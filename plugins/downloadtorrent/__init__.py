@@ -13,7 +13,7 @@ class DownloadTorrent(_PluginBase):
     # 插件描述
     plugin_desc = "选择下载器，添加种子任务。"
     # 插件图标
-    plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugin-Market/main/icons/download.png"
+    plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/download.png"
     # 主题色
     plugin_color = "#f87878"
     # 插件版本

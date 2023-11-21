@@ -42,7 +42,7 @@ class CloudStrm(_PluginBase):
     # 插件描述
     plugin_desc = "监控文件创建，生成strm文件。"
     # 插件图标
-    plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugin-Market/main/icons/cloudstrm.png"
+    plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudstrm.png"
     # 主题色
     plugin_color = "#999999"
     # 插件版本

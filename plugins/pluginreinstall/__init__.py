@@ -15,7 +15,7 @@ class PluginReInstall(_PluginBase):
     # 插件描述
     plugin_desc = "卸载当前插件，强制重装。"
     # 插件图标
-    plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugin-Market/main/icons/reinstall.png"
+    plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/reinstall.png"
     # 主题色
     plugin_color = "#3c78d8"
     # 插件版本

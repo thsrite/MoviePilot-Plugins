@@ -11,7 +11,7 @@ class SiteRemoveSafe(_PluginBase):
     # 插件描述
     plugin_desc = "删除下载器中该站点辅种，保留该站点没有辅种的种子。"
     # 插件图标
-    plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugin-Market/main/icons/sitesafe.png"
+    plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/sitesafe.png"
     # 主题色
     plugin_color = "#6bdd88"
     # 插件版本
