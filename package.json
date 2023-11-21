@@ -1,0 +1,83 @@
+{
+      "SiteStatisticNoMsg": {
+        "name": "站点数据统计",
+        "description": "自动统计和展示站点数据（无站点未读消息）。",
+        "version": "1.0",
+        "icon": "statistic.png",
+        "color": "#324A5E",
+        "author": "lightolly",
+        "level": 2
+      },
+      "CloudStrm": {
+        "name": "云盘strm生成",
+        "description": "监控文件创建，生成strm文件。",
+        "version": "1.6",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugin-Market/main/icons/cloudstrm.png",
+        "color": "#999999",
+        "author": "thsrite",
+        "level": 1
+      },
+      "SiteUnreadMsg": {
+        "name": "站点未读消息",
+        "description": "发送站点未读消息。",
+        "version": "1.2",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugin-Market/main/icons/unread.png",
+        "color": "#4179F4",
+        "author": "thsrite",
+        "level": 2
+      },
+      "SubscribeClear": {
+        "name": "清理订阅缓存",
+        "description": "清理订阅已下载集数。",
+        "version": "1.0",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugin-Market/main/icons/subscribeclear.png",
+        "color": "#80bef7",
+        "author": "thsrite",
+        "level": 2
+      },
+      "DownloadTorrent": {
+        "name": "下载种子",
+        "description": "选择下载器，添加种子任务。",
+        "version": "1.0",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugin-Market/main/icons/download.png",
+        "color": "#f87878",
+        "author": "thsrite",
+        "level": 1
+      },
+      "SiteRemoveSafe": {
+        "name": "安全删除站点",
+        "description": "删除下载器中该站点辅种，保留该站点没有辅种的种子。",
+        "version": "1.0",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugin-Market/main/icons/sitesafe.png",
+        "color": "#6bdd88",
+        "author": "thsrite",
+        "level": 1
+      },
+      "PluginAutoUpdate": {
+        "name": "插件自动更新",
+        "description": "监测已安装插件，自动更新最新版本。",
+        "version": "1.2",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugin-Market/main/icons/pluginupdate.png",
+        "color": "#95eb95",
+        "author": "thsrite",
+        "level": 1
+      },
+      "PluginReInstall": {
+        "name": "插件强制重装",
+        "description": "卸载当前插件，强制重装。",
+        "version": "1.1",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugin-Market/main/icons/reinstall.png",
+        "color": "#3c78d8",
+        "author": "thsrite",
+        "level": 1
+      },
+      "SynologyNotify": {
+        "name": "群辉Webhook通知",
+        "description": "接收群辉webhook通知并推送。",
+        "version": "1.1",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugin-Market/main/icons/synology.png",
+        "color": "#adc8f7",
+        "author": "thsrite",
+        "level": 1
+      }
+}
