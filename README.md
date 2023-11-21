@@ -1,5 +1,5 @@
 # MoviePilot-Plugin-Market
-MoviePilot三方插件市场：https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/
+MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 
 # 保持插件最新
 - 安装并开启`插件自动更新`插件，每次重启会更新已安装插件最新版本。也可设置cron定时任务更新插件。
