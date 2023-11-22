@@ -17,6 +17,15 @@
         "author": "thsrite",
         "level": 1
       },
+      "StrmConvert": {
+        "name": "Strm文件模式转换",
+        "description": "Strm文件内容转为本地路径或者cd2/alist API路径。",
+        "version": "1.0",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/convert.png",
+        "color": "#7eabf3",
+        "author": "thsrite",
+        "level": 1
+      },
       "SiteUnreadMsg": {
         "name": "站点未读消息",
         "description": "发送站点未读消息。",

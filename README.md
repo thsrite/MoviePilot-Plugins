@@ -9,9 +9,10 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 
 ### 插件新增
 
-- [站点数据统计 1.0](plugins_record%2FSiteStatisticNoMsg.md)
+- [站点数据统计 1.0](plugins_record%2FSiteStatisticNoMsg.md) （无未读消息版本）
 - [站点未读消息 1.2](plugins_record%2FSiteUnreadMsg.md)
-- [云盘strm生成 1.7](plugins_record%2FCloudStrm.md)
+- [云盘strm生成 1.6](plugins_record%2FCloudStrm.md)
+- [Strm文件模式转换 1.0](plugins_record%2FStrmConvert.md)
 - [清理订阅缓存 1.0](plugins_record%2FSubscribeClear.md)
 - [添加种子下载 1.0](plugins_record%2FDownloadTorrent.md)
 - [安全删除站点 1.0](plugins_record%2FSiteRemoveSafe.md)
