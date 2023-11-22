@@ -5,7 +5,7 @@ from app.core.plugin import PluginManager
 from app.db.systemconfig_oper import SystemConfigOper
 from app.helper.plugin import PluginHelper
 from app.plugins import _PluginBase
-from typing import Any, List, Dict, Tuple
+from typing import Any, List, Dict, Tuple, Optional
 from app.log import logger
 from app.schemas.types import SystemConfigKey
 from app.utils.string import StringUtils
@@ -36,6 +36,7 @@ class PluginReInstall(_PluginBase):
     # 私有属性
     _plugin_ids = []
     _plugin_url = []
+    _base_url = "https://raw.githubusercontent.com/%s/%s/main/"
 
     def init_plugin(self, config: dict = None):
         if config:
@@ -45,11 +46,19 @@ class PluginReInstall(_PluginBase):
             self._plugin_url = config.get("plugin_url")
 
             # 校验插件仓库格式
-            pattern = "https://raw.githubusercontent.com/(.*?)/(.*?)/main/"
+            pattern = "https://github.com/(.*?)/(.*?)/"
             matches = re.findall(pattern, str(self._plugin_url))
             if not matches:
                 logger.error(f"指定插件仓库地址 {self._plugin_url} 错误，将使用插件默认地址重装")
                 self._plugin_url = ""
+
+            plugin_url = None
+            if self._plugin_url:
+                user, repo = self.get_repo_info(self._plugin_url)
+                if not user or not repo:
+                    logger.error(f"指定插件仓库地址 {self._plugin_url} 错误，将使用插件默认地址重装")
+                    self._plugin_url = ""
+                plugin_url = self._base_url % (user, repo)
 
             self.update_config({
                 "plugin_url": self._plugin_url
@@ -67,7 +76,7 @@ class PluginReInstall(_PluginBase):
 
                     # 开始安装线上插件
                     state, msg = PluginHelper().install(pid=plugin_id,
-                                                        repo_url=str(self._plugin_url) or local_plugin.get("repo_url"))
+                                                        repo_url=plugin_url or local_plugin.get("repo_url"))
                     # 安装失败
                     if not state:
                         logger.error(
@@ -82,6 +91,25 @@ class PluginReInstall(_PluginBase):
             if plugin_reload:
                 logger.info("开始插件重载")
                 PluginManager().init_config()
+
+    @staticmethod
+    def get_repo_info(repo_url: str) -> Tuple[Optional[str], Optional[str]]:
+        """
+        获取Github仓库信息
+        :param repo_url: Github仓库地址
+        """
+        if not repo_url:
+            return None, None
+        if not repo_url.endswith("/"):
+            repo_url += "/"
+        if repo_url.count("/") < 6:
+            repo_url = f"{repo_url}main/"
+        try:
+            user, repo = repo_url.split("/")[-4:-2]
+        except Exception as e:
+            print(str(e))
+            return None, None
+        return user, repo
 
     def get_state(self) -> bool:
         return False
@@ -146,7 +174,7 @@ class PluginReInstall(_PluginBase):
                                         'props': {
                                             'model': 'plugin_url',
                                             'label': '仓库地址',
-                                            'placeholder': 'https://raw.githubusercontent.com/%s/%s/main/'
+                                            'placeholder': 'https://github.com/%s/%s/'
                                         }
                                     }
                                 ]
@@ -188,7 +216,7 @@ class PluginReInstall(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '支持指定插件仓库地址（https://raw.githubusercontent.com/%s/%s/main/）'
+                                            'text': '支持指定插件仓库地址（https://github.com/%s/%s/）'
                                         }
                                     }
                                 ]
