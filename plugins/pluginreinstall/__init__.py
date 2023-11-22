@@ -1,3 +1,5 @@
+import re
+
 from app.core.config import settings
 from app.core.plugin import PluginManager
 from app.db.systemconfig_oper import SystemConfigOper
@@ -19,7 +21,7 @@ class PluginReInstall(_PluginBase):
     # 主题色
     plugin_color = "#3c78d8"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -33,14 +35,25 @@ class PluginReInstall(_PluginBase):
 
     # 私有属性
     _plugin_ids = []
+    _plugin_url = []
 
     def init_plugin(self, config: dict = None):
         if config:
             self._plugin_ids = config.get("plugin_ids") or []
             if not self._plugin_ids:
                 return
+            self._plugin_url = config.get("plugin_url")
 
-            self.update_config({})
+            # 校验插件仓库格式
+            pattern = "https://raw.githubusercontent.com/(.*?)/(.*?)/main/"
+            matches = re.findall(pattern, str(self._plugin_url))
+            if not matches:
+                logger.error(f"指定插件仓库地址 {self._plugin_url} 错误，将使用插件默认地址重装")
+                self._plugin_url = ""
+
+            self.update_config({
+                "plugin_url": self._plugin_url
+            })
 
             # 本地插件
             local_plugins = self.get_local_plugins()
@@ -54,7 +67,7 @@ class PluginReInstall(_PluginBase):
 
                     # 开始安装线上插件
                     state, msg = PluginHelper().install(pid=plugin_id,
-                                                        repo_url=local_plugin.get("repo_url"))
+                                                        repo_url=str(self._plugin_url) or local_plugin.get("repo_url"))
                     # 安装失败
                     if not state:
                         logger.error(
@@ -96,79 +109,119 @@ class PluginReInstall(_PluginBase):
                 "value": local_plugin.get("id")
             })
         return [
-                   {
-                       'component': 'VForm',
-                       'content': [
-                           {
-                               'component': 'VRow',
-                               'content': [
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VSelect',
-                                               'props': {
-                                                   'multiple': True,
-                                                   'chips': True,
-                                                   'model': 'plugin_ids',
-                                                   'label': '重装插件',
-                                                   'items': pluginOptions
-                                               }
-                                           }
-                                       ]
-                                   }
-                               ]
-                           },
-                           {
-                               'component': 'VRow',
-                               'content': [
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12,
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VAlert',
-                                               'props': {
-                                                   'type': 'info',
-                                                   'variant': 'tonal',
-                                                   'text': '选择已安装的本地插件，强制安装插件市场最新版本。'
-                                               }
-                                           }
-                                       ]
-                                   }
-                               ]
-                           },
-                           {
-                               'component': 'VRow',
-                               'content': [
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12,
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VAlert',
-                                               'props': {
-                                                   'type': 'info',
-                                                   'variant': 'tonal',
-                                                   'text': '点击保存卡住请稍等一会，等其他线程执行完先。重载完有提示。'
-                                               }
-                                           }
-                                       ]
-                                   }
-                               ]
-                           }
-                       ]
-                   }
-               ], {
-                   "plugin_ids": []
-               }
+            {
+                'component': 'VForm',
+                'content': [
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'multiple': True,
+                                            'chips': True,
+                                            'model': 'plugin_ids',
+                                            'label': '重装插件',
+                                            'items': pluginOptions
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 8
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'plugin_url',
+                                            'label': '仓库地址',
+                                            'placeholder': 'https://raw.githubusercontent.com/%s/%s/main/'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '选择已安装的本地插件，强制安装插件市场最新版本。'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '支持指定插件仓库地址（https://raw.githubusercontent.com/%s/%s/main/）'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '点击保存卡住请稍等一会，等其他线程执行完先。重载完有提示。'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ], {
+            "plugin_ids": [],
+            "plugin_url": ""
+        }
 
     @staticmethod
     def get_local_plugins():

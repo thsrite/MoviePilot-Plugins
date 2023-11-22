@@ -65,7 +65,7 @@
       "PluginReInstall": {
         "name": "插件强制重装",
         "description": "卸载当前插件，强制重装。",
-        "version": "1.1",
+        "version": "1.2",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/reinstall.png",
         "color": "#3c78d8",
         "author": "thsrite",
