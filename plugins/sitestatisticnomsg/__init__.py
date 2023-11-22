@@ -157,10 +157,12 @@ class SiteStatisticNoMsg(_PluginBase):
         """
         return [{
             "cmd": "/site_statistic",
-            "event": EventType.SiteStatistic,
+            "event": EventType.PluginAction,
             "desc": "站点数据统计",
             "category": "站点",
-            "data": {}
+            "data": {
+                "action": "site_statistic"
+            }
         }]
 
     def get_api(self) -> List[Dict[str, Any]]:
@@ -189,7 +191,7 @@ class SiteStatisticNoMsg(_PluginBase):
         customSites = self.__custom_sites()
 
         site_options = ([{"title": site.name, "value": site.id}
-                        for site in self.siteoper.list_order_by_pri()]
+                         for site in self.siteoper.list_order_by_pri()]
                         + [{"title": site.get("name"), "value": site.get("id")}
                            for site in customSites])
 
@@ -1007,12 +1009,15 @@ class SiteStatisticNoMsg(_PluginBase):
             logger.error(f"站点 {site_name} 获取流量数据失败：{str(e)}")
         return None
 
-    @eventmanager.register(EventType.SiteStatistic)
+    @eventmanager.register(EventType.PluginAction)
     def refresh(self, event: Event):
         """
         刷新站点数据
         """
         if event:
+            event_data = event.event_data
+            if not event_data or event_data.get("action") != "site_statistic":
+                return
             logger.info("收到命令，开始刷新站点数据 ...")
             self.post_message(channel=event.event_data.get("channel"),
                               title="开始刷新站点数据 ...",
