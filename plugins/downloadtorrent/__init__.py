@@ -9,7 +9,7 @@ from app.utils.string import StringUtils
 
 class DownloadTorrent(_PluginBase):
     # 插件名称
-    plugin_name = "下载种子"
+    plugin_name = "添加种子下载"
     # 插件描述
     plugin_desc = "选择下载器，添加种子任务。"
     # 插件图标

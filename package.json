@@ -36,7 +36,7 @@
         "level": 2
       },
       "DownloadTorrent": {
-        "name": "下载种子",
+        "name": "添加种子下载",
         "description": "选择下载器，添加种子任务。",
         "version": "1.0",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/download.png",

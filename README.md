@@ -9,35 +9,14 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 
 ### 插件新增
 
-- 站点数据统计
-    - 1.0 自动统计和展示站点数据（无站点未读消息）
-- 站点未读消息
-    - 1.0 定时获取站点消息
-    - 1.1 防止同一消息重复发送
-    - 1.2 站点消息历史存库
-- 云盘strm生成
-    - 1.0 监控文件创建，生成strm文件
-    - 1.1 支持alist链接模式
-    - 1.2 支持本地模式
-    - 1.3 支持全量运行一次
-    - 1.4 异步开启目录监控
-    - 1.5 优化异步执行
-    - 1.6 支持开启监控延迟
-- 清理订阅缓存
-    - 1.0 清理订阅已下载集数
-- 下载种子
-    - 1.0 选择下载器，添加种子任务
-- 安全删除站点
-    - 1.0 删除下载器中该站点辅种，保留该站点没有辅种的种子
-- 插件自动更新
-    - 1.0 监测已安装插件，自动更新最新版本
-    - 1.1 修复插件重载
-    - 1.2 重启后立即执行一遍更新插件
-- 插件强制重装
-    - 1.0 卸载当前插件，强制重装
-    - 1.1 修复插件重载
-    - 1.2 支持指定插件仓库地址
-- 群辉Webhook通知
-    - 1.0 接收群辉webhook通知并推送
-    - 1.1 修复bug
+- [站点数据统计 1.0](plugins_record%2FSiteStatisticNoMsg.md)
+- [站点未读消息 1.2](plugins_record%2FSiteUnreadMsg.md)
+- [云盘strm生成 1.7](plugins_record%2FCloudStrm.md)
+- [清理订阅缓存 1.0](plugins_record%2FSubscribeClear.md)
+- [添加种子下载 1.0](plugins_record%2FDownloadTorrent.md)
+- [安全删除站点 1.0](plugins_record%2FSiteRemoveSafe.md)
+- [插件自动更新 1.2](plugins_record%2FPluginAutoUpdate.md)
+- [插件强制重装 1.2](plugins_record%2FPluginReInstall.md)
+- [群辉Webhook通知 1.1](plugins_record%2FSynologyNotify.md)
+
 
