@@ -144,7 +144,8 @@ class CloudStrm(_PluginBase):
                     # 异步开启云盘监控
                     logger.info(f"异步开启云盘监控 {source_dir} {mode}")
                     self._scheduler.add_job(func=self.start_monitor, trigger='date',
-                                            run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(seconds=int(self._relay)),
+                                            run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(
+                                                seconds=int(self._relay)),
                                             name=f"云盘监控 {source_dir}",
                                             kwargs={
                                                 "mode": mode,
@@ -427,210 +428,232 @@ class CloudStrm(_PluginBase):
         拼装插件配置页面，需要返回两块数据：1、页面配置；2、数据结构
         """
         return [
-                   {
-                       'component': 'VForm',
-                       'content': [
-                           {
-                               'component': 'VRow',
-                               'content': [
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12,
-                                           'md': 6
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VSwitch',
-                                               'props': {
-                                                   'model': 'enabled',
-                                                   'label': '启用插件',
-                                               }
-                                           }
-                                       ]
-                                   },
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12,
-                                           'md': 6
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VSwitch',
-                                               'props': {
-                                                   'model': 'onlyonce',
-                                                   'label': '立即运行一次',
-                                               }
-                                           }
-                                       ]
-                                   }
-                               ]
-                           },
-                           {
-                               'component': 'VRow',
-                               'content': [
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VTextField',
-                                               'props': {
-                                                   'model': 'relay',
-                                                   'label': '监控延迟',
-                                                   'placeholder': '3'
-                                               }
-                                           }
-                                       ]
-                                   }
-                               ]
-                           },
-                           {
-                               'component': 'VRow',
-                               'content': [
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VTextarea',
-                                               'props': {
-                                                   'model': 'monitor_confs',
-                                                   'label': '监控目录',
-                                                   'rows': 5,
-                                                   'placeholder': '监控方式#监控目录#目的目录#媒体服务器内路径'
-                                               }
-                                           }
-                                       ]
-                                   }
-                               ]
-                           },
-                           {
-                               'component': 'VRow',
-                               'content': [
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12,
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VAlert',
-                                               'props': {
-                                                   'type': 'info',
-                                                   'variant': 'tonal',
-                                                   'text': '目录监控格式：'
-                                                           '1.监控方式#监控目录#目的目录#媒体服务器内路径；'
-                                                           '2.监控方式#监控目录#目的目录#cd2#cd2挂载本地跟路径#cd2服务地址；'
-                                                           '3.监控方式#监控目录#目的目录#alist#alist挂载本地跟路径#alist服务地址。'
-                                               }
-                                           }
-                                       ]
-                                   }
-                               ]
-                           },
-                           {
-                               'component': 'VRow',
-                               'content': [
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12,
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VAlert',
-                                               'props': {
-                                                   'type': 'info',
-                                                   'variant': 'tonal',
-                                                   'text': '媒体服务器内路径：'
-                                                           '网盘映射本地路径挂载进媒体服务器的路径。'
-                                               }
-                                           }
-                                       ]
-                                   }
-                               ]
-                           },
-                           {
-                               'component': 'VRow',
-                               'content': [
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12,
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VAlert',
-                                               'props': {
-                                                   'type': 'info',
-                                                   'variant': 'tonal',
-                                                   'text': '监控方式：'
-                                                           'fast:性能模式，内部处理系统操作类型选择最优解；'
-                                                           'compatibility:兼容模式，目录同步性能降低且NAS不能休眠，但可以兼容挂载的远程共享目录如SMB'
-                                               }
-                                           }
-                                       ]
-                                   }
-                               ]
-                           },
-                           {
-                               'component': 'VRow',
-                               'content': [
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12,
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VAlert',
-                                               'props': {
-                                                   'type': 'info',
-                                                   'variant': 'tonal',
-                                                   'text': '立即运行一次：'
-                                                           '全量运行一次。'
-                                               }
-                                           }
-                                       ]
-                                   }
-                               ]
-                           },
-                           {
-                               'component': 'VRow',
-                               'content': [
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12,
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VAlert',
-                                               'props': {
-                                                   'type': 'info',
-                                                   'variant': 'tonal',
-                                                   'text': '由于unraid开启云盘监控很慢，所以采取异步方式开启磁盘监控，'
-                                                           '具体开启情况可稍等3-5分钟查看日志。'
-                                               }
-                                           }
-                                       ]
-                                   }
-                               ]
-                           },
-                       ]
-                   }
-               ], {
-                   "enabled": False,
-                   "relay": 3,
-                   "onlyonce": False,
-                   "monitor_confs": ""
-               }
+            {
+                'component': 'VForm',
+                'content': [
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'enabled',
+                                            'label': '启用插件',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'onlyonce',
+                                            'label': '立即运行一次',
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'relay',
+                                            'label': '监控延迟',
+                                            'placeholder': '3'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextarea',
+                                        'props': {
+                                            'model': 'monitor_confs',
+                                            'label': '监控目录',
+                                            'rows': 5,
+                                            'placeholder': '监控方式#监控目录#目的目录#媒体服务器内源文件路径'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '目录监控格式：'
+                                                    '1.监控方式#监控目录#目的目录#媒体服务器内源文件路径；'
+                                                    '2.监控方式#监控目录#目的目录#cd2#cd2挂载本地跟路径#cd2服务地址；'
+                                                    '3.监控方式#监控目录#目的目录#alist#alist挂载本地跟路径#alist服务地址。'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '媒体服务器内源文件路径：'
+                                                    '源文件目录即云盘挂载到媒体服务器的路径。'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '监控方式：'
+                                                    'fast:性能模式（快）；'
+                                                    'compatibility:兼容模式（稳，推荐）'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '立即运行一次：'
+                                                    '全量运行一次。'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '由于unraid开启云盘监控很慢，所以采取异步方式开启磁盘监控，'
+                                                    '具体开启情况可稍等3-5分钟查看日志。'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '配置说明：'
+                                                    'https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/plugins_record/CloudStrm.md'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ], {
+            "enabled": False,
+            "relay": 3,
+            "onlyonce": False,
+            "monitor_confs": ""
+        }
 
     def get_page(self) -> List[dict]:
         pass
