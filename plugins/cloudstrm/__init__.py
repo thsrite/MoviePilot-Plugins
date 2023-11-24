@@ -38,15 +38,15 @@ class FileMonitorHandler(FileSystemEventHandler):
 
 class CloudStrm(_PluginBase):
     # 插件名称
-    plugin_name = "云盘strm生成"
+    plugin_name = "云盘Strm生成"
     # 插件描述
-    plugin_desc = "监控文件创建，生成strm文件。"
+    plugin_desc = "监控文件创建，生成Strm文件。"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudstrm.png"
     # 主题色
     plugin_color = "#999999"
     # 插件版本
-    plugin_version = "1.6"
+    plugin_version = "1.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -64,7 +64,7 @@ class CloudStrm(_PluginBase):
     _onlyonce = False
     _relay = 3
     _observer = []
-    _video_formats = ('.mp4', '.avi', '.rmvb', '.wmv', '.mov', '.mkv', '.flv', '.ts', '.webm', '.iso', '.mpg')
+    _video_formats = ('.mp4', '.avi', '.rmvb', '.wmv', '.mov', '.mkv', '.flv', '.ts', '.webm', '.iso', '.mpg', '.m2ts')
 
     _dirconf = {}
     _modeconf = {}
