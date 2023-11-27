@@ -57,8 +57,8 @@
         "name": "删除站点种子",
         "description": "删除下载器中某站点种子。",
         "version": "1.1",
-        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/sitesafe.png",
-        "color": "#6bdd88",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/removetorrent.png",
+        "color": "#f25454",
         "author": "thsrite",
         "level": 1
       },
