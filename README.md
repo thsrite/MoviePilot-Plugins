@@ -15,7 +15,7 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - [Strm文件模式转换 1.0](plugins_record%2FStrmConvert.md)
 - [清理订阅缓存 1.0](plugins_record%2FSubscribeClear.md)
 - [添加种子下载 1.0](plugins_record%2FDownloadTorrent.md)
-- [安全删除站点 1.0](plugins_record%2FSiteRemoveSafe.md)
+- [删除站点种子 1.1](plugins_record%2FRemoveTorrent.md)
 - [插件自动更新 1.2](plugins_record%2FPluginAutoUpdate.md)
 - [插件强制重装 1.2](plugins_record%2FPluginReInstall.md)
 - [群辉Webhook通知 1.1](plugins_record%2FSynologyNotify.md)

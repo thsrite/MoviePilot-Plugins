@@ -5,23 +5,23 @@ from typing import Any, List, Dict, Tuple
 from app.log import logger
 
 
-class SiteRemoveSafe(_PluginBase):
+class RemoveTorrent(_PluginBase):
     # 插件名称
-    plugin_name = "安全删除站点"
+    plugin_name = "删除站点种子"
     # 插件描述
-    plugin_desc = "删除下载器中该站点辅种，保留该站点没有辅种的种子。"
+    plugin_desc = "删除下载器中某站点种子。"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/sitesafe.png"
     # 主题色
     plugin_color = "#6bdd88"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
     author_url = "https://github.com/thsrite"
     # 插件配置项ID前缀
-    plugin_config_prefix = "siteremovesafe_"
+    plugin_config_prefix = "removetorrent_"
     # 加载顺序
     plugin_order = 30
     # 可使用的用户级别
@@ -29,6 +29,7 @@ class SiteRemoveSafe(_PluginBase):
 
     # 私有属性
     _downloader = None
+    _delete_type = False
     _delete_torrent = False
     _delete_file = False
     _trackers = None
@@ -39,6 +40,7 @@ class SiteRemoveSafe(_PluginBase):
 
         if config:
             self._downloader = config.get("downloader")
+            self._delete_type = config.get("delete_type")
             self._delete_torrent = config.get("delete_torrent")
             self._delete_file = config.get("delete_file")
             self._trackers = config.get("trackers")
@@ -50,6 +52,7 @@ class SiteRemoveSafe(_PluginBase):
 
             self.update_config({
                 "downloader": self._downloader,
+                "delete_type": self._delete_type,
                 "delete_torrent": self._delete_torrent,
                 "delete_file": self._delete_file,
                 "trackers": ""
@@ -98,18 +101,31 @@ class SiteRemoveSafe(_PluginBase):
             torrent_name = self.__get_torrent_name(torrent, self._downloader)
             torrent_hash = self.__get_torrent_hash(torrent, self._downloader)
 
-            # 有辅种
-            if all_torrents.count(tracker_torrent) > 1:
-                # 删除逻辑
-                if self._delete_torrent:
-                    downloader_obj.delete_torrents(delete_file=self._delete_file,
-                                                   ids=torrent_hash)
-                    logger.info(f"种子 {torrent_name} {torrent_hash} 有其他辅种，已删除")
+            if self._delete_type:
+                # 有辅种
+                if all_torrents.count(tracker_torrent) > 1:
+                    # 删除逻辑
+                    if self._delete_torrent:
+                        downloader_obj.delete_torrents(delete_file=self._delete_file,
+                                                       ids=torrent_hash)
+                        logger.info(f"种子 {torrent_name} {torrent_hash} 有其他辅种，已删除")
+                    else:
+                        logger.info(f"种子 {torrent_name} {torrent_hash} 有其他辅种，可删除")
                 else:
-                    logger.info(f"种子 {torrent_name} {torrent_hash} 有其他辅种，可删除")
+                    # 无辅种
+                    logger.warn(f"种子 {torrent_name} {torrent_hash} 在其他站无辅种，如需删除请手动处理")
             else:
                 # 无辅种
-                logger.warn(f"种子 {torrent_name} {torrent_hash} 在其他站无辅种，如需删除请手动处理")
+                if all_torrents.count(tracker_torrent) == 1:
+                    # 删除逻辑
+                    if self._delete_torrent:
+                        downloader_obj.delete_torrents(delete_file=self._delete_file,
+                                                       ids=torrent_hash)
+                        logger.info(f"种子 {torrent_name} {torrent_hash} 无其他辅种，已删除")
+                    else:
+                        logger.info(f"种子 {torrent_name} {torrent_hash} 无其他辅种，可删除")
+                else:
+                    logger.warn(f"种子 {torrent_name} {torrent_hash} 在其他站有辅种，如需删除请手动处理")
 
     def __get_downloader(self, dtype: str):
         """
@@ -191,7 +207,7 @@ class SiteRemoveSafe(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -211,7 +227,27 @@ class SiteRemoveSafe(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'model': 'delete_type',
+                                            'label': '是否有辅种',
+                                            'items': [
+                                                {'title': '是', 'value': True},
+                                                {'title': '否', 'value': False}
+                                            ]
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -231,7 +267,7 @@ class SiteRemoveSafe(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -293,11 +329,57 @@ class SiteRemoveSafe(_PluginBase):
                                 ]
                             }
                         ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '场景一：某个站不想保种了，但是有些种子没有辅种，需要保留。'
+                                                    '是否有辅种=是，删除种子=是，删除文件=否。'
+                                                    '（保留站点没有辅种的种子，其余在其他站有辅种的种子均删除（保留文件）。）'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '场景二：想删除某个站没有辅种的种子。'
+                                                    '是否有辅种=否，删除种子=是，删除文件=是。'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
                     }
                 ]
             }
         ], {
             "downloader": "qb",
+            "delete_type": True,
             "delete_torrent": False,
             "delete_file": False,
             "trackers": ""

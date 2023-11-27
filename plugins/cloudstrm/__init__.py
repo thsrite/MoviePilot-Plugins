@@ -189,10 +189,10 @@ class CloudStrm(_PluginBase):
                 logger.warn(
                     f"云盘监控服务启动出现异常：{err_msg}，请在宿主机上（不是docker容器内）执行以下命令并重启："
                     + """
-                                         echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
-                                         echo fs.inotify.max_user_instances=524288 | sudo tee -a /etc/sysctl.conf
-                                         sudo sysctl -p
-                                         """)
+                     echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
+                     echo fs.inotify.max_user_instances=524288 | sudo tee -a /etc/sysctl.conf
+                     sudo sysctl -p
+                     """)
             else:
                 logger.error(f"{source_dir} 启动云盘监控失败：{err_msg}")
             self.systemmessage.put(f"{source_dir} 启动云盘监控失败：{err_msg}")

@@ -53,10 +53,10 @@
         "author": "thsrite",
         "level": 1
       },
-      "SiteRemoveSafe": {
-        "name": "安全删除站点",
-        "description": "删除下载器中该站点辅种，保留该站点没有辅种的种子。",
-        "version": "1.0",
+      "RemoveTorrent": {
+        "name": "删除站点种子",
+        "description": "删除下载器中某站点种子。",
+        "version": "1.1",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/sitesafe.png",
         "color": "#6bdd88",
         "author": "thsrite",
