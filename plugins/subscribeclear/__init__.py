@@ -11,8 +11,6 @@ class SubscribeClear(_PluginBase):
     plugin_desc = "清理订阅已下载集数。"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/subscribeclear.png"
-    # 主题色
-    plugin_color = "#80bef7"
     # 插件版本
     plugin_version = "1.0"
     # 插件作者

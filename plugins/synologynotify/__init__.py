@@ -12,8 +12,6 @@ class SynologyNotify(_PluginBase):
     plugin_desc = "接收群辉webhook通知并推送。"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/synology.png"
-    # 主题色
-    plugin_color = "#adc8f7"
     # 插件版本
     plugin_version = "1.1"
     # 插件作者

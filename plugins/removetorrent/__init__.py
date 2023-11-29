@@ -12,8 +12,6 @@ class RemoveTorrent(_PluginBase):
     plugin_desc = "删除下载器中某站点种子。"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/removetorrent.png"
-    # 主题色
-    plugin_color = "#f25454"
     # 插件版本
     plugin_version = "1.1"
     # 插件作者

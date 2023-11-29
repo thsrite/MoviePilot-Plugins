@@ -21,8 +21,6 @@ class PluginAutoUpdate(_PluginBase):
     plugin_desc = "监测已安装插件，自动更新最新版本。"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/pluginupdate.png"
-    # 主题色
-    plugin_color = "#95eb95"
     # 插件版本
     plugin_version = "1.2"
     # 插件作者

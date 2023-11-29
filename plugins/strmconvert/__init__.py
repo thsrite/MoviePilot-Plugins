@@ -14,8 +14,6 @@ class StrmConvert(_PluginBase):
     plugin_desc = "Strm文件内容转为本地路径或者cd2/alist API路径。"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/convert.png"
-    # 主题色
-    plugin_color = "#7eabf3"
     # 插件版本
     plugin_version = "1.0"
     # 插件作者
