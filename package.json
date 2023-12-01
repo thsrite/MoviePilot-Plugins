@@ -12,7 +12,7 @@
         "name": "云盘Strm生成",
         "description": "监控文件创建，生成Strm文件。",
         "version": "1.7",
-        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudstrm.png",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png",
         "color": "#999999",
         "author": "thsrite",
         "level": 1
@@ -30,7 +30,7 @@
         "name": "站点未读消息",
         "description": "发送站点未读消息。",
         "version": "1.2",
-        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/unread.png",
+        "icon": "Synomail_A.png",
         "color": "#4179F4",
         "author": "thsrite",
         "level": 2
@@ -39,7 +39,7 @@
         "name": "清理订阅缓存",
         "description": "清理订阅已下载集数。",
         "version": "1.0",
-        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/subscribeclear.png",
+        "icon": "clean.png",
         "color": "#80bef7",
         "author": "thsrite",
         "level": 2
@@ -48,7 +48,7 @@
         "name": "添加种子下载",
         "description": "选择下载器，添加种子任务。",
         "version": "1.0",
-        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/download.png",
+        "icon": "download.png",
         "color": "#f87878",
         "author": "thsrite",
         "level": 1
@@ -57,7 +57,7 @@
         "name": "删除站点种子",
         "description": "删除下载器中某站点种子。",
         "version": "1.1",
-        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/removetorrent.png",
+        "icon": "delete.png",
         "color": "#f25454",
         "author": "thsrite",
         "level": 1
@@ -75,7 +75,7 @@
         "name": "插件强制重装",
         "description": "卸载当前插件，强制重装。",
         "version": "1.2",
-        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/reinstall.png",
+        "icon": "refresh.png",
         "color": "#3c78d8",
         "author": "thsrite",
         "level": 1

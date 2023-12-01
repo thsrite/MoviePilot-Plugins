@@ -35,7 +35,7 @@ class SiteUnreadMsg(_PluginBase):
     # 插件描述
     plugin_desc = "发送站点未读消息。"
     # 插件图标
-    plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/unread.png"
+    plugin_icon = "Synomail_A.png"
     # 插件版本
     plugin_version = "1.2"
     # 插件作者
