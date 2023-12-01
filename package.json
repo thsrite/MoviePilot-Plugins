@@ -39,7 +39,7 @@
         "name": "清理订阅缓存",
         "description": "清理订阅已下载集数。",
         "version": "1.0",
-        "icon": "clean.png",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/broom.png",
         "color": "#80bef7",
         "author": "thsrite",
         "level": 2
