@@ -47,14 +47,14 @@ class PluginReInstall(_PluginBase):
             pattern = "https://github.com/(.*?)/(.*?)/"
             matches = re.findall(pattern, str(self._plugin_url))
             if not matches:
-                logger.error(f"指定插件仓库地址 {self._plugin_url} 错误，将使用插件默认地址重装")
+                logger.warn(f"指定插件仓库地址 {self._plugin_url} 错误，将使用插件默认地址重装")
                 self._plugin_url = ""
 
             plugin_url = None
             if self._plugin_url:
                 user, repo = self.get_repo_info(self._plugin_url)
                 if not user or not repo:
-                    logger.error(f"指定插件仓库地址 {self._plugin_url} 错误，将使用插件默认地址重装")
+                    logger.warn(f"指定插件仓库地址 {self._plugin_url} 错误，将使用插件默认地址重装")
                     self._plugin_url = ""
                 plugin_url = self._base_url % (user, repo)
 
