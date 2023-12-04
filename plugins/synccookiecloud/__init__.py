@@ -103,6 +103,9 @@ class SyncCookieCloud(_PluginBase):
             domain = site.domain
             cookie = site.cookie
 
+            if not site.public:
+                continue
+
             if not cookie:
                 logger.error(f"站点{domain}无cookie，跳过处理")
                 continue
