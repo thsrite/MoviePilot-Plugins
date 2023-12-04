@@ -81,7 +81,7 @@ class ScheduleReminder(_PluginBase):
                           text=theme)
 
     def get_state(self) -> bool:
-        return False
+        return self._enabled
 
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
