@@ -113,6 +113,7 @@ class SyncCookieCloud(_PluginBase):
                 site_cookies.append({
                     "domain": domain,
                     "sameSite": "unspecified",
+                    "path": "/",
                     "name": ck.split("=")[0],
                     "value": ck.split("=")[1]
                 })
