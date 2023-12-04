@@ -21,5 +21,5 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - [群辉Webhook通知 1.1](plugins_record%2FSynologyNotify.md)
 - [同步CookieCloud 1.1](plugins_record%2FSyncCookieCloud.md)
 - [日程提醒 1.0](plugins_record%2FScheduleReminder.md)
-- [订阅提醒 1.0](plugins_record%2FSubscribeReminder.md)
+- [订阅提醒 1.1](plugins_record%2FSubscribeReminder.md)
 
