@@ -19,5 +19,6 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - [插件自动更新 1.2](plugins_record%2FPluginAutoUpdate.md)
 - [插件强制重装 1.2](plugins_record%2FPluginReInstall.md)
 - [群辉Webhook通知 1.1](plugins_record%2FSynologyNotify.md)
+- [同步CookieCloud 1.0](plugins_record%2FSyncCookieCloud.md)
 
 

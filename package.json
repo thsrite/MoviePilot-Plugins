@@ -88,5 +88,14 @@
         "color": "#adc8f7",
         "author": "thsrite",
         "level": 1
+      },
+      "SyncCookieCloud": {
+        "name": "同步CookieCloud",
+        "description": "同步MoviePilot站点Cookie到CookieCloud。",
+        "version": "1.0",
+        "icon": "Cookiecloud_A.png",
+        "color": "#adc8f7",
+        "author": "thsrite",
+        "level": 1
       }
 }
