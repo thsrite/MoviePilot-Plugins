@@ -92,7 +92,7 @@
       "SyncCookieCloud": {
         "name": "同步CookieCloud",
         "description": "同步MoviePilot站点Cookie到CookieCloud。",
-        "version": "1.0",
+        "version": "1.1",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cookiecloud.png",
         "color": "#adc8f7",
         "author": "thsrite",

@@ -20,7 +20,7 @@ class SyncCookieCloud(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cookiecloud.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -103,9 +103,6 @@ class SyncCookieCloud(_PluginBase):
             domain = site.domain
             cookie = site.cookie
 
-            if site.public:
-                continue
-
             if not cookie:
                 logger.error(f"站点{domain}无cookie，跳过处理")
                 continue
@@ -115,13 +112,7 @@ class SyncCookieCloud(_PluginBase):
             for ck in cookie.split(";"):
                 site_cookies.append({
                     "domain": domain,
-                    "hostOnly": False,
-                    "httpOnly": False,
-                    "path": "/",
                     "sameSite": "unspecified",
-                    "secure": False,
-                    "session": True,
-                    "storeld": "0",
                     "name": ck.split("=")[0],
                     "value": ck.split("=")[1]
                 })
