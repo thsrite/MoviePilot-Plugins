@@ -58,7 +58,7 @@ class CloudStrm(_PluginBase):
 
     # 私有属性
     _enabled = False
-    _monitor_confs = []
+    _monitor_confs = None
     _onlyonce = False
     _relay = 3
     _observer = []
