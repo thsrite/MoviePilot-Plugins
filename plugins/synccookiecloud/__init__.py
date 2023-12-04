@@ -111,7 +111,7 @@ class SyncCookieCloud(_PluginBase):
             site_cookies = []
             for ck in cookie.split(";"):
                 site_cookies.append({
-                    "domain": "audiences.me",
+                    "domain": domain,
                     "hostOnly": False,
                     "httpOnly": False,
                     "path": "/",
