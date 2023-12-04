@@ -129,6 +129,8 @@ class SyncCookieCloud(_PluginBase):
         # 覆盖到cookiecloud
         if cookies:
             success = cookie_cloud.update_cookie(cookies)
+
+            logger.info(cookies)
             logger.info(f"同步站点cookie到CookieCloud {'成功' if success else '失败'}")
 
     def __update_config(self):
