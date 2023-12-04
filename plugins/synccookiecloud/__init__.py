@@ -103,7 +103,7 @@ class SyncCookieCloud(_PluginBase):
             domain = site.domain
             cookie = site.cookie
 
-            if not site.public:
+            if site.public:
                 continue
 
             if not cookie:
