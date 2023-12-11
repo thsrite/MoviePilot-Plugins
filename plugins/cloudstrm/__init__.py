@@ -637,7 +637,7 @@ class CloudStrm(_PluginBase):
                                             'type': 'info',
                                             'variant': 'tonal',
                                             'text': '配置说明：'
-                                                    'https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/plugins_record/CloudStrm.md'
+                                                    'https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/docs/CloudStrm.md'
                                         }
                                     }
                                 ]

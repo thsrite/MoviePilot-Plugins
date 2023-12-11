@@ -9,17 +9,17 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 
 ### 插件新增
 
-- [站点数据统计 1.0](plugins_record%2FSiteStatisticNoMsg.md) （无未读消息版本）
-- [站点未读消息 1.2](plugins_record%2FSiteUnreadMsg.md)
-- [云盘Strm生成 1.7](plugins_record%2FCloudStrm.md)
-- [Strm文件模式转换 1.0](plugins_record%2FStrmConvert.md)
-- [清理订阅缓存 1.0](plugins_record%2FSubscribeClear.md)
-- [添加种子下载 1.0](plugins_record%2FDownloadTorrent.md)
-- [删除站点种子 1.1](plugins_record%2FRemoveTorrent.md)
-- [插件自动更新 1.2](plugins_record%2FPluginAutoUpdate.md)
-- [插件强制重装 1.2](plugins_record%2FPluginReInstall.md)
-- [群辉Webhook通知 1.1](plugins_record%2FSynologyNotify.md)
-- [同步CookieCloud 1.1](plugins_record%2FSyncCookieCloud.md)
-- [日程提醒 1.0](plugins_record%2FScheduleReminder.md)
-- [订阅提醒 1.1](plugins_record%2FSubscribeReminder.md)
+- [站点数据统计 1.0](docs%2FSiteStatisticNoMsg.md) （无未读消息版本）
+- [站点未读消息 1.2](docs%2FSiteUnreadMsg.md)
+- [云盘Strm生成 1.7](docs%2FCloudStrm.md)
+- [Strm文件模式转换 1.0](docs%2FStrmConvert.md)
+- [清理订阅缓存 1.0](docs%2FSubscribeClear.md)
+- [添加种子下载 1.0](docs%2FDownloadTorrent.md)
+- [删除站点种子 1.1](docs%2FRemoveTorrent.md)
+- [插件自动更新 1.2](docs%2FPluginAutoUpdate.md)
+- [插件强制重装 1.2](docs%2FPluginReInstall.md)
+- [群辉Webhook通知 1.1](docs%2FSynologyNotify.md)
+- [同步CookieCloud 1.1](docs%2FSyncCookieCloud.md)
+- [日程提醒 1.0](docs%2FScheduleReminder.md)
+- [订阅提醒 1.1](docs%2FSubscribeReminder.md)
 
