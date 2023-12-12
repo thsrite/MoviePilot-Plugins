@@ -44,7 +44,7 @@ class CloudStrm(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png"
     # 插件版本
-    plugin_version = "1.7"
+    plugin_version = "2.0"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -241,8 +241,11 @@ class CloudStrm(_PluginBase):
             else:
                 # 文件：nfo、图片、视频文件
                 dest_file = event_path.replace(source_dir, dest_dir)
+                if Path(dest_file).exists():
+                    logger.debug(f"目标文件 {dest_file} 已存在")
+                    return
 
-                # 目标文件夹不存在则创建
+                    # 目标文件夹不存在则创建
                 if not Path(dest_file).parent.exists():
                     logger.info(f"创建目标文件夹 {Path(dest_file).parent}")
                     os.makedirs(Path(dest_file).parent)
@@ -316,6 +319,9 @@ class CloudStrm(_PluginBase):
                 logger.info(f"处理源文件::: {source_file}")
 
                 dest_file = os.path.join(dest_dir, os.path.relpath(source_file, source_dir))
+                if Path(dest_file).exists():
+                    logger.debug(f"目标文件 {dest_file} 已存在")
+                    return
                 logger.info(f"开始生成目标文件::: {dest_file}")
 
                 # 创建目标目录中缺少的文件夹
