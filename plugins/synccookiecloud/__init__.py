@@ -1,14 +1,8 @@
-import hashlib
-import json
 from datetime import datetime, timedelta
-from urllib.parse import urljoin
 
 import pytz
-import requests
-from Cryptodome import Random
-from Cryptodome.Cipher import AES
-import base64
-from hashlib import md5
+from PyCookieCloud import PyCookieCloud
+
 from app.core.config import settings
 from app.db.site_oper import SiteOper
 from app.plugins import _PluginBase
@@ -26,7 +20,7 @@ class SyncCookieCloud(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cookiecloud.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -98,8 +92,10 @@ class SyncCookieCloud(_PluginBase):
         if not sites:
             return
 
-        if not settings.COOKIECLOUD_HOST or not settings.COOKIECLOUD_KEY or not settings.COOKIECLOUD_PASSWORD:
-            logger.error('cookiecloud配置错误，请检查配置')
+        cookie_cloud = PyCookieCloud(settings.COOKIECLOUD_HOST, settings.COOKIECLOUD_KEY, settings.COOKIECLOUD_PASSWORD)
+        the_key = cookie_cloud.get_the_key()
+        if not the_key:
+            logger.error('链接cookiecloud异常，请检查配置')
             return
 
         cookies = {}
@@ -127,64 +123,10 @@ class SyncCookieCloud(_PluginBase):
 
         # 覆盖到cookiecloud
         if cookies:
-            success = self.__update_cookie(cookies)
+            success = cookie_cloud.update_cookie(cookies)
 
             logger.info(cookies)
             logger.info(f"同步站点cookie到CookieCloud {'成功' if success else '失败'}")
-
-    def __update_cookie(self, cookie: Dict[str, Any]) -> bool:
-        """
-        Update cookie data to CookieCloud.
-
-        :param cookie: cookie value to update, if this cookie does not contain 'cookie_data' key, it will be added into 'cookie_data'.
-        :return: if update success, return True, else return False.
-        """
-        if 'cookie_data' not in cookie:
-            cookie = {'cookie_data': cookie}
-        raw_data = json.dumps(cookie)
-        encrypted_data = self.__encrypt(raw_data.encode('utf-8'), self.__get_the_key().encode('utf-8')).decode('utf-8')
-        cookie_cloud_request = requests.post(urljoin(settings.COOKIECLOUD_HOST, '/update'),
-                                             data={'uuid': settings.COOKIECLOUD_KEY, 'encrypted': encrypted_data})
-        if cookie_cloud_request.status_code == 200:
-            if cookie_cloud_request.json()['action'] == 'done':
-                return True
-        return False
-
-    def __encrypt(self, message, passphrase):
-        salt = Random.new().read(8)
-        key_iv = self.__bytes_to_key(passphrase, salt, 32 + 16)
-        key = key_iv[:32]
-        iv = key_iv[32:]
-        aes = AES.new(key, AES.MODE_CBC, iv)
-        return base64.b64encode(b"Salted__" + salt + aes.encrypt(self.__pad(message)))
-
-    @staticmethod
-    def __pad(data):
-        BLOCK_SIZE = 16
-        length = BLOCK_SIZE - (len(data) % BLOCK_SIZE)
-        return data + (chr(length) * length).encode()
-
-    @staticmethod
-    def __bytes_to_key(data, salt, output=48):
-        # extended from https://gist.github.com/gsakkis/4546068
-        assert len(salt) == 8, len(salt)
-        data += salt
-        key = md5(data).digest()
-        final_key = key
-        while len(final_key) < output:
-            key = md5(key + data).digest()
-            final_key += key
-        return final_key[:output]
-
-    def __get_the_key(self) -> str:
-        """
-        Get the key used to encrypt and decrypt data.
-
-        :return: the key.
-        """
-        md5 = hashlib.md5()
-        md5.update((settings.COOKIECLOUD_KEY + '-' + settings.COOKIECLOUD_PASSWORD).encode('utf-8'))
-        return md5.hexdigest()[:16]
 
     def __update_config(self):
         self.update_config({

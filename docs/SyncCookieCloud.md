@@ -2,10 +2,11 @@
 
 ### 更新记录
 
-- 1.2 移除三方依赖
 - 1.1 修复CookieCloud覆盖到浏览器
 - 1.0 同步MoviePilot站点Cookie到CookieCloud
 
 1、同步MoviePilot站点Cookie到CookieCloud
 
 2、看到日志返回成功之后，浏览器的CookieCloud选择覆盖到浏览器，手动同步即可
+
+注：如果执行失败，进入mp容器执行 `pip install PyCookieCloud`
