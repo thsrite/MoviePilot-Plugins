@@ -398,7 +398,6 @@ class EmbyReporter(_PluginBase):
                 if not success:
                     continue
                 item_id = data["SeriesId"]
-                i.update(item_id=item_id)
                 # 封面图像获取
                 success, data = self.primary(item_id)
                 if not success:
@@ -415,6 +414,14 @@ class EmbyReporter(_PluginBase):
             try:
                 # 榜单项数据
                 user_id, item_id, item_type, name, count, duarion = tuple(i)
+                # 图片获取，剧集主封面获取
+                if item_type != "Movie":
+                    # 获取剧ID
+                    success, data = self.items(user_id, item_id)
+                    if not success:
+                        index -= 1
+                        continue
+                    item_id = data["SeriesId"]
                 # 封面图像获取
                 success, data = self.primary(item_id)
                 if not success:
