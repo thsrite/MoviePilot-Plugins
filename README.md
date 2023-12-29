@@ -22,5 +22,5 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - [同步CookieCloud 1.1](docs%2FSyncCookieCloud.md)
 - [日程提醒 1.0](docs%2FScheduleReminder.md)
 - [订阅提醒 1.1](docs%2FSubscribeReminder.md)
-- [Emby观影报告 1.1](docs%2FEmbyReporter.md)
+- [Emby观影报告 1.2](docs%2FEmbyReporter.md)
 

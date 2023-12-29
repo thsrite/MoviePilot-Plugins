@@ -32,7 +32,7 @@ class EmbyReporter(_PluginBase):
     # 插件图标
     plugin_icon = "Pydiocells_A.png"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -380,6 +380,7 @@ class EmbyReporter(_PluginBase):
             except Exception:
                 continue
 
+        logger.info(f"过滤后未删除电影 {len(exites_movies)} 部")
         # 合并绘制
         if len(exites_movies) < 5:
             for i in range(5 - len(exites_movies) + 1):
@@ -397,6 +398,7 @@ class EmbyReporter(_PluginBase):
                 if not success:
                     continue
                 item_id = data["SeriesId"]
+                i['item_id'] = item_id
                 # 封面图像获取
                 success, data = self.primary(item_id)
                 if not success:
@@ -404,6 +406,7 @@ class EmbyReporter(_PluginBase):
                 exites_tvs.append(i)
             except Exception:
                 continue
+        logger.info(f"过滤后未删除电视剧 {len(exites_movies)} 部")
 
         all_ranks = exites_movies + exites_tvs
         index, offset_y = (-1, 0)
@@ -412,15 +415,6 @@ class EmbyReporter(_PluginBase):
             try:
                 # 榜单项数据
                 user_id, item_id, item_type, name, count, duarion = tuple(i)
-                print(item_type, item_id, name, count)
-                # 图片获取，剧集主封面获取
-                if item_type != "Movie":
-                    # 获取剧ID
-                    success, data = self.items(user_id, item_id)
-                    if not success:
-                        index -= 1
-                        continue
-                    item_id = data["SeriesId"]
                 # 封面图像获取
                 success, data = self.primary(item_id)
                 if not success:
