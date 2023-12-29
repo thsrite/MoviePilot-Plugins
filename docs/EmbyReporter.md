@@ -8,4 +8,4 @@
 
 需Emby安装Playback Report 插件
 
-插件依赖安装失败，请手动执行 `pip install python_telegram_bot`
+插件安装失败，请进容器手动执行 `cd /app/app/plugins/embyreporter && pip install -r requirements.txt`
