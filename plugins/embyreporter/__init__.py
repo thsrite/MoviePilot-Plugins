@@ -366,12 +366,46 @@ class EmbyReporter(_PluginBase):
         font_small = ImageFont.truetype(font_path, 14)
         font_count = ImageFont.truetype(font_path, 12)
 
-        # 合并绘制
-        if len(movies) < 5:
-            for i in range(5 - len(movies) + 1):
-                movies.append({"item_id": i})
+        exites_movies = []
+        for i in movies:
+            try:
+                # 榜单项数据
+                user_id, item_id, item_type, name, count, duarion = tuple(i)
+                print(item_type, item_id, name, count)
+                # 封面图像获取
+                success, data = self.primary(item_id)
+                if not success:
+                    continue
+                exites_movies.append(i)
+            except Exception:
+                continue
 
-        all_ranks = movies + tvshows
+        # 合并绘制
+        if len(exites_movies) < 5:
+            for i in range(5 - len(exites_movies) + 1):
+                exites_movies.append({"item_id": i})
+
+        exites_tvs = []
+        for i in tvshows:
+            try:
+                # 榜单项数据
+                user_id, item_id, item_type, name, count, duarion = tuple(i)
+                print(item_type, item_id, name, count)
+                # 图片获取，剧集主封面获取
+                # 获取剧ID
+                success, data = self.items(user_id, item_id)
+                if not success:
+                    continue
+                item_id = data["SeriesId"]
+                # 封面图像获取
+                success, data = self.primary(item_id)
+                if not success:
+                    continue
+                exites_tvs.append(i)
+            except Exception:
+                continue
+
+        all_ranks = exites_movies + exites_tvs
         index, offset_y = (-1, 0)
         for i in all_ranks:
             index += 1
