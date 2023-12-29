@@ -32,7 +32,7 @@ class EmbyReporter(_PluginBase):
     # 插件图标
     plugin_icon = "Pydiocells_A.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -117,11 +117,11 @@ class EmbyReporter(_PluginBase):
             return
 
         # 获取数据
-        success, movies = self.get_report(types=self.PLAYBACK_REPORTING_TYPE_MOVIE, days=self._days, limit=5)
+        success, movies = self.get_report(types=self.PLAYBACK_REPORTING_TYPE_MOVIE, days=int(self._days), limit=10)
         if not success:
             exit(movies)
         logger.info(f"获取到电影 {movies}")
-        success, tvshows = self.get_report(types=self.PLAYBACK_REPORTING_TYPE_TVSHOWS, days=self._days, limit=5)
+        success, tvshows = self.get_report(types=self.PLAYBACK_REPORTING_TYPE_TVSHOWS, days=int(self._days), limit=10)
         if not success:
             exit(tvshows)
         logger.info(f"获取到电视剧 {tvshows}")
@@ -385,6 +385,8 @@ class EmbyReporter(_PluginBase):
         if len(exites_movies) < 5:
             for i in range(5 - len(exites_movies) + 1):
                 exites_movies.append({"item_id": i})
+        if len(exites_movies) > 5:
+            exites_movies = exites_movies[:5]
 
         exites_tvs = []
         for i in tvshows:
@@ -405,7 +407,9 @@ class EmbyReporter(_PluginBase):
                 exites_tvs.append(i)
             except Exception:
                 continue
-        logger.info(f"过滤后未删除电视剧 {len(exites_movies)} 部")
+        logger.info(f"过滤后未删除电视剧 {len(exites_tvs)} 部")
+        if len(exites_tvs) > 5:
+            exites_tvs = exites_tvs[:5]
 
         all_ranks = exites_movies + exites_tvs
         index, offset_y = (-1, 0)
@@ -557,11 +561,11 @@ class EmbyReporter(_PluginBase):
         except Exception:
             return False, "🤕Emby 服务器连接失败!"
 
-    def get_report(self, types=None, user_id=None, days=7, end_date=datetime.now(pytz.timezone("Asia/Shanghai")),
+    def get_report(self, days, types=None, user_id=None, end_date=datetime.now(pytz.timezone("Asia/Shanghai")),
                    limit=10):
         if not types:
             types = self.PLAYBACK_REPORTING_TYPE_MOVIE
-        sub_date = end_date - timedelta(days=days)
+        sub_date = end_date - timedelta(days=int(days))
         start_time = sub_date.strftime("%Y-%m-%d 00:00:00")
         end_time = end_date.strftime("%Y-%m-%d 23:59:59")
         sql = "SELECT UserId, ItemId, ItemType, "
