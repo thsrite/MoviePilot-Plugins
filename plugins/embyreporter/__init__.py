@@ -1,10 +1,7 @@
 from datetime import datetime, timedelta
 
 import pytz
-from telegram.bot import Bot, Request
-from telegram import ParseMode
 from app.core.config import settings
-from app.modules.wechat import WeChat
 from app.plugins import _PluginBase
 from typing import Any, List, Dict, Tuple, Optional
 from app.log import logger
@@ -13,6 +10,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from app.plugins.embyreporter.emby import EmbyService
 from app.plugins.embyreporter.ranks_draw import RanksDraw
+from app.schemas import NotificationType
 
 
 class EmbyReporter(_PluginBase):
@@ -23,7 +21,7 @@ class EmbyReporter(_PluginBase):
     # 插件图标
     plugin_icon = "Pydiocells_A.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -95,6 +93,10 @@ class EmbyReporter(_PluginBase):
         """
         发送Emby观影报告
         """
+        # 本地路径转为url
+        if not self._mp_host:
+            return
+
         # 初始化对象
         emby = EmbyService(settings.EMBY_HOST, settings.EMBY_API_KEY)
         draw = RanksDraw(emby, self._res_dir)
@@ -116,25 +118,15 @@ class EmbyReporter(_PluginBase):
             return
 
         report_text = f"🌟*过去{self._days}日观影排行*\r\n\r\n"
-        if str(self._type) == "tg":
-            proxy = Request(proxy_url=settings.PROXY_HOST)
-            bot = Bot(token=settings.TELEGRAM_TOKEN, request=proxy)
-            bot.send_photo(
-                chat_id=settings.TELEGRAM_CHAT_ID,
-                photo=open(report_path, "rb"),
-                caption=report_text,
-                parse_mode=ParseMode.MARKDOWN_V2
-            )
-            logger.info("Emby观影记录推送Telegram成功")
-        else:
-            # 本地路径转为url
-            if not self._mp_host:
-                return
 
-            report_url = self._mp_host + report_path.replace("/public", "")
-            WeChat().send_msg(title=report_text,
-                              image=report_url)
-            logger.info("Emby观影记录推送微信应用成功")
+        report_url = self._mp_host + report_path.replace("/public", "")
+        mtype = NotificationType.MediaServer
+        if self._type:
+            mtype = NotificationType.__getitem__(str(self._type)) or NotificationType.MediaServer
+        self.post_message(title=report_text,
+                          mtype=mtype,
+                          image=report_url)
+        logger.info("Emby观影记录推送成功")
 
     def __update_config(self):
         self.update_config({
@@ -160,184 +152,166 @@ class EmbyReporter(_PluginBase):
         """
         拼装插件配置页面，需要返回两块数据：1、页面配置；2、数据结构
         """
+        MsgTypeOptions = []
+        for item in NotificationType:
+            MsgTypeOptions.append({
+                "title": item.value,
+                "value": item.name
+            })
         # 编历 NotificationType 枚举，生成消息类型选项
         return [
-            {
-                'component': 'VForm',
-                'content': [
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 6
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VSwitch',
-                                        'props': {
-                                            'model': 'enabled',
-                                            'label': '启用插件',
-                                        }
-                                    }
-                                ]
-                            },
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 6
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VSwitch',
-                                        'props': {
-                                            'model': 'onlyonce',
-                                            'label': '立即运行一次',
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 6
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextField',
-                                        'props': {
-                                            'model': 'cron',
-                                            'label': '执行周期',
-                                            'placeholder': '5位cron表达式，留空自动'
-                                        }
-                                    }
-                                ]
-                            },
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 6
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextField',
-                                        'props': {
-                                            'model': 'res_dir',
-                                            'label': '素材路径',
-                                            'placeholder': '本地素材路径，不传用默认'
-                                        }
-                                    }
-                                ]
-                            },
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 6
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextField',
-                                        'props': {
-                                            'model': 'days',
-                                            'label': '报告天数',
-                                            'placeholder': '向前获取数据的天数'
-                                        }
-                                    }
-                                ]
-                            },
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 6
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VSelect',
-                                        'props': {
-                                            'multiple': False,
-                                            'chips': True,
-                                            'model': 'type',
-                                            'label': '推送方式',
-                                            'items': [
-                                                {'title': 'Telegram', 'value': "tg"},
-                                                {'title': '微信', 'value': "wx"}
-                                            ]
-                                        }
-                                    }
-                                ]
-                            },
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextField',
-                                        'props': {
-                                            'model': 'mp_host',
-                                            'label': 'MoviePilot域名',
-                                            'placeholder': '推送方式非tg可用'
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VAlert',
-                                        'props': {
-                                            'type': 'info',
-                                            'variant': 'tonal',
-                                            'text': 'MoviePilot域名仅在微信推送方式时需要填写。末尾不带/'
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                ]
-            }
-        ], {
-            "enabled": False,
-            "onlyonce": False,
-            "cron": "5 1 * * *",
-            "res_dir": "",
-            "days": 7,
-            "mp_host": "",
-            "type": "tg"
-        }
+                   {
+                       'component': 'VForm',
+                       'content': [
+                           {
+                               'component': 'VRow',
+                               'content': [
+                                   {
+                                       'component': 'VCol',
+                                       'props': {
+                                           'cols': 12,
+                                           'md': 6
+                                       },
+                                       'content': [
+                                           {
+                                               'component': 'VSwitch',
+                                               'props': {
+                                                   'model': 'enabled',
+                                                   'label': '启用插件',
+                                               }
+                                           }
+                                       ]
+                                   },
+                                   {
+                                       'component': 'VCol',
+                                       'props': {
+                                           'cols': 12,
+                                           'md': 6
+                                       },
+                                       'content': [
+                                           {
+                                               'component': 'VSwitch',
+                                               'props': {
+                                                   'model': 'onlyonce',
+                                                   'label': '立即运行一次',
+                                               }
+                                           }
+                                       ]
+                                   }
+                               ]
+                           },
+                           {
+                               'component': 'VRow',
+                               'content': [
+                                   {
+                                       'component': 'VCol',
+                                       'props': {
+                                           'cols': 12,
+                                           'md': 6
+                                       },
+                                       'content': [
+                                           {
+                                               'component': 'VTextField',
+                                               'props': {
+                                                   'model': 'cron',
+                                                   'label': '执行周期',
+                                                   'placeholder': '5位cron表达式，留空自动'
+                                               }
+                                           }
+                                       ]
+                                   },
+                                   {
+                                       'component': 'VCol',
+                                       'props': {
+                                           'cols': 12,
+                                           'md': 6
+                                       },
+                                       'content': [
+                                           {
+                                               'component': 'VTextField',
+                                               'props': {
+                                                   'model': 'res_dir',
+                                                   'label': '素材路径',
+                                                   'placeholder': '本地素材路径，不传用默认'
+                                               }
+                                           }
+                                       ]
+                                   },
+                               ]
+                           },
+                           {
+                               'component': 'VRow',
+                               'content': [
+                                   {
+                                       'component': 'VCol',
+                                       'props': {
+                                           'cols': 12,
+                                           'md': 6
+                                       },
+                                       'content': [
+                                           {
+                                               'component': 'VTextField',
+                                               'props': {
+                                                   'model': 'days',
+                                                   'label': '报告天数',
+                                                   'placeholder': '向前获取数据的天数'
+                                               }
+                                           }
+                                       ]
+                                   },
+                                   {
+                                       'component': 'VCol',
+                                       'props': {
+                                           'cols': 12,
+                                           'md': 6
+                                       },
+                                       'content': [
+                                           {
+                                               'component': 'VSelect',
+                                               'props': {
+                                                   'multiple': False,
+                                                   'chips': True,
+                                                   'model': 'type',
+                                                   'label': '推送方式',
+                                                   'items': MsgTypeOptions
+                                               }
+                                           }
+                                       ]
+                                   },
+                               ]
+                           },
+                           {
+                               'component': 'VRow',
+                               'content': [
+                                   {
+                                       'component': 'VCol',
+                                       'props': {
+                                           'cols': 12
+                                       },
+                                       'content': [
+                                           {
+                                               'component': 'VTextField',
+                                               'props': {
+                                                   'model': 'mp_host',
+                                                   'label': 'MoviePilot域名',
+                                                   'placeholder': '必填，末尾不带/'
+                                               }
+                                           }
+                                       ]
+                                   }
+                               ]
+                           }
+                       ]
+                   }
+               ], {
+                   "enabled": False,
+                   "onlyonce": False,
+                   "cron": "5 1 * * *",
+                   "res_dir": "",
+                   "days": 7,
+                   "mp_host": "",
+                   "type": "tg"
+               }
 
     def get_page(self) -> List[dict]:
         pass
