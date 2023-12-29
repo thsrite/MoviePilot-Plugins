@@ -398,7 +398,7 @@ class EmbyReporter(_PluginBase):
                 if not success:
                     continue
                 item_id = data["SeriesId"]
-                i['item_id'] = item_id
+                i.update(item_id=item_id)
                 # 封面图像获取
                 success, data = self.primary(item_id)
                 if not success:
