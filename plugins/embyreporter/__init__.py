@@ -384,11 +384,14 @@ class EmbyReporter(_PluginBase):
                     # 获取剧ID
                     success, data = self.items(user_id, item_id)
                     if not success:
+                        index -= 1
                         continue
                     item_id = data["SeriesId"]
                 # 封面图像获取
                 success, data = self.primary(item_id)
                 if not success:
+                    if item_type != "Movie":
+                        index -= 1
                     continue
                 # 剧集Y偏移
                 if index >= 5:
