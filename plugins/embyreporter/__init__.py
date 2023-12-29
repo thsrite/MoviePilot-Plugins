@@ -51,6 +51,7 @@ class EmbyReporter(_PluginBase):
     _cron = None
     _days = None
     _type = None
+    _cnt = None
     _mp_host = None
     _scheduler: Optional[BackgroundScheduler] = None
 
@@ -69,6 +70,7 @@ class EmbyReporter(_PluginBase):
             self._cron = config.get("cron")
             self._res_dir = config.get("res_dir")
             self._days = config.get("days") or 7
+            self._cnt = config.get("cnt") or 10
             self._type = config.get("type") or "tg"
             self._mp_host = config.get("mp_host")
 
@@ -117,11 +119,13 @@ class EmbyReporter(_PluginBase):
             return
 
         # 获取数据
-        success, movies = self.get_report(types=self.PLAYBACK_REPORTING_TYPE_MOVIE, days=int(self._days), limit=10)
+        success, movies = self.get_report(types=self.PLAYBACK_REPORTING_TYPE_MOVIE, days=int(self._days),
+                                          limit=int(self._cnt))
         if not success:
             exit(movies)
         logger.info(f"获取到电影 {movies}")
-        success, tvshows = self.get_report(types=self.PLAYBACK_REPORTING_TYPE_TVSHOWS, days=int(self._days), limit=10)
+        success, tvshows = self.get_report(types=self.PLAYBACK_REPORTING_TYPE_TVSHOWS, days=int(self._days),
+                                           limit=int(self._cnt))
         if not success:
             exit(tvshows)
         logger.info(f"获取到电视剧 {tvshows}")
@@ -151,6 +155,7 @@ class EmbyReporter(_PluginBase):
             "onlyonce": self._onlyonce,
             "cron": self._cron,
             "days": self._days,
+            "cnt": self._cnt,
             "type": self._type,
             "mp_host": self._mp_host,
             "res_dir": self._res_dir
@@ -285,6 +290,46 @@ class EmbyReporter(_PluginBase):
                                        },
                                        'content': [
                                            {
+                                               'component': 'VTextField',
+                                               'props': {
+                                                   'model': 'cnt',
+                                                   'label': '观影记录数量',
+                                                   'placeholder': '获取观影数据数量，默认10'
+                                               }
+                                           }
+                                       ]
+                                   },
+
+                               ]
+                           },
+                           {
+                               'component': 'VRow',
+                               'content': [
+                                   {
+                                       'component': 'VCol',
+                                       'props': {
+                                           'cols': 12,
+                                           'md': 6
+                                       },
+                                       'content': [
+                                           {
+                                               'component': 'VTextField',
+                                               'props': {
+                                                   'model': 'mp_host',
+                                                   'label': 'MoviePilot域名',
+                                                   'placeholder': '必填，末尾不带/'
+                                               }
+                                           }
+                                       ]
+                                   },
+                                   {
+                                       'component': 'VCol',
+                                       'props': {
+                                           'cols': 12,
+                                           'md': 6
+                                       },
+                                       'content': [
+                                           {
                                                'component': 'VSelect',
                                                'props': {
                                                    'multiple': False,
@@ -304,15 +349,15 @@ class EmbyReporter(_PluginBase):
                                    {
                                        'component': 'VCol',
                                        'props': {
-                                           'cols': 12
+                                           'cols': 12,
                                        },
                                        'content': [
                                            {
-                                               'component': 'VTextField',
+                                               'component': 'VAlert',
                                                'props': {
-                                                   'model': 'mp_host',
-                                                   'label': 'MoviePilot域名',
-                                                   'placeholder': '必填，末尾不带/'
+                                                   'type': 'info',
+                                                   'variant': 'tonal',
+                                                   'text': '如生成观影记录有空白记录，可酌情调大观影记录数量。'
                                                }
                                            }
                                        ]
@@ -327,6 +372,7 @@ class EmbyReporter(_PluginBase):
                    "cron": "5 1 * * *",
                    "res_dir": "",
                    "days": 7,
+                   "cnt": 10,
                    "mp_host": "",
                    "type": ""
                }
