@@ -357,7 +357,7 @@ class EmbyReporter(_PluginBase):
                                                'props': {
                                                    'type': 'info',
                                                    'variant': 'tonal',
-                                                   'text': '如生成观影记录有空白记录，可酌情调大观影记录数量。'
+                                                   'text': '如生成观影报告有空白记录，可酌情调大观影记录数量。'
                                                }
                                            }
                                        ]
