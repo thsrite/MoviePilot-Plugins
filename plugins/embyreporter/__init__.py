@@ -371,8 +371,9 @@ class EmbyReporter(_PluginBase):
             movies.extend([] * (5 - len(movies)))
 
         all_ranks = movies + tvshows
-        index, offset_y = (0, 0)
+        index, offset_y = (-1, 0)
         for i in all_ranks:
+            index += 1
             try:
                 # 榜单项数据
                 user_id, item_id, item_type, name, count, duarion = tuple(i)
@@ -417,12 +418,13 @@ class EmbyReporter(_PluginBase):
                                                  353 + offset_y),
                                              str(count), font_count, 126)
                 self.draw_text_psd_style(text, (74 + 145 * index, 542 + font_offset_y + offset_y), name, temp_font, 126)
-                index += 1
             except Exception:
                 continue
 
         if index > 0:
             save_path = "/public/report.jpg"
+            if Path(save_path).exists():
+                Path.unlink(Path(save_path))
             bg.save(save_path)
             return save_path
         return None
