@@ -102,5 +102,13 @@
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/subscribe_reminder.png",
         "author": "thsrite",
         "level": 1
+      },
+      "EmbyReporter": {
+          "name": "Emby观影报告",
+          "description": "推送Emby观影报告，需Emby安装Playback Report 插件。",
+          "version": "1.0",
+          "icon": "Pydiocells_A.png",
+          "author": "thsrite",
+          "level": 1
       }
 }
