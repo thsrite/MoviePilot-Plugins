@@ -10,5 +10,6 @@
 需Emby安装Playback Report 插件
 
 /data/EmbyReporter/rss/下路径映射到mp容器内
-![img.png](../img/img.png)
-![img_1.png](../img/img_1.png)
+
+![img.png](../img/EmbyReporter/img.png)
+![img_1.png](../img/EmbyReporter/img_1.png)
