@@ -368,7 +368,8 @@ class EmbyReporter(_PluginBase):
 
         # 合并绘制
         if len(movies) < 5:
-            movies.extend([] * (5 - len(movies)))
+            for i in range(5 - len(movies) + 1):
+                movies.append({"item_id": i})
 
         all_ranks = movies + tvshows
         index, offset_y = (-1, 0)
