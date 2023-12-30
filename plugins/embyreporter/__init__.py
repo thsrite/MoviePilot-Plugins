@@ -156,7 +156,7 @@ class EmbyReporter(_PluginBase):
             return
 
         # 发送海报
-        report_title = f"🌟*过去{self._days}日观影排行*\r\n\r\n"
+        report_title = f"🌟*过去{self._days}日观影排行*"
 
         report_url = self._mp_host + report_path.replace("/public", "")
         mtype = NotificationType.MediaServer
