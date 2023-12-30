@@ -32,7 +32,7 @@ class EmbyReporter(_PluginBase):
     # 插件图标
     plugin_icon = "Pydiocells_A.png"
     # 插件版本
-    plugin_version = "1.3"
+    plugin_version = "1.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -53,14 +53,21 @@ class EmbyReporter(_PluginBase):
     _type = None
     _cnt = None
     _mp_host = None
+    _emby_host = None
+    _emby_api_key = None
+    _text_url = None
+    _show_counts = True
     _scheduler: Optional[BackgroundScheduler] = None
 
     PLAYBACK_REPORTING_TYPE_MOVIE = "ItemName"
     PLAYBACK_REPORTING_TYPE_TVSHOWS = "substr(ItemName,0, instr(ItemName, ' - '))"
     host = None
+    api_key = None
 
     def init_plugin(self, config: dict = None):
-        self.host = "http://" + settings.EMBY_HOST
+        self.host = f"http://{settings.EMBY_HOST}" if not str(settings.EMBY_HOST).startswith(
+            "http") else settings.EMBY_HOST
+        self.api_key = settings.EMBY_API_KEY
         # 停止现有任务
         self.stop_service()
 
@@ -73,6 +80,14 @@ class EmbyReporter(_PluginBase):
             self._cnt = config.get("cnt") or 10
             self._type = config.get("type") or "tg"
             self._mp_host = config.get("mp_host")
+            self._show_counts = config.get("show_counts")
+            self._text_url = config.get("text_url")
+            self._emby_host = config.get("emby_host")
+            self._emby_api_key = config.get("emby_api_key")
+            if self._emby_host and self._emby_api_key:
+                self.host = f"http://{self._emby_host}" if not str(self._emby_host).startswith(
+                    "http") else self._emby_host
+                self.api_key = self._emby_api_key
 
             if self._enabled or self._onlyonce:
                 # 定时服务
@@ -131,21 +146,35 @@ class EmbyReporter(_PluginBase):
         logger.info(f"获取到电视剧 {tvshows}")
 
         # 绘制海报
-        report_path = self.draw(self._res_dir, movies, tvshows)
+        report_path = self.draw(res_path=self._res_dir,
+                                movies=movies,
+                                tvshows=tvshows,
+                                show_count=self._show_counts)
 
         if not report_path:
             logger.error("生成海报失败")
             return
 
         # 发送海报
-        report_text = f"🌟*过去{self._days}日观影排行*\r\n\r\n"
+        report_title = f"🌟*过去{self._days}日观影排行*\r\n\r\n"
 
         report_url = self._mp_host + report_path.replace("/public", "")
         mtype = NotificationType.MediaServer
         if self._type:
             mtype = NotificationType.__getitem__(str(self._type)) or NotificationType.MediaServer
-        self.post_message(title=report_text,
+
+        # 每日一言
+        report_text = None
+        if self._text_url:
+            try:
+                resp = RequestUtils().get_res(url=self._text_url)
+                if resp.status_code == 200:
+                    report_text = resp.text
+            except Exception as e:
+                print(e)
+        self.post_message(title=report_title,
                           mtype=mtype,
+                          text=report_text,
                           image=report_url)
         logger.info(f"Emby观影记录推送成功 {report_url}")
 
@@ -158,6 +187,10 @@ class EmbyReporter(_PluginBase):
             "cnt": self._cnt,
             "type": self._type,
             "mp_host": self._mp_host,
+            "text_url": self._text_url,
+            "show_counts": self._show_counts,
+            "emby_host": self._emby_host,
+            "emby_api_key": self._emby_api_key,
             "res_dir": self._res_dir
         })
 
@@ -255,7 +288,7 @@ class EmbyReporter(_PluginBase):
                                                'props': {
                                                    'model': 'res_dir',
                                                    'label': '素材路径',
-                                                   'placeholder': '本地素材路径，不传用默认'
+                                                   'placeholder': '本地素材路径'
                                                }
                                            }
                                        ]
@@ -298,8 +331,7 @@ class EmbyReporter(_PluginBase):
                                                }
                                            }
                                        ]
-                                   },
-
+                                   }
                                ]
                            },
                            {
@@ -350,6 +382,86 @@ class EmbyReporter(_PluginBase):
                                        'component': 'VCol',
                                        'props': {
                                            'cols': 12,
+                                           'md': 6
+                                       },
+                                       'content': [
+                                           {
+                                               'component': 'VSelect',
+                                               'props': {
+                                                   'model': 'show_counts',
+                                                   'label': '是否显示观看次数',
+                                                   'items': [
+                                                       {'title': '是', 'value': True},
+                                                       {'title': '否', 'value': False}
+                                                   ]
+                                               }
+                                           }
+                                       ]
+                                   },
+                                   {
+                                       'component': 'VCol',
+                                       'props': {
+                                           'cols': 12,
+                                           'md': 6
+                                       },
+                                       'content': [
+                                           {
+                                               'component': 'VTextField',
+                                               'props': {
+                                                   'model': 'text_url',
+                                                   'label': '每日一言api',
+                                                   'placeholder': '空则不发送'
+                                               }
+                                           }
+                                       ]
+                                   }
+                               ]
+                           },
+                           {
+                               'component': 'VRow',
+                               'content': [
+                                   {
+                                       'component': 'VCol',
+                                       'props': {
+                                           'cols': 12,
+                                           'md': 6
+                                       },
+                                       'content': [
+                                           {
+                                               'component': 'VTextField',
+                                               'props': {
+                                                   'model': 'emby_host',
+                                                   'label': '自定义emby host',
+                                                   'placeholder': 'IP:PORT'
+                                               }
+                                           }
+                                       ]
+                                   },
+                                   {
+                                       'component': 'VCol',
+                                       'props': {
+                                           'cols': 12,
+                                           'md': 6
+                                       },
+                                       'content': [
+                                           {
+                                               'component': 'VTextField',
+                                               'props': {
+                                                   'model': 'emby_api_key',
+                                                   'label': '自定义emby apiKey'
+                                               }
+                                           }
+                                       ]
+                                   }
+                               ]
+                           },
+                           {
+                               'component': 'VRow',
+                               'content': [
+                                   {
+                                       'component': 'VCol',
+                                       'props': {
+                                           'cols': 12,
                                        },
                                        'content': [
                                            {
@@ -358,6 +470,27 @@ class EmbyReporter(_PluginBase):
                                                    'type': 'info',
                                                    'variant': 'tonal',
                                                    'text': '如生成观影报告有空白记录，可酌情调大观影记录数量。'
+                                               }
+                                           }
+                                       ]
+                                   }
+                               ]
+                           },
+                           {
+                               'component': 'VRow',
+                               'content': [
+                                   {
+                                       'component': 'VCol',
+                                       'props': {
+                                           'cols': 12,
+                                       },
+                                       'content': [
+                                           {
+                                               'component': 'VAlert',
+                                               'props': {
+                                                   'type': 'info',
+                                                   'variant': 'tonal',
+                                                   'text': '如未设置自定义emby配置，则读取环境变量emby配置。'
                                                }
                                            }
                                        ]
@@ -373,7 +506,11 @@ class EmbyReporter(_PluginBase):
                    "res_dir": "",
                    "days": 7,
                    "cnt": 10,
+                   "emby_host": "",
+                   "emby_api_key": "",
                    "mp_host": "",
+                   "show_counts": True,
+                   "text_url": "",
                    "type": ""
                }
 
@@ -598,7 +735,7 @@ class EmbyReporter(_PluginBase):
     @cache.memoize(ttl=300)
     def items(self, user_id, item_id):
         try:
-            url = f"{self.host}/emby/Users/{user_id}/Items/{item_id}?api_key={settings.EMBY_API_KEY}"
+            url = f"{self.host}/emby/Users/{user_id}/Items/{item_id}?api_key={self.api_key}"
             resp = RequestUtils().get_res(url=url)
 
             if resp.status_code != 204 and resp.status_code != 200:
@@ -628,7 +765,7 @@ class EmbyReporter(_PluginBase):
         sql += "ORDER BY play_count DESC "
         sql += "LIMIT " + str(limit)
 
-        url = f"{self.host}/emby/user_usage_stats/submit_custom_query?api_key={settings.EMBY_API_KEY}"
+        url = f"{self.host}/emby/user_usage_stats/submit_custom_query?api_key={self.api_key}"
 
         data = {
             "CustomQueryString": sql,
