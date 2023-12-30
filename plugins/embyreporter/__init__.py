@@ -170,6 +170,9 @@ class EmbyReporter(_PluginBase):
                 resp = RequestUtils().get_res(url=self._text_url)
                 if resp.status_code == 200:
                     report_text = resp.text
+
+                if report_text:
+                    report_text = str(report_text).replace("<p>", "").replace("</p>", "")
             except Exception as e:
                 print(e)
         self.post_message(title=report_title,
