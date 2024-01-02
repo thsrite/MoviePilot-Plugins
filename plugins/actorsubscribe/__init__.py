@@ -225,11 +225,6 @@ class ActorSubscribe(_PluginBase):
                                     }
                                 ]
                             },
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
                             {
                                 'component': 'VCol',
                                 'props': {
