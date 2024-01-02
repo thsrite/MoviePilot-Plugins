@@ -103,6 +103,7 @@ class ActorSubscribe(_PluginBase):
         # 检查订阅
         actors = str(self._actors).split(",")
         for mediainfo in medias:
+            logger.info(f"开始处理电影 {mediainfo.title_year}")
             if mediainfo.actors:
                 for actor in mediainfo.actors:
                     if actors.__contains__(actor):
