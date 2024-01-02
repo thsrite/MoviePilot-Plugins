@@ -21,7 +21,7 @@ class ActorSubscribe(_PluginBase):
     # 插件图标
     plugin_icon = "Mdcng_A.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -40,6 +40,38 @@ class ActorSubscribe(_PluginBase):
     _actors = None
     subscribechain = None
     _scheduler: Optional[BackgroundScheduler] = None
+    _quality = None
+    _resolution = None
+    _effect = None
+    # 质量选择框数据
+    _qualityOptions = {
+        '全部': '',
+        '蓝光原盘': 'Blu-?Ray.+VC-?1|Blu-?Ray.+AVC|UHD.+blu-?ray.+HEVC|MiniBD',
+        'Remux': 'Remux',
+        'BluRay': 'Blu-?Ray',
+        'UHD': 'UHD|UltraHD',
+        'WEB-DL': 'WEB-?DL|WEB-?RIP',
+        'HDTV': 'HDTV',
+        'H265': '[Hx].?265|HEVC',
+        'H264': '[Hx].?264|AVC'
+    }
+
+    # 分辨率选择框数据
+    _resolutionOptions = {
+        '全部': '',
+        '4k': '4K|2160p|x2160',
+        '1080p': '1080[pi]|x1080',
+        '720p': '720[pi]|x720'
+    }
+
+    # 特效选择框数据
+    _effectOptions = {
+        '全部': '',
+        '杜比视界': 'Dolby[\\s.]+Vision|DOVI|[\\s.]+DV[\\s.]+',
+        '杜比全景声': 'Dolby[\\s.]*\\+?Atmos|Atmos',
+        'HDR': '[\\s.]+HDR[\\s.]+|HDR10|HDR10\\+',
+        'SDR': '[\\s.]+SDR[\\s.]+',
+    }
 
     def init_plugin(self, config: dict = None):
         self.subscribechain = SubscribeChain()
@@ -51,6 +83,9 @@ class ActorSubscribe(_PluginBase):
             self._onlyonce = config.get("onlyonce")
             self._cron = config.get("cron")
             self._actors = config.get("actors")
+            self._quality = config.get("quality")
+            self._resolution = config.get("resolution")
+            self._effect = config.get("effect")
 
             if self._enabled or self._onlyonce:
                 # 定时服务
@@ -127,6 +162,9 @@ class ActorSubscribe(_PluginBase):
                                                     tmdbid=mediainfo.tmdb_id,
                                                     doubanid=mediainfo.douban_id,
                                                     exist_ok=True,
+                                                    quality=self._quality,
+                                                    resolution=self._resolution,
+                                                    effect=self._effect,
                                                     username=settings.SUPERUSER)
                             # 存储历史记录
                             history.append({
@@ -149,7 +187,10 @@ class ActorSubscribe(_PluginBase):
             "enabled": self._enabled,
             "onlyonce": self._onlyonce,
             "cron": self._cron,
-            "actors": self._actors
+            "actors": self._actors,
+            "quality": self._quality,
+            "resolution": self._resolution,
+            "effect": self._effect
         })
 
     def get_state(self) -> bool:
@@ -166,6 +207,11 @@ class ActorSubscribe(_PluginBase):
         """
         拼装插件配置页面，需要返回两块数据：1、页面配置；2、数据结构
         """
+        qualityOptions = [{"title": i, "value": self._qualityOptions.get(i)} for i in self._qualityOptions.keys()]
+        resolutionOptions = [{"title": i, "value": self._resolutionOptions.get(i)} for i in
+                             self._resolutionOptions.keys()]
+        effectOptions = [{"title": i, "value": self._effectOptions.get(i)} for i in self._effectOptions.keys()]
+
         return [
             {
                 'component': 'VForm',
@@ -246,6 +292,68 @@ class ActorSubscribe(_PluginBase):
                             },
                         ]
                     },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'multiple': False,
+                                            'chips': True,
+                                            'model': 'quality',
+                                            'label': '质量',
+                                            'items': qualityOptions
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'multiple': False,
+                                            'chips': True,
+                                            'model': 'resolution',
+                                            'label': '分辨率',
+                                            'items': resolutionOptions
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'multiple': False,
+                                            'chips': True,
+                                            'model': 'effect',
+                                            'label': '特效',
+                                            'items': effectOptions
+                                        }
+                                    }
+                                ]
+                            },
+                        ]
+                    },
                 ]
             }
         ], {
@@ -253,6 +361,9 @@ class ActorSubscribe(_PluginBase):
             "onlyonce": False,
             "cron": "5 1 * * *",
             "actors": "",
+            "quality": "",
+            "resolution": "",
+            "effect": "",
         }
 
     def get_page(self) -> List[dict]:
