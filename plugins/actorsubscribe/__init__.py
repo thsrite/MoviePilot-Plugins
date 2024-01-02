@@ -43,6 +43,7 @@ class ActorSubscribe(_PluginBase):
     _quality = None
     _resolution = None
     _effect = None
+    _clear = False
     # 质量选择框数据
     _qualityOptions = {
         '全部': '',
@@ -86,6 +87,7 @@ class ActorSubscribe(_PluginBase):
             self._quality = config.get("quality")
             self._resolution = config.get("resolution")
             self._effect = config.get("effect")
+            self._clear = config.get("_clear")
 
             if self._enabled or self._onlyonce:
                 # 定时服务
@@ -128,8 +130,12 @@ class ActorSubscribe(_PluginBase):
             logger.warn("暂无订阅明星，停止运行")
             return
 
-        history: List[dict] = self.get_data('history') or []
-        already_handle: List[dict] = self.get_data('already_handle') or []
+        if self._clear:
+            history: List[dict] = []
+            already_handle: List[dict] = []
+        else:
+            history: List[dict] = self.get_data('history') or []
+            already_handle: List[dict] = self.get_data('already_handle') or []
 
         movies = DoubanChain().movie_showing(page=1, count=100)
         if not movies:
@@ -182,6 +188,9 @@ class ActorSubscribe(_PluginBase):
         self.save_data('history', history)
         self.save_data('already_handle', already_handle)
 
+        self._clear = False
+        self.__update_config()
+
     def __update_config(self):
         self.update_config({
             "enabled": self._enabled,
@@ -190,7 +199,8 @@ class ActorSubscribe(_PluginBase):
             "actors": self._actors,
             "quality": self._quality,
             "resolution": self._resolution,
-            "effect": self._effect
+            "effect": self._effect,
+            "clear": self._clear,
         })
 
     def get_state(self) -> bool:
@@ -354,6 +364,27 @@ class ActorSubscribe(_PluginBase):
                             },
                         ]
                     },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'clear',
+                                            'label': '清理历史记录',
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    }
                 ]
             }
         ], {
@@ -364,6 +395,7 @@ class ActorSubscribe(_PluginBase):
             "quality": "",
             "resolution": "",
             "effect": "",
+            "clear": False
         }
 
     def get_page(self) -> List[dict]:
