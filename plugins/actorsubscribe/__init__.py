@@ -91,11 +91,10 @@ class ActorSubscribe(_PluginBase):
             self._quality = config.get("quality")
             self._resolution = config.get("resolution")
             self._effect = config.get("effect")
-            self._clear = config.get("_clear")
+            self._clear = config.get("clear")
 
             # 清理插件历史
-            if bool(self._clear):
-                logger.info("开始清理历史")
+            if self._clear:
                 self.del_data(key="history")
                 self.del_data(key="already_handle")
 
@@ -165,8 +164,12 @@ class ActorSubscribe(_PluginBase):
 
             # 元数据
             meta = MetaInfo(mediainfo.title)
-            if not mediainfo.tmdb_id and meta.tmdbid:
-                mediainfo.tmdb_id = meta.tmdbid
+
+            # 识别豆瓣信息
+            mediainfo = self.chain.recognize_media(meta=meta, doubanid=mediainfo.douban_id)
+            if not mediainfo:
+                logger.warn(f'未识别到媒体信息，标题：{mediainfo.title}，豆瓣ID：{mediainfo.douban_id}')
+                continue
 
             # 查询缺失的媒体信息
             exist_flag, _ = self.downloadchain.get_no_exists_info(meta=meta, mediainfo=mediainfo)
