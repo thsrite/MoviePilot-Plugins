@@ -23,5 +23,5 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - [日程提醒 1.0](docs%2FScheduleReminder.md)
 - [订阅提醒 1.1](docs%2FSubscribeReminder.md)
 - [Emby观影报告 1.4](docs%2FEmbyReporter.md)
-- [豆瓣明星热映订阅 1.1](docs%2FActorSubscribe.md)
+- [豆瓣明星热映订阅 1.2](docs%2FActorSubscribe.md)
 
