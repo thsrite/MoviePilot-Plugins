@@ -110,5 +110,13 @@
           "icon": "Pydiocells_A.png",
           "author": "thsrite",
           "level": 1
+      },
+      "ActorSubscribe": {
+          "name": "豆瓣明星热映订阅",
+          "description": "自动订阅豆瓣明星最新电影。",
+          "version": "1.0",
+          "icon": "Mdcng_A.png",
+          "author": "thsrite",
+          "level": 1
       }
 }
