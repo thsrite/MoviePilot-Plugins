@@ -93,6 +93,14 @@ class ActorSubscribe(_PluginBase):
             self._effect = config.get("effect")
             self._clear = config.get("_clear")
 
+            # 清理插件历史
+            if self._clear:
+                self.del_data(key="history")
+                self.del_data(key="already_handle")
+
+                self._clear = False
+                self.__update_config()
+
             if self._enabled or self._onlyonce:
                 # 定时服务
                 self._scheduler = BackgroundScheduler(timezone=settings.TZ)
@@ -205,9 +213,6 @@ class ActorSubscribe(_PluginBase):
         # 保存历史记录
         self.save_data('history', history)
         self.save_data('already_handle', already_handle)
-
-        self._clear = False
-        self.__update_config()
 
     def __update_config(self):
         self.update_config({
