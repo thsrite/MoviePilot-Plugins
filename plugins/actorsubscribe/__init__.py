@@ -106,7 +106,7 @@ class ActorSubscribe(_PluginBase):
         actors = str(self._actors).split(",")
         for mediainfo in medias:
             if mediainfo.title_year in already_handle:
-                logger.info("电影 {mediainfo.title_year} 已被处理，跳过")
+                logger.info(f"电影 {mediainfo.title_year} 已被处理，跳过")
 
             already_handle.append(mediainfo.title_year)
             logger.info(f"开始处理电影 {mediainfo.title_year}")
@@ -125,7 +125,7 @@ class ActorSubscribe(_PluginBase):
                                                 mtype=mediainfo.type,
                                                 tmdbid=mediainfo.tmdb_id,
                                                 exist_ok=True,
-                                                username="豆瓣榜单")
+                                                username=settings.SUPERUSER)
                         # 存储历史记录
                         history.append({
                             "title": mediainfo.title,
