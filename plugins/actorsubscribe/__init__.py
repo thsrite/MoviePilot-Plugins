@@ -94,12 +94,14 @@ class ActorSubscribe(_PluginBase):
             self._clear = config.get("_clear")
 
             # 清理插件历史
-            if self._clear:
+            if bool(self._clear):
+                logger.info("开始清理历史")
                 self.del_data(key="history")
                 self.del_data(key="already_handle")
 
                 self._clear = False
                 self.__update_config()
+                logger.info("历史清理完成")
 
             if self._enabled or self._onlyonce:
                 # 定时服务
@@ -142,12 +144,8 @@ class ActorSubscribe(_PluginBase):
             logger.warn("暂无订阅明星，停止运行")
             return
 
-        if self._clear:
-            history: List[dict] = []
-            already_handle: List[dict] = []
-        else:
-            history: List[dict] = self.get_data('history') or []
-            already_handle: List[dict] = self.get_data('already_handle') or []
+        history: List[dict] = self.get_data('history') or []
+        already_handle: List[dict] = self.get_data('already_handle') or []
 
         movies = DoubanChain().movie_showing(page=1, count=100)
         if not movies:
