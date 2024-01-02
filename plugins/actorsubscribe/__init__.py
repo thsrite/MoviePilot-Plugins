@@ -7,7 +7,7 @@ from app.chain.subscribe import SubscribeChain
 from app.core.config import settings
 from app.core.context import MediaInfo
 from app.plugins import _PluginBase
-from typing import Any, List, Dict, Tuple
+from typing import Any, List, Dict, Tuple, Optional
 from app.log import logger
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -39,6 +39,7 @@ class ActorSubscribe(_PluginBase):
     _cron: str = ""
     _actors = None
     subscribechain = None
+    _scheduler: Optional[BackgroundScheduler] = None
 
     def init_plugin(self, config: dict = None):
         self.subscribechain = SubscribeChain()
@@ -111,7 +112,7 @@ class ActorSubscribe(_PluginBase):
             logger.info(f"开始处理电影 {mediainfo.title_year}")
             if mediainfo.actors:
                 for actor in mediainfo.actors:
-                    if actors.__contains__(actor):
+                    if actor in actors:
                         # 开始订阅
                         logger.info(f"电影 {mediainfo.title_year} 命中订阅演员 {actor}，开始订阅")
                         # 判断用户是否已经添加订阅
