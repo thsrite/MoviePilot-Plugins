@@ -114,29 +114,31 @@ class ActorSubscribe(_PluginBase):
                 for actor in mediainfo.actors:
                     if actor in actors:
                         # 开始订阅
-                        logger.info(f"电影 {mediainfo.title_year} 命中订阅演员 {actor}，开始订阅")
+                        logger.info(f"电影 {mediainfo.title_year} {mediainfo.tmdb_id} 命中订阅演员 {actor}，开始订阅")
                         # 判断用户是否已经添加订阅
                         if self.subscribechain.exists(mediainfo=mediainfo):
                             logger.info(f'{mediainfo.title_year} 订阅已存在')
                             continue
-                        # 添加订阅
-                        self.subscribechain.add(title=mediainfo.title,
-                                                year=mediainfo.year,
-                                                mtype=mediainfo.type,
-                                                tmdbid=mediainfo.tmdb_id,
-                                                exist_ok=True,
-                                                username=settings.SUPERUSER)
-                        # 存储历史记录
-                        history.append({
-                            "title": mediainfo.title,
-                            "type": mediainfo.type.value,
-                            "year": mediainfo.year,
-                            "poster": mediainfo.get_poster_image(),
-                            "overview": mediainfo.overview,
-                            "tmdbid": mediainfo.tmdb_id,
-                            "doubanid": mediainfo.douban_id,
-                            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        })
+                        else:
+                            # 添加订阅
+                            self.subscribechain.add(title=mediainfo.title,
+                                                    year=mediainfo.year,
+                                                    mtype=mediainfo.type,
+                                                    tmdbid=mediainfo.tmdb_id,
+                                                    doubanid=mediainfo.douban_id,
+                                                    exist_ok=True,
+                                                    username=settings.SUPERUSER)
+                            # 存储历史记录
+                            history.append({
+                                "title": mediainfo.title,
+                                "type": mediainfo.type.value,
+                                "year": mediainfo.year,
+                                "poster": mediainfo.get_poster_image(),
+                                "overview": mediainfo.overview,
+                                "tmdbid": mediainfo.tmdb_id,
+                                "doubanid": mediainfo.douban_id,
+                                "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                            })
 
         # 保存历史记录
         self.save_data('history', history)
