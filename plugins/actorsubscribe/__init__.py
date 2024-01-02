@@ -93,6 +93,7 @@ class ActorSubscribe(_PluginBase):
             return
 
         history: List[dict] = self.get_data('history') or []
+        already_handle: List[dict] = self.get_data('already_handle') or []
 
         movies = DoubanChain().movie_showing(page=1, count=100)
         if not movies:
@@ -103,6 +104,10 @@ class ActorSubscribe(_PluginBase):
         # 检查订阅
         actors = str(self._actors).split(",")
         for mediainfo in medias:
+            if mediainfo.title_year in already_handle:
+                logger.info("电影 {mediainfo.title_year} 已被处理，跳过")
+
+            already_handle.append(mediainfo.title_year)
             logger.info(f"开始处理电影 {mediainfo.title_year}")
             if mediainfo.actors:
                 for actor in mediainfo.actors:
@@ -131,6 +136,10 @@ class ActorSubscribe(_PluginBase):
                             "doubanid": mediainfo.douban_id,
                             "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         })
+
+        # 保存历史记录
+        self.save_data('history', history)
+        self.save_data('already_handle', already_handle)
 
     def __update_config(self):
         self.update_config({
