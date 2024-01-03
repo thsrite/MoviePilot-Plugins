@@ -46,7 +46,7 @@ class ShortPlayMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Amule_B.png"
     # 插件版本
-    plugin_version = "1.3"
+    plugin_version = "1.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -230,18 +230,23 @@ class ShortPlayMonitor(_PluginBase):
             # 硬链接
             if isinstance(rename_conf, bool):
                 if rename_conf:
-                    # 预处理标题
-                    title, _ = WordsMatcher().prepare(Path(target_path).name)
-                else:
-                    title = Path(target_path).name
+                    target = target_path.replace(dest_dir, "")
+                    parent = Path(Path(target).parents[0])
+                    last = target.replace(str(parent), "")
+                    # 自定义识别次
+                    title, _ = WordsMatcher().prepare(parent)
+                    target_path = Path(dest_dir) / title / last
             else:
                 if str(rename_conf) == "smart":
-                    title = Path(target_path).name.split(".")[0]
+                    target = target_path.replace(dest_dir, "")
+                    parent = Path(Path(target).parents[0])
+                    last = target.replace(str(parent), "")
+                    # 取.第一个
+                    title = Path(parent).name.split(".")[0]
+                    target_path = Path(dest_dir) / title / last
                 else:
                     logger.error(f"{target_path} 智能重命名失败")
                     return
-
-            target_path = Path(target_path).parent / title
 
             # 文件夹同步创建
             if is_directory:
