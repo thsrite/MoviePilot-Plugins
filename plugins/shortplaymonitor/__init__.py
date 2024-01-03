@@ -298,10 +298,11 @@ class ShortPlayMonitor(_PluginBase):
                 if thumb_path.exists():
                     logger.info(f"缩略图已存在：{thumb_path}")
                     return
-                if self.get_thumb(video_path=str(file_path),
-                                  image_path=str(thumb_path),
-                                  cover_conf=str(cover_conf),
-                                  frames=self._timeline):
+                self.get_thumb(video_path=str(file_path),
+                               image_path=str(thumb_path),
+                               cover_conf=str(cover_conf),
+                               frames=self._timeline)
+                if Path(thumb_path).exists():
                     logger.info(f"{file_path} 缩略图已生成：{thumb_path}")
                     return thumb_path
             except Exception as err:
