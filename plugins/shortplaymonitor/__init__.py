@@ -48,7 +48,7 @@ class ShortPlayMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Amule_B.png"
     # 插件版本
-    plugin_version = "1.5"
+    plugin_version = "2.0"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
