@@ -365,7 +365,7 @@ class ShortPlayMonitor(_PluginBase):
             frames = "00:00:20"
         if not video_path or not image_path:
             return False
-        cmd = 'ffmpeg -y -i "{video_path}" -ss {frames} -frames 1 -vf "scale={cover_conf}" -f image2 "{image_path}"'.format(
+        cmd = 'ffmpeg -y -i "{video_path}" -ss {frames} -frames 1 -vf "scale={cover_conf}" "{image_path}"'.format(
             video_path=video_path,
             frames=frames,
             cover_conf=cover_conf,
