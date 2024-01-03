@@ -118,5 +118,13 @@
           "icon": "Mdcng_A.png",
           "author": "thsrite",
           "level": 1
+      },
+      "ShortPlayMonitor": {
+          "name": "短剧刮削",
+          "description": "监控视频短剧创建，刮削。",
+          "version": "1.0",
+          "icon": "Amule_B.png",
+          "author": "thsrite",
+          "level": 1
       }
 }
