@@ -266,10 +266,10 @@ class ShortPlayMonitor(_PluginBase):
                     logger.info(f"文件 {event_path} 硬链接完成")
 
                     # 生成缩略图
-                    thumb_path = self.gen_file_thumb(file_path=target_path,
-                                                     cover_conf=cover_conf)
                     if not (target_path.parent / "poster.jpg").exists():
-                        SystemUtils.copy(thumb_path, target_path.parent / "poster.jpg")
+                        thumb_path = self.gen_file_thumb(file_path=target_path,
+                                                         cover_conf=cover_conf)
+                        SystemUtils.move(thumb_path, target_path.parent / "poster.jpg")
                 else:
                     logger.error(f"文件 {event_path} 硬链接失败，错误码：{retcode}")
 
