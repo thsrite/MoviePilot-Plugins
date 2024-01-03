@@ -235,7 +235,7 @@ class ShortPlayMonitor(_PluginBase):
                     last = target.replace(str(parent), "")
                     # 自定义识别次
                     title, _ = WordsMatcher().prepare(parent)
-                    target_path = Path(dest_dir) / title / last
+                    target_path = Path(dest_dir).joinpath(title + last)
             else:
                 if str(rename_conf) == "smart":
                     target = target_path.replace(dest_dir, "")
@@ -243,7 +243,7 @@ class ShortPlayMonitor(_PluginBase):
                     last = target.replace(str(parent), "")
                     # 取.第一个
                     title = Path(parent).name.split(".")[0]
-                    target_path = Path(dest_dir) / title / last
+                    target_path = Path(dest_dir).joinpath(title + last)
                 else:
                     logger.error(f"{target_path} 智能重命名失败")
                     return
