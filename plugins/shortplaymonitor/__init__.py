@@ -64,7 +64,7 @@ class ShortPlayMonitor(_PluginBase):
     _onlyonce = False
     _exclude_keywords = ""
     _observer = []
-    _timeline = "00:03:01"
+    _timeline = "00:00:20"
     _dirconf = {}
     _renameconf = {}
     _coverconf = {}
@@ -204,6 +204,11 @@ class ShortPlayMonitor(_PluginBase):
                     logger.info(f"{event_path} 命中过滤关键字 {keyword}，不处理")
                     return
 
+        # 不是媒体文件不处理
+        if Path(event_path).suffix not in settings.RMT_MEDIAEXT:
+            logger.debug(f"{event_path} 不是媒体文件")
+            return
+
         # 文件发生变化
         logger.debug(f"变动类型 {event.event_type} 变动路径 {event_path}")
         self.__handle_file(is_directory=event.is_directory,
@@ -314,10 +319,10 @@ class ShortPlayMonitor(_PluginBase):
             covers = cover_conf.split(":")
             cover_conf = f"{covers[0] * 360}:{covers[1] * 360}"
         if not frames:
-            frames = "00:03:01"
+            frames = "00:00:20"
         if not video_path or not image_path:
             return False
-        cmd = 'ffmpeg -y -i "{video_path}" -ss {frames} -frames 1 -vf "scale={cover_conf}" "{image_path}"'.format(
+        cmd = 'ffmpeg -y -i "{video_path}" -ss {frames} -frames 1 -vf "scale={cover_conf}" -f image2 "{image_path}"'.format(
             video_path=video_path,
             frames=frames,
             cover_conf=cover_conf,
