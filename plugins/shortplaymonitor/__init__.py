@@ -1,9 +1,12 @@
 import os
+import re
 import threading
+import datetime
 from pathlib import Path
 
 from typing import Any, List, Dict, Tuple, Optional
 
+import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
@@ -28,9 +31,6 @@ class FileMonitorHandler(FileSystemEventHandler):
         self._watch_path = watching_path
         self.file_change = file_change
 
-    # def on_any_event(self, event):
-    #     logger.info(f"目录监控event_type {event.event_type} 路径 {event.src_path}")
-
     def on_created(self, event):
         self.file_change.event_handler(event=event, source_dir=self._watch_path, event_path=event.src_path)
 
@@ -46,7 +46,7 @@ class ShortPlayMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Amule_B.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -62,8 +62,8 @@ class ShortPlayMonitor(_PluginBase):
     _enabled = False
     _monitor_confs = None
     _onlyonce = False
+    _exclude_keywords = ""
     _observer = []
-    _video_formats = ('.mp4', '.avi', '.rmvb', '.wmv', '.mov', '.mkv', '.flv', '.ts', '.webm', '.iso', '.mpg', '.m2ts')
     _timeline = "00:03:01"
     _dirconf = {}
     _renameconf = {}
@@ -80,8 +80,9 @@ class ShortPlayMonitor(_PluginBase):
 
         if config:
             self._enabled = config.get("enabled")
-            # self._onlyonce = config.get("onlyonce")
+            self._onlyonce = config.get("onlyonce")
             self._monitor_confs = config.get("monitor_confs")
+            self._exclude_keywords = config.get("exclude_keywords") or ""
 
         # 停止现有任务
         self.stop_service()
@@ -150,21 +151,36 @@ class ShortPlayMonitor(_PluginBase):
                             logger.error(f"{source_dir} 启动目录监控失败：{err_msg}")
                         self.systemmessage.put(f"{source_dir} 启动目录监控失败：{err_msg}")
 
-            # # 运行一次定时服务
-            # if self._onlyonce:
-            #     logger.info("云盘监控服务启动，立即运行一次")
-            #     self._scheduler.add_job(func=self.sync_all, trigger='date',
-            #                             run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
-            #                             name="云盘监控全量执行")
-            #     # 关闭一次性开关
-            #     self._onlyonce = False
-            #     # 保存配置
-            #     self.__update_config()
+            # 运行一次定时服务
+            if self._onlyonce:
+                logger.info("短剧监控服务启动，立即运行一次")
+                self._scheduler.add_job(func=self.sync_all, trigger='date',
+                                        run_date=datetime.datetime.now(
+                                            tz=pytz.timezone(settings.TZ)) + datetime.timedelta(seconds=3),
+                                        name="短剧监控全量执行")
+                # 关闭一次性开关
+                self._onlyonce = False
+                # 保存配置
+                self.__update_config()
 
             # 启动任务
             if self._scheduler.get_jobs():
                 self._scheduler.print_jobs()
                 self._scheduler.start()
+
+    def sync_all(self):
+        """
+        立即运行一次，全量同步目录中所有文件
+        """
+        logger.info("开始全量同步短剧监控目录 ...")
+        # 遍历所有监控目录
+        for mon_path in self._dirconf.keys():
+            # 遍历目录下所有文件
+            for file_path in SystemUtils.list_files(Path(mon_path), settings.RMT_MEDIAEXT):
+                self.__handle_file(is_directory=Path(file_path).is_dir(),
+                                   event_path=str(file_path),
+                                   source_dir=mon_path)
+        logger.info("全量同步短剧监控目录完成！")
 
     def event_handler(self, event, source_dir: str, event_path: str):
         """
@@ -181,13 +197,23 @@ class ShortPlayMonitor(_PluginBase):
             logger.info(f"{event_path} 是回收站或隐藏的文件，跳过处理")
             return
 
-        # 文件发生变化
-        logger.info(f"变动类型 {event.event_type} 变动路径 {event_path}")
-        self.__handle_file(event=event, event_path=event_path, source_dir=source_dir)
+        # 命中过滤关键字不处理
+        if self._exclude_keywords:
+            for keyword in self._exclude_keywords.split("\n"):
+                if keyword and re.findall(keyword, event_path):
+                    logger.info(f"{event_path} 命中过滤关键字 {keyword}，不处理")
+                    return
 
-    def __handle_file(self, event, event_path: str, source_dir: str):
+        # 文件发生变化
+        logger.debug(f"变动类型 {event.event_type} 变动路径 {event_path}")
+        self.__handle_file(is_directory=event.is_directory,
+                           event_path=event_path,
+                           source_dir=source_dir)
+
+    def __handle_file(self, is_directory: bool, event_path: str, source_dir: str):
         """
         同步一个文件
+        :event.is_directory
         :param event_path: 事件文件路径
         :param source_dir: 监控目录
         """
@@ -211,7 +237,7 @@ class ShortPlayMonitor(_PluginBase):
             target_path = Path(target_path).parent / title
 
             # 文件夹同步创建
-            if event.is_directory:
+            if is_directory:
                 # 目标文件夹不存在则创建
                 if not Path(target_path).exists():
                     logger.info(f"创建目标文件夹 {target_path}")
@@ -233,7 +259,8 @@ class ShortPlayMonitor(_PluginBase):
                     logger.info(f"文件 {source_dir} 硬链接完成")
 
                     # 生成缩略图
-                    thumb_path = self.gen_file_thumb(target_path)
+                    thumb_path = self.gen_file_thumb(file_path=target_path,
+                                                     cover_conf=cover_conf)
                     if not (target_path.parent / "poster.jpg").exists():
                         SystemUtils.copy(thumb_path, target_path.parent / "poster.jpg")
                 else:
@@ -243,7 +270,7 @@ class ShortPlayMonitor(_PluginBase):
             logger.error(f"event_handler_created error: {e}")
             print(str(e))
 
-    def gen_file_thumb(self, file_path: Path):
+    def gen_file_thumb(self, file_path: Path, cover_conf: str):
         """
         处理一个文件
         """
@@ -255,7 +282,9 @@ class ShortPlayMonitor(_PluginBase):
                     logger.info(f"缩略图已存在：{thumb_path}")
                     return
                 if self.get_thumb(video_path=str(file_path),
-                                  image_path=str(thumb_path), frames=self._timeline):
+                                  image_path=str(thumb_path),
+                                  cover_conf=str(cover_conf),
+                                  frames=self._timeline):
                     logger.info(f"{file_path} 缩略图已生成：{thumb_path}")
                     return thumb_path
             except Exception as err:
@@ -292,7 +321,8 @@ class ShortPlayMonitor(_PluginBase):
         """
         self.update_config({
             "enabled": self._enabled,
-            # "onlyonce": self._onlyonce,
+            "exclude_keywords": self._exclude_keywords,
+            "onlyonce": self._onlyonce,
             "monitor_confs": self._monitor_confs
         })
 
@@ -311,98 +341,120 @@ class ShortPlayMonitor(_PluginBase):
         拼装插件配置页面，需要返回两块数据：1、页面配置；2、数据结构
         """
         return [
-            {
-                'component': 'VForm',
-                'content': [
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 6
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VSwitch',
-                                        'props': {
-                                            'model': 'enabled',
-                                            'label': '启用插件',
-                                        }
-                                    }
-                                ]
-                            },
-                            # {
-                            #     'component': 'VCol',
-                            #     'props': {
-                            #         'cols': 12,
-                            #         'md': 6
-                            #     },
-                            #     'content': [
-                            #         {
-                            #             'component': 'VSwitch',
-                            #             'props': {
-                            #                 'model': 'onlyonce',
-                            #                 'label': '立即运行一次',
-                            #             }
-                            #         }
-                            #     ]
-                            # }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextarea',
-                                        'props': {
-                                            'model': 'monitor_confs',
-                                            'label': '监控目录',
-                                            'rows': 5,
-                                            'placeholder': '监控目录#目的目录#是否重命名#封面比例'
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VAlert',
-                                        'props': {
-                                            'type': 'info',
-                                            'variant': 'tonal',
-                                            'text': '配置说明：'
-                                                    'https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/docs/CloudStrm.md'
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    }
-                ]
-            }
-        ], {
-            "enabled": False,
-            # "relay": 3,
-            # "onlyonce": False,
-            "monitor_confs": ""
-        }
+                   {
+                       'component': 'VForm',
+                       'content': [
+                           {
+                               'component': 'VRow',
+                               'content': [
+                                   {
+                                       'component': 'VCol',
+                                       'props': {
+                                           'cols': 12,
+                                           'md': 6
+                                       },
+                                       'content': [
+                                           {
+                                               'component': 'VSwitch',
+                                               'props': {
+                                                   'model': 'enabled',
+                                                   'label': '启用插件',
+                                               }
+                                           }
+                                       ]
+                                   },
+                                   {
+                                       'component': 'VCol',
+                                       'props': {
+                                           'cols': 12,
+                                           'md': 6
+                                       },
+                                       'content': [
+                                           {
+                                               'component': 'VSwitch',
+                                               'props': {
+                                                   'model': 'onlyonce',
+                                                   'label': '立即运行一次',
+                                               }
+                                           }
+                                       ]
+                                   }
+                               ]
+                           },
+                           {
+                               'component': 'VRow',
+                               'content': [
+                                   {
+                                       'component': 'VCol',
+                                       'props': {
+                                           'cols': 12
+                                       },
+                                       'content': [
+                                           {
+                                               'component': 'VTextarea',
+                                               'props': {
+                                                   'model': 'monitor_confs',
+                                                   'label': '监控目录',
+                                                   'rows': 5,
+                                                   'placeholder': '监控方式#监控目录#目的目录#是否重命名#封面比例'
+                                               }
+                                           }
+                                       ]
+                                   }
+                               ]
+                           },
+                           {
+                               'component': 'VRow',
+                               'content': [
+                                   {
+                                       'component': 'VCol',
+                                       'props': {
+                                           'cols': 12,
+                                       },
+                                       'content': [
+                                           {
+                                               'component': 'VTextarea',
+                                               'props': {
+                                                   'model': 'exclude_keywords',
+                                                   'label': '排除关键词',
+                                                   'rows': 2,
+                                                   'placeholder': '每一行一个关键词'
+                                               }
+                                           }
+                                       ]
+                                   }
+                               ]
+                           },
+                           {
+                               'component': 'VRow',
+                               'content': [
+                                   {
+                                       'component': 'VCol',
+                                       'props': {
+                                           'cols': 12,
+                                       },
+                                       'content': [
+                                           {
+                                               'component': 'VAlert',
+                                               'props': {
+                                                   'type': 'info',
+                                                   'variant': 'tonal',
+                                                   'text': '配置说明：'
+                                                           'https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/docs/ShortPlayMonitor.md'
+                                               }
+                                           }
+                                       ]
+                                   }
+                               ]
+                           }
+                       ]
+                   }
+               ], {
+                   "enabled": False,
+                   "onlyonce": False,
+                   "monitor_confs": "",
+                   "exclude_keywords": ""
+               }
 
     def get_page(self) -> List[dict]:
         pass
