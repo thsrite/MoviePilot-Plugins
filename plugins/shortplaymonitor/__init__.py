@@ -46,7 +46,7 @@ class ShortPlayMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Amule_B.png"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -254,9 +254,9 @@ class ShortPlayMonitor(_PluginBase):
                     return
 
                 # 硬链接
-                retcode, retmsg = SystemUtils.link(Path(source_dir), target_path)
+                retcode, retmsg = SystemUtils.link(Path(event_path), target_path)
                 if retcode == 0:
-                    logger.info(f"文件 {source_dir} 硬链接完成")
+                    logger.info(f"文件 {event_path} 硬链接完成")
 
                     # 生成缩略图
                     thumb_path = self.gen_file_thumb(file_path=target_path,
@@ -264,7 +264,7 @@ class ShortPlayMonitor(_PluginBase):
                     if not (target_path.parent / "poster.jpg").exists():
                         SystemUtils.copy(thumb_path, target_path.parent / "poster.jpg")
                 else:
-                    logger.error(f"文件 {source_dir} 硬链接失败，错误码：{retcode}")
+                    logger.error(f"文件 {event_path} 硬链接失败，错误码：{retcode}")
 
         except Exception as e:
             logger.error(f"event_handler_created error: {e}")

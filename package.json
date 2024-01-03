@@ -122,7 +122,7 @@
       "ShortPlayMonitor": {
           "name": "短剧刮削",
           "description": "监控视频短剧创建，刮削。",
-          "version": "1.1",
+          "version": "1.2",
           "icon": "Amule_B.png",
           "author": "thsrite",
           "level": 1
