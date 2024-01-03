@@ -5,6 +5,8 @@ import datetime
 from pathlib import Path
 
 from typing import Any, List, Dict, Tuple, Optional
+from xml.dom import minidom
+from app.utils.dom import DomUtils
 
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -46,7 +48,7 @@ class ShortPlayMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Amule_B.png"
     # 插件版本
-    plugin_version = "1.4"
+    plugin_version = "1.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -234,13 +236,15 @@ class ShortPlayMonitor(_PluginBase):
 
             # 硬链接
             if isinstance(rename_conf, bool):
+                target = target_path.replace(dest_dir, "")
+                parent = Path(Path(target).parents[0])
+                last = target.replace(str(parent), "")
                 if rename_conf:
-                    target = target_path.replace(dest_dir, "")
-                    parent = Path(Path(target).parents[0])
-                    last = target.replace(str(parent), "")
                     # 自定义识别次
                     title, _ = WordsMatcher().prepare(parent)
                     target_path = Path(dest_dir).joinpath(title + last)
+                else:
+                    title = parent
             else:
                 if str(rename_conf) == "smart":
                     target = target_path.replace(dest_dir, "")
@@ -274,6 +278,10 @@ class ShortPlayMonitor(_PluginBase):
                 retcode, retmsg = SystemUtils.link(Path(event_path), target_path)
                 if retcode == 0:
                     logger.info(f"文件 {event_path} 硬链接完成")
+                    # 生成 tvshow.nfo
+                    if not (target_path.parent / "tvshow.nfo").exists():
+                        self.__gen_tv_nfo_file(dir_path=target_path.parent,
+                                               title=title)
 
                     # 生成缩略图
                     if not (target_path.parent / "poster.jpg").exists():
@@ -294,6 +302,24 @@ class ShortPlayMonitor(_PluginBase):
         except Exception as e:
             logger.error(f"event_handler_created error: {e}")
             print(str(e))
+
+    def __gen_tv_nfo_file(self, dir_path: Path, title: str):
+        """
+        生成电视剧的NFO描述文件
+        :param dir_path: 电视剧根目录
+        """
+        # 开始生成XML
+        logger.info(f"正在生成电视剧NFO文件：{dir_path.name}")
+        doc = minidom.Document()
+        root = DomUtils.add_node(doc, doc, "tvshow")
+
+        # 标题
+        DomUtils.add_node(doc, root, "title", title)
+        DomUtils.add_node(doc, root, "originaltitle", title)
+        DomUtils.add_node(doc, root, "season", "-1")
+        DomUtils.add_node(doc, root, "episode", "-1")
+        # 保存
+        self.__save_nfo(doc, dir_path.joinpath("tvshow.nfo"))
 
     def gen_file_thumb(self, file_path: Path, cover_conf: str):
         """
