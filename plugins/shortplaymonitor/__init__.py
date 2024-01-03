@@ -46,7 +46,7 @@ class ShortPlayMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Amule_B.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -228,11 +228,18 @@ class ShortPlayMonitor(_PluginBase):
             target_path = event_path.replace(source_dir, dest_dir)
 
             # 硬链接
-            if rename_conf:
-                # 预处理标题
-                title, _ = WordsMatcher().prepare(Path(target_path).name)
+            if isinstance(rename_conf, bool):
+                if rename_conf:
+                    # 预处理标题
+                    title, _ = WordsMatcher().prepare(Path(target_path).name)
+                else:
+                    title = Path(target_path).name
             else:
-                title = Path(target_path).name
+                if str(rename_conf) == "smart":
+                    title = Path(target_path).name.split(".")[0]
+                else:
+                    logger.error(f"{target_path} 智能重命名失败")
+                    return
 
             target_path = Path(target_path).parent / title
 
@@ -305,7 +312,7 @@ class ShortPlayMonitor(_PluginBase):
             frames = "00:03:01"
         if not video_path or not image_path:
             return False
-        cmd = 'ffmpeg -i "{video_path}" -ss {frames} -vframes 1 -vf “scale={cover_conf}” -f image2 "{image_path}"'.format(
+        cmd = 'ffmpeg -y -i "{video_path}" -ss {frames} -frames 1 -vf "scale={cover_conf}" "{image_path}"'.format(
             video_path=video_path,
             frames=frames,
             cover_conf=cover_conf,
