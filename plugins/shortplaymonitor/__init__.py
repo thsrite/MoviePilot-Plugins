@@ -321,6 +321,14 @@ class ShortPlayMonitor(_PluginBase):
         # 保存
         self.__save_nfo(doc, dir_path.joinpath("tvshow.nfo"))
 
+    def __save_nfo(self, doc, file_path: Path):
+        """
+        保存NFO
+        """
+        xml_str = doc.toprettyxml(indent="  ", encoding="utf-8")
+        file_path.write_bytes(xml_str)
+        logger.info(f"NFO文件已保存：{file_path}")
+
     def gen_file_thumb(self, file_path: Path, cover_conf: str):
         """
         处理一个文件
