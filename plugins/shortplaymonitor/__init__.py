@@ -287,7 +287,10 @@ class ShortPlayMonitor(_PluginBase):
                     if not (target_path.parent / "poster.jpg").exists():
                         thumb_path = self.gen_file_thumb(file_path=target_path)
                         if thumb_path and Path(thumb_path).exists():
-                            SystemUtils.move(thumb_path, target_path.parent / "poster.jpg")
+                            self.__save_poster(input_path=thumb_path,
+                                               poster_path=target_path.parent / "poster.jpg",
+                                               cover_conf=cover_conf)
+                            thumb_path.unlink()
                         else:
                             # 检查是否有缩略图
                             thumb_files = SystemUtils.list_files(directory=target_path.parent,
