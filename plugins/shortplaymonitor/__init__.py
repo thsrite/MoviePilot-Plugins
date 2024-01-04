@@ -234,7 +234,7 @@ class ShortPlayMonitor(_PluginBase):
 
             target_path = event_path.replace(source_dir, dest_dir)
 
-            # 硬链接
+            # 目录重命名
             if isinstance(rename_conf, bool):
                 target = target_path.replace(dest_dir, "")
                 parent = Path(Path(target).parents[0])
@@ -264,6 +264,21 @@ class ShortPlayMonitor(_PluginBase):
                     logger.info(f"创建目标文件夹 {target_path}")
                     os.makedirs(target_path)
             else:
+                # 媒体重命名
+                try:
+                    pattern = r'S(\d{2})E(\d{2})'
+                    matches = re.search(pattern, Path(target_path).name)
+
+                    if matches:
+                        season = matches.group(1)  # 提取S后面的数字作为季数
+                        episode = matches.group(2)  # 提取E后面的数字作为集数
+                        target_path = Path(
+                            target_path).parent / f"S{season}E{episode}{Path(Path(target_path).name).suffix}"
+                    else:
+                        print("未找到匹配的季数和集数")
+                except Exception as e:
+                    print(e)
+
                 # 目标文件夹不存在则创建
                 if not Path(target_path).parent.exists():
                     logger.info(f"创建目标文件夹 {Path(target_path).parent}")
