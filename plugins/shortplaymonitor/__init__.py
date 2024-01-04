@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, List, Dict, Tuple, Optional
 from xml.dom import minidom
 from app.utils.dom import DomUtils
-
+from PIL import Image
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 from watchdog.events import FileSystemEventHandler
@@ -48,7 +48,7 @@ class ShortPlayMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Amule_B.png"
     # 插件版本
-    plugin_version = "1.5"
+    plugin_version = "2.0"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -66,7 +66,7 @@ class ShortPlayMonitor(_PluginBase):
     _onlyonce = False
     _exclude_keywords = ""
     _observer = []
-    _timeline = "00:00:20"
+    _timeline = "00:00:10"
     _dirconf = {}
     _renameconf = {}
     _coverconf = {}
@@ -285,8 +285,7 @@ class ShortPlayMonitor(_PluginBase):
 
                     # 生成缩略图
                     if not (target_path.parent / "poster.jpg").exists():
-                        thumb_path = self.gen_file_thumb(file_path=target_path,
-                                                         cover_conf=cover_conf)
+                        thumb_path = self.gen_file_thumb(file_path=target_path)
                         if thumb_path and Path(thumb_path).exists():
                             SystemUtils.move(thumb_path, target_path.parent / "poster.jpg")
                         else:
@@ -294,14 +293,59 @@ class ShortPlayMonitor(_PluginBase):
                             thumb_files = SystemUtils.list_files(directory=target_path.parent,
                                                                  extensions=[".jpg"])
                             if thumb_files:
+                                # 生成poster
                                 for thumb in thumb_files:
-                                    SystemUtils.move(thumb, target_path.parent / "poster.jpg")
+                                    self.__save_poster(input_path=thumb,
+                                                       poster_path=target_path.parent / "poster.jpg",
+                                                       cover_conf=cover_conf)
+                                    break
+                                # 删除多余jpg
+                                for thumb in thumb_files:
+                                    Path(thumb).unlink()
+
+
                 else:
                     logger.error(f"文件 {event_path} 硬链接失败，错误码：{retcode}")
 
         except Exception as e:
             logger.error(f"event_handler_created error: {e}")
             print(str(e))
+
+    def __save_poster(self, input_path, poster_path, cover_conf):
+        """
+        截取图片做封面
+        """
+        image = Image.open(input_path)
+
+        # 需要截取的长宽比（比如 16:9）
+        if not cover_conf:
+            target_ratio = 2 / 3
+        else:
+            covers = cover_conf.split(":")
+            target_ratio = covers[0] / covers[1]
+
+        # 获取原始图片的长宽比
+        original_ratio = image.width / image.height
+
+        # 计算截取后的大小
+        if original_ratio > target_ratio:
+            new_height = image.height
+            new_width = int(new_height * target_ratio)
+        else:
+            new_width = image.width
+            new_height = int(new_width / target_ratio)
+
+        # 计算截取的位置
+        left = (image.width - new_width) // 2
+        top = (image.height - new_height) // 2
+        right = left + new_width
+        bottom = top + new_height
+
+        # 截取图片
+        cropped_image = image.crop((left, top, right, bottom))
+
+        # 保存截取后的图片
+        cropped_image.save(poster_path)
 
     def __gen_tv_nfo_file(self, dir_path: Path, title: str):
         """
@@ -329,7 +373,7 @@ class ShortPlayMonitor(_PluginBase):
         file_path.write_bytes(xml_str)
         logger.info(f"NFO文件已保存：{file_path}")
 
-    def gen_file_thumb(self, file_path: Path, cover_conf: str):
+    def gen_file_thumb(self, file_path: Path):
         """
         处理一个文件
         """
@@ -342,7 +386,6 @@ class ShortPlayMonitor(_PluginBase):
                     return
                 self.get_thumb(video_path=str(file_path),
                                image_path=str(thumb_path),
-                               cover_conf=str(cover_conf),
                                frames=self._timeline)
                 if Path(thumb_path).exists():
                     logger.info(f"{file_path} 缩略图已生成：{thumb_path}")
@@ -352,23 +395,17 @@ class ShortPlayMonitor(_PluginBase):
                 return None
 
     @staticmethod
-    def get_thumb(video_path: str, image_path: str, frames: str = None, cover_conf: str = None):
+    def get_thumb(video_path: str, image_path: str, frames: str = None):
         """
         使用ffmpeg从视频文件中截取缩略图
         """
-        if not cover_conf:
-            cover_conf = "720:1080"
-        else:
-            covers = cover_conf.split(":")
-            cover_conf = f"{covers[0] * 360}:{covers[1] * 360}"
         if not frames:
-            frames = "00:00:20"
+            frames = "00:00:10"
         if not video_path or not image_path:
             return False
-        cmd = 'ffmpeg -y -i "{video_path}" -ss {frames} -frames 1 -vf "scale={cover_conf}" "{image_path}"'.format(
+        cmd = 'ffmpeg -y -i "{video_path}" -ss {frames} -frames 1 "{image_path}"'.format(
             video_path=video_path,
             frames=frames,
-            cover_conf=cover_conf,
             image_path=image_path)
         result = SystemUtils.execute(cmd)
         if result:
@@ -401,120 +438,120 @@ class ShortPlayMonitor(_PluginBase):
         拼装插件配置页面，需要返回两块数据：1、页面配置；2、数据结构
         """
         return [
-                   {
-                       'component': 'VForm',
-                       'content': [
-                           {
-                               'component': 'VRow',
-                               'content': [
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12,
-                                           'md': 6
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VSwitch',
-                                               'props': {
-                                                   'model': 'enabled',
-                                                   'label': '启用插件',
-                                               }
-                                           }
-                                       ]
-                                   },
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12,
-                                           'md': 6
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VSwitch',
-                                               'props': {
-                                                   'model': 'onlyonce',
-                                                   'label': '立即运行一次',
-                                               }
-                                           }
-                                       ]
-                                   }
-                               ]
-                           },
-                           {
-                               'component': 'VRow',
-                               'content': [
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VTextarea',
-                                               'props': {
-                                                   'model': 'monitor_confs',
-                                                   'label': '监控目录',
-                                                   'rows': 5,
-                                                   'placeholder': '监控方式#监控目录#目的目录#是否重命名#封面比例'
-                                               }
-                                           }
-                                       ]
-                                   }
-                               ]
-                           },
-                           {
-                               'component': 'VRow',
-                               'content': [
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12,
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VTextarea',
-                                               'props': {
-                                                   'model': 'exclude_keywords',
-                                                   'label': '排除关键词',
-                                                   'rows': 2,
-                                                   'placeholder': '每一行一个关键词'
-                                               }
-                                           }
-                                       ]
-                                   }
-                               ]
-                           },
-                           {
-                               'component': 'VRow',
-                               'content': [
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12,
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VAlert',
-                                               'props': {
-                                                   'type': 'info',
-                                                   'variant': 'tonal',
-                                                   'text': '配置说明：'
-                                                           'https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/docs/ShortPlayMonitor.md'
-                                               }
-                                           }
-                                       ]
-                                   }
-                               ]
-                           }
-                       ]
-                   }
-               ], {
-                   "enabled": False,
-                   "onlyonce": False,
-                   "monitor_confs": "",
-                   "exclude_keywords": ""
-               }
+            {
+                'component': 'VForm',
+                'content': [
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'enabled',
+                                            'label': '启用插件',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'onlyonce',
+                                            'label': '立即运行一次',
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextarea',
+                                        'props': {
+                                            'model': 'monitor_confs',
+                                            'label': '监控目录',
+                                            'rows': 5,
+                                            'placeholder': '监控方式#监控目录#目的目录#是否重命名#封面比例'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextarea',
+                                        'props': {
+                                            'model': 'exclude_keywords',
+                                            'label': '排除关键词',
+                                            'rows': 2,
+                                            'placeholder': '每一行一个关键词'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '配置说明：'
+                                                    'https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/docs/ShortPlayMonitor.md'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ], {
+            "enabled": False,
+            "onlyonce": False,
+            "monitor_confs": "",
+            "exclude_keywords": ""
+        }
 
     def get_page(self) -> List[dict]:
         pass
