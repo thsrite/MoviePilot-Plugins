@@ -325,7 +325,7 @@ class ShortPlayMonitor(_PluginBase):
             target_ratio = 2 / 3
         else:
             covers = cover_conf.split(":")
-            target_ratio = covers[0] / covers[1]
+            target_ratio = int(covers[0]) / int(covers[1])
 
         # 获取原始图片的长宽比
         original_ratio = image.width / image.height
