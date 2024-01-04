@@ -266,14 +266,11 @@ class ShortPlayMonitor(_PluginBase):
             else:
                 # 媒体重命名
                 try:
-                    pattern = r'S(\d{2})E(\d{2})'
+                    pattern = r'S\d+E\d+'
                     matches = re.search(pattern, Path(target_path).name)
-
                     if matches:
-                        season = matches.group(1)  # 提取S后面的数字作为季数
-                        episode = matches.group(2)  # 提取E后面的数字作为集数
                         target_path = Path(
-                            target_path).parent / f"S{season}E{episode}{Path(Path(target_path).name).suffix}"
+                            target_path).parent / f"{matches.group()}{Path(Path(target_path).name).suffix}"
                     else:
                         print("未找到匹配的季数和集数")
                 except Exception as e:
@@ -320,11 +317,8 @@ class ShortPlayMonitor(_PluginBase):
                                 # 删除多余jpg
                                 for thumb in thumb_files:
                                     Path(thumb).unlink()
-
-
                 else:
                     logger.error(f"文件 {event_path} 硬链接失败，错误码：{retcode}")
-
         except Exception as e:
             logger.error(f"event_handler_created error: {e}")
             print(str(e))
