@@ -8,6 +8,7 @@ from xml.dom import minidom
 from app.utils.dom import DomUtils
 from PIL import Image
 import pytz
+from app.db.site_oper import SiteOper
 from apscheduler.schedulers.background import BackgroundScheduler
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
@@ -404,22 +405,30 @@ class ShortPlayMonitor(_PluginBase):
         try:
             image = None
             # 查询索引
-            site = SitesHelper().get_indexer("agsvpt.com")
-            if site:
+            domain = "agsvpt.com"
+            site = SiteOper().get_by_domain(domain)
+            index = SitesHelper().get_indexer(domain)
+            if not index and site:
+                index.cookie = site.cookie
+            if index:
                 req_url = f"https://www.agsvpt.com/torrents.php?search_mode=0&search_area=0&page=0&notnewword=1&search={title}"
                 image_xpath = "//*[@id='kdescr']/img[1]/@src"
                 # 查询站点资源
-                logger.info(f"开始检索 {site.name} {title}")
-                image = self.__get_site_torrents(url=req_url, site=site, image_xpath=image_xpath)
+                logger.info(f"开始检索 {index.name} {title}")
+                image = self.__get_site_torrents(url=req_url, site=index, image_xpath=image_xpath)
             if not image:
-                site = SitesHelper().get_indexer("ilolicon.com")
-                if site:
+                domain = "ilolicon.com"
+                site = SiteOper().get_by_domain(domain)
+                index = SitesHelper().get_indexer(domain)
+                if not index and site:
+                    index.cookie = site.cookie
+                if index:
                     req_url = f"https://share.ilolicon.com/torrents.php?search_mode=0&search_area=0&page=0&notnewword=1&search={title}"
 
                     image_xpath = "//*[@id='kdescr']/img[1]/@src"
                     # 查询站点资源
-                    logger.info(f"开始检索 {site.name} {title}")
-                    image = self.__get_site_torrents(url=req_url, site=site, image_xpath=image_xpath)
+                    logger.info(f"开始检索 {index.name} {title}")
+                    image = self.__get_site_torrents(url=req_url, site=index, image_xpath=image_xpath)
 
             if not image:
                 logger.error(f"检索站点 {title} 封面失败")
@@ -430,7 +439,7 @@ class ShortPlayMonitor(_PluginBase):
                 return file_path
             return None
         except Exception as e:
-            print(str(e))
+            logger.error(f"检索站点 {title} 封面失败 {str(e)}")
             return None
 
     @retry(RequestException, logger=logger)
@@ -522,15 +531,19 @@ class ShortPlayMonitor(_PluginBase):
         """
         处理一个文件
         """
-        thumb_path = file_path.with_name(file_path.stem + "-thumb.jpg")
         # 智能重命名时从站点检索
         if str(rename_conf) == "smart":
+            thumb_path = file_path.with_name(file_path.stem + "-site.jpg")
+            if thumb_path.exists():
+                logger.info(f"缩略图已存在：{thumb_path}")
+                return
             file_path = self.gen_file_thumb_from_site(title=title, file_path=thumb_path)
             if file_path:
                 return file_path
         # 单线程处理
         with ffmpeg_lock:
             try:
+                thumb_path = file_path.with_name(file_path.stem + "-thumb.jpg")
                 if thumb_path.exists():
                     logger.info(f"缩略图已存在：{thumb_path}")
                     return
