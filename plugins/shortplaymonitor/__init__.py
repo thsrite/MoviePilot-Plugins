@@ -410,11 +410,11 @@ class ShortPlayMonitor(_PluginBase):
             index = SitesHelper().get_indexer(domain)
             if not index and site:
                 index.cookie = site.cookie
-            if index:
+            if index and site:
                 req_url = f"https://www.agsvpt.com/torrents.php?search_mode=0&search_area=0&page=0&notnewword=1&search={title}"
                 image_xpath = "//*[@id='kdescr']/img[1]/@src"
                 # 查询站点资源
-                logger.info(f"开始检索 {index.name} {title}")
+                logger.info(f"开始检索 {site.name} {title}")
                 image = self.__get_site_torrents(url=req_url, site=index, image_xpath=image_xpath)
             if not image:
                 domain = "ilolicon.com"
@@ -422,12 +422,12 @@ class ShortPlayMonitor(_PluginBase):
                 index = SitesHelper().get_indexer(domain)
                 if not index and site:
                     index.cookie = site.cookie
-                if index:
+                if index and site:
                     req_url = f"https://share.ilolicon.com/torrents.php?search_mode=0&search_area=0&page=0&notnewword=1&search={title}"
 
                     image_xpath = "//*[@id='kdescr']/img[1]/@src"
                     # 查询站点资源
-                    logger.info(f"开始检索 {index.name} {title}")
+                    logger.info(f"开始检索 {site.name} {title}")
                     image = self.__get_site_torrents(url=req_url, site=index, image_xpath=image_xpath)
 
             if not image:
@@ -537,9 +537,10 @@ class ShortPlayMonitor(_PluginBase):
             if thumb_path.exists():
                 logger.info(f"缩略图已存在：{thumb_path}")
                 return
-            file_path = self.gen_file_thumb_from_site(title=title, file_path=thumb_path)
-            if file_path:
-                return file_path
+            self.gen_file_thumb_from_site(title=title, file_path=thumb_path)
+            if Path(thumb_path).exists():
+                logger.info(f"{file_path} 缩略图已生成：{thumb_path}")
+                return thumb_path
         # 单线程处理
         with ffmpeg_lock:
             try:
