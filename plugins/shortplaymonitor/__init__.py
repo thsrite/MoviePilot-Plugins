@@ -315,6 +315,8 @@ class ShortPlayMonitor(_PluginBase):
                             self.__save_poster(input_path=thumb_path,
                                                poster_path=target_path.parent / "poster.jpg",
                                                cover_conf=cover_conf)
+                            if (target_path.parent / "poster.jpg").exists():
+                                logger.info(f"{target_path.parent / 'poster.jpg'} 缩略图已生成")
                             thumb_path.unlink()
                         else:
                             # 检查是否有缩略图
