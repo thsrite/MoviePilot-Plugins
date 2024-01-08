@@ -58,7 +58,7 @@ class ShortPlayMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Amule_B.png"
     # 插件版本
-    plugin_version = "2.3"
+    plugin_version = "2.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -74,6 +74,7 @@ class ShortPlayMonitor(_PluginBase):
     _enabled = False
     _monitor_confs = None
     _onlyonce = False
+    _image = False
     _exclude_keywords = ""
     _observer = []
     _timeline = "00:00:10"
@@ -93,6 +94,7 @@ class ShortPlayMonitor(_PluginBase):
         if config:
             self._enabled = config.get("enabled")
             self._onlyonce = config.get("onlyonce")
+            self._image = config.get("image")
             self._monitor_confs = config.get("monitor_confs")
             self._exclude_keywords = config.get("exclude_keywords") or ""
 
@@ -180,6 +182,11 @@ class ShortPlayMonitor(_PluginBase):
                 self._scheduler.print_jobs()
                 self._scheduler.start()
 
+        if self._image:
+            self._image = False
+            self.__update_config()
+            self.__handle_image()
+
     def sync_all(self):
         """
         立即运行一次，全量同步目录中所有文件
@@ -193,6 +200,35 @@ class ShortPlayMonitor(_PluginBase):
                                    event_path=str(file_path),
                                    source_dir=mon_path)
         logger.info("全量同步短剧监控目录完成！")
+
+    def __handle_image(self):
+        """
+        立即运行一次，裁剪封面
+        """
+        if not self._dirconf or not self._dirconf.keys():
+            logger.error("未正确配置，停止裁剪 ...")
+            return
+
+        logger.info("开始全量裁剪封面 ...")
+        # 遍历所有监控目录
+        for mon_path in self._dirconf.keys():
+            cover_conf = self._coverconf.get(mon_path)
+            target_path = self._dirconf.get(mon_path)
+            # 遍历目录下所有文件
+            for file_path in SystemUtils.list_files(Path(target_path), ["poster.jpg"]):
+                try:
+                    if Path(file_path).name != "poster.jpg":
+                        continue
+                    image = Image.open(file_path)
+                    if image.width / image.height != int(str(cover_conf).split(":")[0]) / int(
+                            str(cover_conf).split(":")[1]):
+                        self.__save_poster(input_path=file_path,
+                                           poster_path=file_path,
+                                           cover_conf=cover_conf)
+                        logger.info(f"封面 {file_path} 已裁剪 比例为 {cover_conf}")
+                except Exception:
+                    continue
+        logger.info("全量裁剪封面完成！")
 
     def event_handler(self, event, source_dir: str, event_path: str):
         """
@@ -342,37 +378,40 @@ class ShortPlayMonitor(_PluginBase):
         """
         截取图片做封面
         """
-        image = Image.open(input_path)
+        try:
+            image = Image.open(input_path)
 
-        # 需要截取的长宽比（比如 16:9）
-        if not cover_conf:
-            target_ratio = 2 / 3
-        else:
-            covers = cover_conf.split(":")
-            target_ratio = int(covers[0]) / int(covers[1])
+            # 需要截取的长宽比（比如 16:9）
+            if not cover_conf:
+                target_ratio = 2 / 3
+            else:
+                covers = cover_conf.split(":")
+                target_ratio = int(covers[0]) / int(covers[1])
 
-        # 获取原始图片的长宽比
-        original_ratio = image.width / image.height
+            # 获取原始图片的长宽比
+            original_ratio = image.width / image.height
 
-        # 计算截取后的大小
-        if original_ratio > target_ratio:
-            new_height = image.height
-            new_width = int(new_height * target_ratio)
-        else:
-            new_width = image.width
-            new_height = int(new_width / target_ratio)
+            # 计算截取后的大小
+            if original_ratio > target_ratio:
+                new_height = image.height
+                new_width = int(new_height * target_ratio)
+            else:
+                new_width = image.width
+                new_height = int(new_width / target_ratio)
 
-        # 计算截取的位置
-        left = (image.width - new_width) // 2
-        top = (image.height - new_height) // 2
-        right = left + new_width
-        bottom = top + new_height
+            # 计算截取的位置
+            left = (image.width - new_width) // 2
+            top = (image.height - new_height) // 2
+            right = left + new_width
+            bottom = top + new_height
 
-        # 截取图片
-        cropped_image = image.crop((left, top, right, bottom))
+            # 截取图片
+            cropped_image = image.crop((left, top, right, bottom))
 
-        # 保存截取后的图片
-        cropped_image.save(poster_path)
+            # 保存截取后的图片
+            cropped_image.save(poster_path)
+        except Exception as e:
+            print(str(e))
 
     def __gen_tv_nfo_file(self, dir_path: Path, title: str):
         """
@@ -582,6 +621,7 @@ class ShortPlayMonitor(_PluginBase):
             "enabled": self._enabled,
             "exclude_keywords": self._exclude_keywords,
             "onlyonce": self._onlyonce,
+            "image": self._image,
             "monitor_confs": self._monitor_confs
         })
 
@@ -610,7 +650,7 @@ class ShortPlayMonitor(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 6
+                                    'md': 4
                                 },
                                 'content': [
                                     {
@@ -626,7 +666,7 @@ class ShortPlayMonitor(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 6
+                                    'md': 4
                                 },
                                 'content': [
                                     {
@@ -634,6 +674,22 @@ class ShortPlayMonitor(_PluginBase):
                                         'props': {
                                             'model': 'onlyonce',
                                             'label': '立即运行一次',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'image',
+                                            'label': '封面裁剪',
                                         }
                                     }
                                 ]
@@ -726,12 +782,34 @@ class ShortPlayMonitor(_PluginBase):
                                 ]
                             }
                         ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '开启封面裁剪后，会把封面裁剪成配置的比例。'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
                     }
                 ]
             }
         ], {
             "enabled": False,
             "onlyonce": False,
+            "image": False,
             "monitor_confs": "",
             "exclude_keywords": ""
         }
