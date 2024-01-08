@@ -408,27 +408,23 @@ class ShortPlayMonitor(_PluginBase):
             domain = "agsvpt.com"
             site = SiteOper().get_by_domain(domain)
             index = SitesHelper().get_indexer(domain)
-            if not index and site:
-                index.cookie = site.cookie
-            if index and site:
+            if site:
                 req_url = f"https://www.agsvpt.com/torrents.php?search_mode=0&search_area=0&page=0&notnewword=1&search={title}"
                 image_xpath = "//*[@id='kdescr']/img[1]/@src"
                 # 查询站点资源
                 logger.info(f"开始检索 {site.name} {title}")
-                image = self.__get_site_torrents(url=req_url, site=index, image_xpath=image_xpath)
+                image = self.__get_site_torrents(url=req_url, site=site, image_xpath=image_xpath, index=index)
             if not image:
                 domain = "ilolicon.com"
                 site = SiteOper().get_by_domain(domain)
                 index = SitesHelper().get_indexer(domain)
-                if not index and site:
-                    index.cookie = site.cookie
-                if index and site:
+                if site:
                     req_url = f"https://share.ilolicon.com/torrents.php?search_mode=0&search_area=0&page=0&notnewword=1&search={title}"
 
                     image_xpath = "//*[@id='kdescr']/img[1]/@src"
                     # 查询站点资源
                     logger.info(f"开始检索 {site.name} {title}")
-                    image = self.__get_site_torrents(url=req_url, site=index, image_xpath=image_xpath)
+                    image = self.__get_site_torrents(url=req_url, site=site, image_xpath=image_xpath, index=index)
 
             if not image:
                 logger.error(f"检索站点 {title} 封面失败")
@@ -463,7 +459,7 @@ class ShortPlayMonitor(_PluginBase):
             logger.error(f"{file_path.stem}图片下载失败：{str(err)}")
             return False
 
-    def __get_site_torrents(self, url: str, site, image_xpath):
+    def __get_site_torrents(self, url: str, site, image_xpath, index):
         """
         查询站点资源
         """
@@ -471,7 +467,7 @@ class ShortPlayMonitor(_PluginBase):
         if not page_source:
             logger.error(f"请求站点 {site.name} 失败")
             return None
-        _spider = TorrentSpider(indexer=site,
+        _spider = TorrentSpider(indexer=index,
                                 page=1)
         torrents = _spider.parse(page_source)
         if not torrents:
