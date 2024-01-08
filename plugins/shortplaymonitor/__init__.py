@@ -1,5 +1,4 @@
 import os
-import re
 import threading
 import datetime
 from pathlib import Path
@@ -13,12 +12,22 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
-
+from app.utils.common import retry
+from requests import RequestException
 from app.core.meta.words import WordsMatcher
 from app.log import logger
 from app.plugins import _PluginBase
 from app.core.config import settings
 from app.utils.system import SystemUtils
+import re
+
+import chardet
+from lxml import etree
+
+from app.modules.indexer import IndexerModule, TorrentSpider
+from app.helper.sites import SitesHelper
+
+from app.utils.http import RequestUtils
 
 ffmpeg_lock = threading.Lock()
 
@@ -48,7 +57,7 @@ class ShortPlayMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Amule_B.png"
     # 插件版本
-    plugin_version = "2.2"
+    plugin_version = "2.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -298,7 +307,9 @@ class ShortPlayMonitor(_PluginBase):
 
                     # 生成缩略图
                     if not (target_path.parent / "poster.jpg").exists():
-                        thumb_path = self.gen_file_thumb(file_path=target_path)
+                        thumb_path = self.gen_file_thumb(title=title,
+                                                         rename_conf=rename_conf,
+                                                         file_path=target_path)
                         if thumb_path and Path(thumb_path).exists():
                             self.__save_poster(input_path=thumb_path,
                                                poster_path=target_path.parent / "poster.jpg",
@@ -386,14 +397,140 @@ class ShortPlayMonitor(_PluginBase):
         file_path.write_bytes(xml_str)
         logger.info(f"NFO文件已保存：{file_path}")
 
-    def gen_file_thumb(self, file_path: Path):
+    def gen_file_thumb_from_site(self, title: str, file_path: Path):
+        """
+        从agsv或者萝莉站查询封面
+        """
+        try:
+            image = None
+            # 查询索引
+            site = SitesHelper().get_indexer("agsvpt.com")
+            if site:
+                req_url = f"https://www.agsvpt.com/torrents.php?search_mode=0&search_area=0&page=0&notnewword=1&search={title}"
+                image_xpath = "//*[@id='kdescr']/img[1]/@src"
+                # 查询站点资源
+                logger.info(f"开始检索 {site.name} {title}")
+                image = self.__get_site_torrents(url=req_url, site=site, image_xpath=image_xpath)
+            if not image:
+                site = SitesHelper().get_indexer("ilolicon.com")
+                if site:
+                    req_url = f"https://share.ilolicon.com/torrents.php?search_mode=0&search_area=0&page=0&notnewword=1&search={title}"
+
+                    image_xpath = "//*[@id='kdescr']/img[1]/@src"
+                    # 查询站点资源
+                    logger.info(f"开始检索 {site.name} {title}")
+                    image = self.__get_site_torrents(url=req_url, site=site, image_xpath=image_xpath)
+
+            if not image:
+                logger.error(f"检索站点 {title} 封面失败")
+                return None
+
+            # 下载图片保存
+            if self.__save_image(url=image, file_path=file_path):
+                return file_path
+            return None
+        except Exception as e:
+            print(str(e))
+            return None
+
+    @retry(RequestException, logger=logger)
+    def __save_image(self, url: str, file_path: Path):
+        """
+        下载图片并保存
+        """
+        try:
+            logger.info(f"正在下载{file_path.stem}图片：{url} ...")
+            r = RequestUtils().get_res(url=url, raise_exception=True)
+            if r:
+                file_path.write_bytes(r.content)
+                logger.info(f"图片已保存：{file_path}")
+                return True
+            else:
+                logger.info(f"{file_path.stem}图片下载失败，请检查网络连通性")
+                return False
+        except RequestException as err:
+            raise err
+        except Exception as err:
+            logger.error(f"{file_path.stem}图片下载失败：{str(err)}")
+            return False
+
+    def __get_site_torrents(self, url: str, site, image_xpath):
+        """
+        查询站点资源
+        """
+        page_source = self.__get_page_source(url=url, site=site)
+        if not page_source:
+            logger.error(f"请求站点 {site.name} 失败")
+            return None
+        _spider = TorrentSpider(indexer=site,
+                                page=1)
+        torrents = _spider.parse(page_source)
+        if not torrents:
+            logger.error(f"未检索到站点 {site.name} 资源")
+            return None
+
+        # 获取种子详情页
+        torrent_detail_source = self.__get_page_source(url=torrents[0].get("page_url"), site=site)
+        if not torrent_detail_source:
+            logger.error(f"请求种子详情页失败 {torrents[0].get('page_url')}")
+            return None
+
+        html = etree.HTML(torrent_detail_source)
+        if not html:
+            logger.error(f"请求种子详情页失败 {torrents[0].get('page_url')}")
+            return None
+
+        image = html.xpath(image_xpath)[0]
+        if not image:
+            logger.error(f"未获取到种子封面图 {torrents[0].get('page_url')}")
+            return None
+
+        return str(image)
+
+    def __get_page_source(self, url: str, site):
+        """
+        获取页面资源
+        """
+        ret = RequestUtils(
+            cookies=site.cookie,
+            timeout=30,
+        ).get_res(url, allow_redirects=True)
+        if ret is not None:
+            # 使用chardet检测字符编码
+            raw_data = ret.content
+            if raw_data:
+                try:
+                    result = chardet.detect(raw_data)
+                    encoding = result['encoding']
+                    # 解码为字符串
+                    page_source = raw_data.decode(encoding)
+                except Exception as e:
+                    # 探测utf-8解码
+                    if re.search(r"charset=\"?utf-8\"?", ret.text, re.IGNORECASE):
+                        ret.encoding = "utf-8"
+                    else:
+                        ret.encoding = ret.apparent_encoding
+                    page_source = ret.text
+            else:
+                page_source = ret.text
+        else:
+            page_source = ""
+
+        return page_source
+
+    def gen_file_thumb(self, title: str, file_path: Path, rename_conf: str):
         """
         处理一个文件
         """
+        thumb_path = file_path.with_name(file_path.stem + "-thumb.jpg")
+        # 智能重命名时从站点检索
+        if str(rename_conf) == "smart":
+            file_path = self.gen_file_thumb_from_site(title=title, file_path=thumb_path)
+            if file_path:
+                return file_path
         # 单线程处理
         with ffmpeg_lock:
             try:
-                thumb_path = file_path.with_name(file_path.stem + "-thumb.jpg")
                 if thumb_path.exists():
                     logger.info(f"缩略图已存在：{thumb_path}")
                     return
