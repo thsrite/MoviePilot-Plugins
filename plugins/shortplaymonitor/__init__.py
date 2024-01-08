@@ -48,7 +48,7 @@ class ShortPlayMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Amule_B.png"
     # 插件版本
-    plugin_version = "2.1"
+    plugin_version = "2.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -235,7 +235,8 @@ class ShortPlayMonitor(_PluginBase):
             target_path = event_path.replace(source_dir, dest_dir)
 
             # 目录重命名
-            if isinstance(rename_conf, bool):
+            if str(rename_conf) == "true" or str(rename_conf) == "false":
+                rename_conf = bool(rename_conf)
                 target = target_path.replace(dest_dir, "")
                 parent = Path(Path(target).parents[0])
                 last = target.replace(str(parent), "")
