@@ -450,7 +450,7 @@ class ShortPlayMonitor(_PluginBase):
             site = SiteOper().get_by_domain(domain)
             index = SitesHelper().get_indexer(domain)
             if site:
-                req_url = f"https://www.agsvpt.com/torrents.php?search_mode=0&search_area=0&page=0&notnewword=1&search={title}"
+                req_url = f"https://www.agsvpt.com/torrents.php?search_mode=0&search_area=0&page=0&notnewword=1&cat=419&search={title}"
                 image_xpath = "//*[@id='kdescr']/img[1]/@src"
                 # 查询站点资源
                 logger.info(f"开始检索 {site.name} {title}")
@@ -460,7 +460,7 @@ class ShortPlayMonitor(_PluginBase):
                 site = SiteOper().get_by_domain(domain)
                 index = SitesHelper().get_indexer(domain)
                 if site:
-                    req_url = f"https://share.ilolicon.com/torrents.php?search_mode=0&search_area=0&page=0&notnewword=1&search={title}"
+                    req_url = f"https://share.ilolicon.com/torrents.php?search_mode=0&search_area=0&page=0&notnewword=1&cat=402&search={title}"
 
                     image_xpath = "//*[@id='kdescr']/img[1]/@src"
                     # 查询站点资源
