@@ -646,7 +646,7 @@ class EmbyReporter(_PluginBase):
                     self.draw_text_psd_style(text,
                                              (177 + 145 * index - font_count.getlength(
                                                  StringUtils.str_secends(int(duration))),
-                                              353 + offset_y),
+                                              355 + offset_y),
                                              StringUtils.str_secends(int(duration)), font_count, 126)
                 self.draw_text_psd_style(text, (74 + 145 * index, 542 + font_offset_y + offset_y), name, temp_font, 126)
             except Exception:
