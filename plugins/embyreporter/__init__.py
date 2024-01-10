@@ -551,7 +551,7 @@ class EmbyReporter(_PluginBase):
         bg.paste(mask, (0, 0), mask)
         font = ImageFont.truetype(font_path, 18)
         font_small = ImageFont.truetype(font_path, 14)
-        font_count = ImageFont.truetype(font_path, 12)
+        font_count = ImageFont.truetype(font_path, 8)
 
         exites_movies = []
         for i in movies:
