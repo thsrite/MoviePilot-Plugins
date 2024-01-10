@@ -20,6 +20,7 @@ from cacheout import Cache
 from datetime import datetime, timedelta
 
 from app.utils.http import RequestUtils
+from app.utils.string import StringUtils
 
 cache = Cache()
 
@@ -557,7 +558,7 @@ class EmbyReporter(_PluginBase):
             try:
                 # 榜单项数据
                 user_id, item_id, item_type, name, count, duration = tuple(i)
-                print(item_type, item_id, name, count, f"{round(int(duration) / 60, 2)}min")
+                print(item_type, item_id, name, count, StringUtils.str_secends(int(duration)))
                 # 封面图像获取
                 success, data = self.primary(item_id)
                 if not success:
@@ -579,7 +580,7 @@ class EmbyReporter(_PluginBase):
             try:
                 # 榜单项数据
                 user_id, item_id, item_type, name, count, duration = tuple(i)
-                print(item_type, item_id, name, count, f"{round(int(duration) / 60, 2)}min")
+                print(item_type, item_id, name, count, StringUtils.str_secends(int(duration)))
                 # 图片获取，剧集主封面获取
                 # 获取剧ID
                 success, data = self.items(user_id, item_id)
@@ -644,9 +645,9 @@ class EmbyReporter(_PluginBase):
                 if show_time:
                     self.draw_text_psd_style(text,
                                              (177 + 145 * index - font_count.getlength(
-                                                 f"{round(int(duration) / 60, 2)}min"),
+                                                 StringUtils.str_secends(int(duration))),
                                               353 + offset_y),
-                                             f"{round(int(duration) / 60, 2)}min", font_count, 126)
+                                             StringUtils.str_secends(int(duration)), font_count, 126)
                 self.draw_text_psd_style(text, (74 + 145 * index, 542 + font_offset_y + offset_y), name, temp_font, 126)
             except Exception:
                 continue
