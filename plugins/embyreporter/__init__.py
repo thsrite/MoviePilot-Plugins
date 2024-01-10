@@ -32,7 +32,7 @@ class EmbyReporter(_PluginBase):
     # 插件图标
     plugin_icon = "Pydiocells_A.png"
     # 插件版本
-    plugin_version = "1.4"
+    plugin_version = "1.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -56,7 +56,7 @@ class EmbyReporter(_PluginBase):
     _emby_host = None
     _emby_api_key = None
     _text_url = None
-    _show_counts = True
+    show_time = True
     _scheduler: Optional[BackgroundScheduler] = None
 
     PLAYBACK_REPORTING_TYPE_MOVIE = "ItemName"
@@ -80,7 +80,7 @@ class EmbyReporter(_PluginBase):
             self._cnt = config.get("cnt") or 10
             self._type = config.get("type") or "tg"
             self._mp_host = config.get("mp_host")
-            self._show_counts = config.get("show_counts")
+            self.show_time = config.get("show_time")
             self._text_url = config.get("text_url")
             self._emby_host = config.get("emby_host")
             self._emby_api_key = config.get("emby_api_key")
@@ -149,7 +149,7 @@ class EmbyReporter(_PluginBase):
         report_path = self.draw(res_path=self._res_dir,
                                 movies=movies,
                                 tvshows=tvshows,
-                                show_count=self._show_counts)
+                                show_time=self.show_time)
 
         if not report_path:
             logger.error("生成海报失败")
@@ -191,7 +191,7 @@ class EmbyReporter(_PluginBase):
             "type": self._type,
             "mp_host": self._mp_host,
             "text_url": self._text_url,
-            "show_counts": self._show_counts,
+            "show_time": self.show_time,
             "emby_host": self._emby_host,
             "emby_api_key": self._emby_api_key,
             "res_dir": self._res_dir
@@ -219,303 +219,303 @@ class EmbyReporter(_PluginBase):
             })
         # 编历 NotificationType 枚举，生成消息类型选项
         return [
-                   {
-                       'component': 'VForm',
-                       'content': [
-                           {
-                               'component': 'VRow',
-                               'content': [
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12,
-                                           'md': 6
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VSwitch',
-                                               'props': {
-                                                   'model': 'enabled',
-                                                   'label': '启用插件',
-                                               }
-                                           }
-                                       ]
-                                   },
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12,
-                                           'md': 6
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VSwitch',
-                                               'props': {
-                                                   'model': 'onlyonce',
-                                                   'label': '立即运行一次',
-                                               }
-                                           }
-                                       ]
-                                   }
-                               ]
-                           },
-                           {
-                               'component': 'VRow',
-                               'content': [
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12,
-                                           'md': 6
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VTextField',
-                                               'props': {
-                                                   'model': 'cron',
-                                                   'label': '执行周期',
-                                                   'placeholder': '5位cron表达式，留空自动'
-                                               }
-                                           }
-                                       ]
-                                   },
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12,
-                                           'md': 6
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VTextField',
-                                               'props': {
-                                                   'model': 'res_dir',
-                                                   'label': '素材路径',
-                                                   'placeholder': '本地素材路径'
-                                               }
-                                           }
-                                       ]
-                                   },
-                               ]
-                           },
-                           {
-                               'component': 'VRow',
-                               'content': [
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12,
-                                           'md': 6
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VTextField',
-                                               'props': {
-                                                   'model': 'days',
-                                                   'label': '报告天数',
-                                                   'placeholder': '向前获取数据的天数'
-                                               }
-                                           }
-                                       ]
-                                   },
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12,
-                                           'md': 6
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VTextField',
-                                               'props': {
-                                                   'model': 'cnt',
-                                                   'label': '观影记录数量',
-                                                   'placeholder': '获取观影数据数量，默认10'
-                                               }
-                                           }
-                                       ]
-                                   }
-                               ]
-                           },
-                           {
-                               'component': 'VRow',
-                               'content': [
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12,
-                                           'md': 6
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VTextField',
-                                               'props': {
-                                                   'model': 'mp_host',
-                                                   'label': 'MoviePilot域名',
-                                                   'placeholder': '必填，末尾不带/'
-                                               }
-                                           }
-                                       ]
-                                   },
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12,
-                                           'md': 6
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VSelect',
-                                               'props': {
-                                                   'multiple': False,
-                                                   'chips': True,
-                                                   'model': 'type',
-                                                   'label': '推送方式',
-                                                   'items': MsgTypeOptions
-                                               }
-                                           }
-                                       ]
-                                   },
-                               ]
-                           },
-                           {
-                               'component': 'VRow',
-                               'content': [
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12,
-                                           'md': 6
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VSelect',
-                                               'props': {
-                                                   'model': 'show_counts',
-                                                   'label': '是否显示观看次数',
-                                                   'items': [
-                                                       {'title': '是', 'value': True},
-                                                       {'title': '否', 'value': False}
-                                                   ]
-                                               }
-                                           }
-                                       ]
-                                   },
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12,
-                                           'md': 6
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VTextField',
-                                               'props': {
-                                                   'model': 'text_url',
-                                                   'label': '每日一言api',
-                                                   'placeholder': '空则不发送'
-                                               }
-                                           }
-                                       ]
-                                   }
-                               ]
-                           },
-                           {
-                               'component': 'VRow',
-                               'content': [
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12,
-                                           'md': 6
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VTextField',
-                                               'props': {
-                                                   'model': 'emby_host',
-                                                   'label': '自定义emby host',
-                                                   'placeholder': 'IP:PORT'
-                                               }
-                                           }
-                                       ]
-                                   },
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12,
-                                           'md': 6
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VTextField',
-                                               'props': {
-                                                   'model': 'emby_api_key',
-                                                   'label': '自定义emby apiKey'
-                                               }
-                                           }
-                                       ]
-                                   }
-                               ]
-                           },
-                           {
-                               'component': 'VRow',
-                               'content': [
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12,
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VAlert',
-                                               'props': {
-                                                   'type': 'info',
-                                                   'variant': 'tonal',
-                                                   'text': '如生成观影报告有空白记录，可酌情调大观影记录数量。'
-                                               }
-                                           }
-                                       ]
-                                   }
-                               ]
-                           },
-                           {
-                               'component': 'VRow',
-                               'content': [
-                                   {
-                                       'component': 'VCol',
-                                       'props': {
-                                           'cols': 12,
-                                       },
-                                       'content': [
-                                           {
-                                               'component': 'VAlert',
-                                               'props': {
-                                                   'type': 'info',
-                                                   'variant': 'tonal',
-                                                   'text': '如未设置自定义emby配置，则读取环境变量emby配置。'
-                                               }
-                                           }
-                                       ]
-                                   }
-                               ]
-                           }
-                       ]
-                   }
-               ], {
-                   "enabled": False,
-                   "onlyonce": False,
-                   "cron": "5 1 * * *",
-                   "res_dir": "",
-                   "days": 7,
-                   "cnt": 10,
-                   "emby_host": "",
-                   "emby_api_key": "",
-                   "mp_host": "",
-                   "show_counts": True,
-                   "text_url": "",
-                   "type": ""
-               }
+            {
+                'component': 'VForm',
+                'content': [
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'enabled',
+                                            'label': '启用插件',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'onlyonce',
+                                            'label': '立即运行一次',
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'cron',
+                                            'label': '执行周期',
+                                            'placeholder': '5位cron表达式，留空自动'
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'res_dir',
+                                            'label': '素材路径',
+                                            'placeholder': '本地素材路径'
+                                        }
+                                    }
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'days',
+                                            'label': '报告天数',
+                                            'placeholder': '向前获取数据的天数'
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'cnt',
+                                            'label': '观影记录数量',
+                                            'placeholder': '获取观影数据数量，默认10'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'mp_host',
+                                            'label': 'MoviePilot域名',
+                                            'placeholder': '必填，末尾不带/'
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'multiple': False,
+                                            'chips': True,
+                                            'model': 'type',
+                                            'label': '推送方式',
+                                            'items': MsgTypeOptions
+                                        }
+                                    }
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'model': 'show_time',
+                                            'label': '是否显示观看时长',
+                                            'items': [
+                                                {'title': '是', 'value': True},
+                                                {'title': '否', 'value': False}
+                                            ]
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'text_url',
+                                            'label': '每日一言api',
+                                            'placeholder': '空则不发送'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'emby_host',
+                                            'label': '自定义emby host',
+                                            'placeholder': 'IP:PORT'
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'emby_api_key',
+                                            'label': '自定义emby apiKey'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '如生成观影报告有空白记录，可酌情调大观影记录数量。'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '如未设置自定义emby配置，则读取环境变量emby配置。'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ], {
+            "enabled": False,
+            "onlyonce": False,
+            "cron": "5 1 * * *",
+            "res_dir": "",
+            "days": 7,
+            "cnt": 10,
+            "emby_host": "",
+            "emby_api_key": "",
+            "mp_host": "",
+            "show_time": True,
+            "text_url": "",
+            "type": ""
+        }
 
     def get_page(self) -> List[dict]:
         pass
@@ -533,7 +533,7 @@ class EmbyReporter(_PluginBase):
         except Exception as e:
             logger.error("退出插件失败：%s" % str(e))
 
-    def draw(self, res_path, movies, tvshows, show_count=True):
+    def draw(self, res_path, movies, tvshows, show_time=True):
         # 默认路径 默认图
         if not res_path:
             res_path = os.path.join(Path(__file__).parent, "res")
@@ -556,8 +556,8 @@ class EmbyReporter(_PluginBase):
         for i in movies:
             try:
                 # 榜单项数据
-                user_id, item_id, item_type, name, count, duarion = tuple(i)
-                print(item_type, item_id, name, count)
+                user_id, item_id, item_type, name, count, duration = tuple(i)
+                print(item_type, item_id, name, count, f"{round(duration / 60, 2)}min")
                 # 封面图像获取
                 success, data = self.primary(item_id)
                 if not success:
@@ -578,8 +578,8 @@ class EmbyReporter(_PluginBase):
         for i in tvshows:
             try:
                 # 榜单项数据
-                user_id, item_id, item_type, name, count, duarion = tuple(i)
-                print(item_type, item_id, name, count)
+                user_id, item_id, item_type, name, count, duration = tuple(i)
+                print(item_type, item_id, name, count, f"{round(duration / 60, 2)}min")
                 # 图片获取，剧集主封面获取
                 # 获取剧ID
                 success, data = self.items(user_id, item_id)
@@ -603,7 +603,7 @@ class EmbyReporter(_PluginBase):
             index += 1
             try:
                 # 榜单项数据
-                user_id, item_id, item_type, name, count, duarion = tuple(i)
+                user_id, item_id, item_type, name, count, duration = tuple(i)
                 # 图片获取，剧集主封面获取
                 if item_type != "Movie":
                     # 获取剧ID
@@ -640,12 +640,12 @@ class EmbyReporter(_PluginBase):
                 bg.paste(cover, (73 + 145 * index, 379 + offset_y))
                 # 绘制 播放次数、影片名称
                 text = ImageDraw.Draw(bg)
-                if show_count:
+                if show_time:
                     self.draw_text_psd_style(text,
-                                             (
-                                                 177 + 145 * index - font_count.getlength(str(count)),
-                                                 353 + offset_y),
-                                             str(count), font_count, 126)
+                                             (177 + 145 * index - font_count.getlength(
+                                                 f"{round(duration / 60, 2)}min"),
+                                              353 + offset_y),
+                                             f"{round(duration / 60, 2)}min", font_count, 126)
                 self.draw_text_psd_style(text, (74 + 145 * index, 542 + font_offset_y + offset_y), name, temp_font, 126)
             except Exception:
                 continue
@@ -757,7 +757,7 @@ class EmbyReporter(_PluginBase):
         sql = "SELECT UserId, ItemId, ItemType, "
         sql += types + " AS name, "
         sql += "COUNT(1) AS play_count, "
-        sql += "SUM(PlayDuration - PauseDuration) AS total_duarion "
+        sql += "SUM(PlayDuration - PauseDuration) AS total_duration "
         sql += "FROM PlaybackActivity "
         sql += f"WHERE ItemType = '{'Movie' if types == self.PLAYBACK_REPORTING_TYPE_MOVIE else 'Episode'}' "
         sql += f"AND DateCreated >= '{start_time}' AND DateCreated <= '{end_time}' "
@@ -765,7 +765,7 @@ class EmbyReporter(_PluginBase):
         if user_id:
             sql += f"AND UserId = '{user_id}' "
         sql += "GROUP BY name "
-        sql += "ORDER BY play_count DESC "
+        sql += "ORDER BY total_duration DESC "
         sql += "LIMIT " + str(limit)
 
         url = f"{self.host}/emby/user_usage_stats/submit_custom_query?api_key={self.api_key}"
