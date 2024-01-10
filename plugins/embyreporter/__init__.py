@@ -557,7 +557,7 @@ class EmbyReporter(_PluginBase):
             try:
                 # 榜单项数据
                 user_id, item_id, item_type, name, count, duration = tuple(i)
-                print(item_type, item_id, name, count, f"{round(duration / 60, 2)}min")
+                print(item_type, item_id, name, count, f"{round(int(duration) / 60, 2)}min")
                 # 封面图像获取
                 success, data = self.primary(item_id)
                 if not success:
@@ -579,7 +579,7 @@ class EmbyReporter(_PluginBase):
             try:
                 # 榜单项数据
                 user_id, item_id, item_type, name, count, duration = tuple(i)
-                print(item_type, item_id, name, count, f"{round(duration / 60, 2)}min")
+                print(item_type, item_id, name, count, f"{round(int(duration) / 60, 2)}min")
                 # 图片获取，剧集主封面获取
                 # 获取剧ID
                 success, data = self.items(user_id, item_id)
@@ -591,7 +591,8 @@ class EmbyReporter(_PluginBase):
                 if not success:
                     continue
                 exites_tvs.append(i)
-            except Exception:
+            except Exception as e:
+                print(str(e))
                 continue
         logger.info(f"过滤后未删除电视剧 {len(exites_tvs)} 部")
         if len(exites_tvs) > 5:
@@ -643,9 +644,9 @@ class EmbyReporter(_PluginBase):
                 if show_time:
                     self.draw_text_psd_style(text,
                                              (177 + 145 * index - font_count.getlength(
-                                                 f"{round(duration / 60, 2)}min"),
+                                                 f"{round(int(duration) / 60, 2)}min"),
                                               353 + offset_y),
-                                             f"{round(duration / 60, 2)}min", font_count, 126)
+                                             f"{round(int(duration) / 60, 2)}min", font_count, 126)
                 self.draw_text_psd_style(text, (74 + 145 * index, 542 + font_offset_y + offset_y), name, temp_font, 126)
             except Exception:
                 continue
