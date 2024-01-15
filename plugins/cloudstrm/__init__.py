@@ -44,7 +44,7 @@ class CloudStrm(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png"
     # 插件版本
-    plugin_version = "2.0"
+    plugin_version = "2.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -60,6 +60,7 @@ class CloudStrm(_PluginBase):
     _enabled = False
     _monitor_confs = None
     _onlyonce = False
+    _copy_files = False
     _relay = 3
     _observer = []
     _video_formats = ('.mp4', '.avi', '.rmvb', '.wmv', '.mov', '.mkv', '.flv', '.ts', '.webm', '.iso', '.mpg', '.m2ts')
@@ -86,6 +87,7 @@ class CloudStrm(_PluginBase):
         if config:
             self._enabled = config.get("enabled")
             self._onlyonce = config.get("onlyonce")
+            self._copy_files = config.get("copy_files")
             self._monitor_confs = config.get("monitor_confs")
             self._relay = config.get("relay") or 3
 
@@ -252,19 +254,14 @@ class CloudStrm(_PluginBase):
 
                 # 视频文件创建.strm文件
                 if event_path.lower().endswith(self._video_formats):
-                    # 如果视频文件小于1MB，则直接复制，不创建.strm文件
-                    if os.path.getsize(event_path) < 1024 * 1024:
-                        shutil.copy2(event_path, dest_file)
-                        logger.info(f"复制视频文件 {event_path} 到 {dest_file}")
-                    else:
-                        # 创建.strm文件
-                        self.__create_strm_file(dest_file=dest_file,
-                                                dest_dir=dest_dir,
-                                                source_file=event_path,
-                                                library_dir=library_dir,
-                                                cloud_type=cloud_type,
-                                                cloud_path=cloud_path,
-                                                cloud_url=cloud_url)
+                    # 创建.strm文件
+                    self.__create_strm_file(dest_file=dest_file,
+                                            dest_dir=dest_dir,
+                                            source_file=event_path,
+                                            library_dir=library_dir,
+                                            cloud_type=cloud_type,
+                                            cloud_path=cloud_path,
+                                            cloud_url=cloud_url)
                 else:
                     # 其他nfo、jpg等复制文件
                     shutil.copy2(event_path, dest_file)
@@ -348,9 +345,10 @@ class CloudStrm(_PluginBase):
                                                 cloud_path=cloud_path,
                                                 cloud_url=cloud_url)
                 else:
-                    # 复制文件
-                    logger.info(f"复制其他文件到:::{dest_file}")
-                    shutil.copy2(source_file, dest_file)
+                    if self._copy_files:
+                        # 复制文件
+                        logger.info(f"复制其他文件到:::{dest_file}")
+                        shutil.copy2(source_file, dest_file)
 
     @staticmethod
     def __create_strm_file(dest_file: str, dest_dir: str, source_file: str, library_dir: str = None,
@@ -413,6 +411,7 @@ class CloudStrm(_PluginBase):
         self.update_config({
             "enabled": self._enabled,
             "onlyonce": self._onlyonce,
+            "copy_files": self._copy_files,
             "relay": self._relay,
             "monitor_confs": self._monitor_confs
         })
@@ -513,6 +512,27 @@ class CloudStrm(_PluginBase):
                                     }
                                 ]
                             }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'copy_files',
+                                            'label': '复制非媒体文件',
+                                        }
+                                    }
+                                ]
+                            },
                         ]
                     },
                     {
@@ -656,6 +676,7 @@ class CloudStrm(_PluginBase):
             "enabled": False,
             "relay": 3,
             "onlyonce": False,
+            "copy_files": False,
             "monitor_confs": ""
         }
 
