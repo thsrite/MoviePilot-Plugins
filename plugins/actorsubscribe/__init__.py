@@ -202,17 +202,17 @@ class ActorSubscribe(_PluginBase):
                                                 resolution=self._resolution,
                                                 effect=self._effect,
                                                 username=settings.SUPERUSER)
-                        # 存储历史记录
-                        history.append({
-                            "title": mediainfo.title,
-                            "type": mediainfo.type.value,
-                            "year": mediainfo.year,
-                            "poster": mediainfo.get_poster_image(),
-                            "overview": mediainfo.overview,
-                            "tmdbid": mediainfo.tmdb_id,
-                            "doubanid": mediainfo.douban_id,
-                            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        })
+            # 存储历史记录
+            history.append({
+                "title": mediainfo.title,
+                "type": mediainfo.type.value,
+                "year": mediainfo.year,
+                "poster": mediainfo.get_poster_image(),
+                "overview": mediainfo.overview,
+                "tmdbid": mediainfo.tmdb_id,
+                "doubanid": mediainfo.douban_id,
+                "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            })
 
         # 保存历史记录
         self.save_data('history', history)
