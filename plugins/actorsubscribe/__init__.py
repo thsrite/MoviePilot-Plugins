@@ -166,9 +166,10 @@ class ActorSubscribe(_PluginBase):
             meta = MetaInfo(mediainfo.title)
 
             # 识别豆瓣信息
+            oldmediainfo = mediainfo
             mediainfo = self.chain.recognize_media(meta=meta, doubanid=mediainfo.douban_id)
             if not mediainfo:
-                logger.warn(f'未识别到媒体信息，标题：{mediainfo.title}，豆瓣ID：{mediainfo.douban_id}')
+                logger.warn(f'未识别到媒体信息，标题：{oldmediainfo.title}，豆瓣ID：{oldmediainfo.douban_id}')
                 continue
 
             # 查询缺失的媒体信息
