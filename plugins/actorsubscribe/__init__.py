@@ -186,9 +186,9 @@ class ActorSubscribe(_PluginBase):
             if mediainfo.actors:
                 for actor in mediainfo.actors:
                     # logger.info(f'正在处理 {mediainfo.title_year} 演员 {actor}')
-                    if actor and actor.name and actor.name in actors:
+                    if actor and actor.get('name') and actor.get('name') in actors:
                         # 开始订阅
-                        logger.info(f"电影 {mediainfo.title_year} {mediainfo.tmdb_id} 命中订阅演员 {actor.name}，开始订阅")
+                        logger.info(f"电影 {mediainfo.title_year} {mediainfo.tmdb_id} 命中订阅演员 {actor.get('name')}，开始订阅")
 
                         # 添加订阅
                         self.subscribechain.add(title=mediainfo.title,
