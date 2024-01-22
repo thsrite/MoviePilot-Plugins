@@ -23,7 +23,7 @@ class ActorSubscribe(_PluginBase):
     # 插件图标
     plugin_icon = "Mdcng_A.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -33,7 +33,7 @@ class ActorSubscribe(_PluginBase):
     # 加载顺序
     plugin_order = 25
     # 可使用的用户级别
-    auth_level = 1
+    auth_level = 2
 
     # 私有属性
     _enabled: bool = False
@@ -165,13 +165,6 @@ class ActorSubscribe(_PluginBase):
             # 元数据
             meta = MetaInfo(mediainfo.title)
 
-            # 识别豆瓣信息
-            oldmediainfo = mediainfo
-            mediainfo = self.chain.recognize_media(meta=meta, doubanid=mediainfo.douban_id)
-            if not mediainfo:
-                logger.warn(f'未识别到媒体信息，标题：{oldmediainfo.title}，豆瓣ID：{oldmediainfo.douban_id}')
-                continue
-
             # 查询缺失的媒体信息
             exist_flag, _ = self.downloadchain.get_no_exists_info(meta=meta, mediainfo=mediainfo)
             if exist_flag:
@@ -183,12 +176,13 @@ class ActorSubscribe(_PluginBase):
                 logger.info(f'{mediainfo.title_year} 订阅已存在')
                 continue
 
-            if mediainfo.actors:
-                for actor in mediainfo.actors:
+            mediainfo_actiors = mediainfo.actors + mediainfo.directors
+            if mediainfo_actiors:
+                for actor in mediainfo_actiors:
                     # logger.info(f'正在处理 {mediainfo.title_year} 演员 {actor}')
-                    if actor and actor.get('name') and actor.get('name') in actors:
+                    if actor and actor in actors:
                         # 开始订阅
-                        logger.info(f"电影 {mediainfo.title_year} {mediainfo.tmdb_id} 命中订阅演员 {actor.get('name')}，开始订阅")
+                        logger.info(f"电影 {mediainfo.title_year} {mediainfo.tmdb_id} 命中订阅演员 {actor}，开始订阅")
 
                         # 添加订阅
                         self.subscribechain.add(title=mediainfo.title,
@@ -201,17 +195,17 @@ class ActorSubscribe(_PluginBase):
                                                 resolution=self._resolution,
                                                 effect=self._effect,
                                                 username=settings.SUPERUSER)
-            # 存储历史记录
-            history.append({
-                "title": mediainfo.title,
-                "type": mediainfo.type.value,
-                "year": mediainfo.year,
-                "poster": mediainfo.get_poster_image(),
-                "overview": mediainfo.overview,
-                "tmdbid": mediainfo.tmdb_id,
-                "doubanid": mediainfo.douban_id,
-                "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            })
+                        # 存储历史记录
+                        history.append({
+                            "title": mediainfo.title,
+                            "type": mediainfo.type.value,
+                            "year": mediainfo.year,
+                            "poster": mediainfo.get_poster_image(),
+                            "overview": mediainfo.overview,
+                            "tmdbid": mediainfo.tmdb_id,
+                            "doubanid": mediainfo.douban_id,
+                            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        })
 
         # 保存历史记录
         self.save_data('history', history)
