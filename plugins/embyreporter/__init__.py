@@ -699,7 +699,7 @@ class EmbyReporter(_PluginBase):
             x = xy[0]
 
     @cache.memoize(ttl=600)
-    def primary(self, item_id, width=200, height=300, quality=90, ret_url=False):
+    def primary(self, item_id, width=720, height=1440, quality=90, ret_url=False):
         try:
             url = self.host + f"/emby/Items/{item_id}/Images/Primary?maxHeight={height}&maxWidth={width}&quality={quality}"
             if ret_url:
