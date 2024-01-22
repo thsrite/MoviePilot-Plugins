@@ -165,16 +165,6 @@ class ActorSubscribe(_PluginBase):
             # 元数据
             meta = MetaInfo(mediainfo.title)
 
-            # 豆瓣演员信息
-            mediainfo_actiors = mediainfo.actors + mediainfo.directors
-
-            # 识别豆瓣信息
-            oldmediainfo = mediainfo
-            mediainfo = self.chain.recognize_media(meta=meta, doubanid=mediainfo.douban_id)
-            if not mediainfo:
-                logger.warn(f'未识别到媒体信息，标题：{oldmediainfo.title}，豆瓣ID：{oldmediainfo.douban_id}')
-                continue
-
             # 查询缺失的媒体信息
             exist_flag, _ = self.downloadchain.get_no_exists_info(meta=meta, mediainfo=mediainfo)
             if exist_flag:
@@ -182,10 +172,12 @@ class ActorSubscribe(_PluginBase):
                 continue
 
             # 判断用户是否已经添加订阅
-            if self.subscribechain.exists(mediainfo=mediainfo, meta=meta):
+            if self.subscribechain.exists(mediainfo=mediainfo):
                 logger.info(f'{mediainfo.title_year} 订阅已存在')
                 continue
 
+            # 豆瓣演员信息
+            mediainfo_actiors = mediainfo.actors + mediainfo.directors
             if mediainfo_actiors:
                 for actor in mediainfo_actiors:
                     # logger.info(f'正在处理 {mediainfo.title_year} 演员 {actor}')
