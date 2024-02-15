@@ -1,3 +1,4 @@
+import json
 import re
 import warnings
 from datetime import datetime, timedelta
@@ -15,6 +16,7 @@ from app import schemas
 from app.core.config import settings
 from app.core.event import Event
 from app.core.event import eventmanager
+from app.db.models import PluginData
 from app.db.site_oper import SiteOper
 from app.helper.browser import PlaywrightHelper
 from app.helper.module import ModuleHelper
@@ -24,6 +26,7 @@ from app.plugins import _PluginBase
 from app.plugins.sitestatistic.siteuserinfo import ISiteUserInfo
 from app.schemas.types import EventType, NotificationType
 from app.utils.http import RequestUtils
+from app.utils.object import ObjectUtils
 from app.utils.string import StringUtils
 from app.utils.timer import TimerUtils
 
@@ -40,7 +43,7 @@ class SiteStatisticNoMsg(_PluginBase):
     # 插件图标
     plugin_icon = "statistic.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "lightolly"
     # 作者主页
@@ -86,9 +89,9 @@ class SiteStatisticNoMsg(_PluginBase):
             self._statistic_sites = config.get("statistic_sites") or []
 
             # 过滤掉已删除的站点
-            all_sites = [site for site in self.sites.get_indexers() if not site.get("public")] + self.__custom_sites()
-            self._statistic_sites = [site.get("id") for site in all_sites if
-                                     not site.get("public") and site.get("id") in self._statistic_sites]
+            all_sites = [site.id for site in self.siteoper.list_order_by_pri()] + [site.get("id") for site in
+                                                                                   self.__custom_sites()]
+            self._statistic_sites = [site_id for site_id in all_sites if site_id in self._statistic_sites]
             self.__update_config()
 
         if self._enabled or self._onlyonce:
@@ -125,9 +128,9 @@ class SiteStatisticNoMsg(_PluginBase):
                                             trigger=CronTrigger.from_crontab(self._cron),
                                             name="站点数据统计")
                 except Exception as err:
-                    logger.error(f"定时任务配置错误：{err}")
+                    logger.error(f"定时任务配置错误：{str(err)}")
                     # 推送实时消息
-                    self.systemmessage.put(f"执行周期配置错误：{err}")
+                    self.systemmessage.put(f"执行周期配置错误：{str(err)}")
             else:
                 triggers = TimerUtils.random_scheduler(num_executions=1,
                                                        begin_hour=0,
@@ -344,17 +347,38 @@ class SiteStatisticNoMsg(_PluginBase):
         """
         拼装插件详情页面，需要返回页面配置，同时附带数据
         """
-        #
-        # 最近两天的日期数组
-        date_list = [(datetime.now() - timedelta(days=i)).date() for i in range(2)]
+
+        def __gb(value: int) -> float:
+            """
+            转换为GB，保留1位小数
+            """
+            if not value:
+                return 0
+            return round(value / 1024 / 1024 / 1024, 1)
+
+        def __sub_dict(d1: dict, d2: dict) -> dict:
+            """
+            计算两个字典相同Key值的差值（如果值为数字），返回新字典
+            """
+            if not d1:
+                return {}
+            if not d2:
+                return d1
+            d = {k: d1.get(k) - d2.get(k) for k in d1
+                 if k in d2 and isinstance(d1.get(k), int) and isinstance(d2.get(k), int)}
+            # 把小于0的数据变成0
+            for k, v in d.items():
+                if isinstance(v, int) and v < 0:
+                    d[k] = 0
+            return d
+
         # 最近一天的签到数据
         stattistic_data: Dict[str, Dict[str, Any]] = {}
-        for day in date_list:
-            current_day = day.strftime("%Y-%m-%d")
-            stattistic_data = self.get_data(current_day)
-            if stattistic_data:
-                break
-        if not stattistic_data:
+        # 昨天数据
+        yesterday_sites_data: Dict[str, Dict[str, Any]] = {}
+        # 获取最近所有数据
+        data_list: List[PluginData] = self.get_data(key=None)
+        if not data_list:
             return [
                 {
                     'component': 'div',
@@ -364,6 +388,19 @@ class SiteStatisticNoMsg(_PluginBase):
                     }
                 }
             ]
+        # 取key符合日期格式的数据
+        data_list = [data for data in data_list if re.match(r"\d{4}-\d{2}-\d{2}", data.key)]
+        # 按日期倒序排序
+        data_list.sort(key=lambda x: x.key, reverse=True)
+        # 今天的日期
+        today = data_list[0].key
+        # 数据按时间降序排序
+        datas = [json.loads(data.value) for data in data_list if ObjectUtils.is_obj(data.value)]
+        if len(data_list) > 0:
+            stattistic_data = datas[0]
+        if len(data_list) > 1:
+            yesterday_sites_data = datas[1]
+
         # 数据按时间降序排序
         stattistic_data = dict(sorted(stattistic_data.items(),
                                       key=lambda item: item[1].get('upload') or 0,
@@ -437,6 +474,25 @@ class SiteStatisticNoMsg(_PluginBase):
                 ]
             } for site, data in stattistic_data.items() if not data.get("err_msg")
         ]
+
+        # 计算增量数据集
+        inc_data = {}
+        for site, data in stattistic_data.items():
+            inc = __sub_dict(data, yesterday_sites_data.get(site))
+            if inc:
+                inc_data[site] = inc
+        # 今日上传
+        uploads = {k: v for k, v in inc_data.items() if v.get("upload")}
+        # 今日上传站点
+        upload_sites = [site for site in uploads.keys()]
+        # 今日上传数据
+        upload_datas = [__gb(data.get("upload")) for data in uploads.values()]
+        # 今日下载
+        downloads = {k: v for k, v in inc_data.items() if v.get("download")}
+        # 今日下载站点
+        download_sites = [site for site in downloads.keys()]
+        # 今日下载数据
+        download_datas = [__gb(data.get("download")) for data in downloads.values()]
 
         # 拼装页面
         return [
@@ -723,6 +779,74 @@ class SiteStatisticNoMsg(_PluginBase):
                             }
                         ]
                     },
+                    # 上传量图表
+                    {
+                        'component': 'VCol',
+                        'props': {
+                            'cols': 12,
+                            'md': 6
+                        },
+                        'content': [
+                            {
+                                'component': 'VApexChart',
+                                'props': {
+                                    'height': 300,
+                                    'options': {
+                                        'chart': {
+                                            'type': 'pie',
+                                        },
+                                        'labels': upload_sites,
+                                        'title': {
+                                            'text': f'今日上传（{today}）'
+                                        },
+                                        'legend': {
+                                            'show': True
+                                        },
+                                        'plotOptions': {
+                                            'pie': {
+                                                'expandOnClick': False
+                                            }
+                                        }
+                                    },
+                                    'series': upload_datas
+                                }
+                            }
+                        ]
+                    },
+                    # 下载量图表
+                    {
+                        'component': 'VCol',
+                        'props': {
+                            'cols': 12,
+                            'md': 6
+                        },
+                        'content': [
+                            {
+                                'component': 'VApexChart',
+                                'props': {
+                                    'height': 300,
+                                    'options': {
+                                        'chart': {
+                                            'type': 'pie',
+                                        },
+                                        'labels': download_sites,
+                                        'title': {
+                                            'text': f'今日下载（{today}）'
+                                        },
+                                        'legend': {
+                                            'show': True
+                                        },
+                                        'plotOptions': {
+                                            'pie': {
+                                                'expandOnClick': False
+                                            }
+                                        }
+                                    },
+                                    'series': download_datas
+                                }
+                            }
+                        ]
+                    },
                     # 各站点数据明细
                     {
                         'component': 'VCol',
@@ -835,7 +959,7 @@ class SiteStatisticNoMsg(_PluginBase):
                 if site_schema.match(html_text):
                     return site_schema
             except Exception as e:
-                logger.error(f"站点匹配失败 {e}")
+                logger.error(f"站点匹配失败 {str(e)}")
         return None
 
     def build(self, site_info: CommentedMap) -> Optional[ISiteUserInfo]:
