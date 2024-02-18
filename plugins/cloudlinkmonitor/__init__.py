@@ -13,12 +13,18 @@ from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
 
 from app import schemas
+from app.chain.tmdb import TmdbChain
+from app.chain.transfer import TransferChain
 from app.core.config import settings
 from app.core.event import eventmanager, Event
+from app.core.metainfo import MetaInfoPath
+from app.db.transferhistory_oper import TransferHistoryOper
 from app.log import logger
 from app.plugins import _PluginBase
-from app.schemas import Notification, NotificationType
-from app.schemas.types import EventType
+from app.core.context import MediaInfo
+from app.schemas import Notification, NotificationType, TransferInfo
+from app.schemas.types import EventType, MediaType
+from app.utils.string import StringUtils
 from app.utils.system import SystemUtils
 
 lock = threading.Lock()
@@ -45,13 +51,13 @@ class FileMonitorHandler(FileSystemEventHandler):
 
 class CloudLinkMonitor(_PluginBase):
     # 插件名称
-    plugin_name = "云盘实时软链接"
+    plugin_name = "云盘实时链接"
     # 插件描述
-    plugin_desc = "监控云盘目录文件变化，按原文件名软连接。"
+    plugin_desc = "监控云盘目录文件变化，自动转移链接（不刮削）。"
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -69,14 +75,19 @@ class CloudLinkMonitor(_PluginBase):
     _enabled = False
     _notify = False
     _onlyonce = False
+    tmdbchain = None
+    transferhis = None
+    transferchian = None
     _cron = None
     _size = 0
     # 转移方式
     _monitor_dirs = ""
     _exclude_keywords = ""
+    _cloud_medias = {}
 
     # 模式 compatibility/fast
     _mode = "compatibility"
+    _transfer_type = "link"
     # 存储源目录与目的目录关系
     _dirconf: Dict[str, Optional[Path]] = {}
     # 存储源目录转移方式
@@ -88,6 +99,9 @@ class CloudLinkMonitor(_PluginBase):
         # 清空配置
         self._dirconf = {}
         self._transferconf = {}
+        self.tmdbchain = TmdbChain()
+        self.transferhis = TransferHistoryOper()
+        self.transferchian = TransferChain()
 
         # 读取配置
         if config:
@@ -95,6 +109,7 @@ class CloudLinkMonitor(_PluginBase):
             self._notify = config.get("notify")
             self._onlyonce = config.get("onlyonce")
             self._mode = config.get("mode")
+            self._transfer_type = config.get("transfer_type")
             self._monitor_dirs = config.get("monitor_dirs") or ""
             self._exclude_keywords = config.get("exclude_keywords") or ""
             self._cron = config.get("cron")
@@ -106,6 +121,8 @@ class CloudLinkMonitor(_PluginBase):
         if self._enabled or self._onlyonce:
             # 定时服务管理器
             self._scheduler = BackgroundScheduler(timezone=settings.TZ)
+            # 追加入库消息统一发送服务
+            self._scheduler.add_job(self.send_msg, trigger='interval', seconds=15)
 
             # 读取目录配置
             monitor_dirs = self._monitor_dirs.split("\n")
@@ -132,8 +149,8 @@ class CloudLinkMonitor(_PluginBase):
                     target_path = Path(paths[1])
                     self._dirconf[mon_path] = target_path
                 else:
-                    logger.warn(f"{mon_path} 未配置目的目录，将不会进行软连接")
-                    self.systemmessage.put(f"{mon_path} 未配置目的目录，将不会进行软连接！")
+                    logger.warn(f"{mon_path} 未配置目的目录，将不会进行连接")
+                    self.systemmessage.put(f"{mon_path} 未配置目的目录，将不会进行连接！")
                     continue
 
                 # 启用目录监控
@@ -191,7 +208,7 @@ class CloudLinkMonitor(_PluginBase):
                 try:
                     self._scheduler.add_job(func=self.sync_all,
                                             trigger=CronTrigger.from_crontab(self._cron),
-                                            name="实时软连接")
+                                            name="云盘实时链接")
                 except Exception as err:
                     logger.error(f"定时任务配置错误：{str(err)}")
                     # 推送实时消息
@@ -211,6 +228,7 @@ class CloudLinkMonitor(_PluginBase):
             "notify": self._notify,
             "onlyonce": self._onlyonce,
             "mode": self._mode,
+            "transfer_type": self._transfer_type,
             "monitor_dirs": self._monitor_dirs,
             "exclude_keywords": self._exclude_keywords,
             "cron": self._cron,
@@ -227,24 +245,24 @@ class CloudLinkMonitor(_PluginBase):
             if not event_data or event_data.get("action") != "realtime_link":
                 return
             self.post_message(channel=event.event_data.get("channel"),
-                              title="开始实时软连接 ...",
+                              title="开始实时连接 ...",
                               userid=event.event_data.get("user"))
         self.sync_all()
         if event:
             self.post_message(channel=event.event_data.get("channel"),
-                              title="实时软连接完成！", userid=event.event_data.get("user"))
+                              title="实时连接完成！", userid=event.event_data.get("user"))
 
     def sync_all(self):
         """
         立即运行一次，全量同步目录中所有文件
         """
-        logger.info("开始全量实时软连接 ...")
+        logger.info("开始全量实时连接 ...")
         # 遍历所有监控目录
         for mon_path in self._dirconf.keys():
             # 遍历目录下所有文件
             for file_path in SystemUtils.list_files(Path(mon_path), ['.*']):
                 self.__handle_file(event_path=str(file_path), mon_path=mon_path)
-        logger.info("全量实时软连接完成！")
+        logger.info("全量实时连接完成！")
 
     def event_handler(self, event, mon_path: str, text: str, event_path: str):
         """
@@ -259,9 +277,8 @@ class CloudLinkMonitor(_PluginBase):
             logger.debug("文件%s：%s" % (text, event_path))
             self.__handle_file(event_path=event_path, mon_path=mon_path)
 
-    @staticmethod
-    def _link_file(src_path: Path, mon_path: str,
-                   target_path: Path, transfer_type: str = "link") -> Tuple[bool, str]:
+    def _link_file(self, src_path: Path, mon_path: str,
+                   target_path: Path, transfer_type: str = "softlink") -> Tuple[bool, str]:
         """
         对文件做纯链接处理，不做识别重命名，则监控模块调用
         :param : 来源渠道
@@ -280,9 +297,110 @@ class CloudLinkMonitor(_PluginBase):
             # 转移
             if transfer_type == "copy":
                 code, errmsg = SystemUtils.copy(src_path, new_path)
+                return True if code == 0 else False, errmsg
             else:
-                code, errmsg = SystemUtils.softlink(src_path, new_path)
-            return True if code == 0 else False, errmsg
+                # 元数据
+                file_meta = MetaInfoPath(src_path)
+                # 识别媒体信息
+                mediainfo: MediaInfo = self.chain.recognize_media(meta=file_meta)
+                # 获取集数据
+                if mediainfo.type == MediaType.TV:
+                    episodes_info = self.tmdbchain.tmdb_episodes(tmdbid=mediainfo.tmdb_id,
+                                                                 season=file_meta.begin_season or 1)
+                else:
+                    episodes_info = None
+                # 转移
+                transferinfo: TransferInfo = self.chain.transfer(mediainfo=mediainfo,
+                                                                 path=src_path,
+                                                                 transfer_type=transfer_type,
+                                                                 target=target_path,
+                                                                 meta=file_meta,
+                                                                 episodes_info=episodes_info)
+                if not transferinfo:
+                    logger.error("文件转移模块运行失败")
+                    return False, "文件转移模块运行失败"
+                if not transferinfo.success:
+                    if not transferinfo.success:
+                        # 转移失败
+                        logger.warn(f"{src_path.name} 入库失败：{transferinfo.message}")
+                        # 新增转移失败历史记录
+                        self.transferhis.add_fail(
+                            src_path=src_path,
+                            mode=transfer_type,
+                            meta=file_meta,
+                            mediainfo=mediainfo,
+                            transferinfo=transferinfo
+                        )
+                        if self._notify:
+                            self.chain.post_message(Notification(
+                                mtype=NotificationType.Manual,
+                                title=f"{mediainfo.title_year}{file_meta.season_episode} 入库失败！",
+                                text=f"原因：{transferinfo.message or '未知'}",
+                                image=mediainfo.get_message_image()
+                            ))
+                        return False, "文件转移模块运行失败"
+
+                        # 新增转移成功历史记录
+                    self.transferhis.add_success(
+                        src_path=src_path,
+                        mode=transfer_type,
+                        meta=file_meta,
+                        mediainfo=mediainfo,
+                        transferinfo=transferinfo
+                    )
+
+                    # 发送消息汇总
+                    media_list = self._cloud_medias.get(mediainfo.title_year + " " + file_meta.season) or {}
+                    if media_list:
+                        media_files = media_list.get("files") or []
+                        if media_files:
+                            file_exists = False
+                            for file in media_files:
+                                if str(src_path) == file.get("path"):
+                                    file_exists = True
+                                    break
+                            if not file_exists:
+                                media_files.append({
+                                    "path": src_path,
+                                    "mediainfo": mediainfo,
+                                    "file_meta": file_meta,
+                                    "transferinfo": transferinfo
+                                })
+                        else:
+                            media_files = [
+                                {
+                                    "path": src_path,
+                                    "mediainfo": mediainfo,
+                                    "file_meta": file_meta,
+                                    "transferinfo": transferinfo
+                                }
+                            ]
+                        media_list = {
+                            "files": media_files,
+                            "time": datetime.datetime.now()
+                        }
+                    else:
+                        media_list = {
+                            "files": [
+                                {
+                                    "path": src_path,
+                                    "mediainfo": mediainfo,
+                                    "file_meta": file_meta,
+                                    "transferinfo": transferinfo
+                                }
+                            ],
+                            "time": datetime.datetime.now()
+                        }
+                    self._cloud_medias[mediainfo.title_year + " " + file_meta.season] = media_list
+
+                    # 广播事件
+                    self.eventmanager.send_event(EventType.TransferComplete, {
+                        'meta': file_meta,
+                        'mediainfo': mediainfo,
+                        'transferinfo': transferinfo
+                    })
+
+                    return True, "文件转移模块运行成功"
 
     def __handle_file(self, event_path: str, mon_path: str):
         """
@@ -315,7 +433,7 @@ class CloudLinkMonitor(_PluginBase):
                 # 判断文件大小
                 if self._size and float(self._size) > 0 and file_path.stat().st_size < float(self._size) * 1024:
                     logger.info(f"{event_path} 文件大小小于最小文件大小，复制...")
-                    _transfer_type = "link"
+                    _transfer_type = self._transfer_type
                 else:
                     _transfer_type = "copy"
 
@@ -325,35 +443,78 @@ class CloudLinkMonitor(_PluginBase):
                     logger.warn(f"{mon_path} 未配置目的目录，将不会进行软连接")
                     return
 
-                # 开始硬连接
-                state, errmsg = self._link_file(src_path=file_path, mon_path=mon_path,
-                                                target_path=target, transfer_type=_transfer_type)
-
-                if not state:
-                    # 转移失败
-                    logger.warn(f"{file_path.name} 软连接失败：{errmsg}")
-                    if self._notify:
-                        self.chain.post_message(Notification(
-                            mtype=NotificationType.Manual,
-                            title=f"{file_path.name} 软连接失败！",
-                            text=f"原因：{errmsg or '未知'}"
-                        ))
-                    return
-
-                # 转移成功
-                logger.info(f"{file_path.name} 软连接成功")
-                if self._notify:
-                    self.chain.post_message(Notification(
-                        mtype=NotificationType.Manual,
-                        title=f"{file_path.name} 软连接完成！",
-                        text=f"目标目录：{target}"
-                    ))
+                # 开始连接
+                self._link_file(src_path=file_path, mon_path=mon_path,
+                                target_path=target, transfer_type=_transfer_type)
 
         except Exception as e:
             logger.error("目录监控发生错误：%s - %s" % (str(e), traceback.format_exc()))
 
     def get_state(self) -> bool:
         return self._enabled
+
+    def send_msg(self):
+        """
+        定时检查是否有媒体处理完，发送统一消息
+        """
+        if not self._cloud_medias or not self._cloud_medias.keys():
+            return
+
+        # 遍历检查是否已刮削完，发送消息
+        for medis_title_year_season in list(self._cloud_medias.keys()):
+            media_list = self._cloud_medias.get(medis_title_year_season)
+            logger.info(f"开始处理媒体 {medis_title_year_season} 消息")
+
+            if not media_list:
+                continue
+
+            # 获取最后更新时间
+            last_update_time = media_list.get("time")
+            media_files = media_list.get("files")
+            if not last_update_time or not media_files:
+                continue
+
+            transferinfo = media_files[0].get("transferinfo")
+            file_meta = media_files[0].get("file_meta")
+            mediainfo = media_files[0].get("mediainfo")
+            # 判断剧集最后更新时间距现在是已超过10秒或者电影，发送消息
+            if (datetime.datetime.now() - last_update_time).total_seconds() > int(10) \
+                    or mediainfo.type == MediaType.MOVIE:
+                # 发送通知
+                if self._notify:
+                    # 汇总处理文件总大小
+                    total_size = 0
+                    file_count = 0
+
+                    # 剧集汇总
+                    episodes = []
+                    for file in media_files:
+                        transferinfo = file.get("transferinfo")
+                        total_size += transferinfo.total_size
+                        file_count += 1
+
+                        file_meta = file.get("file_meta")
+                        if file_meta and file_meta.begin_episode:
+                            episodes.append(file_meta.begin_episode)
+
+                    transferinfo.total_size = total_size
+                    # 汇总处理文件数量
+                    transferinfo.file_count = file_count
+
+                    # 剧集季集信息 S01 E01-E04 || S01 E01、E02、E04
+                    season_episode = None
+                    # 处理文件多，说明是剧集，显示季入库消息
+                    if mediainfo.type == MediaType.TV:
+                        # 季集文本
+                        season_episode = f"{file_meta.season} {StringUtils.format_ep(episodes)}"
+                    # 发送消息
+                    self.transferchian.send_transfer_message(meta=file_meta,
+                                                             mediainfo=mediainfo,
+                                                             transferinfo=transferinfo,
+                                                             season_episode=season_episode)
+                # 发送完消息，移出key
+                del self._cloud_medias[medis_title_year_season]
+                continue
 
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
@@ -452,7 +613,7 @@ class CloudLinkMonitor(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -472,7 +633,27 @@ class CloudLinkMonitor(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'model': 'transfer_type',
+                                            'label': '转移方式',
+                                            'items': [
+                                                {'title': '硬链接', 'value': 'link'},
+                                                {'title': '软连接', 'value': 'softlink'}
+                                            ]
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -489,7 +670,7 @@ class CloudLinkMonitor(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -578,6 +759,7 @@ class CloudLinkMonitor(_PluginBase):
             "notify": False,
             "onlyonce": False,
             "mode": "compatibility",
+            "transfer_type": "link",
             "monitor_dirs": "",
             "exclude_keywords": "",
             "cron": "",

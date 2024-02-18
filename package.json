@@ -128,9 +128,9 @@
           "level": 1
       },
       "CloudLinkMonitor": {
-          "name": "云盘实时软链接",
-          "description": "监控云盘目录文件变化，按原文件名软连接。",
-          "version": "1.0",
+          "name": "云盘实时链接",
+          "description": "监控云盘目录文件变化，自动转移链接（不刮削）。",
+          "version": "1.1",
           "icon": "Linkease_A.png",
           "author": "thsrite",
           "level": 1
