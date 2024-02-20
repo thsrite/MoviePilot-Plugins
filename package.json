@@ -1,12 +1,4 @@
 {
-      "SiteStatisticNoMsg": {
-        "name": "站点数据统计",
-        "description": "自动统计和展示站点数据（无站点未读消息）。",
-        "version": "1.4",
-        "icon": "statistic.png",
-        "author": "lightolly",
-        "level": 2
-      },
       "CloudStrm": {
         "name": "云盘Strm生成",
         "description": "监控文件创建，生成Strm文件。",
