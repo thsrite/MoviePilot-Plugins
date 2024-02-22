@@ -126,5 +126,13 @@
           "icon": "Linkease_A.png",
           "author": "thsrite",
           "level": 1
+      },
+      "LinkToSrc": {
+          "name": "源文件恢复",
+          "description": "根据MoviePilot的转移记录中的硬链文件恢复源文件。",
+          "version": "1.0",
+          "icon": "Time_machine_A.png",
+          "author": "thsrite",
+          "level": 1
       }
 }
