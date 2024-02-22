@@ -15,7 +15,7 @@ class LinkToSrc(_PluginBase):
     # 插件图标
     plugin_icon = "Time_machine_A.png"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -42,7 +42,7 @@ class LinkToSrc(_PluginBase):
         self.__update_config()
 
     def _task(self):
-        db_path = Path(Settings.CONFIG_PATH).joinpath('user.db')
+        db_path = Settings().CONFIG_PATH / 'user.db'
         try:
             gradedb = sqlite3.connect(db_path)
         except Exception as e:
