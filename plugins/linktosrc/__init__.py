@@ -15,7 +15,7 @@ class LinkToSrc(_PluginBase):
     # 插件图标
     plugin_icon = "Time_machine_A.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -28,10 +28,12 @@ class LinkToSrc(_PluginBase):
     auth_level = 1
 
     _onlyonce: bool = False
+    _link_dirs: str = None
 
     def init_plugin(self, config: dict = None):
         if config:
             self._onlyonce = config.get("onlyonce")
+            self._link_dirs = config.get("link_dirs")
 
         if self._onlyonce:
             # 执行替换
@@ -47,21 +49,42 @@ class LinkToSrc(_PluginBase):
             logger.error(f"无法打开数据库文件 {db_path}，请检查路径是否正确：{str(e)}")
             return
 
+        transfer_history = []
         # 创建游标cursor来执行executeＳＱＬ语句
         cursor = gradedb.cursor()
-        sql = '''
-               SELECT
-                   src,
-                   dest
-               FROM
-                   transferhistory  
-               WHERE
-                   src IS NOT NULL and dest IS NOT NULL;
-                   '''
-        cursor.execute(sql)
-        transfer_history = cursor.fetchall()
+        if self._link_dirs:
+            link_dirs = self._link_dirs.split("\n")
+            for link_dir in link_dirs:
+                sql = f'''
+                       SELECT
+                           src,
+                           dest
+                       FROM
+                           transferhistory  
+                       WHERE
+                           src IS NOT NULL and dest IS NOT NULL and dest like '{link_dir}%';
+                           '''
+                cursor.execute(sql)
+                transfer_history += cursor.fetchall()
+        else:
+            sql = '''
+                   SELECT
+                       src,
+                       dest
+                   FROM
+                       transferhistory  
+                   WHERE
+                       src IS NOT NULL and dest IS NOT NULL;
+                       '''
+            cursor.execute(sql)
+            transfer_history = cursor.fetchall()
         logger.info(f"查询到历史记录{len(transfer_history)}条")
         cursor.close()
+
+        if not transfer_history:
+            logger.error("未获取到历史记录，停止处理")
+            return
+
         for history in transfer_history:
             src = history[0]
             dest = history[1]
@@ -81,7 +104,8 @@ class LinkToSrc(_PluginBase):
 
     def __update_config(self):
         self.update_config({
-            "onlyonce": self._onlyonce
+            "onlyonce": self._onlyonce,
+            "link_dirs": self._link_dirs
         })
 
     @staticmethod
@@ -127,6 +151,28 @@ class LinkToSrc(_PluginBase):
                                 },
                                 'content': [
                                     {
+                                        'component': 'VTextarea',
+                                        'props': {
+                                            'model': 'link_dirs',
+                                            'label': '需要恢复的硬链接目录',
+                                            'rows': 5,
+                                            'placeholder': '硬链接目录 （一行一个）'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
                                         'component': 'VAlert',
                                         'props': {
                                             'type': 'info',
@@ -142,7 +188,8 @@ class LinkToSrc(_PluginBase):
                 ]
             }
         ], {
-            "onlyonce": False
+            "onlyonce": False,
+            "link_dirs": ""
         }
 
     def get_page(self) -> List[dict]:
