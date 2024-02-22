@@ -42,7 +42,7 @@ class LinkToSrc(_PluginBase):
         self.__update_config()
 
     def _task(self):
-        db_path = Settings.CONFIG_PATH / "user.db"
+        db_path = Settings.CONFIG_PATH / 'user.db'
         try:
             gradedb = sqlite3.connect(db_path)
         except Exception as e:
