@@ -25,6 +25,6 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - [Emby观影报告 1.5](docs%2FEmbyReporter.md)
 - [豆瓣明星热映订阅 1.3](docs%2FActorSubscribe.md)
 - [短剧刮削 2.5](docs%2FShortPlayMonitor.md)
-- [云盘实时链接 1.1](docs%2FCloudLinkMonitor.md)
+- [云盘实时链接 1.2](docs%2FCloudLinkMonitor.md)
 - [源文件恢复 1.2](docs%2FLinkToSrc.md)
 
