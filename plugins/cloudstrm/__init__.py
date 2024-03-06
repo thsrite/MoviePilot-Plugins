@@ -222,6 +222,8 @@ class CloudStrm(_PluginBase):
                             # 扫描云盘文件，判断是否有对应strm
                             self.__strm(source_file)
                             __save_flag = True
+                        else:
+                            logger.debug(f"{source_file} 已在缓存中！跳过处理")
 
             # 重新保存json文件
             if __save_flag:
