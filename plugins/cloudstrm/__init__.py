@@ -8,6 +8,7 @@ from pathlib import Path
 import pytz
 from typing import Any, List, Dict, Tuple, Optional
 
+from app.schemas.types import EventType
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
@@ -24,7 +25,7 @@ class CloudStrm(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png"
     # 插件版本
-    plugin_version = "3.0"
+    plugin_version = "3.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -154,14 +155,17 @@ class CloudStrm(_PluginBase):
             logger.error("未获取到可用目录监控配置，请检查")
             return
 
+        logger.info("云盘strm生成任务开始")
         # 首次扫描或者重建索引
         __init_flag = False
         if self._rebuild or not Path(self.__cloud_files_json).exists():
+            logger.info("正在重建索引或初始化运行")
             self.__init_cloud_files_json()
             self._rebuild = False
             self.__update_config()
             __init_flag = True
         else:
+            logger.info("尝试加载本地缓存")
             # 尝试加载本地
             with open(self.__cloud_files_json, 'r') as file:
                 content = file.read()
@@ -170,6 +174,7 @@ class CloudStrm(_PluginBase):
 
         # 本地没加载到则重建索引
         if not self.__cloud_files:
+            logger.error("尝试加载本地缓存，开始重建索引")
             self.__init_cloud_files_json()
             self._rebuild = False
             self.__update_config()
@@ -179,6 +184,7 @@ class CloudStrm(_PluginBase):
         if not __init_flag:
             __save_flag = False
             for source_dir in self._dirconf.keys():
+                logger.info(f"正在处理监控文件 {source_dir}")
                 for root, dirs, files in os.walk(source_dir):
                     # 如果遇到名为'extrafanart'的文件夹，则跳过处理该文件夹，继续处理其他文件夹
                     if "extrafanart" in dirs:
@@ -207,12 +213,15 @@ class CloudStrm(_PluginBase):
             if __save_flag:
                 self.__sava_json()
 
+        logger.info("云盘strm生成任务完成")
+
     def __init_cloud_files_json(self):
         """
         初始化云盘文件json
         """
         # init
         for source_dir in self._dirconf.keys():
+            logger.info(f"正在处理监控文件 {source_dir}")
             for root, dirs, files in os.walk(source_dir):
                 # 如果遇到名为'extrafanart'的文件夹，则跳过处理该文件夹，继续处理其他文件夹
                 if "extrafanart" in dirs:
@@ -237,7 +246,6 @@ class CloudStrm(_PluginBase):
 
         # 写入本地文件
         if self.__cloud_files:
-            logger.info(f"开始写入本地文件 {self.__cloud_files_json}")
             self.__sava_json()
         else:
             logger.warning(f"未获取到文件列表")
@@ -246,6 +254,7 @@ class CloudStrm(_PluginBase):
         """
         保存json文件
         """
+        logger.info(f"开始写入本地文件 {self.__cloud_files_json}")
         file = open(self.__cloud_files_json, 'w')
         file.write(json.dumps(self.__cloud_files))
         file.close()
@@ -378,7 +387,40 @@ class CloudStrm(_PluginBase):
 
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
-        pass
+        """
+        定义远程控制命令
+        :return: 命令关键字、事件、描述、附带数据
+        """
+        return [{
+            "cmd": "/cloud_strm",
+            "event": EventType.PluginAction,
+            "desc": "云盘strm文件生成",
+            "category": "",
+            "data": {
+                "action": "cloud_strm"
+            }
+        }]
+
+    def get_service(self) -> List[Dict[str, Any]]:
+        """
+        注册插件公共服务
+        [{
+            "id": "服务ID",
+            "name": "服务名称",
+            "trigger": "触发器：cron/interval/date/CronTrigger.from_crontab()",
+            "func": self.xxx,
+            "kwargs": {} # 定时器参数
+        }]
+        """
+        if self._enabled and self._cron:
+            return [{
+                "id": "CloudStrm",
+                "name": "云盘strm文件生成服务",
+                "trigger": CronTrigger.from_crontab(self._cron),
+                "func": self.__scan,
+                "kwargs": {}
+            }]
+        return []
 
     def get_api(self) -> List[Dict[str, Any]]:
         pass
