@@ -25,7 +25,7 @@ class CloudStrm(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png"
     # 插件版本
-    plugin_version = "3.1"
+    plugin_version = "3.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -151,6 +151,9 @@ class CloudStrm(_PluginBase):
         """
         扫描
         """
+        if not self._enabled:
+            logger.error("插件未开启")
+            return
         if not self._dirconf or not self._dirconf.keys():
             logger.error("未获取到可用目录监控配置，请检查")
             return
@@ -412,7 +415,7 @@ class CloudStrm(_PluginBase):
             "kwargs": {} # 定时器参数
         }]
         """
-        if self._enabled and self._cron:
+        if self._enabled:
             return [{
                 "id": "CloudStrm",
                 "name": "云盘strm文件生成服务",
