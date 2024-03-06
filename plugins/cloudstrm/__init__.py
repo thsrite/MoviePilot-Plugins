@@ -25,7 +25,7 @@ class CloudStrm(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png"
     # 插件版本
-    plugin_version = "3.2"
+    plugin_version = "3.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -290,6 +290,7 @@ class CloudStrm(_PluginBase):
                             os.makedirs(dest_file)
                             continue
                     else:
+                        # 非媒体文件
                         if Path(dest_file).exists():
                             logger.info(f"目标文件 {dest_file} 已存在")
                             continue
@@ -339,6 +340,11 @@ class CloudStrm(_PluginBase):
 
             # 构造.strm文件路径
             strm_path = os.path.join(dest_path, f"{os.path.splitext(video_name)[0]}.strm")
+            # strm已存在跳过处理
+            if Path(strm_path).exists():
+                logger.info(f"strm文件已存在 {strm_path}")
+                return
+
             logger.info(f"替换前本地路径:::{dest_file}")
 
             # 云盘模式
