@@ -124,7 +124,7 @@ class CloudStrm(_PluginBase):
             # 运行一次定时服务
             if self._onlyonce:
                 logger.info("云盘监控全量执行服务启动，立即运行一次")
-                self._scheduler.add_job(func=self.__scan, trigger='date',
+                self._scheduler.add_job(func=self.scan, trigger='date',
                                         run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
                                         name="云盘监控全量执行")
                 # 关闭一次性开关
@@ -135,7 +135,7 @@ class CloudStrm(_PluginBase):
             # 周期运行
             if self._cron:
                 try:
-                    self._scheduler.add_job(func=self.__scan,
+                    self._scheduler.add_job(func=self.scan,
                                             trigger=CronTrigger.from_crontab(self._cron),
                                             name="云盘监控")
                 except Exception as err:
@@ -149,7 +149,7 @@ class CloudStrm(_PluginBase):
                 self._scheduler.start()
 
     @eventmanager.register(EventType.PluginAction)
-    def __scan(self, event: Event = None):
+    def scan(self, event: Event = None):
         """
         扫描
         """
@@ -441,7 +441,7 @@ class CloudStrm(_PluginBase):
                 "id": "CloudStrm",
                 "name": "云盘strm文件生成服务",
                 "trigger": CronTrigger.from_crontab(self._cron),
-                "func": self.__scan,
+                "func": self.scan,
                 "kwargs": {}
             }]
         return []
