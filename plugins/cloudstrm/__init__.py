@@ -421,23 +421,14 @@ class CloudStrm(_PluginBase):
             "kwargs": {} # 定时器参数
         }]
         """
-        if self._enabled:
-            if self._cron:
-                return [{
-                    "id": "CloudStrm",
-                    "name": "云盘strm文件生成服务",
-                    "trigger": CronTrigger.from_crontab(self._cron),
-                    "func": self.__scan,
-                    "kwargs": {}
-                }]
-            else:
-                return [{
-                    "id": "CloudStrm",
-                    "name": "云盘strm文件生成服务",
-                    "trigger": None,
-                    "func": self.__scan,
-                    "kwargs": {}
-                }]
+        if self._enabled and self._cron:
+            return [{
+                "id": "CloudStrm",
+                "name": "云盘strm文件生成服务",
+                "trigger": CronTrigger.from_crontab(self._cron),
+                "func": self.__scan,
+                "kwargs": {}
+            }]
         return []
 
     def get_api(self) -> List[Dict[str, Any]]:
