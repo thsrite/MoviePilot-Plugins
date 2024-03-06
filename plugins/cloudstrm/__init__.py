@@ -8,6 +8,7 @@ from pathlib import Path
 import pytz
 from typing import Any, List, Dict, Tuple, Optional
 
+from app.core.event import eventmanager, Event
 from app.schemas.types import EventType
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -25,7 +26,7 @@ class CloudStrm(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png"
     # 插件版本
-    plugin_version = "3.3"
+    plugin_version = "3.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -147,7 +148,8 @@ class CloudStrm(_PluginBase):
                 self._scheduler.print_jobs()
                 self._scheduler.start()
 
-    def __scan(self):
+    @eventmanager.register(EventType.PluginAction)
+    def __scan(self, event: Event):
         """
         扫描
         """
@@ -157,6 +159,15 @@ class CloudStrm(_PluginBase):
         if not self._dirconf or not self._dirconf.keys():
             logger.error("未获取到可用目录监控配置，请检查")
             return
+
+        if event:
+            event_data = event.event_data
+            if not event_data or event_data.get("action") != "cloud_strm":
+                return
+            logger.info("收到命令，开始云盘strm生成 ...")
+            self.post_message(channel=event.event_data.get("channel"),
+                              title="开始云盘strm生成 ...",
+                              userid=event.event_data.get("user"))
 
         logger.info("云盘strm生成任务开始")
         # 首次扫描或者重建索引
@@ -217,6 +228,10 @@ class CloudStrm(_PluginBase):
                 self.__sava_json()
 
         logger.info("云盘strm生成任务完成")
+        if event:
+            self.post_message(channel=event.event_data.get("channel"),
+                              title="云盘strm生成任务完成！",
+                              userid=event.event_data.get("user"))
 
     def __init_cloud_files_json(self):
         """
