@@ -2,7 +2,7 @@
       "CloudStrm": {
         "name": "云盘Strm生成",
         "description": "监控文件创建，生成Strm文件。",
-        "version": "3.4",
+        "version": "3.5",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png",
         "author": "thsrite",
         "level": 1

@@ -26,7 +26,7 @@ class CloudStrm(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png"
     # 插件版本
-    plugin_version = "3.4"
+    plugin_version = "3.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -149,7 +149,7 @@ class CloudStrm(_PluginBase):
                 self._scheduler.start()
 
     @eventmanager.register(EventType.PluginAction)
-    def __scan(self, event: Event):
+    def __scan(self, event: Event = None):
         """
         扫描
         """
