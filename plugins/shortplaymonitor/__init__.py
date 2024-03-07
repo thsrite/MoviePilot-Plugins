@@ -295,26 +295,31 @@ class ShortPlayMonitor(_PluginBase):
             transfer_flag = False
             # 走tmdb刮削
             if mediainfo:
-                # 更新媒体图片
-                self.chain.obtain_images(mediainfo=mediainfo)
-                episodes_info = self.tmdbchain.tmdb_episodes(tmdbid=mediainfo.tmdb_id,
-                                                             season=file_meta.begin_season or 1)
-                mediainfo.category = None
-                # 转移
-                transferinfo: TransferInfo = self.chain.transfer(mediainfo=mediainfo,
-                                                                 path=Path(event_path),
-                                                                 transfer_type="link",
-                                                                 target=Path(dest_dir),
-                                                                 meta=file_meta,
-                                                                 episodes_info=episodes_info)
-                if not transferinfo:
-                    logger.error("文件转移模块运行失败")
+                try:
+                    # 更新媒体图片
+                    self.chain.obtain_images(mediainfo=mediainfo)
+                    episodes_info = self.tmdbchain.tmdb_episodes(tmdbid=mediainfo.tmdb_id,
+                                                                 season=file_meta.begin_season or 1)
+                    mediainfo.category = ""
+                    # 转移
+                    transferinfo: TransferInfo = self.chain.transfer(mediainfo=mediainfo,
+                                                                     path=Path(event_path),
+                                                                     transfer_type="link",
+                                                                     target=Path(dest_dir),
+                                                                     meta=file_meta,
+                                                                     episodes_info=episodes_info)
+                    if not transferinfo:
+                        logger.error("文件转移模块运行失败")
+                        transfer_flag = False
+                    else:
+                        self.chain.scrape_metadata(path=transferinfo.target_path,
+                                                   mediainfo=mediainfo,
+                                                   transfer_type="link")
+                        transfer_flag = True
+                except Exception as e:
+                    print(str(e))
                     transfer_flag = False
-                else:
-                    self.chain.scrape_metadata(path=transferinfo.target_path,
-                                               mediainfo=mediainfo,
-                                               transfer_type="link")
-                    transfer_flag = True
+                    logger.error(f"{event_path} tmdb刮削失败")
                 # 广播事件
                 # self.eventmanager.send_event(EventType.TransferComplete, {
                 #     'meta': file_meta,
