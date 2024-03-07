@@ -5,6 +5,11 @@ from pathlib import Path
 
 from typing import Any, List, Dict, Tuple, Optional
 from xml.dom import minidom
+
+from app.chain.tmdb import TmdbChain
+from app.core.metainfo import MetaInfoPath
+from app.schemas import MediaInfo, TransferInfo
+from app.schemas.types import EventType
 from app.utils.dom import DomUtils
 from PIL import Image
 import pytz
@@ -58,7 +63,7 @@ class ShortPlayMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Amule_B.png"
     # 插件版本
-    plugin_version = "2.5"
+    plugin_version = "3.0"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -81,6 +86,7 @@ class ShortPlayMonitor(_PluginBase):
     _dirconf = {}
     _renameconf = {}
     _coverconf = {}
+    tmdbchain = None
 
     # 定时器
     _scheduler: Optional[BackgroundScheduler] = None
@@ -90,6 +96,7 @@ class ShortPlayMonitor(_PluginBase):
         self._dirconf = {}
         self._renameconf = {}
         self._coverconf = {}
+        self.tmdbchain = TmdbChain()
 
         if config:
             self._enabled = config.get("enabled")
@@ -277,99 +284,135 @@ class ShortPlayMonitor(_PluginBase):
             rename_conf = self._renameconf.get(source_dir)
             # 封面比例
             cover_conf = self._coverconf.get(source_dir)
+            # 元数据
+            file_meta = MetaInfoPath(Path(event_path))
+            if not file_meta.name:
+                logger.error(f"{Path(event_path).name} 无法识别有效信息")
+                return
+            # 识别媒体信息
+            mediainfo: MediaInfo = self.chain.recognize_media(meta=file_meta)
 
-            target_path = event_path.replace(source_dir, dest_dir)
-
-            # 目录重命名
-            if str(rename_conf) == "true" or str(rename_conf) == "false":
-                rename_conf = bool(rename_conf)
-                target = target_path.replace(dest_dir, "")
-                parent = Path(Path(target).parents[0])
-                last = target.replace(str(parent), "")
-                if rename_conf:
-                    # 自定义识别次
-                    title, _ = WordsMatcher().prepare(parent)
-                    target_path = Path(dest_dir).joinpath(title + last)
+            transfer_flag = False
+            # 走tmdb刮削
+            if mediainfo:
+                # 更新媒体图片
+                self.chain.obtain_images(mediainfo=mediainfo)
+                episodes_info = self.tmdbchain.tmdb_episodes(tmdbid=mediainfo.tmdb_id,
+                                                             season=file_meta.begin_season or 1)
+                # 转移
+                transferinfo: TransferInfo = self.chain.transfer(mediainfo=mediainfo,
+                                                                 path=Path(event_path),
+                                                                 transfer_type="link",
+                                                                 target=Path(dest_dir),
+                                                                 meta=file_meta,
+                                                                 episodes_info=episodes_info)
+                if not transferinfo:
+                    logger.error("文件转移模块运行失败")
+                    transfer_flag = False
                 else:
-                    title = parent
-            else:
-                if str(rename_conf) == "smart":
+                    self.chain.scrape_metadata(path=transferinfo.target_path,
+                                               mediainfo=mediainfo,
+                                               transfer_type="link")
+                    transfer_flag = True
+                # 广播事件
+                # self.eventmanager.send_event(EventType.TransferComplete, {
+                #     'meta': file_meta,
+                #     'mediainfo': mediainfo,
+                #     'transferinfo': transferinfo
+                # })
+            if not transfer_flag:
+                target_path = event_path.replace(source_dir, dest_dir)
+
+                # 目录重命名
+                if str(rename_conf) == "true" or str(rename_conf) == "false":
+                    rename_conf = bool(rename_conf)
                     target = target_path.replace(dest_dir, "")
                     parent = Path(Path(target).parents[0])
                     last = target.replace(str(parent), "")
-                    # 取.第一个
-                    title = Path(parent).name.split(".")[0]
-                    target_path = Path(dest_dir).joinpath(title + last)
-                else:
-                    logger.error(f"{target_path} 智能重命名失败")
-                    return
-
-            # 文件夹同步创建
-            if is_directory:
-                # 目标文件夹不存在则创建
-                if not Path(target_path).exists():
-                    logger.info(f"创建目标文件夹 {target_path}")
-                    os.makedirs(target_path)
-            else:
-                # 媒体重命名
-                try:
-                    pattern = r'S\d+E\d+'
-                    matches = re.search(pattern, Path(target_path).name)
-                    if matches:
-                        target_path = Path(
-                            target_path).parent / f"{matches.group()}{Path(Path(target_path).name).suffix}"
+                    if rename_conf:
+                        # 自定义识别次
+                        title, _ = WordsMatcher().prepare(parent)
+                        target_path = Path(dest_dir).joinpath(title + last)
                     else:
-                        print("未找到匹配的季数和集数")
-                except Exception as e:
-                    print(e)
-
-                # 目标文件夹不存在则创建
-                if not Path(target_path).parent.exists():
-                    logger.info(f"创建目标文件夹 {Path(target_path).parent}")
-                    os.makedirs(Path(target_path).parent)
-
-                # 文件：nfo、图片、视频文件
-                if Path(target_path).exists():
-                    logger.debug(f"目标文件 {target_path} 已存在")
-                    return
-
-                # 硬链接
-                retcode, retmsg = SystemUtils.link(Path(event_path), target_path)
-                if retcode == 0:
-                    logger.info(f"文件 {event_path} 硬链接完成")
-                    # 生成 tvshow.nfo
-                    if not (target_path.parent / "tvshow.nfo").exists():
-                        self.__gen_tv_nfo_file(dir_path=target_path.parent,
-                                               title=title)
-
-                    # 生成缩略图
-                    if not (target_path.parent / "poster.jpg").exists():
-                        thumb_path = self.gen_file_thumb(title=title,
-                                                         rename_conf=rename_conf,
-                                                         file_path=target_path)
-                        if thumb_path and Path(thumb_path).exists():
-                            self.__save_poster(input_path=thumb_path,
-                                               poster_path=target_path.parent / "poster.jpg",
-                                               cover_conf=cover_conf)
-                            if (target_path.parent / "poster.jpg").exists():
-                                logger.info(f"{target_path.parent / 'poster.jpg'} 缩略图已生成")
-                            thumb_path.unlink()
-                        else:
-                            # 检查是否有缩略图
-                            thumb_files = SystemUtils.list_files(directory=target_path.parent,
-                                                                 extensions=[".jpg"])
-                            if thumb_files:
-                                # 生成poster
-                                for thumb in thumb_files:
-                                    self.__save_poster(input_path=thumb,
-                                                       poster_path=target_path.parent / "poster.jpg",
-                                                       cover_conf=cover_conf)
-                                    break
-                                # 删除多余jpg
-                                for thumb in thumb_files:
-                                    Path(thumb).unlink()
+                        title = parent
                 else:
-                    logger.error(f"文件 {event_path} 硬链接失败，错误码：{retcode}")
+                    if str(rename_conf) == "smart":
+                        target = target_path.replace(dest_dir, "")
+                        parent = Path(Path(target).parents[0])
+                        last = target.replace(str(parent), "")
+                        # 取.第一个
+                        title = Path(parent).name.split(".")[0]
+                        target_path = Path(dest_dir).joinpath(title + last)
+                    else:
+                        logger.error(f"{target_path} 智能重命名失败")
+                        return
+
+                # 文件夹同步创建
+                if is_directory:
+                    # 目标文件夹不存在则创建
+                    if not Path(target_path).exists():
+                        logger.info(f"创建目标文件夹 {target_path}")
+                        os.makedirs(target_path)
+                else:
+                    # 媒体重命名
+                    try:
+                        pattern = r'S\d+E\d+'
+                        matches = re.search(pattern, Path(target_path).name)
+                        if matches:
+                            target_path = Path(
+                                target_path).parent / f"{matches.group()}{Path(Path(target_path).name).suffix}"
+                        else:
+                            print("未找到匹配的季数和集数")
+                    except Exception as e:
+                        print(e)
+
+                    # 目标文件夹不存在则创建
+                    if not Path(target_path).parent.exists():
+                        logger.info(f"创建目标文件夹 {Path(target_path).parent}")
+                        os.makedirs(Path(target_path).parent)
+
+                    # 文件：nfo、图片、视频文件
+                    if Path(target_path).exists():
+                        logger.debug(f"目标文件 {target_path} 已存在")
+                        return
+
+                    # 硬链接
+                    retcode, retmsg = SystemUtils.link(Path(event_path), target_path)
+                    if retcode == 0:
+                        logger.info(f"文件 {event_path} 硬链接完成")
+                        # 生成 tvshow.nfo
+                        if not (target_path.parent / "tvshow.nfo").exists():
+                            self.__gen_tv_nfo_file(dir_path=target_path.parent,
+                                                   title=title)
+
+                        # 生成缩略图
+                        if not (target_path.parent / "poster.jpg").exists():
+                            thumb_path = self.gen_file_thumb(title=title,
+                                                             rename_conf=rename_conf,
+                                                             file_path=target_path)
+                            if thumb_path and Path(thumb_path).exists():
+                                self.__save_poster(input_path=thumb_path,
+                                                   poster_path=target_path.parent / "poster.jpg",
+                                                   cover_conf=cover_conf)
+                                if (target_path.parent / "poster.jpg").exists():
+                                    logger.info(f"{target_path.parent / 'poster.jpg'} 缩略图已生成")
+                                thumb_path.unlink()
+                            else:
+                                # 检查是否有缩略图
+                                thumb_files = SystemUtils.list_files(directory=target_path.parent,
+                                                                     extensions=[".jpg"])
+                                if thumb_files:
+                                    # 生成poster
+                                    for thumb in thumb_files:
+                                        self.__save_poster(input_path=thumb,
+                                                           poster_path=target_path.parent / "poster.jpg",
+                                                           cover_conf=cover_conf)
+                                        break
+                                    # 删除多余jpg
+                                    for thumb in thumb_files:
+                                        Path(thumb).unlink()
+                    else:
+                        logger.error(f"文件 {event_path} 硬链接失败，错误码：{retcode}")
         except Exception as e:
             logger.error(f"event_handler_created error: {e}")
             print(str(e))
@@ -776,7 +819,7 @@ class ShortPlayMonitor(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '当重命名方式为smart时，如站点管理已配置AGSV、ilolicon，则优先从站点获取短剧封面。'
+                                            'text': '默认从tmdb刮削，刮削失败则从pt站刮削。当重命名方式为smart时，如站点管理已配置AGSV、ilolicon，则优先从站点获取短剧封面。'
                                         }
                                     }
                                 ]
