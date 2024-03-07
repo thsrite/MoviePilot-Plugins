@@ -5,7 +5,7 @@ from pathlib import Path
 
 from typing import Any, List, Dict, Tuple, Optional
 from xml.dom import minidom
-
+from threading import Lock
 from app.chain.tmdb import TmdbChain
 from app.core.metainfo import MetaInfoPath
 from app.schemas import MediaInfo, TransferInfo
@@ -36,6 +36,7 @@ from app.helper.sites import SitesHelper
 from app.utils.http import RequestUtils
 
 ffmpeg_lock = threading.Lock()
+lock = Lock()
 
 
 class FileMonitorHandler(FileSystemEventHandler):
@@ -63,7 +64,7 @@ class ShortPlayMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Amule_B.png"
     # 插件版本
-    plugin_version = "3.0"
+    plugin_version = "3.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -81,6 +82,7 @@ class ShortPlayMonitor(_PluginBase):
     _onlyonce = False
     _image = False
     _exclude_keywords = ""
+    _transfer_type = "link"
     _observer = []
     _timeline = "00:00:10"
     _dirconf = {}
@@ -104,6 +106,7 @@ class ShortPlayMonitor(_PluginBase):
             self._image = config.get("image")
             self._monitor_confs = config.get("monitor_confs")
             self._exclude_keywords = config.get("exclude_keywords") or ""
+            self._transfer_type = config.get("transfer_type") or "link"
 
         # 停止现有任务
         self.stop_service()
@@ -304,7 +307,7 @@ class ShortPlayMonitor(_PluginBase):
                     # 转移
                     transferinfo: TransferInfo = self.chain.transfer(mediainfo=mediainfo,
                                                                      path=Path(event_path),
-                                                                     transfer_type="link",
+                                                                     transfer_type=self._transfer_type,
                                                                      target=Path(dest_dir),
                                                                      meta=file_meta,
                                                                      episodes_info=episodes_info)
@@ -314,7 +317,7 @@ class ShortPlayMonitor(_PluginBase):
                     else:
                         self.chain.scrape_metadata(path=transferinfo.target_path,
                                                    mediainfo=mediainfo,
-                                                   transfer_type="link")
+                                                   transfer_type=self._transfer_type)
                         transfer_flag = True
                 except Exception as e:
                     print(str(e))
@@ -383,7 +386,9 @@ class ShortPlayMonitor(_PluginBase):
                         return
 
                     # 硬链接
-                    retcode, retmsg = SystemUtils.link(Path(event_path), target_path)
+                    retcode = self.__transfer_command(file_item=Path(event_path),
+                                                      target_file=target_path,
+                                                      transfer_type=self._transfer_type)
                     if retcode == 0:
                         logger.info(f"文件 {event_path} 硬链接完成")
                         # 生成 tvshow.nfo
@@ -422,6 +427,41 @@ class ShortPlayMonitor(_PluginBase):
         except Exception as e:
             logger.error(f"event_handler_created error: {e}")
             print(str(e))
+
+    @staticmethod
+    def __transfer_command(file_item: Path, target_file: Path, transfer_type: str) -> int:
+        """
+        使用系统命令处理单个文件
+        :param file_item: 文件路径
+        :param target_file: 目标文件路径
+        :param transfer_type: RmtMode转移方式
+        """
+        with lock:
+
+            # 转移
+            if transfer_type == 'link':
+                # 硬链接
+                retcode, retmsg = SystemUtils.link(file_item, target_file)
+            elif transfer_type == 'softlink':
+                # 软链接
+                retcode, retmsg = SystemUtils.softlink(file_item, target_file)
+            elif transfer_type == 'move':
+                # 移动
+                retcode, retmsg = SystemUtils.move(file_item, target_file)
+            elif transfer_type == 'rclone_move':
+                # Rclone 移动
+                retcode, retmsg = SystemUtils.rclone_move(file_item, target_file)
+            elif transfer_type == 'rclone_copy':
+                # Rclone 复制
+                retcode, retmsg = SystemUtils.rclone_copy(file_item, target_file)
+            else:
+                # 复制
+                retcode, retmsg = SystemUtils.copy(file_item, target_file)
+
+        if retcode != 0:
+            logger.error(retmsg)
+
+        return retcode
 
     def __save_poster(self, input_path, poster_path, cover_conf):
         """
@@ -669,6 +709,7 @@ class ShortPlayMonitor(_PluginBase):
         self.update_config({
             "enabled": self._enabled,
             "exclude_keywords": self._exclude_keywords,
+            "transfer_type": self._transfer_type,
             "onlyonce": self._onlyonce,
             "image": self._image,
             "monitor_confs": self._monitor_confs
@@ -699,7 +740,7 @@ class ShortPlayMonitor(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -715,7 +756,7 @@ class ShortPlayMonitor(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -731,7 +772,7 @@ class ShortPlayMonitor(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -742,7 +783,31 @@ class ShortPlayMonitor(_PluginBase):
                                         }
                                     }
                                 ]
-                            }
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'model': 'transfer_type',
+                                            'label': '转移方式',
+                                            'items': [
+                                                {'title': '移动', 'value': 'move'},
+                                                {'title': '复制', 'value': 'copy'},
+                                                {'title': '硬链接', 'value': 'link'},
+                                                {'title': '软链接', 'value': 'softlink'},
+                                                {'title': 'Rclone复制', 'value': 'rclone_copy'},
+                                                {'title': 'Rclone移动', 'value': 'rclone_move'}
+                                            ]
+                                        }
+                                    }
+                                ]
+                            },
                         ]
                     },
                     {
@@ -860,7 +925,8 @@ class ShortPlayMonitor(_PluginBase):
             "onlyonce": False,
             "image": False,
             "monitor_confs": "",
-            "exclude_keywords": ""
+            "exclude_keywords": "",
+            "transfer_type": "link"
         }
 
     def get_page(self) -> List[dict]:
