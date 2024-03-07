@@ -16,7 +16,6 @@ from apscheduler.triggers.cron import CronTrigger
 from app.log import logger
 from app.plugins import _PluginBase
 from app.core.config import settings
-from app.utils.system import SystemUtils
 
 
 class CloudStrm(_PluginBase):
@@ -27,7 +26,7 @@ class CloudStrm(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png"
     # 插件版本
-    plugin_version = "3.6"
+    plugin_version = "3.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -200,30 +199,35 @@ class CloudStrm(_PluginBase):
             __save_flag = False
             for source_dir in self._dirconf.keys():
                 logger.info(f"正在处理监控文件 {source_dir}")
-                # 遍历获取下载目录所有文件
-                file_paths = SystemUtils.list_files(directory=Path(source_dir),
-                                                    extensions=['.*'] if self._copy_files else settings.RMT_MEDIAEXT)
-                logger.info(
-                    f"获取目录 {source_dir} {'所有类型文件' if self._copy_files else '媒体类型文件'} 文件数量：{len(file_paths)}")
-                for file in file_paths:
-                    source_file = str(file)
-                    # 回收站及隐藏的文件不处理
-                    if (source_file.find("/@Recycle") != -1
-                            or source_file.find("/#recycle") != -1
-                            or source_file.find("/.") != -1
-                            or source_file.find("/@eaDir") != -1):
-                        logger.info(f"{source_file} 是回收站或隐藏的文件，跳过处理")
-                        continue
+                for root, dirs, files in os.walk(source_dir):
+                    # 如果遇到名为'extrafanart'的文件夹，则跳过处理该文件夹，继续处理其他文件夹
+                    if "extrafanart" in dirs:
+                        dirs.remove("extrafanart")
 
-                    if source_file not in self.__cloud_files:
-                        logger.info(f"扫描到新文件 {source_file}，正在开始处理")
-                        # 云盘文件json新增
-                        self.__cloud_files.append(source_file)
-                        # 扫描云盘文件，判断是否有对应strm
-                        self.__strm(source_file)
-                        __save_flag = True
-                    else:
-                        logger.debug(f"{source_file} 已在缓存中！跳过处理")
+                    # 处理文件
+                    for file in files:
+                        source_file = os.path.join(root, file)
+                        # 回收站及隐藏的文件不处理
+                        if (source_file.find("/@Recycle") != -1
+                                or source_file.find("/#recycle") != -1
+                                or source_file.find("/.") != -1
+                                or source_file.find("/@eaDir") != -1):
+                            logger.info(f"{source_file} 是回收站或隐藏的文件，跳过处理")
+                            continue
+
+                        # 不复制非媒体文件时直接过滤掉非媒体文件
+                        if not self._copy_files and not file.lower().endswith(self._video_formats):
+                            continue
+
+                        if source_file not in self.__cloud_files:
+                            logger.info(f"扫描到新文件 {source_file}，正在开始处理")
+                            # 云盘文件json新增
+                            self.__cloud_files.append(source_file)
+                            # 扫描云盘文件，判断是否有对应strm
+                            self.__strm(source_file)
+                            __save_flag = True
+                        else:
+                            logger.debug(f"{source_file} 已在缓存中！跳过处理")
 
             # 重新保存json文件
             if __save_flag:
@@ -242,27 +246,31 @@ class CloudStrm(_PluginBase):
         # init
         for source_dir in self._dirconf.keys():
             logger.info(f"正在处理监控文件 {source_dir}")
-            # 遍历获取下载目录所有文件
-            file_paths = SystemUtils.list_files(directory=Path(source_dir),
-                                                extensions=['.*'] if self._copy_files else settings.RMT_MEDIAEXT)
-            logger.info(
-                f"初始化获取目录 {source_dir} {'所有类型文件' if self._copy_files else '媒体类型文件'} 文件数量：{len(file_paths)}")
-            for file in file_paths:
-                # 处理文件
-                source_file = str(file)
-                # 回收站及隐藏的文件不处理
-                if (source_file.find("/@Recycle") != -1
-                        or source_file.find("/#recycle") != -1
-                        or source_file.find("/.") != -1
-                        or source_file.find("/@eaDir") != -1):
-                    logger.info(f"{source_file} 是回收站或隐藏的文件，跳过处理")
-                    continue
+            for root, dirs, files in os.walk(source_dir):
+                # 如果遇到名为'extrafanart'的文件夹，则跳过处理该文件夹，继续处理其他文件夹
+                if "extrafanart" in dirs:
+                    dirs.remove("extrafanart")
 
-                logger.info(f"扫描到新文件 {source_file}，正在开始处理")
-                # 云盘文件json新增
-                self.__cloud_files.append(source_file)
-                # 扫描云盘文件，判断是否有对应strm
-                self.__strm(source_file)
+                # 处理文件
+                for file in files:
+                    source_file = os.path.join(root, file)
+                    # 回收站及隐藏的文件不处理
+                    if (source_file.find("/@Recycle") != -1
+                            or source_file.find("/#recycle") != -1
+                            or source_file.find("/.") != -1
+                            or source_file.find("/@eaDir") != -1):
+                        logger.info(f"{source_file} 是回收站或隐藏的文件，跳过处理")
+                        continue
+
+                    # 不复制非媒体文件时直接过滤掉非媒体文件
+                    if not self._copy_files and not file.lower().endswith(self._video_formats):
+                        continue
+
+                    logger.info(f"扫描到新文件 {source_file}，正在开始处理")
+                    # 云盘文件json新增
+                    self.__cloud_files.append(source_file)
+                    # 扫描云盘文件，判断是否有对应strm
+                    self.__strm(source_file)
 
         # 写入本地文件
         if self.__cloud_files:
