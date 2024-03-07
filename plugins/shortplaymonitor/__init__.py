@@ -293,6 +293,8 @@ class ShortPlayMonitor(_PluginBase):
             mediainfo: MediaInfo = self.chain.recognize_media(meta=file_meta)
 
             transfer_flag = False
+             # 转移文件
+            transfer_type = settings.TRANSFER_TYPE
             # 走tmdb刮削
             if mediainfo:
                 try:
@@ -304,7 +306,7 @@ class ShortPlayMonitor(_PluginBase):
                     # 转移
                     transferinfo: TransferInfo = self.chain.transfer(mediainfo=mediainfo,
                                                                      path=Path(event_path),
-                                                                     transfer_type="link",
+                                                                     transfer_type=transfer_type,
                                                                      target=Path(dest_dir),
                                                                      meta=file_meta,
                                                                      episodes_info=episodes_info)
@@ -382,14 +384,12 @@ class ShortPlayMonitor(_PluginBase):
                         logger.debug(f"目标文件 {target_path} 已存在")
                         return
 
-                     # 转移文件
-                    transfer_type = settings.TRANSFER_TYPE
                     # 软链接
                     if transfer_type == "softlink":
                         retcode, retmsg = SystemUtils.softlink(Path(event_path), target_path)
                         transfer_str = "软链接"
                     # 硬链接
-                    elif transfer_type == "hardlink":
+                    elif transfer_type in ("hardlink", "link"):
                         retcode, retmsg = SystemUtils.link(Path(event_path), target_path)
                         transfer_str = "硬链接"
                     # 复制文件
