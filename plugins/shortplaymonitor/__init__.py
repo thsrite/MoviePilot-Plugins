@@ -382,11 +382,22 @@ class ShortPlayMonitor(_PluginBase):
                         logger.debug(f"目标文件 {target_path} 已存在")
                         return
 
+                     # 转移文件
+                    transfer_type = settings.TRANSFER_TYPE
+                    # 软链接
+                    if transfer_type == "softlink":
+                        retcode, retmsg = SystemUtils.softlink(Path(event_path), target_path)
+                        transfer_str = "软链接"
                     # 硬链接
-                    retcode, retmsg = SystemUtils.link(Path(event_path), target_path)
+                    elif transfer_type == "hardlink":
+                        retcode, retmsg = SystemUtils.link(Path(event_path), target_path)
+                        transfer_str = "硬链接"
+                    # 复制文件
+                    else:
+                        retcode, retmsg = SystemUtils.copy(Path(event_path), target_path)
+                        transfer_str = "复制文件"
                     if retcode == 0:
-                        logger.info(f"文件 {event_path} 硬链接完成")
-                        # 生成 tvshow.nfo
+                        logger.info(f"文件 {event_path} {retmsg}: {transfer_str}完成")                       # 生成 tvshow.nfo
                         if not (target_path.parent / "tvshow.nfo").exists():
                             self.__gen_tv_nfo_file(dir_path=target_path.parent,
                                                    title=title)
