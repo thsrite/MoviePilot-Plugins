@@ -299,6 +299,7 @@ class ShortPlayMonitor(_PluginBase):
                 self.chain.obtain_images(mediainfo=mediainfo)
                 episodes_info = self.tmdbchain.tmdb_episodes(tmdbid=mediainfo.tmdb_id,
                                                              season=file_meta.begin_season or 1)
+                mediainfo.category = None
                 # 转移
                 transferinfo: TransferInfo = self.chain.transfer(mediainfo=mediainfo,
                                                                  path=Path(event_path),
