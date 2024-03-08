@@ -244,7 +244,7 @@ class WeChatForward(_PluginBase):
                     continue
 
                 # 忽略userid正则表达式
-                if re.search(self._ignore_userid, title):
+                if self._ignore_userid and re.search(self._ignore_userid, title):
                     userid = None
 
                 # 发送消息
