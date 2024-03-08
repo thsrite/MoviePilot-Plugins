@@ -134,5 +134,13 @@
           "icon": "Time_machine_A.png",
           "author": "thsrite",
           "level": 1
-      }
+      },
+      "WeChatForward": {
+        "name": "微信消息转发",
+        "description": "根据正则转发通知到其他WeChat应用。",
+        "version": "2.0",
+        "icon": "forward.png",
+        "author": "thsrite",
+        "level": 1
+    }
 }
