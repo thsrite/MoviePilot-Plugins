@@ -152,7 +152,7 @@ class WeChatForward(_PluginBase):
                                             'model': 'ignore_userid',
                                             'rows': '1',
                                             'label': '忽略userid',
-                                            'placeholder': '开始下载|下载失败'
+                                            'placeholder': '开始下载|添加下载任务失败'
                                         }
                                     }
                                 ]
