@@ -26,7 +26,7 @@ class CloudStrm(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png"
     # 插件版本
-    plugin_version = "3.5"
+    plugin_version = "3.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -41,6 +41,7 @@ class CloudStrm(_PluginBase):
     # 私有属性
     _enabled = False
     _cron = None
+    _rebuild_cron = None
     _monitor_confs = None
     _onlyonce = False
     _copy_files = False
@@ -71,6 +72,7 @@ class CloudStrm(_PluginBase):
         if config:
             self._enabled = config.get("enabled")
             self._cron = config.get("cron")
+            self._rebuild_cron = config.get("rebuild_cron")
             self._onlyonce = config.get("onlyonce")
             self._rebuild = config.get("rebuild")
             self._copy_files = config.get("copy_files")
@@ -137,7 +139,18 @@ class CloudStrm(_PluginBase):
                 try:
                     self._scheduler.add_job(func=self.scan,
                                             trigger=CronTrigger.from_crontab(self._cron),
-                                            name="云盘监控")
+                                            name="云盘监控生成")
+                except Exception as err:
+                    logger.error(f"定时任务配置错误：{err}")
+                    # 推送实时消息
+                    self.systemmessage.put(f"执行周期配置错误：{err}")
+
+            # 周期运行
+            if self._rebuild_cron:
+                try:
+                    self._scheduler.add_job(func=self.__init_cloud_files_json,
+                                            trigger=CronTrigger.from_crontab(self._rebuild_cron),
+                                            name="云盘监控重建索引")
                 except Exception as err:
                     logger.error(f"定时任务配置错误：{err}")
                     # 推送实时消息
@@ -526,15 +539,33 @@ class CloudStrm(_PluginBase):
                             {
                                 'component': 'VCol',
                                 'props': {
-                                    'cols': 12
+                                    'cols': 12,
+                                    'md': 6
                                 },
                                 'content': [
                                     {
                                         'component': 'VTextField',
                                         'props': {
                                             'model': 'cron',
-                                            'label': '定时周期',
+                                            'label': '生成周期',
                                             'placeholder': '0 0 * * *'
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'rebuild_cron',
+                                            'label': '重建索引周期',
+                                            'placeholder': '0 1 * * *'
                                         }
                                     }
                                 ]
@@ -678,6 +709,7 @@ class CloudStrm(_PluginBase):
         ], {
             "enabled": False,
             "cron": "",
+            "rebuild_cron": "",
             "onlyonce": False,
             "rebuild": False,
             "copy_files": False,
