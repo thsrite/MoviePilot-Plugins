@@ -356,7 +356,7 @@ class SubscribeStatistic(_PluginBase):
                                             }
                                         },
                                         'noData': {
-                                            'text': '暂无数据'
+                                            'text': '订阅未选择站点或站点已删除'
                                         }
                                     },
                                     'series': movie_subscribe_datas
@@ -393,7 +393,7 @@ class SubscribeStatistic(_PluginBase):
                                             }
                                         },
                                         'noData': {
-                                            'text': '暂无数据'
+                                            'text': '订阅未选择站点或站点已删除'
                                         }
                                     },
                                     'series': tv_subscribe_datas
