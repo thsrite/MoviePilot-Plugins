@@ -15,7 +15,7 @@ class SubscribeStatistic(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/subscribestatistic.png"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -303,8 +303,8 @@ class SubscribeStatistic(_PluginBase):
             for movie_download_site in movie_download_sites2:
                 if not movie_download_sites.__contains__(movie_download_site):
                     movie_download_sites.append(movie_download_site)
-                if not movie_download_datas.__contains__(movie_download_site):
-                    movie_download_datas.append(movie_download_sites2.count(movie_download_site))
+                    if not movie_download_datas.__contains__(movie_download_site):
+                        movie_download_datas.append(movie_download_sites2.count(movie_download_site))
 
         # 电视剧下载
         tv_downloads = self.downloadhis.list_by_type(mtype="电视剧", days=self._tv_download_days)
@@ -319,8 +319,8 @@ class SubscribeStatistic(_PluginBase):
             for tv_download_site in tv_download_sites2:
                 if not tv_download_sites.__contains__(tv_download_site):
                     tv_download_sites.append(tv_download_site)
-                if not tv_download_datas.__contains__(tv_download_site):
-                    tv_download_datas.append(tv_download_sites2.count(tv_download_site))
+                    if not tv_download_datas.__contains__(tv_download_site):
+                        tv_download_datas.append(tv_download_sites2.count(tv_download_site))
 
         # 拼装页面
         return [
