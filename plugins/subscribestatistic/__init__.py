@@ -6,6 +6,8 @@ from app.plugins import _PluginBase
 from app.db.subscribe_oper import SubscribeOper
 from typing import Any, List, Dict, Tuple
 
+from app.schemas.types import SystemConfigKey
+
 
 class SubscribeStatistic(_PluginBase):
     # 插件名称
@@ -15,7 +17,7 @@ class SubscribeStatistic(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/subscribestatistic.png"
     # 插件版本
-    plugin_version = "1.3"
+    plugin_version = "1.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -265,6 +267,8 @@ class SubscribeStatistic(_PluginBase):
             for movie_subscribe in movie_subscribes:
                 if movie_subscribe.sites:
                     movie_subscribe_site_ids += [site for site in json.loads(movie_subscribe.sites)]
+                else:
+                    movie_subscribe_site_ids += self.systemconfig.get(SystemConfigKey.RssSites) or []
 
             for movie_subscribe_site_id in movie_subscribe_site_ids:
                 site = self.siteoper.get(movie_subscribe_site_id)
@@ -282,6 +286,8 @@ class SubscribeStatistic(_PluginBase):
             for tv_subscribe in tv_subscribes:
                 if tv_subscribe.sites:
                     tv_subscribe_site_ids += [site for site in json.loads(tv_subscribe.sites)]
+                else:
+                    tv_subscribe_site_ids += self.systemconfig.get(SystemConfigKey.RssSites) or []
 
             for tv_subscribe_site_id in tv_subscribe_site_ids:
                 site = self.siteoper.get(tv_subscribe_site_id)
