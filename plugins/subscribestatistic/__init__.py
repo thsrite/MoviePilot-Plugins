@@ -15,7 +15,7 @@ class SubscribeStatistic(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/subscribestatistic.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -274,7 +274,7 @@ class SubscribeStatistic(_PluginBase):
                         movie_subscribe_datas.append(movie_subscribe_site_ids.count(movie_subscribe_site_id))
 
         # 电视剧订阅
-        tv_subscribes = self.subscribe.list_by_type(mtype='电视剧', days=self._movie_subscribe_days)
+        tv_subscribes = self.subscribe.list_by_type(mtype='电视剧', days=self._tv_subscribe_days)
         tv_subscribe_sites = []
         tv_subscribe_datas = []
         if tv_subscribes:

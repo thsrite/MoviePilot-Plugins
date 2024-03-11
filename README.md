@@ -28,5 +28,5 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - [云盘实时链接 1.2](docs%2FCloudLinkMonitor.md)
 - [源文件恢复 1.2](docs%2FLinkToSrc.md)
 - [微信消息转发 1.0](docs%2FWeChatForward.md)
-- [订阅下载统计 1.2](docs%2FSubscribeStatistic.md)
+- [订阅下载统计 1.3](docs%2FSubscribeStatistic.md)
 
