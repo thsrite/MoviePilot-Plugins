@@ -215,7 +215,7 @@ class SubscribeStatistic(_PluginBase):
             ]
 
         # 电影订阅
-        movie_subscribes = self.subscribe.list_by_type(type='电影', days=self._movie_subscribe_days)
+        movie_subscribes = self.subscribe.list_by_type(mtype='电影', days=self._movie_subscribe_days)
         movie_subscribe_sites = []
         movie_subscribe_datas = []
         if movie_subscribes:
@@ -232,7 +232,7 @@ class SubscribeStatistic(_PluginBase):
                         movie_subscribe_datas.append(movie_subscribe_site_ids.count(movie_subscribe_site_id))
 
         # 电视剧订阅
-        tv_subscribes = self.subscribe.list_by_type(type='电视剧', days=self._movie_subscribe_days)
+        tv_subscribes = self.subscribe.list_by_type(mtype='电视剧', days=self._movie_subscribe_days)
         tv_subscribe_sites = []
         tv_subscribe_datas = []
         if tv_subscribes:
@@ -249,7 +249,7 @@ class SubscribeStatistic(_PluginBase):
                         tv_subscribe_datas.append(tv_subscribe_site_ids.count(tv_subscribe_site_id))
 
         # 电影下载
-        movie_downloads = self.downloadhis.list_by_type(type="电影", days=self._movie_download_days)
+        movie_downloads = self.downloadhis.list_by_type(mtype="电影", days=self._movie_download_days)
         movie_download_sites = []
         movie_download_datas = []
         if movie_downloads:
@@ -262,7 +262,7 @@ class SubscribeStatistic(_PluginBase):
                     movie_download_datas.append(movie_download_sites.count(movie_download_site))
 
         # 电视剧下载
-        tv_downloads = self.downloadhis.list_by_type(type="电视剧", days=self._tv_download_days)
+        tv_downloads = self.downloadhis.list_by_type(mtype="电视剧", days=self._tv_download_days)
         tv_download_sites = []
         tv_download_datas = []
         if tv_downloads:
