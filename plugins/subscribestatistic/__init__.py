@@ -295,26 +295,32 @@ class SubscribeStatistic(_PluginBase):
         movie_download_sites = []
         movie_download_datas = []
         if movie_downloads:
+            movie_download_sites2 = []
             for movie_download in movie_downloads:
                 if movie_download.torrent_site:
-                    movie_download_sites.append(movie_download.torrent_site)
+                    movie_download_sites2.append(movie_download.torrent_site)
 
-            for movie_download_site in movie_download_sites:
+            for movie_download_site in movie_download_sites2:
+                if not movie_download_sites.__contains__(movie_download_site):
+                    movie_download_sites.append(movie_download_site)
                 if not movie_download_datas.__contains__(movie_download_site):
-                    movie_download_datas.append(movie_download_sites.count(movie_download_site))
+                    movie_download_datas.append(movie_download_sites2.count(movie_download_site))
 
         # 电视剧下载
         tv_downloads = self.downloadhis.list_by_type(mtype="电视剧", days=self._tv_download_days)
         tv_download_sites = []
         tv_download_datas = []
         if tv_downloads:
+            tv_download_sites2 = []
             for tv_download in tv_downloads:
                 if tv_download.torrent_site:
-                    tv_download_sites.append(tv_download.torrent_site)
+                    tv_download_sites2.append(tv_download.torrent_site)
 
-            for tv_download_site in tv_download_sites:
+            for tv_download_site in tv_download_sites2:
+                if not tv_download_sites.__contains__(tv_download_site):
+                    tv_download_sites.append(tv_download_site)
                 if not tv_download_datas.__contains__(tv_download_site):
-                    tv_download_datas.append(tv_download_sites.count(tv_download_site))
+                    tv_download_datas.append(tv_download_sites2.count(tv_download_site))
 
         # 拼装页面
         return [
