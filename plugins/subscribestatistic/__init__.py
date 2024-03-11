@@ -9,7 +9,7 @@ from typing import Any, List, Dict, Tuple
 
 class SubscribeStatistic(_PluginBase):
     # 插件名称
-    plugin_name = "订阅统计"
+    plugin_name = "订阅下载统计"
     # 插件描述
     plugin_desc = "统计指定时间内各站点订阅及下载情况。"
     # 插件图标
@@ -134,7 +134,7 @@ class SubscribeStatistic(_PluginBase):
                                         'props': {
                                             'model': 'movie_subscribe_days',
                                             'label': '电影订阅天数',
-                                            'placeholder': '7'
+                                            'placeholder': '30'
                                         }
                                     }
                                 ]
@@ -151,7 +151,7 @@ class SubscribeStatistic(_PluginBase):
                                         'props': {
                                             'model': 'tv_subscribe_days',
                                             'label': '电视剧订阅天数',
-                                            'placeholder': '7'
+                                            'placeholder': '30'
                                         }
                                     }
                                 ]
@@ -191,13 +191,55 @@ class SubscribeStatistic(_PluginBase):
                                 ]
                             },
                         ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '订阅数量：MoviePilot指定天数内正在订阅的数量。'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '下载数量：通过MoviePilot下载的数量，包括订阅下载、手动下载以及其他下载等场景。'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
                     }
                 ]
             }
         ], {
             "enabled": False,
-            "movie_subscribe_days": 7,
-            "tv_subscribe_days": 7,
+            "movie_subscribe_days": 30,
+            "tv_subscribe_days": 30,
             "movie_download_days": 7,
             "tv_download_days": 7
         }

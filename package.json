@@ -144,7 +144,7 @@
         "level": 1
     },
     "SubscribeStatistic": {
-        "name": "订阅统计",
+        "name": "订阅下载统计",
         "description": "统计指定时间内各站点订阅及下载情况。",
         "version": "1.0",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/subscribestatistic.png",
