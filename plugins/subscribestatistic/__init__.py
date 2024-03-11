@@ -339,7 +339,7 @@ class SubscribeStatistic(_PluginBase):
                                         },
                                         'labels': movie_subscribe_sites,
                                         'title': {
-                                            'text': f'电影近（{self._movie_subscribe_days}）天订阅 {len(movie_subscribes)} 部'
+                                            'text': f'电影近 {self._movie_subscribe_days} 天订阅 {len(movie_subscribes)} 部'
                                         },
                                         'legend': {
                                             'show': True
@@ -376,7 +376,7 @@ class SubscribeStatistic(_PluginBase):
                                         },
                                         'labels': tv_subscribe_sites,
                                         'title': {
-                                            'text': f'电视剧近（{self._tv_subscribe_days}）天订阅 {len(tv_subscribes)} 部'
+                                            'text': f'电视剧近 {self._tv_subscribe_days} 天订阅 {len(tv_subscribes)} 部'
                                         },
                                         'legend': {
                                             'show': True
@@ -413,7 +413,7 @@ class SubscribeStatistic(_PluginBase):
                                         },
                                         'labels': movie_download_sites,
                                         'title': {
-                                            'text': f'电影近（{self._movie_download_days}）天下载 {len(movie_downloads)} 个种子'
+                                            'text': f'电影近 {self._movie_download_days} 天下载 {len(movie_downloads)} 个种子'
                                         },
                                         'legend': {
                                             'show': True
@@ -450,7 +450,7 @@ class SubscribeStatistic(_PluginBase):
                                         },
                                         'labels': tv_download_sites,
                                         'title': {
-                                            'text': f'电视剧近（{self._tv_download_days}）天下载 {len(tv_downloads)} 个种子'
+                                            'text': f'电视剧近 {self._tv_download_days} 天下载 {len(tv_downloads)} 个种子'
                                         },
                                         'legend': {
                                             'show': True
