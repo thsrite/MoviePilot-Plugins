@@ -1,7 +1,8 @@
+import json
 from datetime import datetime, timedelta
+from hashlib import md5
 
 import pytz
-from PyCookieCloud import PyCookieCloud
 
 from app.core.config import settings
 from app.db.site_oper import SiteOper
@@ -10,17 +11,18 @@ from typing import Any, List, Dict, Tuple, Optional
 from app.log import logger
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from app.utils.common import encrypt
 
 
 class SyncCookieCloud(_PluginBase):
     # 插件名称
     plugin_name = "同步CookieCloud"
     # 插件描述
-    plugin_desc = "同步MoviePilot站点Cookie到CookieCloud。"
+    plugin_desc = "同步MoviePilot站点Cookie到本地CookieCloud。"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cookiecloud.png"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -92,10 +94,8 @@ class SyncCookieCloud(_PluginBase):
         if not sites:
             return
 
-        cookie_cloud = PyCookieCloud(settings.COOKIECLOUD_HOST, settings.COOKIECLOUD_KEY, settings.COOKIECLOUD_PASSWORD)
-        the_key = cookie_cloud.get_the_key()
-        if not the_key:
-            logger.error('链接cookiecloud异常，请检查配置')
+        if not settings.COOKIECLOUD_ENABLE_LOCAL:
+            logger.error('本地CookieCloud服务器未启用')
             return
 
         cookies = {}
@@ -123,10 +123,29 @@ class SyncCookieCloud(_PluginBase):
 
         # 覆盖到cookiecloud
         if cookies:
-            success = cookie_cloud.update_cookie(cookies)
+            crypt_key = self._get_crypt_key()
+            try:
+                cookies = {'cookie_data': cookies}
+                encrypted_data = encrypt(json.dumps(cookies).encode('utf-8'), crypt_key).decode('utf-8')
+            except Exception as e:
+                logger.error(f"CookieCloud加密失败，{e}")
+                return
+
+            ck = {'encrypted': encrypted_data}
+            file = open(settings.COOKIE_PATH / f'{settings.COOKIECLOUD_KEY}.json', 'w')
+            file.write(json.dumps(ck))
+            file.close()
 
             logger.info(cookies)
-            logger.info(f"同步站点cookie到CookieCloud {'成功' if success else '失败'}")
+            logger.info(f"同步站点cookie到CookieCloud成功")
+
+    def _get_crypt_key(self) -> bytes:
+        """
+        使用UUID和密码生成CookieCloud的加解密密钥
+        """
+        md5_generator = md5()
+        md5_generator.update((str(settings.COOKIECLOUD_KEY).strip() + '-' + str(settings.COOKIECLOUD_PASSWORD).strip()).encode('utf-8'))
+        return (md5_generator.hexdigest()[:16]).encode('utf-8')
 
     def __update_config(self):
         self.update_config({
@@ -209,6 +228,27 @@ class SyncCookieCloud(_PluginBase):
                                     }
                                 ]
                             },
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '需要MoviePilot设定-站点启用本地CookieCloud服务器。'
+                                        }
+                                    }
+                                ]
+                            }
                         ]
                     },
                 ]
