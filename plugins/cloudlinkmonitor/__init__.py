@@ -23,6 +23,7 @@ from app.core.metainfo import MetaInfoPath
 from app.db.downloadhistory_oper import DownloadHistoryOper
 from app.db.transferhistory_oper import TransferHistoryOper
 from app.log import logger
+from app.modules.filetransfer import FileTransferModule
 from app.plugins import _PluginBase
 from app.schemas import Notification, NotificationType, TransferInfo
 from app.schemas.types import EventType, MediaType, SystemConfigKey
@@ -55,11 +56,11 @@ class CloudLinkMonitor(_PluginBase):
     # 插件名称
     plugin_name = "云盘实时链接"
     # 插件描述
-    plugin_desc = "监控云盘目录文件变化，自动转移链接（不刮削）。"
+    plugin_desc = "监控云盘目录文件变化，自动转移链接（不刮削不生成目的二级目录）。"
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
-    plugin_version = "1.4"
+    plugin_version = "1.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -82,6 +83,7 @@ class CloudLinkMonitor(_PluginBase):
     _notify = False
     _onlyonce = False
     _cron = None
+    filetransfer = None
     _size = 0
     # 模式 compatibility/fast
     _mode = "compatibility"
@@ -103,6 +105,7 @@ class CloudLinkMonitor(_PluginBase):
         self.downloadhis = DownloadHistoryOper()
         self.transferchian = TransferChain()
         self.tmdbchain = TmdbChain()
+        self.filetransfer = FileTransferModule()
         # 清空配置
         self._dirconf = {}
         self._transferconf = {}
@@ -390,13 +393,15 @@ class CloudLinkMonitor(_PluginBase):
                 else:
                     episodes_info = None
 
+                # 拼装媒体库一、二级子目录
+                target = self.__get_dest_dir(mediainfo=mediainfo, target_dir=target)
                 # 转移
-                transferinfo: TransferInfo = self.chain.transfer(mediainfo=mediainfo,
-                                                                 path=file_path,
-                                                                 transfer_type=transfer_type,
-                                                                 target=target,
-                                                                 meta=file_meta,
-                                                                 episodes_info=episodes_info)
+                transferinfo: TransferInfo = self.filetransfer.transfer_media(in_path=file_path,
+                                                                              in_meta=file_meta,
+                                                                              mediainfo=mediainfo,
+                                                                              transfer_type=transfer_type,
+                                                                              target_dir=target,
+                                                                              episodes_info=episodes_info)
                 if not transferinfo:
                     logger.error("文件转移模块运行失败")
                     return
@@ -509,6 +514,45 @@ class CloudLinkMonitor(_PluginBase):
 
         except Exception as e:
             logger.error("目录监控发生错误：%s - %s" % (str(e), traceback.format_exc()))
+
+    @staticmethod
+    def __get_dest_dir(mediainfo: MediaInfo, target_dir: Path, typename_dir: bool = True) -> Path:
+        """
+        根据设置并装媒体库目录
+        :param mediainfo: 媒体信息
+        :target_dir: 媒体库根目录
+        :typename_dir: 是否加上类型目录
+        """
+        if not target_dir:
+            return target_dir
+
+        if mediainfo.type == MediaType.MOVIE:
+            # 电影
+            if typename_dir:
+                # 目的目录加上类型和二级分类
+                target_dir = target_dir / settings.LIBRARY_MOVIE_NAME / mediainfo.category
+            else:
+                # 目的目录加上二级分类
+                target_dir = target_dir / mediainfo.category
+
+        if mediainfo.type == MediaType.TV:
+            # 电视剧
+            if mediainfo.genre_ids \
+                    and set(mediainfo.genre_ids).intersection(set(settings.ANIME_GENREIDS)):
+                # 动漫
+                if typename_dir:
+                    target_dir = target_dir / (settings.LIBRARY_ANIME_NAME
+                                               or settings.LIBRARY_TV_NAME) / mediainfo.category
+                else:
+                    target_dir = target_dir / mediainfo.category
+            else:
+                # 电视剧
+                if typename_dir:
+                    target_dir = target_dir / settings.LIBRARY_TV_NAME / mediainfo.category
+                else:
+                    target_dir = target_dir / mediainfo.category
+
+        return target_dir
 
     def send_msg(self):
         """
@@ -853,7 +897,7 @@ class CloudLinkMonitor(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '监控目录不指定目的目录时，将转移到媒体库目录，并自动创建一级分类目录，同时按配置创建二级分类目录；监控目录指定了目的目录时，不会自动创建一级目录，但会根据配置创建二级分类目录。'
+                                            'text': '按配置创建一级二级分类目录'
                                         }
                                     }
                                 ]
