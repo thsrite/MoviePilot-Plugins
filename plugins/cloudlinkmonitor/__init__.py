@@ -56,7 +56,7 @@ class CloudLinkMonitor(_PluginBase):
     # 插件名称
     plugin_name = "云盘实时链接"
     # 插件描述
-    plugin_desc = "监控云盘目录文件变化，自动转移链接（不刮削）。"
+    plugin_desc = "监控云盘目录文件变化，自动转移链接（不刮削不生成目的二级目录）。"
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
@@ -812,8 +812,6 @@ class CloudLinkMonitor(_PluginBase):
                                             'label': '监控目录',
                                             'rows': 5,
                                             'placeholder': '每一行一个目录，支持以下几种配置方式，转移方式支持 move、copy、link、softlink、rclone_copy、rclone_move：\n'
-                                                           '监控目录\n'
-                                                           '监控目录#转移方式\n'
                                                            '监控目录:转移目的目录\n'
                                                            '监控目录:转移目的目录#转移方式'
                                         }
@@ -858,7 +856,7 @@ class CloudLinkMonitor(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '监控目录不指定目的目录时，将转移到媒体库目录，并自动创建一级分类目录，同时按配置创建二级分类目录；监控目录指定了目的目录时，不会自动创建一级目录，但会根据配置创建二级分类目录。'
+                                            'text': '目的目录不自动配置二级分类目录。'
                                         }
                                     }
                                 ]
