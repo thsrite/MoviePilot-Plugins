@@ -302,7 +302,7 @@ class WeChatForward(_PluginBase):
                                 # 发送额外消息
                                 if str(settings.WECHAT_APP_ID) == str(extra_appid):
                                     # 直接发送
-                                    WeChat().send_msg(title=extra_title, userid=extra_userid)
+                                    WeChat().send_msg(title=extra_title, userid=user_id)
                                 else:
                                     for wechat_idx in self._pattern_token.keys():
                                         wechat_conf = self._pattern_token.get(wechat_idx)
@@ -313,7 +313,7 @@ class WeChatForward(_PluginBase):
                                                 logger.error("未获取到有效token，请检查配置")
                                                 continue
                                             self.__send_message(title=extra_title,
-                                                                userid=extra_userid,
+                                                                userid=user_id,
                                                                 access_token=access_token,
                                                                 appid=appid,
                                                                 index=wechat_idx)
