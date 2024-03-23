@@ -299,7 +299,8 @@ class WeChatForward(_PluginBase):
                                 continue
                             # 获取消息text中的用户
                             user_id = result.group(1)
-                            if user_id and any(userid == user for user in extra_userid.split(",")):
+                            logger.info(f"获取到消息用户 {user_id}")
+                            if user_id and any(user_id == user for user in extra_userid.split(",")):
                                 logger.info(f"消息用户{user_id} 匹配到目标用户 {extra_userid}")
                                 # 发送额外消息
                                 if str(settings.WECHAT_APP_ID) == str(extra_appid):
