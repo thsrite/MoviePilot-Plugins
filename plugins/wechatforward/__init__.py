@@ -291,6 +291,7 @@ class WeChatForward(_PluginBase):
                         extra_appid = extras[2]
                         extra_userid = extras[3]
                         if re.search(extra_pattern, title):
+                            logger.info(f"{title} 正则匹配到额外消息 {extra_pattern}")
                             # 判断text的userId
                             userid_pattern = r"用户：(.*?)\n"
                             result = re.search(userid_pattern, text)
@@ -298,11 +299,13 @@ class WeChatForward(_PluginBase):
                                 continue
                             # 获取消息text中的用户
                             user_id = result.group(1)
-                            if user_id in extra_userid:
+                            if user_id and user_id in extra_userid:
+                                logger.info(f"消息用户{user_id} 匹配到目标用户 {extra_userid}")
                                 # 发送额外消息
                                 if str(settings.WECHAT_APP_ID) == str(extra_appid):
                                     # 直接发送
                                     WeChat().send_msg(title=extra_title, userid=user_id)
+                                    logger.info(f"{settings.WECHAT_APP_ID} 发送额外消息 {extra_title} 成功")
                                 else:
                                     for wechat_idx in self._pattern_token.keys():
                                         wechat_conf = self._pattern_token.get(wechat_idx)
@@ -317,6 +320,7 @@ class WeChatForward(_PluginBase):
                                                                 access_token=access_token,
                                                                 appid=appid,
                                                                 index=wechat_idx)
+                                            logger.info(f"{appid} 发送额外消息 {extra_title} 成功")
 
     def __save_wechat_token(self):
         """
