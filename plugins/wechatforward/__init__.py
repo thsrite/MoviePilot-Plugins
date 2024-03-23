@@ -292,7 +292,7 @@ class WeChatForward(_PluginBase):
                         extra_userid = extras[3]
                         if re.search(extra_pattern, title):
                             # 判断text的userId
-                            userid_pattern = r"用户：\{(\d+)\}"
+                            userid_pattern = r"用户：(.*?)\n"
                             result = re.search(userid_pattern, text)
                             if not result:
                                 continue
