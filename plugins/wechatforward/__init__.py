@@ -20,7 +20,7 @@ class WeChatForward(_PluginBase):
     # 插件图标
     plugin_icon = "Wechat_A.png"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -177,7 +177,7 @@ class WeChatForward(_PluginBase):
                                             'model': 'extra_confs',
                                             'rows': '2',
                                             'label': '额外配置',
-                                            'placeholder': '开始下载 > 后台下载任务已提交，请耐心等候入库通知。> appid > userid'
+                                            'placeholder': '开始下载 > userid > 后台下载任务已提交，请耐心等候入库通知。 > appid'
                                         }
                                     }
                                 ]
@@ -279,7 +279,7 @@ class WeChatForward(_PluginBase):
                 else:
                     self.__send_message(title, text, userid, access_token, appid, index)
 
-                # 正在下载 > 后台下载任务已提交，请耐心等候入库通知。> appid > userid
+                # 开始下载 > userid > 后台下载任务已提交，请耐心等候入库通知。 > appid
                 if self._extra_confs:
                     extra_confs = self._extra_confs.split("\n")
                     for extra_conf in extra_confs:
@@ -287,9 +287,9 @@ class WeChatForward(_PluginBase):
                         if len(extras) != 4:
                             continue
                         extra_pattern = extras[0]
-                        extra_title = extras[1]
-                        extra_appid = extras[2]
-                        extra_userid = extras[3]
+                        extra_userid = extras[1]
+                        extra_title = extras[2]
+                        extra_appid = extras[3]
                         if re.search(extra_pattern, title):
                             logger.info(f"{title} 正则匹配到额外消息 {extra_pattern}")
                             # 判断text的userId
@@ -299,7 +299,7 @@ class WeChatForward(_PluginBase):
                                 continue
                             # 获取消息text中的用户
                             user_id = result.group(1)
-                            if user_id and user_id in extra_userid:
+                            if user_id and any(userid == user for user in extra_userid.split(",")):
                                 logger.info(f"消息用户{user_id} 匹配到目标用户 {extra_userid}")
                                 # 发送额外消息
                                 if str(settings.WECHAT_APP_ID) == str(extra_appid):
