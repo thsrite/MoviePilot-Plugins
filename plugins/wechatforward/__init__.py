@@ -1,5 +1,6 @@
 import json
 import re
+import time
 from datetime import datetime
 
 from app.core.config import settings
@@ -324,9 +325,12 @@ class WeChatForward(_PluginBase):
                             f"{user_id}-{self.__parse_tv_title(title)}") or None
                         # 只处理下载消息
                         if extra_history_time:
-                            if (datetime.now() - extra_history_time).total_seconds() < 600:
+                            logger.info(
+                                f"获取到额外消息上次发送时间 {datetime.strptime(extra_history_time, '%Y-%m-%d %H:%M:%S')}")
+                            if (datetime.now() - datetime.strptime(extra_history_time,
+                                                                   '%Y-%m-%d %H:%M:%S')).total_seconds() < 600:
                                 logger.warn(
-                                    f"额外消息 {self.__parse_tv_title(title)} 上次发送时间 {extra_history_time} 十分钟内重复发送，跳过。")
+                                    f"额外消息 {self.__parse_tv_title(title)} 十分钟内重复发送，跳过。")
                                 continue
                             # 判断当前用户是否订阅，是否订阅后续消息
                             subscribes = SubscribeOper().list(state="R")
@@ -350,7 +354,8 @@ class WeChatForward(_PluginBase):
                         logger.info(f"{settings.WECHAT_APP_ID} 发送额外消息 {extra_title} 成功")
                         # 保存已发送消息
                         if "开始下载" in str(title):
-                            self._extra_msg_history[f"{user_id}-{self.__parse_tv_title(title)}"] = datetime.now()
+                            self._extra_msg_history[f"{user_id}-{self.__parse_tv_title(title)}"] = time.strftime(
+                                "%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
                             is_save_history = True
                     else:
                         for wechat_idx in self._pattern_token.keys():
@@ -370,7 +375,8 @@ class WeChatForward(_PluginBase):
                                 # 保存已发送消息
                                 if "开始下载" in str(title):
                                     self._extra_msg_history[
-                                        f"{user_id}-{self.__parse_tv_title(title)}"] = datetime.now()
+                                        f"{user_id}-{self.__parse_tv_title(title)}"] = time.strftime(
+                                        "%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
                                     is_save_history = True
 
         # 保存额外消息历史
@@ -386,7 +392,7 @@ class WeChatForward(_PluginBase):
         titles = title.split(" ")
         _title = ""
         for sub_title_str in titles:
-            _title += f"{sub_title_str} "
+            _title += sub_title_str
             # 电影 功夫熊猫 (2008) 开始下载
             if len(titles) == 3:
                 if '(' in sub_title_str:
@@ -395,6 +401,7 @@ class WeChatForward(_PluginBase):
             if len(titles) == 5:
                 if 'S0' in sub_title_str:
                     break
+            _title += " "
         return _title
 
     def __save_wechat_token(self):
