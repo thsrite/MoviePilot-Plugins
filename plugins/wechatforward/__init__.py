@@ -309,7 +309,7 @@ class WeChatForward(_PluginBase):
                 result = re.search(userid_pattern, text)
                 if not result:
                     # 订阅消息，获取消息text中的用户
-                    pattern = r"用户：(.*?)，"
+                    pattern = r"来自用户：(.*?)$"
                     result = re.search(pattern, text)
                     if not result:
                         continue
@@ -318,10 +318,12 @@ class WeChatForward(_PluginBase):
                 logger.info(f"获取到消息用户 {user_id}")
                 if user_id and any(user_id == user for user in extra_userid.split(",")):
                     # 判断是否重复发送，10分钟内重复消息title、重复userid算重复消息
-                    extra_history_time = _extra_msg_history.get(f"{user_id}-{title}")
+                    extra_history_time = _extra_msg_history.get(f"{user_id}-{self.__parse_tv_title(title)}")
                     # 只处理下载消息
                     if extra_history_time and '开始下载' in extra_pattern:
                         if (datetime.now() - extra_history_time).total_seconds() < 600:
+                            logger.warn(
+                                f"额外消息 {self.__parse_tv_title(title)} 上次发送时间 {extra_history_time} 十分钟内重复发送，跳过。")
                             continue
                         # 判断当前用户是否订阅，是否订阅后续消息
                         subscribes = SubscribeOper().list(state="R")
@@ -333,6 +335,7 @@ class WeChatForward(_PluginBase):
                                     is_continue = True
                         # 电视剧之前该用户订阅下载过，不再发送额外消息
                         if is_continue:
+                            logger.info(f"额外消息 {self.__parse_tv_title(title)} 用户 {user_id} 已订阅，不再发送额外消息。")
                             continue
 
                     logger.info(f"消息用户{user_id} 匹配到目标用户 {extra_userid}")
@@ -343,7 +346,7 @@ class WeChatForward(_PluginBase):
                         logger.info(f"{settings.WECHAT_APP_ID} 发送额外消息 {extra_title} 成功")
                         # 保存已发送消息
                         if '开始下载' in extra_pattern:
-                            _extra_msg_history.append({f"{user_id}-{title}": datetime.now()})
+                            _extra_msg_history.append({f"{user_id}-{self.__parse_tv_title(title)}": datetime.now()})
                             is_update_histroy = True
                     else:
                         for wechat_idx in self._pattern_token.keys():
@@ -362,12 +365,31 @@ class WeChatForward(_PluginBase):
                                 logger.info(f"{appid} 发送额外消息 {extra_title} 成功")
                                 # 保存已发送消息
                                 if '开始下载' in extra_pattern:
-                                    _extra_msg_history.append({f"{user_id}-{title}": datetime.now()})
+                                    _extra_msg_history.append(
+                                        {f"{user_id}-{self.__parse_tv_title(title)}": datetime.now()})
                                     is_update_histroy = True
 
         # 保存额外消息历史
         if is_update_histroy:
             self.save_data("extra_msg", _extra_msg_history)
+
+    def __parse_tv_title(self, title):
+        """
+        解析title标题
+        """
+        titles = title.split(" ")
+        _title = ""
+        for s in titles:
+            _title += s
+            # 电影 功夫熊猫 (2008) 开始下载
+            if len(titles) == 3:
+                if '(' in s:
+                    break
+            # 电视剧 追风者 (2024) S01 E01-E04 开始下载
+            if len(titles) == 5:
+                if 'S0' in s:
+                    break
+        return _title
 
     def __save_wechat_token(self):
         """
