@@ -335,7 +335,8 @@ class WeChatForward(_PluginBase):
                                     is_continue = True
                         # 电视剧之前该用户订阅下载过，不再发送额外消息
                         if is_continue:
-                            logger.info(f"额外消息 {self.__parse_tv_title(title)} 用户 {user_id} 已订阅，不再发送额外消息。")
+                            logger.info(
+                                f"额外消息 {self.__parse_tv_title(title)} 用户 {user_id} 已订阅，不再发送额外消息。")
                             continue
 
                     logger.info(f"消息用户{user_id} 匹配到目标用户 {extra_userid}")
@@ -379,15 +380,15 @@ class WeChatForward(_PluginBase):
         """
         titles = title.split(" ")
         _title = ""
-        for s in titles:
-            _title += s
+        for sub_title_str in titles:
+            _title += f"{sub_title_str} "
             # 电影 功夫熊猫 (2008) 开始下载
             if len(titles) == 3:
-                if '(' in s:
+                if '(' in sub_title_str:
                     break
             # 电视剧 追风者 (2024) S01 E01-E04 开始下载
             if len(titles) == 5:
-                if 'S0' in s:
+                if 'S0' in sub_title_str:
                     break
         return _title
 
