@@ -3,10 +3,11 @@ import re
 from datetime import datetime
 
 from app.core.config import settings
+from app.db.subscribe_oper import SubscribeOper
 from app.modules.wechat import WeChat
 from app.plugins import _PluginBase
 from app.core.event import eventmanager
-from app.schemas.types import EventType, MessageChannel
+from app.schemas.types import EventType, MessageChannel, MediaType
 from app.utils.http import RequestUtils
 from typing import Any, List, Dict, Tuple, Optional
 from app.log import logger
@@ -20,7 +21,7 @@ class WeChatForward(_PluginBase):
     # 插件图标
     plugin_icon = "Wechat_A.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -279,49 +280,94 @@ class WeChatForward(_PluginBase):
                 else:
                     self.__send_message(title, text, userid, access_token, appid, index)
 
-                # 开始下载 > userid > 后台下载任务已提交，请耐心等候入库通知。 > appid
+                # 开始下载 > userid > {name} 后台下载任务已提交，请耐心等候入库通知。 > appid
+                # 已添加订阅 > userid > {name} 电视剧正在更新，已添加订阅，待更新后自动下载。 > appid
                 if self._extra_confs:
-                    extra_confs = self._extra_confs.split("\n")
-                    for extra_conf in extra_confs:
-                        extras = str(extra_conf).split(" > ")
-                        if len(extras) != 4:
+                    self.__send_extra_msg(title, text)
+
+    def __send_extra_msg(self, title, text):
+        """
+        根据自定义规则发送额外消息
+        """
+        _extra_msg_history = self.get_data("extra_msg") or {}
+        is_update_histroy = False
+        extra_confs = self._extra_confs.split("\n")
+        for extra_conf in extra_confs:
+            extras = str(extra_conf).split(" > ")
+            if len(extras) != 4:
+                continue
+            extra_pattern = extras[0]
+            extra_userid = extras[1]
+            extra_title = extras[2]
+            extra_appid = extras[3]
+            if str(extra_title).find('{name}') != -1:
+                extra_title = extra_title.replace('{name}', str(title).split(" ")[0])
+            if re.search(extra_pattern, title):
+                logger.info(f"{title} 正则匹配到额外消息 {extra_pattern}")
+                # 搜索消息，获取消息text中的用户
+                userid_pattern = r"用户：(.*?)\n"
+                result = re.search(userid_pattern, text)
+                if not result:
+                    # 订阅消息，获取消息text中的用户
+                    pattern = r"用户：(.*?)，"
+                    result = re.search(pattern, text)
+                    if not result:
+                        continue
+                # 获取消息text中的用户
+                user_id = result.group(1)
+                logger.info(f"获取到消息用户 {user_id}")
+                if user_id and any(user_id == user for user in extra_userid.split(",")):
+                    # 判断是否重复发送，10分钟内重复消息title、重复userid算重复消息
+                    extra_history_time = _extra_msg_history.get(f"{user_id}-{title}")
+                    # 只处理下载消息
+                    if extra_history_time and '开始下载' in extra_pattern:
+                        if (datetime.now() - extra_history_time).total_seconds() < 600:
                             continue
-                        extra_pattern = extras[0]
-                        extra_userid = extras[1]
-                        extra_title = extras[2]
-                        extra_appid = extras[3]
-                        if re.search(extra_pattern, title):
-                            logger.info(f"{title} 正则匹配到额外消息 {extra_pattern}")
-                            # 判断text的userId
-                            userid_pattern = r"用户：(.*?)\n"
-                            result = re.search(userid_pattern, text)
-                            if not result:
-                                continue
-                            # 获取消息text中的用户
-                            user_id = result.group(1)
-                            logger.info(f"获取到消息用户 {user_id}")
-                            if user_id and any(user_id == user for user in extra_userid.split(",")):
-                                logger.info(f"消息用户{user_id} 匹配到目标用户 {extra_userid}")
-                                # 发送额外消息
-                                if str(settings.WECHAT_APP_ID) == str(extra_appid):
-                                    # 直接发送
-                                    WeChat().send_msg(title=extra_title, userid=user_id)
-                                    logger.info(f"{settings.WECHAT_APP_ID} 发送额外消息 {extra_title} 成功")
-                                else:
-                                    for wechat_idx in self._pattern_token.keys():
-                                        wechat_conf = self._pattern_token.get(wechat_idx)
-                                        if (wechat_conf and wechat_conf.get("appid")
-                                                and str(wechat_conf.get("appid")) == str(extra_appid)):
-                                            access_token, appid = self.__flush_access_token(wechat_idx)
-                                            if not access_token:
-                                                logger.error("未获取到有效token，请检查配置")
-                                                continue
-                                            self.__send_message(title=extra_title,
-                                                                userid=user_id,
-                                                                access_token=access_token,
-                                                                appid=appid,
-                                                                index=wechat_idx)
-                                            logger.info(f"{appid} 发送额外消息 {extra_title} 成功")
+                        # 判断当前用户是否订阅，是否订阅后续消息
+                        subscribes = SubscribeOper().list(state="R")
+                        is_continue = False
+                        for subscribe in subscribes:
+                            if subscribe.type == MediaType.TV.value and str(subscribe.username) == str(user_id):
+                                # 匹配订阅title
+                                if f"{subscribe.name} ({subscribe.year})" in title:
+                                    is_continue = True
+                        # 电视剧之前该用户订阅下载过，不再发送额外消息
+                        if is_continue:
+                            continue
+
+                    logger.info(f"消息用户{user_id} 匹配到目标用户 {extra_userid}")
+                    # 发送额外消息
+                    if str(settings.WECHAT_APP_ID) == str(extra_appid):
+                        # 直接发送
+                        WeChat().send_msg(title=extra_title, userid=user_id)
+                        logger.info(f"{settings.WECHAT_APP_ID} 发送额外消息 {extra_title} 成功")
+                        # 保存已发送消息
+                        if '开始下载' in extra_pattern:
+                            _extra_msg_history.append({f"{user_id}-{title}": datetime.now()})
+                            is_update_histroy = True
+                    else:
+                        for wechat_idx in self._pattern_token.keys():
+                            wechat_conf = self._pattern_token.get(wechat_idx)
+                            if (wechat_conf and wechat_conf.get("appid")
+                                    and str(wechat_conf.get("appid")) == str(extra_appid)):
+                                access_token, appid = self.__flush_access_token(wechat_idx)
+                                if not access_token:
+                                    logger.error("未获取到有效token，请检查配置")
+                                    continue
+                                self.__send_message(title=extra_title,
+                                                    userid=user_id,
+                                                    access_token=access_token,
+                                                    appid=appid,
+                                                    index=wechat_idx)
+                                logger.info(f"{appid} 发送额外消息 {extra_title} 成功")
+                                # 保存已发送消息
+                                if '开始下载' in extra_pattern:
+                                    _extra_msg_history.append({f"{user_id}-{title}": datetime.now()})
+                                    is_update_histroy = True
+
+        # 保存额外消息历史
+        if is_update_histroy:
+            self.save_data("extra_msg", _extra_msg_history)
 
     def __save_wechat_token(self):
         """
