@@ -342,7 +342,7 @@ class WeChatForward(_PluginBase):
                                     is_subscribe = True
                         # 电视剧之前该用户订阅下载过，不再发送额外消息
                         if is_subscribe:
-                            logger.info(
+                            logger.warn(
                                 f"额外消息 {self.__parse_tv_title(title)} 用户 {user_id} 已订阅，不再发送额外消息。")
                             continue
 
