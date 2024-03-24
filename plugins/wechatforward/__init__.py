@@ -320,7 +320,7 @@ class WeChatForward(_PluginBase):
                     # 判断是否重复发送，10分钟内重复消息title、重复userid算重复消息
                     extra_history_time = _extra_msg_history.get(f"{user_id}-{self.__parse_tv_title(title)}")
                     # 只处理下载消息
-                    if extra_history_time and '开始下载' in extra_pattern:
+                    if extra_history_time and "开始下载" in str(title):
                         if (datetime.now() - extra_history_time).total_seconds() < 600:
                             logger.warn(
                                 f"额外消息 {self.__parse_tv_title(title)} 上次发送时间 {extra_history_time} 十分钟内重复发送，跳过。")
@@ -345,7 +345,7 @@ class WeChatForward(_PluginBase):
                         WeChat().send_msg(title=extra_title, userid=user_id)
                         logger.info(f"{settings.WECHAT_APP_ID} 发送额外消息 {extra_title} 成功")
                         # 保存已发送消息
-                        if '开始下载' in extra_pattern:
+                        if "开始下载" in str(title):
                             _extra_msg_history.append({f"{user_id}-{self.__parse_tv_title(title)}": datetime.now()})
                             is_update_histroy = True
                     else:
@@ -364,7 +364,7 @@ class WeChatForward(_PluginBase):
                                                     index=wechat_idx)
                                 logger.info(f"{appid} 发送额外消息 {extra_title} 成功")
                                 # 保存已发送消息
-                                if '开始下载' in extra_pattern:
+                                if "开始下载" in str(title):
                                     _extra_msg_history.append(
                                         {f"{user_id}-{self.__parse_tv_title(title)}": datetime.now()})
                                     is_update_histroy = True
