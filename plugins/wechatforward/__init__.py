@@ -391,7 +391,6 @@ class WeChatForward(_PluginBase):
         titles = title.split(" ")
         _title = ""
         for sub_title_str in titles:
-            _title += f"{sub_title_str} "
             # 电影 功夫熊猫 (2008) 开始下载
             # 电影 功夫熊猫 (2008) 已添加订阅
             # 电视剧 追风者 (2024) S01 E01-E04 开始下载
@@ -402,7 +401,8 @@ class WeChatForward(_PluginBase):
                 continue
             if '已添加订阅' in sub_title_str:
                 continue
-        return _title.rsplit()
+            _title += f"{sub_title_str} "
+        return str(_title.rstrip())
 
     def __save_wechat_token(self):
         """
