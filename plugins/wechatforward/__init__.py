@@ -290,7 +290,7 @@ class WeChatForward(_PluginBase):
         """
         根据自定义规则发送额外消息
         """
-        self._extra_msg_history = self.get_data("extra_msg") or {}
+        self._extra_msg_history = self.get_data(key="extra_msg") or {}
         is_save_history = False
         extra_confs = self._extra_confs.split("\n")
         for extra_conf in extra_confs:
@@ -318,27 +318,29 @@ class WeChatForward(_PluginBase):
                 user_id = result.group(1)
                 logger.info(f"获取到消息用户 {user_id}")
                 if user_id and any(user_id == user for user in extra_userid.split(",")):
-                    # 判断是否重复发送，10分钟内重复消息title、重复userid算重复消息
-                    extra_history_time = self._extra_msg_history.get(f"{user_id}-{self.__parse_tv_title(title)}")
-                    # 只处理下载消息
-                    if extra_history_time and "开始下载" in str(title):
-                        if (datetime.now() - extra_history_time).total_seconds() < 600:
-                            logger.warn(
-                                f"额外消息 {self.__parse_tv_title(title)} 上次发送时间 {extra_history_time} 十分钟内重复发送，跳过。")
-                            continue
-                        # 判断当前用户是否订阅，是否订阅后续消息
-                        subscribes = SubscribeOper().list(state="R")
-                        is_continue = False
-                        for subscribe in subscribes:
-                            if subscribe.type == MediaType.TV.value and str(subscribe.username) == str(user_id):
-                                # 匹配订阅title
-                                if f"{subscribe.name} ({subscribe.year})" in title:
-                                    is_continue = True
-                        # 电视剧之前该用户订阅下载过，不再发送额外消息
-                        if is_continue:
-                            logger.info(
-                                f"额外消息 {self.__parse_tv_title(title)} 用户 {user_id} 已订阅，不再发送额外消息。")
-                            continue
+                    if "开始下载" in str(title):
+                        # 判断是否重复发送，10分钟内重复消息title、重复userid算重复消息
+                        extra_history_time = self._extra_msg_history.get(
+                            f"{user_id}-{self.__parse_tv_title(title)}") or None
+                        # 只处理下载消息
+                        if extra_history_time:
+                            if (datetime.now() - extra_history_time).total_seconds() < 600:
+                                logger.warn(
+                                    f"额外消息 {self.__parse_tv_title(title)} 上次发送时间 {extra_history_time} 十分钟内重复发送，跳过。")
+                                continue
+                            # 判断当前用户是否订阅，是否订阅后续消息
+                            subscribes = SubscribeOper().list(state="R")
+                            is_continue = False
+                            for subscribe in subscribes:
+                                if subscribe.type == MediaType.TV.value and str(subscribe.username) == str(user_id):
+                                    # 匹配订阅title
+                                    if f"{subscribe.name} ({subscribe.year})" in title:
+                                        is_continue = True
+                            # 电视剧之前该用户订阅下载过，不再发送额外消息
+                            if is_continue:
+                                logger.info(
+                                    f"额外消息 {self.__parse_tv_title(title)} 用户 {user_id} 已订阅，不再发送额外消息。")
+                                continue
 
                     logger.info(f"消息用户{user_id} 匹配到目标用户 {extra_userid}")
                     # 发送额外消息
@@ -373,7 +375,9 @@ class WeChatForward(_PluginBase):
 
         # 保存额外消息历史
         if is_save_history:
-            self.save_data("extra_msg", self._extra_msg_history)
+            logger.info(f"开始保存额外消息历史==》{self._extra_msg_history}")
+            self.save_data(key="extra_msg",
+                           value=self._extra_msg_history)
 
     def __parse_tv_title(self, title):
         """
