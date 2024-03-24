@@ -40,6 +40,7 @@ class WeChatForward(_PluginBase):
     _ignore_userid = None
     _extra_confs = None
     _pattern_token = {}
+    _extra_msg_history = {}
 
     # 企业微信发送消息URL
     _send_msg_url = f"{settings.WECHAT_PROXY}/cgi-bin/message/send?access_token=%s"
@@ -289,8 +290,8 @@ class WeChatForward(_PluginBase):
         """
         根据自定义规则发送额外消息
         """
-        _extra_msg_history = self.get_data("extra_msg") or {}
-        is_update_histroy = False
+        self._extra_msg_history = self.get_data("extra_msg") or {}
+        is_save_history = False
         extra_confs = self._extra_confs.split("\n")
         for extra_conf in extra_confs:
             extras = str(extra_conf).split(" > ")
@@ -301,7 +302,7 @@ class WeChatForward(_PluginBase):
             extra_title = extras[2]
             extra_appid = extras[3]
             if str(extra_title).find('{name}') != -1:
-                extra_title = extra_title.replace('{name}', str(title).split(" ")[0])
+                extra_title = extra_title.replace('{name}', self.__parse_tv_title(title))
             if re.search(extra_pattern, title):
                 logger.info(f"{title} 正则匹配到额外消息 {extra_pattern}")
                 # 搜索消息，获取消息text中的用户
@@ -318,7 +319,7 @@ class WeChatForward(_PluginBase):
                 logger.info(f"获取到消息用户 {user_id}")
                 if user_id and any(user_id == user for user in extra_userid.split(",")):
                     # 判断是否重复发送，10分钟内重复消息title、重复userid算重复消息
-                    extra_history_time = _extra_msg_history.get(f"{user_id}-{self.__parse_tv_title(title)}")
+                    extra_history_time = self._extra_msg_history.get(f"{user_id}-{self.__parse_tv_title(title)}")
                     # 只处理下载消息
                     if extra_history_time and "开始下载" in str(title):
                         if (datetime.now() - extra_history_time).total_seconds() < 600:
@@ -347,8 +348,8 @@ class WeChatForward(_PluginBase):
                         logger.info(f"{settings.WECHAT_APP_ID} 发送额外消息 {extra_title} 成功")
                         # 保存已发送消息
                         if "开始下载" in str(title):
-                            _extra_msg_history.append({f"{user_id}-{self.__parse_tv_title(title)}": datetime.now()})
-                            is_update_histroy = True
+                            self._extra_msg_history[f"{user_id}-{self.__parse_tv_title(title)}"] = datetime.now()
+                            is_save_history = True
                     else:
                         for wechat_idx in self._pattern_token.keys():
                             wechat_conf = self._pattern_token.get(wechat_idx)
@@ -366,13 +367,13 @@ class WeChatForward(_PluginBase):
                                 logger.info(f"{appid} 发送额外消息 {extra_title} 成功")
                                 # 保存已发送消息
                                 if "开始下载" in str(title):
-                                    _extra_msg_history.append(
-                                        {f"{user_id}-{self.__parse_tv_title(title)}": datetime.now()})
-                                    is_update_histroy = True
+                                    self._extra_msg_history[
+                                        f"{user_id}-{self.__parse_tv_title(title)}"] = datetime.now()
+                                    is_save_history = True
 
         # 保存额外消息历史
-        if is_update_histroy:
-            self.save_data("extra_msg", _extra_msg_history)
+        if is_save_history:
+            self.save_data("extra_msg", self._extra_msg_history)
 
     def __parse_tv_title(self, title):
         """
