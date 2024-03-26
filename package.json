@@ -18,7 +18,7 @@
       "SiteUnreadMsg": {
         "name": "站点未读消息",
         "description": "发送站点未读消息。",
-        "version": "1.2",
+        "version": "1.3",
         "icon": "Synomail_A.png",
         "author": "thsrite",
         "level": 2

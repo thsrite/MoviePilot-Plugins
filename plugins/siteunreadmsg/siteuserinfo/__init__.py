@@ -31,6 +31,7 @@ class SiteSchema(Enum):
     TorrentLeech = "TorrentLeech"
     FileList = "FileList"
     TNode = "TNode"
+    MTorrent = "MTorrent"
 
 
 class ISiteUserInfo(metaclass=ABCMeta):
@@ -38,6 +39,8 @@ class ISiteUserInfo(metaclass=ABCMeta):
     schema = SiteSchema.NexusPhp
     # 站点解析时判断顺序，值越小越先解析
     order = SITE_BASE_ORDER
+    # 请求模式 cookie/apikey
+    request_mode = "cookie"
 
     def __init__(self, site_name: str,
                  url: str,
@@ -78,6 +81,9 @@ class ISiteUserInfo(metaclass=ABCMeta):
         self.seeding_info = []
 
         # 用户详细信息
+        self._user_basic_page = None
+        self._user_basic_params = None
+        self._user_basic_headers = None
         self.user_level = None
         self.join_at = None
         self.bonus = 0.0
@@ -93,16 +99,25 @@ class ISiteUserInfo(metaclass=ABCMeta):
         # 站点页面
         self._brief_page = "index.php"
         self._user_detail_page = "userdetails.php?id="
+        self._user_detail_params = None
+        self._user_detail_headers = None
         self._user_traffic_page = "index.php"
-        self._torrent_seeding_page = "getusertorrentlistajax.php?userid="
+        self._user_traffic_params = None
+        self._user_traffic_headers = None
         self._user_mail_unread_page = "messages.php?action=viewmailbox&box=1&unread=yes"
         self._sys_mail_unread_page = "messages.php?action=viewmailbox&box=-2&unread=yes"
+        self._mail_unread_params = None
+        self._mail_unread_headers = None
+        self._mail_content_params = None
+        self._mail_content_headers = None
+        self._torrent_seeding_page = "getusertorrentlistajax.php?userid="
         self._torrent_seeding_params = None
         self._torrent_seeding_headers = None
 
         split_url = urlsplit(url)
         self.site_name = site_name
         self.site_url = url
+        self.site_domain = split_url.netloc
         self._base_url = f"{split_url.scheme}://{split_url.netloc}"
         self._site_cookie = site_cookie
         self._index_html = index_html
@@ -133,17 +148,43 @@ class ISiteUserInfo(metaclass=ABCMeta):
         解析站点信息
         :return:
         """
+        # 检查是否已经登录
         if not self._parse_logged_in(self._index_html):
             return
-
+        # 解析站点页面
         self._parse_site_page(self._index_html)
-        self._parse_user_base_info(self._index_html)
-        self._pase_unread_msgs()
-        if self._user_traffic_page:
-            self._parse_user_traffic_info(self._get_page_content(urljoin(self._base_url, self._user_traffic_page)))
+        # 解析用户基础信息
+        if self._user_basic_page:
+            self._parse_user_base_info(
+                self._get_page_content(
+                    url=urljoin(self._base_url, self._user_basic_page),
+                    params=self._user_basic_params,
+                    headers=self._user_basic_headers
+                )
+            )
+        else:
+            self._parse_user_base_info(self._index_html)
+        # 解析用户详细信息
         if self._user_detail_page:
-            self._parse_user_detail_info(self._get_page_content(urljoin(self._base_url, self._user_detail_page)))
-
+            self._parse_user_detail_info(
+                self._get_page_content(
+                    url=urljoin(self._base_url, self._user_detail_page),
+                    params=self._user_detail_params,
+                    headers=self._user_detail_headers
+                )
+            )
+        # 解析用户未读消息
+        self._pase_unread_msgs()
+        # 解析用户上传、下载、分享率等信息
+        if self._user_traffic_page:
+            self._parse_user_traffic_info(
+                self._get_page_content(
+                    url=urljoin(self._base_url, self._user_traffic_page),
+                    params=self._user_traffic_params,
+                    headers=self._user_traffic_headers
+                )
+            )
+        # 解析用户做种信息
         self._parse_seeding_pages()
         self.seeding_info = json.dumps(self.seeding_info)
 
@@ -158,36 +199,59 @@ class ISiteUserInfo(metaclass=ABCMeta):
             for link in links:
                 if not link:
                     continue
-
                 msg_links = []
                 next_page = self._parse_message_unread_links(
-                    self._get_page_content(urljoin(self._base_url, link)), msg_links)
+                    self._get_page_content(
+                        url=urljoin(self._base_url, link),
+                        params=self._mail_unread_params,
+                        headers=self._mail_unread_headers
+                    ),
+                    msg_links)
                 while next_page:
                     next_page = self._parse_message_unread_links(
-                        self._get_page_content(urljoin(self._base_url, next_page)), msg_links)
-
+                        self._get_page_content(
+                            url=urljoin(self._base_url, next_page),
+                            params=self._mail_unread_params,
+                            headers=self._mail_unread_headers
+                        ),
+                        msg_links
+                    )
                 unread_msg_links.extend(msg_links)
-
+        # 解析未读消息内容
         for msg_link in unread_msg_links:
             logger.debug(f"{self.site_name} 信息链接 {msg_link}")
-            head, date, content = self._parse_message_content(self._get_page_content(urljoin(self._base_url, msg_link)))
+            head, date, content = self._parse_message_content(
+                self._get_page_content(
+                    urljoin(self._base_url, msg_link),
+                    params=self._mail_content_params,
+                    headers=self._mail_content_headers
+                )
+            )
             logger.debug(f"{self.site_name} 标题 {head} 时间 {date} 内容 {content}")
             self.message_unread_contents.append((head, date, content))
 
     def _parse_seeding_pages(self):
+        """
+        解析做种页面
+        """
         if self._torrent_seeding_page:
             # 第一页
             next_page = self._parse_user_torrent_seeding_info(
-                self._get_page_content(urljoin(self._base_url, self._torrent_seeding_page),
-                                       self._torrent_seeding_params,
-                                       self._torrent_seeding_headers))
+                self._get_page_content(
+                    url=urljoin(self._base_url, self._torrent_seeding_page),
+                    params=self._torrent_seeding_params,
+                    headers=self._torrent_seeding_headers
+                )
+            )
 
             # 其他页处理
-            while next_page:
+            while next_page is not None and next_page is not False:
                 next_page = self._parse_user_torrent_seeding_info(
-                    self._get_page_content(urljoin(urljoin(self._base_url, self._torrent_seeding_page), next_page),
-                                           self._torrent_seeding_params,
-                                           self._torrent_seeding_headers),
+                    self._get_page_content(
+                        url=urljoin(urljoin(self._base_url, self._torrent_seeding_page), next_page),
+                        params=self._torrent_seeding_params,
+                        headers=self._torrent_seeding_headers
+                    ),
                     multi_page=True)
 
     @staticmethod
@@ -216,41 +280,61 @@ class ISiteUserInfo(metaclass=ABCMeta):
         req_headers = None
         proxies = settings.PROXY if self._proxy else None
         if self._ua or headers or self._addition_headers:
-            req_headers = {}
+            req_headers = {
+                "User-Agent": f"{self._ua}"
+            }
+
             if headers:
                 req_headers.update(headers)
+            else:
+                req_headers.update({
+                    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                })
+                if self._addition_headers:
+                    req_headers.update(self._addition_headers)
 
-            req_headers.update({
-                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-                "User-Agent": f"{self._ua}"
-            })
-
-            if self._addition_headers:
-                req_headers.update(self._addition_headers)
+        if self.request_mode == "apikey":
+            # 使用apikey请求，通过请求头传递
+            cookie = None
+            session = None
+        else:
+            # 使用cookie请求
+            cookie = self._site_cookie
+            session = self._session
 
         if params:
-            res = RequestUtils(cookies=self._site_cookie,
-                               session=self._session,
-                               timeout=60,
-                               proxies=proxies,
-                               headers=req_headers).post_res(url=url, data=params)
+            if req_headers.get("Content-Type") == "application/json":
+                res = RequestUtils(cookies=cookie,
+                                   session=session,
+                                   timeout=60,
+                                   proxies=proxies,
+                                   headers=req_headers).post_res(url=url, json=params)
+            else:
+                res = RequestUtils(cookies=cookie,
+                                   session=session,
+                                   timeout=60,
+                                   proxies=proxies,
+                                   headers=req_headers).post_res(url=url, data=params)
         else:
-            res = RequestUtils(cookies=self._site_cookie,
-                               session=self._session,
+            res = RequestUtils(cookies=cookie,
+                               session=session,
                                timeout=60,
                                proxies=proxies,
                                headers=req_headers).get_res(url=url)
         if res is not None and res.status_code in (200, 500, 403):
-            # 如果cloudflare 有防护，尝试使用浏览器仿真
-            if under_challenge(res.text):
-                logger.warn(
-                    f"{self.site_name} 检测到Cloudflare，请更新Cookie和UA")
-                return ""
-            if re.search(r"charset=\"?utf-8\"?", res.text, re.IGNORECASE):
-                res.encoding = "utf-8"
+            if req_headers and "application/json" in req_headers.get("Accept"):
+                return json.dumps(res.json())
             else:
-                res.encoding = res.apparent_encoding
-            return res.text
+                # 如果cloudflare 有防护，尝试使用浏览器仿真
+                if under_challenge(res.text):
+                    logger.warn(
+                        f"{self.site_name} 检测到Cloudflare，请更新Cookie和UA")
+                    return ""
+                if re.search(r"charset=\"?utf-8\"?", res.text, re.IGNORECASE):
+                    res.encoding = "utf-8"
+                else:
+                    res.encoding = res.apparent_encoding
+                return res.text
 
         return ""
 
