@@ -5,7 +5,7 @@ from app.db.downloadhistory_oper import DownloadHistoryOper
 from app.db.site_oper import SiteOper
 from app.plugins import _PluginBase
 from app.db.subscribe_oper import SubscribeOper
-from typing import Any, List, Dict, Tuple
+from typing import Any, List, Dict, Tuple, Optional
 
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -51,6 +51,7 @@ class SubscribeStatistic(_PluginBase):
     downloadhis = None
     siteoper = None
     _cron: str = ""
+    _scheduler: Optional[BackgroundScheduler] = None
 
     def init_plugin(self, config: dict = None):
         self.subscribe = SubscribeOper()
