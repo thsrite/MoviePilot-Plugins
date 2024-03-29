@@ -127,7 +127,7 @@ class SubscribeStatistic(_PluginBase):
         """
         text = ""
         if 'movie_subscribes' in self._notify_type:
-            text += f"【电影订阅统计{self._movie_subscribe_days}天内】\n"
+            text += f"【电影{self._movie_subscribe_days}天内订阅统计】\n"
             _, movie_subscribe_sites, movie_subscribe_datas = self.__get_movie_subscribes()
             movie_subscribe_dict = dict(zip(movie_subscribe_sites, movie_subscribe_datas))
             movie_subscribe_dict = dict(sorted(movie_subscribe_dict.items(), key=lambda x: x[1], reverse=True))
@@ -136,7 +136,7 @@ class SubscribeStatistic(_PluginBase):
             text += "\n"
 
         if 'tv_subscribes' in self._notify_type:
-            text += f"【电视剧订阅统计{self._tv_subscribe_days}天内】\n"
+            text += f"【电视剧{self._tv_subscribe_days}天内订阅统计】\n"
             _, tv_subscribe_sites, tv_subscribe_datas = self.__get_tv_subscribes()
             tv_subscribe_dict = dict(zip(tv_subscribe_sites, tv_subscribe_datas))
             tv_subscribe_dict = dict(sorted(tv_subscribe_dict.items(), key=lambda x: x[1], reverse=True))
@@ -145,7 +145,7 @@ class SubscribeStatistic(_PluginBase):
             text += "\n"
 
         if 'movie_downloads' in self._notify_type:
-            text += f"【电影下载统计{self._movie_download_days}天内】\n"
+            text += f"【电影{self._movie_download_days}天内下载统计】\n"
             _, movie_download_sites, movie_download_datas = self.__get_movie_downloads()
             movie_download_dict = dict(zip(movie_download_sites, movie_download_datas))
             movie_download_dict = dict(sorted(movie_download_dict.items(), key=lambda x: x[1], reverse=True))
@@ -154,7 +154,7 @@ class SubscribeStatistic(_PluginBase):
             text += "\n"
 
         if 'tv_downloads' in self._notify_type:
-            text += f"【电视剧下载统计{self._tv_download_days}天内】\n"
+            text += f"【电视剧{self._tv_download_days}天内下载统计】\n"
             _, tv_download_sites, tv_download_datas = self.__get_tv_downloads()
             tv_download_dict = dict(zip(tv_download_sites, tv_download_datas))
             tv_download_dict = dict(sorted(tv_download_dict.items(), key=lambda x: x[1], reverse=True))
