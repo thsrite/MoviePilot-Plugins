@@ -56,6 +56,10 @@ class SubscribeStatistic(_PluginBase):
         self.subscribe = SubscribeOper()
         self.downloadhis = DownloadHistoryOper()
         self.siteoper = SiteOper()
+
+        # 停止现有任务
+        self.stop_service()
+
         if config:
             self._enabled = config.get("enabled")
             self._notify = config.get("notify")
@@ -706,4 +710,11 @@ class SubscribeStatistic(_PluginBase):
         """
         退出插件
         """
-        pass
+        try:
+            if self._scheduler:
+                self._scheduler.remove_all_jobs()
+                if self._scheduler.running:
+                    self._scheduler.shutdown()
+                self._scheduler = None
+        except Exception as e:
+            logger.error("退出插件失败：%s" % str(e))
