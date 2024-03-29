@@ -414,30 +414,6 @@ class SubscribeStatistic(_PluginBase):
                                 ]
                             },
                             {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VSelect',
-                                        'props': {
-                                            'multiple': True,
-                                            'chips': True,
-                                            'model': 'notify_type',
-                                            'label': '推送类型',
-                                            'items': [
-                                                {'title': '电影订阅', 'value': 'movie_subscribes'},
-                                                {'title': '电视剧订阅', 'value': 'tv_subscribes'},
-                                                {'title': '电影下载', 'value': 'movie_downloads'},
-                                                {'title': '电视剧下载', 'value': 'tv_downloads'},
-                                            ]
-                                        }
-                                    }
-                                ]
-                            },
-                            {
                                 'component': 'VRow',
                                 'content': [
                                     {
@@ -461,6 +437,31 @@ class SubscribeStatistic(_PluginBase):
                                     }
                                 ]
                             },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'multiple': True,
+                                            'chips': True,
+                                            'model': 'notify_type',
+                                            'label': '推送类型',
+                                            'items': [
+                                                {'title': '电影订阅', 'value': 'movie_subscribes'},
+                                                {'title': '电视剧订阅', 'value': 'tv_subscribes'},
+                                                {'title': '电影下载', 'value': 'movie_downloads'},
+                                                {'title': '电视剧下载', 'value': 'tv_downloads'},
+                                            ]
+                                        }
+                                    }
+                                ]
+                            },
+
                         ]
                     },
                     {
