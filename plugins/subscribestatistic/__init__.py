@@ -418,7 +418,7 @@ class SubscribeStatistic(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -432,26 +432,21 @@ class SubscribeStatistic(_PluginBase):
                                 ]
                             },
                             {
-                                'component': 'VRow',
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
                                 'content': [
                                     {
-                                        'component': 'VCol',
+                                        'component': 'VSelect',
                                         'props': {
-                                            'cols': 12,
-                                            'md': 4
-                                        },
-                                        'content': [
-                                            {
-                                                'component': 'VSelect',
-                                                'props': {
-                                                    'multiple': False,
-                                                    'chips': True,
-                                                    'model': 'msgtype',
-                                                    'label': '消息类型',
-                                                    'items': MsgTypeOptions
-                                                }
-                                            }
-                                        ]
+                                            'multiple': False,
+                                            'chips': True,
+                                            'model': 'msgtype',
+                                            'label': '消息类型',
+                                            'items': MsgTypeOptions
+                                        }
                                     }
                                 ]
                             },
@@ -459,7 +454,7 @@ class SubscribeStatistic(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
                                 },
                                 'content': [
                                     {
