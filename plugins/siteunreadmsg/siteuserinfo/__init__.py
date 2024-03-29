@@ -290,8 +290,8 @@ class ISiteUserInfo(metaclass=ABCMeta):
                 req_headers.update({
                     "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
                 })
-                if self._addition_headers:
-                    req_headers.update(self._addition_headers)
+            if self._addition_headers:
+                req_headers.update(self._addition_headers)
 
         if self.request_mode == "apikey":
             # 使用apikey请求，通过请求头传递
@@ -322,7 +322,7 @@ class ISiteUserInfo(metaclass=ABCMeta):
                                proxies=proxies,
                                headers=req_headers).get_res(url=url)
         if res is not None and res.status_code in (200, 500, 403):
-            if req_headers and "application/json" in req_headers.get("Accept"):
+            if req_headers and "application/json" in str(req_headers.get("Accept")):
                 return json.dumps(res.json())
             else:
                 # 如果cloudflare 有防护，尝试使用浏览器仿真
