@@ -106,6 +106,20 @@ class SubscribeStatistic(_PluginBase):
                     self._scheduler.print_jobs()
                     self._scheduler.start()
 
+    def __update_config(self):
+        self.update_config({
+            "enabled": self._enabled,
+            "onlyonce": self._onlyonce,
+            "cron": self._cron,
+            "notify": self._notify,
+            "movie_subscribe_days": self._movie_subscribe_days,
+            "tv_subscribe_days": self._tv_subscribe_days,
+            "movie_download_days": self._movie_download_days,
+            "tv_download_days": self._tv_download_days,
+            "notify_type": self._notify_type,
+            "msgtype": self._msgtype,
+        })
+
     def notify(self):
         """
         发送统计消息
