@@ -2,16 +2,16 @@ import random
 import subprocess
 import time
 from datetime import datetime, timedelta
+from typing import Any, List, Dict, Tuple, Optional
 
 import pytz
-from app.core.config import settings
-from app.plugins import _PluginBase
-from typing import Any, List, Dict, Tuple, Optional
-from app.log import logger
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from app.schemas import NotificationType, MediaType
+from app.core.config import settings
+from app.log import logger
+from app.plugins import _PluginBase
+from app.schemas import NotificationType
 
 
 class CustomCommand(_PluginBase):
@@ -112,7 +112,7 @@ class CustomCommand(_PluginBase):
         result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output, errors = result.communicate()
         logger.info(
-            f"执行命令：{command} {'成功' if errors else '失败'} 返回值：{errors.decode('utf-8')}")
+            f"执行命令：{command} 返回值：{errors.decode('utf-8') if errors else output.decode('utf-8')}")
 
         if self._notify and self._msgtype:
             # 发送通知
@@ -122,7 +122,8 @@ class CustomCommand(_PluginBase):
 
             self.post_message(title=name,
                               mtype=mtype,
-                              text=errors.decode('utf-8') if errors else "执行失败")
+                              text="执行失败" if not errors and not output else errors.decode(
+                                  'utf-8') if errors else output.decode('utf-8'))
 
     def __update_config(self):
         self.update_config({
