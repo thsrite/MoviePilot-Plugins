@@ -232,10 +232,11 @@ class CustomCommand(_PluginBase):
                                 },
                                 'content': [
                                     {
-                                        'component': 'VTextField',
+                                        'component': 'VTextarea',
                                         'props': {
                                             'model': 'time_confs',
                                             'label': '执行命令',
+                                            'rows': 2,
                                             'placeholder': '命令名#0 9 * * *#python main.py\n'
                                                            '命令名#0 9 * * *#python main.py#1-600'
                                         }
