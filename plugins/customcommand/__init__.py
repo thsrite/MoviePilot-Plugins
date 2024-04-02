@@ -60,10 +60,13 @@ class CustomCommand(_PluginBase):
                 # 分别执行命令，输入结果
                 for time_conf in self._time_confs.split("\n"):
                     if time_conf:
-                        for conf in str(time_conf).split("#"):
-                            name = conf[0]
-                            cron = conf[1]
-                            command = conf[2]
+                        if str(time_conf).count("#") == 2 or str(time_conf).count("#") == 3:
+                            name = str(time_conf).split("#")[0]
+                            cron = str(time_conf).split("#")[1]
+                            command = str(time_conf).split("#")[2]
+                            random_delay = None
+                            if str(time_conf).count("#") == 3:
+                                random_delay = str(time_conf).split("#")[3]
 
                             if self._onlyonce:
                                 # 立即运行一次
@@ -79,9 +82,6 @@ class CustomCommand(_PluginBase):
                                 # 保存配置
                                 self.__update_config()
                             else:
-                                random_delay = None
-                                if str(time_conf).count("#") == 3:
-                                    random_delay = conf[3]
                                 try:
                                     self._scheduler.add_job(func=self.__execute_command,
                                                             trigger=CronTrigger.from_crontab(str(cron)),
@@ -92,6 +92,8 @@ class CustomCommand(_PluginBase):
                                     logger.error(f"定时任务配置错误：{err}")
                                     # 推送实时消息
                                     self.systemmessage.put(f"执行周期配置错误：{err}")
+                        else:
+                            logger.error(f"{time_conf} 配置错误，跳过处理")
 
                 # 启动任务
                 if self._scheduler.get_jobs():
@@ -107,8 +109,10 @@ class CustomCommand(_PluginBase):
             logger.info(f"随机延时 {random_delay} 秒")
             time.sleep(random_delay)
 
-        result = subprocess.call(command, shell=True)
-        logger.info(f"执行命令：{command} 返回值：{result}")
+        result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output, errors = result.communicate()
+        logger.info(
+            f"执行命令：{command} {'成功' if errors else '失败'} 返回值：{errors.decode('utf-8')}")
 
         if self._notify and self._msgtype:
             # 发送通知
@@ -118,7 +122,7 @@ class CustomCommand(_PluginBase):
 
             self.post_message(title=name,
                               mtype=mtype,
-                              text=result)
+                              text=errors.decode('utf-8') if errors else "执行失败")
 
     def __update_config(self):
         self.update_config({
