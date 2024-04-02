@@ -43,7 +43,6 @@ class CustomCommand(_PluginBase):
     _scheduler: Optional[BackgroundScheduler] = None
 
     def init_plugin(self, config: dict = None):
-
         # 停止现有任务
         self.stop_service()
 
