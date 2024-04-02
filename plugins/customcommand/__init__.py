@@ -82,7 +82,7 @@ class CustomCommand(_PluginBase):
                                 try:
                                     self._scheduler.add_job(func=self.__execute_command,
                                                             trigger=CronTrigger.from_crontab(str(cron)),
-                                                            name=name,
+                                                            name=name + (f"随机延时{conf[3]}秒" if conf[3] else ""),
                                                             args=[name, command, conf[3]])
                                 except Exception as err:
                                     logger.error(f"定时任务配置错误：{err}")
