@@ -22,7 +22,7 @@ class CustomCommand(_PluginBase):
     # 插件图标
     plugin_icon = "Ntfy_A.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -108,10 +108,26 @@ class CustomCommand(_PluginBase):
             logger.info(f"随机延时 {random_delay} 秒")
             time.sleep(random_delay)
 
-        result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output, errors = result.communicate()
+        result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1)
+        last_output = None
+        last_error = None
+        while True:
+            output = result.stdout.readline().decode("utf-8")
+            if output == '' and result.poll() is not None:
+                break
+            if output:
+                print(output.strip())
+                last_output = output.strip()
+
+            error = result.stderr.readline().decode("utf-8")
+            if error == '' and result.poll() is not None:
+                break
+            if error:
+                print(error.strip())
+                last_error = error.strip()
+
         logger.info(
-            f"执行命令：{command} 返回值：{errors.decode('utf-8') if errors else output.decode('utf-8')}")
+            f"执行命令：{command} {'成功' if result.returncode == 0 else '失败'} 返回值：{last_output if last_output else last_error}")
 
         if self._notify and self._msgtype:
             # 发送通知
@@ -121,8 +137,7 @@ class CustomCommand(_PluginBase):
 
             self.post_message(title=name,
                               mtype=mtype,
-                              text="执行失败" if not errors and not output else errors.decode(
-                                  'utf-8') if errors else output.decode('utf-8'))
+                              text=last_output if last_output else last_error)
 
     def __update_config(self):
         self.update_config({
