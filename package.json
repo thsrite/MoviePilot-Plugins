@@ -150,5 +150,13 @@
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/subscribestatistic.png",
         "author": "thsrite",
         "level": 1
+    },
+    "CustomCommand": {
+        "name": "自定义命令",
+        "description": "自定义执行周期执行命令并推送结果。",
+        "version": "1.0",
+        "icon": "Ntfy_A.png",
+        "author": "thsrite",
+        "level": 1
     }
 }
