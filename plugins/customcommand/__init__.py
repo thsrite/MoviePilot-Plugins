@@ -79,11 +79,15 @@ class CustomCommand(_PluginBase):
                                 # 保存配置
                                 self.__update_config()
                             else:
+                                random_delay = None
+                                if str(time_conf).count("#") == 3:
+                                    random_delay = conf[3]
                                 try:
                                     self._scheduler.add_job(func=self.__execute_command,
                                                             trigger=CronTrigger.from_crontab(str(cron)),
-                                                            name=name + (f"随机延时{conf[3]}秒" if conf[3] else ""),
-                                                            args=[name, command, conf[3]])
+                                                            name=name + (
+                                                                f"随机延时{random_delay}秒" if random_delay else ""),
+                                                            args=[name, command, random_delay])
                                 except Exception as err:
                                     logger.error(f"定时任务配置错误：{err}")
                                     # 推送实时消息
