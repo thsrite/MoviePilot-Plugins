@@ -22,7 +22,7 @@ class CustomCommand(_PluginBase):
     # 插件图标
     plugin_icon = "Ntfy_A.png"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.0"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -108,7 +108,7 @@ class CustomCommand(_PluginBase):
             logger.info(f"随机延时 {random_delay} 秒")
             time.sleep(random_delay)
 
-        result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1)
+        result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         last_output = None
         last_error = None
         while True:
@@ -116,14 +116,14 @@ class CustomCommand(_PluginBase):
             if output == '' and result.poll() is not None:
                 break
             if output:
-                print(output.strip())
+                logger.info(output.strip())
                 last_output = output.strip()
 
             error = result.stderr.readline().decode("utf-8")
             if error == '' and result.poll() is not None:
                 break
             if error:
-                print(error.strip())
+                logger.info(error.strip())
                 last_error = error.strip()
 
         logger.info(
