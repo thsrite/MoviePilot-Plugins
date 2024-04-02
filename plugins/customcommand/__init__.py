@@ -112,19 +112,19 @@ class CustomCommand(_PluginBase):
         last_output = None
         last_error = None
         while True:
-            output = result.stdout.readline().decode("utf-8")
-            if output == '' and result.poll() is not None:
-                break
-            if output:
-                logger.info(output.strip())
-                last_output = output.strip()
-
             error = result.stderr.readline().decode("utf-8")
             if error == '' and result.poll() is not None:
                 break
             if error:
                 logger.info(error.strip())
                 last_error = error.strip()
+
+            output = result.stdout.readline().decode("utf-8")
+            if output == '' and result.poll() is not None:
+                break
+            if output:
+                logger.info(output.strip())
+                last_output = output.strip()
 
         logger.info(
             f"执行命令：{command} {'成功' if result.returncode == 0 else '失败'} 返回值：{last_output if last_output else last_error}")
