@@ -178,8 +178,8 @@ class WeChatForward(_PluginBase):
                                         'component': 'VTextarea',
                                         'props': {
                                             'model': 'extra_confs',
-                                            'rows': '2',
-                                            'label': '额外配置',
+                                            'rows': '5',
+                                            'label': '额外消息配置',
                                             'placeholder': '开始下载 > userid > 后台下载任务已提交，请耐心等候入库通知。 > appid'
                                         }
                                     }
