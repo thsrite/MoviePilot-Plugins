@@ -22,7 +22,7 @@ class WeChatForward(_PluginBase):
     # 插件图标
     plugin_icon = "Wechat_A.png"
     # 插件版本
-    plugin_version = "1.3"
+    plugin_version = "1.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -42,6 +42,7 @@ class WeChatForward(_PluginBase):
     _extra_confs = None
     _pattern_token = {}
     _extra_msg_history = {}
+    _specify_confs = {}
 
     # 企业微信发送消息URL
     _send_msg_url = f"{settings.WECHAT_PROXY}/cgi-bin/message/send?access_token=%s"
@@ -55,6 +56,7 @@ class WeChatForward(_PluginBase):
             self._pattern = config.get("pattern")
             self._ignore_userid = config.get("ignore_userid")
             self._extra_confs = config.get("extra_confs")
+            self._specify_confs = config.get("specify_confs")
 
             # 获取token存库
             if self._enabled and self._wechat:
@@ -155,10 +157,10 @@ class WeChatForward(_PluginBase):
                                     {
                                         'component': 'VTextarea',
                                         'props': {
-                                            'model': 'ignore_userid',
-                                            'rows': '1',
-                                            'label': '忽略userid',
-                                            'placeholder': '开始下载|添加下载任务失败'
+                                            'model': 'extra_confs',
+                                            'rows': '4',
+                                            'label': '额外消息配置',
+                                            'placeholder': '开始下载 > userid > 后台下载任务已提交，请耐心等候入库通知。 > appid'
                                         }
                                     }
                                 ]
@@ -177,10 +179,32 @@ class WeChatForward(_PluginBase):
                                     {
                                         'component': 'VTextarea',
                                         'props': {
-                                            'model': 'extra_confs',
-                                            'rows': '5',
-                                            'label': '额外消息配置',
-                                            'placeholder': '开始下载 > userid > 后台下载任务已提交，请耐心等候入库通知。 > appid'
+                                            'model': 'specify_confs',
+                                            'rows': '2',
+                                            'label': '特定消息指定用户',
+                                            'placeholder': 'title > text > userid'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextarea',
+                                        'props': {
+                                            'model': 'ignore_userid',
+                                            'rows': '1',
+                                            'label': '忽略userid',
+                                            'placeholder': '开始下载|添加下载任务失败'
                                         }
                                     }
                                 ]
@@ -202,34 +226,14 @@ class WeChatForward(_PluginBase):
                                             'type': 'info',
                                             'variant': 'tonal',
                                             'text': '根据正则表达式，把MoviePilot的消息转发到多个微信应用。'
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VAlert',
-                                        'props': {
-                                            'type': 'info',
-                                            'variant': 'tonal',
-                                            'text': '应用配置可加注释：'
+                                                    '应用配置可加注释：'
                                                     'appid:corpid:appsecret#站点通知'
                                         }
                                     }
                                 ]
                             }
                         ]
-                    }
+                    },
                 ]
             }
         ], {
@@ -237,6 +241,7 @@ class WeChatForward(_PluginBase):
             "wechat": "",
             "pattern": "",
             "ignore_userid": "",
+            "specify_confs": "",
             "extra_confs": ""
         }
 
@@ -275,6 +280,16 @@ class WeChatForward(_PluginBase):
                 # 忽略userid正则表达式
                 if self._ignore_userid and re.search(self._ignore_userid, title):
                     userid = None
+
+                # 特定消息指定用户
+                if self._specify_confs:
+                    for specify_conf in self._specify_confs.split("\n"):
+                        specify = specify_conf.split(" > ")
+                        if len(specify) != 3:
+                            continue
+                        if re.search(specify[0], title) and re.search(specify[0], text):
+                            userid = specify[2]
+                            break
 
                 # 发送消息
                 if image:
