@@ -22,7 +22,7 @@ class CustomCommand(_PluginBase):
     # 插件图标
     plugin_icon = "Ntfy_A.png"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -128,6 +128,18 @@ class CustomCommand(_PluginBase):
 
         logger.info(
             f"执行命令：{command} {'成功' if result.returncode == 0 else '失败'} 返回值：{last_output if last_output else last_error}")
+
+        # 读取历史记录
+        history = self.get_data('history') or []
+
+        history.append({
+            "name": name,
+            "command": command,
+            "result": last_output if last_output else last_error,
+            "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
+        })
+        # 保存历史
+        self.save_data(key="history", value=history)
 
         if self._notify and self._msgtype:
             # 发送通知
@@ -321,7 +333,106 @@ class CustomCommand(_PluginBase):
         }
 
     def get_page(self) -> List[dict]:
-        pass
+        # 查询同步详情
+        historys = self.get_data('history')
+        if not historys:
+            return [
+                {
+                    'component': 'div',
+                    'text': '暂无数据',
+                    'props': {
+                        'class': 'text-center',
+                    }
+                }
+            ]
+
+        if not isinstance(historys, list):
+            historys = [historys]
+
+        # 按照签到时间倒序
+        historys = sorted(historys, key=lambda x: x.get("time") or 0, reverse=True)
+
+        # 签到消息
+        sign_msgs = [
+            {
+                'component': 'tr',
+                'props': {
+                    'class': 'text-sm'
+                },
+                'content': [
+                    {
+                        'component': 'td',
+                        'props': {
+                            'class': 'whitespace-nowrap break-keep text-high-emphasis'
+                        },
+                        'text': history.get("time")
+                    },
+                    {
+                        'component': 'td',
+                        'text': history.get("name")
+                    },
+                    {
+                        'component': 'td',
+                        'text': history.get("result")
+                    }
+                ]
+            } for history in historys
+        ]
+
+        # 拼装页面
+        return [
+            {
+                'component': 'VRow',
+                'content': [
+                    {
+                        'component': 'VCol',
+                        'props': {
+                            'cols': 12,
+                        },
+                        'content': [
+                            {
+                                'component': 'VTable',
+                                'props': {
+                                    'hover': True
+                                },
+                                'content': [
+                                    {
+                                        'component': 'thead',
+                                        'content': [
+                                            {
+                                                'component': 'th',
+                                                'props': {
+                                                    'class': 'text-start ps-4'
+                                                },
+                                                'text': '执行时间'
+                                            },
+                                            {
+                                                'component': 'th',
+                                                'props': {
+                                                    'class': 'text-start ps-4'
+                                                },
+                                                'text': '命令名称'
+                                            },
+                                            {
+                                                'component': 'th',
+                                                'props': {
+                                                    'class': 'text-start ps-4'
+                                                },
+                                                'text': '执行结果'
+                                            },
+                                        ]
+                                    },
+                                    {
+                                        'component': 'tbody',
+                                        'content': sign_msgs
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
 
     def stop_service(self):
         """
