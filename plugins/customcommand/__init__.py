@@ -22,7 +22,7 @@ class CustomCommand(_PluginBase):
     # 插件图标
     plugin_icon = "Ntfy_A.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -38,7 +38,8 @@ class CustomCommand(_PluginBase):
     _enabled: bool = False
     _onlyonce: bool = False
     _notify: bool = False
-    _msgtype: bool = False
+    _clear: bool = False
+    _msgtype: str = None
     _time_confs = None
     _scheduler: Optional[BackgroundScheduler] = None
 
@@ -51,7 +52,14 @@ class CustomCommand(_PluginBase):
             self._onlyonce = config.get("onlyonce")
             self._notify = config.get("notify")
             self._msgtype = config.get("msgtype")
+            self._clear = config.get("clear")
             self._time_confs = config.get("time_confs")
+
+            # 清除历史
+            if self._clear:
+                self.del_data('history')
+                self._clear = False
+                self.__update_config()
 
             if (self._enabled or self._onlyonce) and self._time_confs:
                 # 周期运行
@@ -157,7 +165,8 @@ class CustomCommand(_PluginBase):
             "onlyonce": self._onlyonce,
             "notify": self._notify,
             "msgtype": self._msgtype,
-            "time_confs": self._time_confs
+            "time_confs": self._time_confs,
+            "clear": self._clear
         })
 
     def get_state(self) -> bool:
@@ -192,7 +201,7 @@ class CustomCommand(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 3
+                                    'md': 2
                                 },
                                 'content': [
                                     {
@@ -208,7 +217,7 @@ class CustomCommand(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 3
+                                    'md': 2
                                 },
                                 'content': [
                                     {
@@ -224,7 +233,7 @@ class CustomCommand(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 3
+                                    'md': 2
                                 },
                                 'content': [
                                     {
@@ -232,6 +241,22 @@ class CustomCommand(_PluginBase):
                                         'props': {
                                             'model': 'onlyonce',
                                             'label': '立即运行一次',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 2
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'clear',
+                                            'label': '清除历史记录',
                                         }
                                     }
                                 ]
@@ -328,6 +353,7 @@ class CustomCommand(_PluginBase):
             "enabled": False,
             "notify": False,
             "onlyonce": False,
+            "clear": False,
             "time_confs": "",
             "msgtype": ""
         }
