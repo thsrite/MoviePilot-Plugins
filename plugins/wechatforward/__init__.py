@@ -284,6 +284,11 @@ class WeChatForward(_PluginBase):
                 # 特定消息指定用户
                 if self._specify_confs:
                     for specify_conf in self._specify_confs.split("\n"):
+                        if not specify_conf:
+                            continue
+                        # 跳过注释
+                        if str(specify_conf).startswith("#"):
+                            continue
                         specify = specify_conf.split(" > ")
                         if len(specify) != 3:
                             continue
@@ -311,6 +316,11 @@ class WeChatForward(_PluginBase):
         is_save_history = False
         extra_confs = self._extra_confs.split("\n")
         for extra_conf in extra_confs:
+            if not extra_conf:
+                continue
+            # 跳过注释
+            if str(extra_conf).startswith("#"):
+                continue
             extras = str(extra_conf).split(" > ")
             if len(extras) != 4:
                 continue
