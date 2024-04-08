@@ -272,7 +272,7 @@ class WeChatForward(_PluginBase):
         for index, pattern in enumerate(patterns):
             msg_match = re.search(pattern, title)
             if msg_match:
-                access_token, appid = self.__flush_access_token(index)
+                access_token, appid = self.__flush_access_token(index=index)
                 if not access_token:
                     logger.error("未获取到有效token，请检查配置")
                     continue
@@ -280,33 +280,43 @@ class WeChatForward(_PluginBase):
                 # 忽略userid正则表达式
                 if self._ignore_userid and re.search(self._ignore_userid, title):
                     userid = None
-
-                # 特定消息指定用户
-                if self._specify_confs:
-                    for specify_conf in self._specify_confs.split("\n"):
-                        if not specify_conf:
-                            continue
-                        # 跳过注释
-                        if str(specify_conf).startswith("#"):
-                            continue
-                        specify = specify_conf.split(" > ")
-                        if len(specify) != 3:
-                            continue
-                        if re.search(specify[0], title) and re.search(specify[1], text):
-                            userid = specify[2]
-                            logger.info(f"消息 {title} {text} 指定用户 {userid}")
-                            break
+                else:
+                    # 特定消息指定用户
+                    userid = self.__specify_userid(title=title, text=text, userid=userid)
 
                 # 发送消息
                 if image:
-                    self.__send_image_message(title, text, image, userid, access_token, appid, index)
+                    self.__send_image_message(title=title, text=text, image_url=image, userid=userid,
+                                              access_token=access_token, appid=appid, index=index)
                 else:
-                    self.__send_message(title, text, userid, access_token, appid, index)
+                    self.__send_message(title=title, text=text, userid=userid, access_token=access_token, appid=appid,
+                                        index=index)
 
                 # 开始下载 > userid > {name} 后台下载任务已提交，请耐心等候入库通知。 > appid
                 # 已添加订阅 > userid > {name} 电视剧正在更新，已添加订阅，待更新后自动下载。 > appid
                 if self._extra_confs:
-                    self.__send_extra_msg(title, text)
+                    self.__send_extra_msg(title=title, text=text)
+
+    def __specify_userid(self, title, text, userid):
+        """
+        特定消息指定用户
+        """
+        if self._specify_confs:
+            for specify_conf in self._specify_confs.split("\n"):
+                if not specify_conf:
+                    continue
+                # 跳过注释
+                if str(specify_conf).startswith("#"):
+                    continue
+                specify = specify_conf.split(" > ")
+                if len(specify) != 3:
+                    continue
+                if re.search(specify[0], title) and re.search(specify[1], text):
+                    userid = specify[2]
+                    logger.info(f"消息 {title} {text} 指定用户 {userid}")
+                    break
+
+        return userid
 
     def __send_extra_msg(self, title, text):
         """
@@ -340,6 +350,7 @@ class WeChatForward(_PluginBase):
                     pattern = r"来自用户：(.*?)$"
                     result = re.search(pattern, text)
                     if not result:
+                        logger.error("未获取到用户，跳过处理")
                         continue
                 # 获取消息text中的用户
                 user_id = result.group(1)
@@ -388,7 +399,7 @@ class WeChatForward(_PluginBase):
                             wechat_conf = self._pattern_token.get(wechat_idx)
                             if (wechat_conf and wechat_conf.get("appid")
                                     and str(wechat_conf.get("appid")) == str(extra_appid)):
-                                access_token, appid = self.__flush_access_token(wechat_idx)
+                                access_token, appid = self.__flush_access_token(index=wechat_idx)
                                 if not access_token:
                                     logger.error("未获取到有效token，请检查配置")
                                     continue
