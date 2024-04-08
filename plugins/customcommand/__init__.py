@@ -233,7 +233,7 @@ class CustomCommand(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 2
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -249,7 +249,7 @@ class CustomCommand(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 2
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -265,7 +265,7 @@ class CustomCommand(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 3
+                                    'md': 2
                                 },
                                 'content': [
                                     {
