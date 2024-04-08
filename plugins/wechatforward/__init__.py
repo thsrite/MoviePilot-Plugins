@@ -287,7 +287,7 @@ class WeChatForward(_PluginBase):
                         specify = specify_conf.split(" > ")
                         if len(specify) != 3:
                             continue
-                        if re.search(specify[0], title) and re.search(specify[0], text):
+                        if re.search(specify[0], title) and re.search(specify[1], text):
                             userid = specify[2]
                             logger.info(f"消息 {title} {text} 指定用户 {userid}")
                             break
