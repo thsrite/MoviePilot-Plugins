@@ -22,7 +22,7 @@ class WeChatForward(_PluginBase):
     # 插件图标
     plugin_icon = "Wechat_A.png"
     # 插件版本
-    plugin_version = "1.4"
+    plugin_version = "1.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -289,6 +289,7 @@ class WeChatForward(_PluginBase):
                             continue
                         if re.search(specify[0], title) and re.search(specify[0], text):
                             userid = specify[2]
+                            logger.info(f"消息 {title} {text} 指定用户 {userid}")
                             break
 
                 # 发送消息
@@ -560,13 +561,13 @@ class WeChatForward(_PluginBase):
             if res and res.status_code == 200:
                 ret_json = res.json()
                 if ret_json.get('errcode') == 0:
-                    logger.info(f"转发消息 {title} 成功")
+                    logger.info(f"转发消息 {title} {req_json} 成功")
                     return True
                 else:
                     if ret_json.get('errcode') == 81013:
                         return False
 
-                    logger.error(f"转发消息 {title} 失败，错误信息：{ret_json}")
+                    logger.error(f"转发消息 {title} {req_json} 失败，错误信息：{ret_json}")
                     if ret_json.get('errcode') == 42001 or ret_json.get('errcode') == 40014:
                         logger.info("token已过期，正在重新刷新token重试")
                         # 重新获取token
@@ -583,13 +584,13 @@ class WeChatForward(_PluginBase):
                                                            retry=retry)
                     return False
             elif res is not None:
-                logger.error(f"转发消息 {title} 失败，错误码：{res.status_code}，错误原因：{res.reason}")
+                logger.error(f"转发消息 {title} {req_json} 失败，错误码：{res.status_code}，错误原因：{res.reason}")
                 return False
             else:
-                logger.error(f"转发消息 {title} 失败，未获取到返回信息")
+                logger.error(f"转发消息 {title} {req_json} 失败，未获取到返回信息")
                 return False
         except Exception as err:
-            logger.error(f"转发消息 {title} 异常，错误信息：{str(err)}")
+            logger.error(f"转发消息 {title} {req_json} 异常，错误信息：{str(err)}")
             return False
 
     def __get_access_token(self, corpid: str, appsecret: str):
