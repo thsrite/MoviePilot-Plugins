@@ -50,6 +50,7 @@ class ActorSubscribe(_PluginBase):
     _resolution = None
     _effect = None
     _clear = False
+    _clear_already_handle = False
     _source = "showing"
     # 质量选择框数据
     _qualityOptions = {
@@ -96,16 +97,24 @@ class ActorSubscribe(_PluginBase):
             self._resolution = config.get("resolution")
             self._effect = config.get("effect")
             self._clear = config.get("clear")
+            self._clear_already_handle = config.get("clear_already_handle")
             self._source = config.get("source")
 
-            # 清理插件历史
+            # 清理插件订阅历史
             if self._clear:
                 self.del_data(key="history")
-                self.del_data(key="already_handle")
 
                 self._clear = False
                 self.__update_config()
-                logger.info("历史清理完成")
+                logger.info("订阅历史清理完成")
+
+            # 清理已处理历史
+            if self._clear_already_handle:
+                self.del_data(key="already_handle")
+
+                self._clear_already_handle = False
+                self.__update_config()
+                logger.info("已处理历史清理完成")
 
             if self._enabled or self._onlyonce:
                 # 定时服务
@@ -225,12 +234,14 @@ class ActorSubscribe(_PluginBase):
                 continue
 
             if mediainfo_actiors:
+                is_subscribe = False
                 for actor in mediainfo_actiors:
                     # logger.info(f'正在处理 {mediainfo.title_year} 演员 {actor}')
                     if actor and actor in actors:
                         # 开始订阅
-                        logger.info(f"电影 {mediainfo.title_year} {mediainfo.tmdb_id} 命中订阅演员 {actor}，开始订阅")
-
+                        logger.info(
+                            f"{mediainfo.type.name} {mediainfo.title_year} {mediainfo.tmdb_id} 命中订阅演员 {actor}，开始订阅")
+                        is_subscribe = True
                         # 添加订阅
                         self.subscribechain.add(title=mediainfo.title,
                                                 year=mediainfo.year,
@@ -253,6 +264,9 @@ class ActorSubscribe(_PluginBase):
                             "doubanid": mediainfo.douban_id,
                             "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         })
+
+                if not is_subscribe:
+                    logger.info(f"{mediainfo.type.name} {mediainfo.title_year} {mediainfo.tmdb_id} 未命中订阅演员，跳过")
 
         # 保存历史记录
         self.save_data('history', history)
@@ -432,6 +446,7 @@ class ActorSubscribe(_PluginBase):
             "resolution": self._resolution,
             "effect": self._effect,
             "clear": self._clear,
+            "clear_already_handle": self._clear_already_handle,
             "source": self._source,
         })
 
@@ -465,7 +480,7 @@ class ActorSubscribe(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -481,7 +496,7 @@ class ActorSubscribe(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -497,14 +512,30 @@ class ActorSubscribe(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
                                 },
                                 'content': [
                                     {
                                         'component': 'VSwitch',
                                         'props': {
                                             'model': 'clear',
-                                            'label': '清理历史记录',
+                                            'label': '清理订阅记录',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'clear_already_handle',
+                                            'label': '清理已处理记录',
                                         }
                                     }
                                 ]
@@ -557,75 +588,13 @@ class ActorSubscribe(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
                                 },
                                 'content': [
                                     {
                                         'component': 'VSelect',
                                         'props': {
-                                            'multiple': False,
-                                            'chips': True,
-                                            'model': 'quality',
-                                            'label': '质量',
-                                            'items': qualityOptions
-                                        }
-                                    }
-                                ]
-                            },
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VSelect',
-                                        'props': {
-                                            'multiple': False,
-                                            'chips': True,
-                                            'model': 'resolution',
-                                            'label': '分辨率',
-                                            'items': resolutionOptions
-                                        }
-                                    }
-                                ]
-                            },
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VSelect',
-                                        'props': {
-                                            'multiple': False,
-                                            'chips': True,
-                                            'model': 'effect',
-                                            'label': '特效',
-                                            'items': effectOptions
-                                        }
-                                    }
-                                ]
-                            },
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VSelect',
-                                        'props': {
-                                            'multiple': False,
+                                            'multiple': True,
                                             'chips': True,
                                             'model': 'source',
                                             'label': '订阅来源',
@@ -647,6 +616,63 @@ class ActorSubscribe(_PluginBase):
                                     }
                                 ]
                             },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'multiple': False,
+                                            'chips': True,
+                                            'model': 'quality',
+                                            'label': '质量',
+                                            'items': qualityOptions
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'multiple': False,
+                                            'chips': True,
+                                            'model': 'resolution',
+                                            'label': '分辨率',
+                                            'items': resolutionOptions
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'multiple': False,
+                                            'chips': True,
+                                            'model': 'effect',
+                                            'label': '特效',
+                                            'items': effectOptions
+                                        }
+                                    }
+                                ]
+                            },
                         ]
                     },
                 ]
@@ -660,6 +686,7 @@ class ActorSubscribe(_PluginBase):
             "resolution": "",
             "effect": "",
             "clear": False,
+            "clear_already_handle": False,
             "source": "douban_showing"
         }
 
