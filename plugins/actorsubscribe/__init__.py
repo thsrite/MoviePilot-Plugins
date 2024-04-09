@@ -203,10 +203,10 @@ class ActorSubscribe(_PluginBase):
             meta = MetaInfo(mediainfo.title)
 
             # 演员中文名
-            if mediainfo.actors:
+            if mediainfo.actors or mediainfo.directors:
                 mediainfo_actiors = mediainfo.actors + mediainfo.directors
             else:
-                # 查询tmdb数据源的中文演员名
+                # 查询豆瓣中文演员名
                 mediainfo_actiors = self.__get_douban_actors(mediainfo)
 
             if not mediainfo_actiors:
@@ -289,7 +289,9 @@ class ActorSubscribe(_PluginBase):
         # 豆瓣演员
         if doubaninfo:
             doubanitem = DoubanChain().douban_info(doubaninfo.get("id")) or {}
-            return (doubanitem.get("actors") or []) + (doubanitem.get("directors") or [])
+            actors = (doubanitem.get("actors") or []) + (doubanitem.get("directors") or [])
+            actors = [actor.get("name") for actor in actors]
+            return actors
         else:
             logger.debug(f"未找到豆瓣信息：{mediainfo.title_year}")
         return []
