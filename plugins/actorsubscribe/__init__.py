@@ -20,9 +20,9 @@ from apscheduler.triggers.cron import CronTrigger
 
 class ActorSubscribe(_PluginBase):
     # 插件名称
-    plugin_name = "明星订阅"
+    plugin_name = "演员订阅"
     # 插件描述
-    plugin_desc = "自动订阅指定明星热映或最新电影或电视剧。"
+    plugin_desc = "自动订阅指定演员热映或最新电影或电视剧。"
     # 插件图标
     plugin_icon = "Mdcng_A.png"
     # 插件版本

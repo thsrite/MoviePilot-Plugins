@@ -104,8 +104,8 @@
           "level": 1
       },
       "ActorSubscribe": {
-          "name": "明星订阅",
-          "description": "自动订阅指定明星热映或最新电影或电视剧。",
+          "name": "演员订阅",
+          "description": "自动订阅指定演员热映或最新电影或电视剧。",
           "version": "1.4",
           "icon": "Mdcng_A.png",
           "author": "thsrite",
