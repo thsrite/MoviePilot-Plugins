@@ -51,7 +51,7 @@ class ActorSubscribe(_PluginBase):
     _effect = None
     _clear = False
     _clear_already_handle = False
-    _source = "showing"
+    _source = ["douban_showing"]
     # 质量选择框数据
     _qualityOptions = {
         '全部': '',
@@ -161,7 +161,7 @@ class ActorSubscribe(_PluginBase):
         already_handle: List[dict] = self.get_data('already_handle') or []
 
         medias = []
-        for source in self._source.split("\n"):
+        for source in self._source:
             if source.strip() == "douban_showing":
                 medias += self.__douban_movie_showing()
             elif source.strip() == "douban_movies":
@@ -688,7 +688,7 @@ class ActorSubscribe(_PluginBase):
             "effect": "",
             "clear": False,
             "clear_already_handle": False,
-            "source": "douban_showing"
+            "source": ["douban_showing"]
         }
 
     def get_page(self) -> List[dict]:
