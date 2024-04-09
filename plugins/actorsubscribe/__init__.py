@@ -1,13 +1,16 @@
+import time
 from datetime import datetime, timedelta
 
 import pytz
 
 from app.chain.douban import DoubanChain
+from app.chain.tmdb import TmdbChain
 from app.chain.download import DownloadChain
 from app.chain.subscribe import SubscribeChain
 from app.core.config import settings
 from app.core.context import MediaInfo
 from app.core.metainfo import MetaInfo
+from app.schemas import MediaType
 from app.plugins import _PluginBase
 from typing import Any, List, Dict, Tuple, Optional
 from app.log import logger
@@ -17,13 +20,13 @@ from apscheduler.triggers.cron import CronTrigger
 
 class ActorSubscribe(_PluginBase):
     # 插件名称
-    plugin_name = "豆瓣明星热映订阅"
+    plugin_name = "明星订阅"
     # 插件描述
-    plugin_desc = "自动订阅豆瓣明星最新电影。"
+    plugin_desc = "自动订阅指定明星热映或最新电影或电视剧。"
     # 插件图标
     plugin_icon = "Mdcng_A.png"
     # 插件版本
-    plugin_version = "1.3"
+    plugin_version = "1.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -47,6 +50,7 @@ class ActorSubscribe(_PluginBase):
     _resolution = None
     _effect = None
     _clear = False
+    _source = "showing"
     # 质量选择框数据
     _qualityOptions = {
         '全部': '',
@@ -92,6 +96,7 @@ class ActorSubscribe(_PluginBase):
             self._resolution = config.get("resolution")
             self._effect = config.get("effect")
             self._clear = config.get("clear")
+            self._source = config.get("source")
 
             # 清理插件历史
             if self._clear:
@@ -146,17 +151,40 @@ class ActorSubscribe(_PluginBase):
         history: List[dict] = self.get_data('history') or []
         already_handle: List[dict] = self.get_data('already_handle') or []
 
-        movies = DoubanChain().movie_showing(page=1, count=100)
-        if not movies:
-            return []
-        medias = [MediaInfo(douban_info=movie) for movie in movies]
-        logger.info(f"获取到豆瓣正在热映 {len(medias)} 部")
+        medias = []
+        for source in self._source.split("\n"):
+            if source.strip() == "douban_showing":
+                medias += self.__douban_movie_showing()
+            elif source.strip() == "douban_movies":
+                medias += self.__douban_movies()
+            elif source.strip() == "douban_tvs":
+                medias += self.__douban_tvs()
+            elif source.strip() == "douban_movie_top250":
+                medias += self.__douban_movie_top250()
+            elif source.strip() == "douban_tv_weekly_chinese":
+                medias += self.__douban_tv_weekly_chinese()
+            elif source.strip() == "douban_tv_weekly_global":
+                medias += self.__douban_tv_weekly_global()
+            elif source.strip() == "douban_tv_animation":
+                medias += self.__douban_tv_animation()
+            elif source.strip() == "douban_movie_hot":
+                medias += self.__douban_movie_hot()
+            elif source.strip() == "douban_tv_hot":
+                medias += self.__douban_tv_hot()
+            elif source.strip() == "tmdb_movies":
+                medias += self.__tmdb_movies()
+            elif source.strip() == "tmdb_tvs":
+                medias += self.__tmdb_tvs()
+            elif source.strip() == "tmdb_trending":
+                medias += self.__tmdb_trending()
+            else:
+                logger.warn(f"未知的订阅源：{source}")
 
         # 检查订阅
         actors = str(self._actors).split(",")
         for mediainfo in medias:
             if mediainfo.title_year in already_handle:
-                logger.info(f"电影 {mediainfo.title_year} 已被处理，跳过")
+                logger.info(f"{mediainfo.type.name} {mediainfo.title_year} 已被处理，跳过")
                 continue
 
             already_handle.append(mediainfo.title_year)
@@ -165,15 +193,25 @@ class ActorSubscribe(_PluginBase):
             # 元数据
             meta = MetaInfo(mediainfo.title)
 
-            # 豆瓣演员中文名
-            mediainfo_actiors = mediainfo.actors + mediainfo.directors
+            # 演员中文名
+            if mediainfo.actors:
+                mediainfo_actiors = mediainfo.actors + mediainfo.directors
+            else:
+                # 查询tmdb数据源的中文演员名
+                mediainfo_actiors = self.__get_douban_actors(mediainfo)
 
-            oldmediainfo = mediainfo
-            # 主要获取tmdbid
-            mediainfo = self.chain.recognize_media(meta=meta, doubanid=mediainfo.douban_id)
-            if not mediainfo:
-                logger.warn(f'未识别到媒体信息，标题：{oldmediainfo.title}，豆瓣ID：{oldmediainfo.douban_id}')
+            if not mediainfo_actiors:
+                logger.warn(f'未识别到演员信息，标题：{mediainfo.title}，tmdbid：{mediainfo.tmdb_id}')
                 continue
+
+            # 判断有无tmdbid
+            if not mediainfo.tmdb_id:
+                oldmediainfo = mediainfo
+                # 主要获取tmdbid
+                mediainfo = self.chain.recognize_media(meta=meta, doubanid=mediainfo.douban_id)
+                if not mediainfo:
+                    logger.warn(f'未识别到媒体信息，标题：{oldmediainfo.title}，豆瓣ID：{oldmediainfo.douban_id}')
+                    continue
 
             # 查询缺失的媒体信息
             exist_flag, _ = self.downloadchain.get_no_exists_info(meta=meta, mediainfo=mediainfo)
@@ -220,6 +258,170 @@ class ActorSubscribe(_PluginBase):
         self.save_data('history', history)
         self.save_data('already_handle', already_handle)
 
+    def __get_douban_actors(self, mediainfo: MediaInfo, season: int = None) -> List[dict]:
+        """
+        获取豆瓣演员信息
+        """
+        # 随机休眠 3-10 秒
+        sleep_time = 3 + int(time.time()) % 7
+        logger.debug(f"随机休眠 {sleep_time}秒 ...")
+        time.sleep(sleep_time)
+        # 匹配豆瓣信息
+        doubaninfo = DoubanChain().match_doubaninfo(name=mediainfo.title,
+                                                    imdbid=mediainfo.imdb_id,
+                                                    mtype=mediainfo.type,
+                                                    year=mediainfo.year,
+                                                    season=season)
+        # 豆瓣演员
+        if doubaninfo:
+            doubanitem = DoubanChain().douban_info(doubaninfo.get("id")) or {}
+            return (doubanitem.get("actors") or []) + (doubanitem.get("directors") or [])
+        else:
+            logger.debug(f"未找到豆瓣信息：{mediainfo.title_year}")
+        return []
+
+    def __douban_movie_showing(self):
+        """
+        豆瓣正在热映
+        """
+        movies = DoubanChain().movie_showing(page=1, count=30)
+        if not movies:
+            return []
+        medias = [MediaInfo(douban_info=movie) for movie in movies]
+        logger.info(f"获取到豆瓣正在热映 {len(medias)} 部")
+        return medias
+
+    def __douban_movies(self):
+        """
+        豆瓣电影
+        """
+        movies = DoubanChain().douban_discover(mtype=MediaType.MOVIE,
+                                               sort="R", tags="", page=1, count=30)
+        if not movies:
+            return []
+        medias = [MediaInfo(douban_info=movie) for movie in movies]
+        logger.info(f"获取到豆瓣电影 {len(medias)} 部")
+        return medias
+
+    def __douban_tvs(self):
+        """
+        豆瓣剧集
+        """
+        tvs = DoubanChain().douban_discover(mtype=MediaType.TV,
+                                            sort="R", tags="", page=1, count=30)
+        if not tvs:
+            return []
+        medias = [MediaInfo(douban_info=tv) for tv in tvs]
+        logger.info(f"获取到豆瓣剧集 {len(medias)} 部")
+        return medias
+
+    def __douban_movie_top250(self):
+        """
+        豆瓣电影TOP250
+        """
+        movies = DoubanChain().movie_top250(mtype=MediaType.MOVIE, page=1, count=30)
+        if not movies:
+            return []
+        medias = [MediaInfo(douban_info=movie) for movie in movies]
+        logger.info(f"获取到豆瓣电影TOP250 {len(medias)} 部")
+        return medias
+
+    def __douban_tv_weekly_chinese(self):
+        """
+        豆瓣国产剧集周榜
+        """
+        tvs = DoubanChain().tv_weekly_chinese(page=1, count=30)
+        if not tvs:
+            return []
+        medias = [MediaInfo(douban_info=tv) for tv in tvs]
+        logger.info(f"获取到豆瓣国产剧集周榜 {len(medias)} 部")
+        return medias
+
+    def __douban_tv_weekly_global(self):
+        """
+        全球每周剧集口碑榜
+        """
+        tvs = DoubanChain().tv_weekly_global(page=1, count=30)
+        if not tvs:
+            return []
+        medias = [MediaInfo(douban_info=tv) for tv in tvs]
+        logger.info(f"获取到全球每周剧集口碑榜 {len(medias)} 部")
+        return medias
+
+    def __douban_tv_animation(self):
+        """
+        豆瓣动画剧集
+        """
+        tvs = DoubanChain().tv_animation(page=1, count=30)
+        if not tvs:
+            return []
+        medias = [MediaInfo(douban_info=tv) for tv in tvs]
+        logger.info(f"获取到豆瓣动画剧集 {len(medias)} 部")
+        return medias
+
+    def __douban_movie_hot(self):
+        """
+        豆瓣热门电影
+        """
+        movies = DoubanChain().movie_hot(page=1, count=30)
+        if not movies:
+            return []
+        medias = [MediaInfo(douban_info=movie) for movie in movies]
+        logger.info(f"获取到豆瓣热门电影 {len(medias)} 部")
+        return medias
+
+    def __douban_tv_hot(self):
+        """
+        豆瓣热门电视剧
+        """
+        tvs = DoubanChain().tv_hot(page=1, count=30)
+        if not tvs:
+            return []
+        medias = [MediaInfo(douban_info=tv) for tv in tvs]
+        logger.info(f"获取到豆瓣热门电视剧 {len(medias)} 部")
+        return medias
+
+    def __tmdb_movies(self):
+        """
+        TMDB电影
+        """
+        movies = TmdbChain().tmdb_discover(mtype=MediaType.MOVIE,
+                                           sort_by="popularity.desc",
+                                           with_genres="",
+                                           with_original_language="",
+                                           page=1)
+        if not movies:
+            return []
+        medias = [MediaInfo(tmdb_info=movie) for movie in movies]
+        logger.info(f"获取到TMDB电影 {len(medias)} 部")
+        return medias
+
+    def __tmdb_tvs(self):
+        """
+        TMDB剧集
+        """
+        tvs = TmdbChain().tmdb_discover(mtype=MediaType.TV,
+                                        sort_by="popularity.desc",
+                                        with_genres="",
+                                        with_original_language="",
+                                        page=1)
+        if not tvs:
+            return []
+        medias = [MediaInfo(tmdb_info=tv) for tv in tvs]
+        logger.info(f"获取到TMDB剧集 {len(medias)} 部")
+        return medias
+
+    def __tmdb_trending(self):
+        """
+        TMDB流行趋势
+        """
+        tvs = TmdbChain().tmdb_trending(page=1)
+        if not tvs:
+            return []
+        medias = [MediaInfo(tmdb_info=tv) for tv in tvs]
+        logger.info(f"获取到TMDB流行趋势 {len(medias)} 部")
+        return medias
+
     def __update_config(self):
         self.update_config({
             "enabled": self._enabled,
@@ -230,6 +432,7 @@ class ActorSubscribe(_PluginBase):
             "resolution": self._resolution,
             "effect": self._effect,
             "clear": self._clear,
+            "source": self._source,
         })
 
     def get_state(self) -> bool:
@@ -409,6 +612,43 @@ class ActorSubscribe(_PluginBase):
                             },
                         ]
                     },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'multiple': False,
+                                            'chips': True,
+                                            'model': 'source',
+                                            'label': '订阅来源',
+                                            'items': [
+                                                {'title': '豆瓣正在热映', 'value': 'douban_showing'},
+                                                {'title': '豆瓣电影', 'value': 'douban_movies'},
+                                                {'title': '豆瓣剧集', 'value': 'douban_tvs'},
+                                                {'title': '豆瓣电影TOP250', 'value': 'douban_movie_top250'},
+                                                {'title': '豆瓣国产剧集周榜', 'value': 'douban_tv_weekly_chinese'},
+                                                {'title': '豆瓣全球剧集周榜', 'value': 'douban_tv_weekly_global'},
+                                                {'title': '豆瓣动画剧集', 'value': 'douban_tv_animation'},
+                                                {'title': '豆瓣热门电影', 'value': 'douban_movie_hot'},
+                                                {'title': '豆瓣热门电视剧', 'value': 'douban_tv_hot'},
+                                                {'title': 'TMDB电影', 'value': 'tmdb_movies'},
+                                                {'title': 'TMDB剧集', 'value': 'tmdb_tvs'},
+                                                {'title': 'TMDB流行趋势', 'value': 'tmdb_trending'},
+                                            ]
+                                        }
+                                    }
+                                ]
+                            },
+                        ]
+                    },
                 ]
             }
         ], {
@@ -419,7 +659,8 @@ class ActorSubscribe(_PluginBase):
             "quality": "",
             "resolution": "",
             "effect": "",
-            "clear": False
+            "clear": False,
+            "source": "douban_showing"
         }
 
     def get_page(self) -> List[dict]:
