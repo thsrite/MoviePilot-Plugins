@@ -193,7 +193,7 @@ class ActorSubscribe(_PluginBase):
         actors = str(self._actors).split(",")
         for mediainfo in medias:
             if mediainfo.title_year in already_handle:
-                logger.info(f"{mediainfo.type.name} {mediainfo.title_year} 已被处理，跳过")
+                logger.info(f"{mediainfo.type.value} {mediainfo.title_year} 已被处理，跳过")
                 continue
 
             already_handle.append(mediainfo.title_year)
@@ -210,7 +210,7 @@ class ActorSubscribe(_PluginBase):
                 mediainfo_actiors = self.__get_douban_actors(mediainfo)
 
             if not mediainfo_actiors:
-                logger.warn(f'未识别到演员信息，标题：{mediainfo.title}，tmdbid：{mediainfo.tmdb_id}')
+                logger.warn(f'未识别到演员信息，标题：{mediainfo.title}，{mediainfo.tmdb_id or mediainfo.douban_id}')
                 continue
 
             # 判断有无tmdbid
@@ -240,7 +240,7 @@ class ActorSubscribe(_PluginBase):
                     if actor and actor in actors:
                         # 开始订阅
                         logger.info(
-                            f"{mediainfo.type.name} {mediainfo.title_year} {mediainfo.tmdb_id} 命中订阅演员 {actor}，开始订阅")
+                            f"{mediainfo.type.value} {mediainfo.title_year} {mediainfo.tmdb_id or mediainfo.douban_id} 命中订阅演员 {actor}，开始订阅")
                         is_subscribe = True
                         # 添加订阅
                         self.subscribechain.add(title=mediainfo.title,
@@ -266,7 +266,7 @@ class ActorSubscribe(_PluginBase):
                         })
 
                 if not is_subscribe:
-                    logger.info(f"{mediainfo.type.name} {mediainfo.title_year} {mediainfo.tmdb_id} 未命中订阅演员，跳过")
+                    logger.info(f"{mediainfo.type.value} {mediainfo.title_year} {mediainfo.tmdb_id or mediainfo.douban_id} 未命中订阅演员，跳过")
 
         # 保存历史记录
         self.save_data('history', history)
