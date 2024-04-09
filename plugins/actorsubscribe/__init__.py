@@ -290,8 +290,7 @@ class ActorSubscribe(_PluginBase):
         if doubaninfo:
             doubanitem = DoubanChain().douban_info(doubaninfo.get("id")) or {}
             actors = (doubanitem.get("actors") or []) + (doubanitem.get("directors") or [])
-            actors = [actor.get("name") for actor in actors]
-            return actors
+            return [actor.get("name") for actor in actors]
         else:
             logger.debug(f"未找到豆瓣信息：{mediainfo.title_year}")
         return []
