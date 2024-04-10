@@ -183,11 +183,12 @@
       "ShortPlayMonitor": {
         "name": "短剧刮削",
         "description": "监控视频短剧创建，刮削。",
-        "version": "3.1",
+        "version": "3.2",
         "icon": "Amule_B.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v3.2": "支持消息发送",
           "v3.1": "支持自定义转移方式",
           "v3.0": "默认从tmdb刮削，刮削失败则从pt站刮削"
         }

@@ -9,7 +9,6 @@ from threading import Lock
 from app.chain.tmdb import TmdbChain
 from app.core.metainfo import MetaInfoPath
 from app.schemas import MediaInfo, TransferInfo
-from app.schemas.types import EventType
 from app.utils.dom import DomUtils
 from PIL import Image
 import pytz
@@ -25,12 +24,13 @@ from app.log import logger
 from app.plugins import _PluginBase
 from app.core.config import settings
 from app.utils.system import SystemUtils
+from app.schemas.types import NotificationType
 import re
 
 import chardet
 from lxml import etree
 
-from app.modules.indexer import IndexerModule, TorrentSpider
+from app.modules.indexer import TorrentSpider
 from app.helper.sites import SitesHelper
 
 from app.utils.http import RequestUtils
@@ -64,7 +64,7 @@ class ShortPlayMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Amule_B.png"
     # 插件版本
-    plugin_version = "3.1"
+    plugin_version = "3.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -89,6 +89,9 @@ class ShortPlayMonitor(_PluginBase):
     _renameconf = {}
     _coverconf = {}
     tmdbchain = None
+    _interval = 10
+    _notify = False
+    _medias = {}
 
     # 定时器
     _scheduler: Optional[BackgroundScheduler] = None
@@ -104,6 +107,8 @@ class ShortPlayMonitor(_PluginBase):
             self._enabled = config.get("enabled")
             self._onlyonce = config.get("onlyonce")
             self._image = config.get("image")
+            self._interval = config.get("interval")
+            self._notify = config.get("notify")
             self._monitor_confs = config.get("monitor_confs")
             self._exclude_keywords = config.get("exclude_keywords") or ""
             self._transfer_type = config.get("transfer_type") or "link"
@@ -114,6 +119,9 @@ class ShortPlayMonitor(_PluginBase):
         if self._enabled or self._onlyonce:
             # 定时服务
             self._scheduler = BackgroundScheduler(timezone=settings.TZ)
+            if self._notify:
+                # 追加入库消息统一发送服务
+                self._scheduler.add_job(self.send_msg, trigger='interval', seconds=15)
 
             # 读取目录配置
             monitor_confs = self._monitor_confs.split("\n")
@@ -296,6 +304,7 @@ class ShortPlayMonitor(_PluginBase):
             mediainfo: MediaInfo = self.chain.recognize_media(meta=file_meta)
 
             transfer_flag = False
+            title = None
             # 走tmdb刮削
             if mediainfo:
                 try:
@@ -424,9 +433,60 @@ class ShortPlayMonitor(_PluginBase):
                                         Path(thumb).unlink()
                     else:
                         logger.error(f"文件 {event_path} 硬链接失败，错误码：{retcode}")
+            if self._notify:
+                # 发送消息汇总
+                media_list = self._medias.get(mediainfo.title_year if mediainfo else title) or {}
+                if media_list:
+                    media_files = media_list.get("files") or []
+                    if media_files:
+                        if str(event_path) not in media_files:
+                            media_files.append(str(event_path))
+                    else:
+                        media_files = [str(event_path)]
+                    media_list = {
+                        "files": media_files,
+                        "time": datetime.datetime.now()
+                    }
+                else:
+                    media_list = {
+                        "files": [str(event_path)],
+                        "time": datetime.datetime.now()
+                    }
+                self._medias[mediainfo.title_year if mediainfo else title] = media_list
         except Exception as e:
             logger.error(f"event_handler_created error: {e}")
             print(str(e))
+
+    def send_msg(self):
+        """
+        定时检查是否有媒体处理完，发送统一消息
+        """
+        if self._notify:
+            if not self._medias or not self._medias.keys():
+                return
+
+            # 遍历检查是否已刮削完，发送消息
+            for medis_title_year in list(self._medias.keys()):
+                media_list = self._medias.get(medis_title_year)
+                logger.info(f"开始处理媒体 {medis_title_year} 消息")
+
+                if not media_list:
+                    continue
+
+                # 获取最后更新时间
+                last_update_time = media_list.get("time")
+                media_files = media_list.get("files")
+                if not last_update_time or not media_files:
+                    continue
+
+                # 判断剧集最后更新时间距现在是已超过10秒或者电影，发送消息
+                if (datetime.datetime.now() - last_update_time).total_seconds() > int(self._interval):
+                    # 发送消息
+                    self.post_message(mtype=NotificationType.Organize,
+                                      title=f"短剧 {medis_title_year} 共{len(media_files)}集已入库")
+                    # 发送完消息，移出key
+                    del self._medias[medis_title_year]
+                    continue
 
     @staticmethod
     def __transfer_command(file_item: Path, target_file: Path, transfer_type: str) -> int:
@@ -711,6 +771,8 @@ class ShortPlayMonitor(_PluginBase):
             "exclude_keywords": self._exclude_keywords,
             "transfer_type": self._transfer_type,
             "onlyonce": self._onlyonce,
+            "interval": self._interval,
+            "notify": self._notify,
             "image": self._image,
             "monitor_confs": self._monitor_confs
         })
@@ -792,6 +854,27 @@ class ShortPlayMonitor(_PluginBase):
                                 },
                                 'content': [
                                     {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'notify',
+                                            'label': '发送通知',
+                                        }
+                                    }
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
                                         'component': 'VSelect',
                                         'props': {
                                             'model': 'transfer_type',
@@ -808,6 +891,23 @@ class ShortPlayMonitor(_PluginBase):
                                     }
                                 ]
                             },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'interval',
+                                            'label': '入库消息延迟',
+                                            'placeholder': '10'
+                                        }
+                                    }
+                                ]
+                            }
                         ]
                     },
                     {
@@ -924,6 +1024,8 @@ class ShortPlayMonitor(_PluginBase):
             "enabled": False,
             "onlyonce": False,
             "image": False,
+            "notify": False,
+            "interval": 10,
             "monitor_confs": "",
             "exclude_keywords": "",
             "transfer_type": "link"
