@@ -483,7 +483,8 @@ class ShortPlayMonitor(_PluginBase):
                 if (datetime.datetime.now() - last_update_time).total_seconds() > int(self._interval):
                     # 发送消息
                     self.post_message(mtype=NotificationType.Organize,
-                                      title=f"短剧 {medis_title_year} 共{len(media_files)}集已入库")
+                                      title=f"{medis_title_year} 共{len(media_files)}集已入库",
+                                      text="类别：短剧")
                     # 发送完消息，移出key
                     del self._medias[medis_title_year]
                     continue
