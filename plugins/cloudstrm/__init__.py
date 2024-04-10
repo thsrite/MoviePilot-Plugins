@@ -26,7 +26,7 @@ class CloudStrm(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png"
     # 插件版本
-    plugin_version = "3.6"
+    plugin_version = "3.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -46,6 +46,7 @@ class CloudStrm(_PluginBase):
     _onlyonce = False
     _copy_files = False
     _rebuild = False
+    _https = False
     _observer = []
     _video_formats = ('.mp4', '.avi', '.rmvb', '.wmv', '.mov', '.mkv', '.flv', '.ts', '.webm', '.iso', '.mpg', '.m2ts')
     __cloud_files_json = "cloud_files.json"
@@ -75,6 +76,7 @@ class CloudStrm(_PluginBase):
             self._rebuild_cron = config.get("rebuild_cron")
             self._onlyonce = config.get("onlyonce")
             self._rebuild = config.get("rebuild")
+            self._https = config.get("https")
             self._copy_files = config.get("copy_files")
             self._monitor_confs = config.get("monitor_confs")
 
@@ -341,7 +343,8 @@ class CloudStrm(_PluginBase):
                         # 视频文件创建.strm文件
                         if dest_file.lower().endswith(self._video_formats):
                             # 创建.strm文件
-                            self.__create_strm_file(dest_file=dest_file,
+                            self.__create_strm_file(scheme="https" if self._https else "http",
+                                                    dest_file=dest_file,
                                                     dest_dir=dest_dir,
                                                     source_file=source_file,
                                                     library_dir=library_dir,
@@ -359,7 +362,8 @@ class CloudStrm(_PluginBase):
 
     @staticmethod
     def __create_strm_file(dest_file: str, dest_dir: str, source_file: str, library_dir: str = None,
-                           cloud_type: str = None, cloud_path: str = None, cloud_url: str = None):
+                           cloud_type: str = None, cloud_path: str = None, cloud_url: str = None,
+                           scheme: str = None):
         """
         生成strm文件
         :param library_dir:
@@ -394,10 +398,10 @@ class CloudStrm(_PluginBase):
                 dest_file = urllib.parse.quote(dest_file, safe='')
                 if str(cloud_type) == "cd2":
                     # 将路径的开头盘符"/mnt/user/downloads"替换为"http://localhost:19798/static/http/localhost:19798/False/"
-                    dest_file = f"http://{cloud_url}/static/http/{cloud_url}/False/{dest_file}"
+                    dest_file = f"{scheme}://{cloud_url}/static/{scheme}/{cloud_url}/False/{dest_file}"
                     logger.info(f"替换后cd2路径:::{dest_file}")
                 elif str(cloud_type) == "alist":
-                    dest_file = f"http://{cloud_url}/d/{dest_file}"
+                    dest_file = f"{scheme}://{cloud_url}/d/{dest_file}"
                     logger.info(f"替换后alist路径:::{dest_file}")
                 else:
                     logger.error(f"云盘类型 {cloud_type} 错误")
@@ -425,6 +429,7 @@ class CloudStrm(_PluginBase):
             "onlyonce": self._onlyonce,
             "rebuild": self._rebuild,
             "copy_files": self._copy_files,
+            "https": self._https,
             "cron": self._cron,
             "monitor_confs": self._monitor_confs
         })
@@ -601,7 +606,7 @@ class CloudStrm(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 6
+                                    'md': 4
                                 },
                                 'content': [
                                     {
@@ -609,6 +614,22 @@ class CloudStrm(_PluginBase):
                                         'props': {
                                             'model': 'copy_files',
                                             'label': '复制非媒体文件',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'https',
+                                            'label': '启用https',
                                         }
                                     }
                                 ]
@@ -713,6 +734,7 @@ class CloudStrm(_PluginBase):
             "onlyonce": False,
             "rebuild": False,
             "copy_files": False,
+            "https": False,
             "monitor_confs": ""
         }
 
