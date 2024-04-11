@@ -26,7 +26,7 @@ class CloudStrm(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png"
     # 插件版本
-    plugin_version = "3.7"
+    plugin_version = "3.8"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -47,6 +47,7 @@ class CloudStrm(_PluginBase):
     _copy_files = False
     _rebuild = False
     _https = False
+    _linkage = False
     _observer = []
     _video_formats = ('.mp4', '.avi', '.rmvb', '.wmv', '.mov', '.mkv', '.flv', '.ts', '.webm', '.iso', '.mpg', '.m2ts')
     __cloud_files_json = "cloud_files.json"
@@ -77,6 +78,7 @@ class CloudStrm(_PluginBase):
             self._onlyonce = config.get("onlyonce")
             self._rebuild = config.get("rebuild")
             self._https = config.get("https")
+            self._linkage = config.get("linkage")
             self._copy_files = config.get("copy_files")
             self._monitor_confs = config.get("monitor_confs")
 
@@ -302,9 +304,23 @@ class CloudStrm(_PluginBase):
         file.write(json.dumps(self.__cloud_files))
         file.close()
 
+    @eventmanager.register(EventType.TransferComplete)
+    def _linkage_strm(self, event: Event = None):
+        """
+        联动生成strm文件
+        """
+        if self._linkage and event:
+            event_data = event.event_data
+            if not event_data or not event_data.get("transferinfo"):
+                return
+            source_file = event_data.get("transferinfo").path
+            logger.info(f"收到命令，开始处理单个文件 {source_file} ...")
+            if source_file:
+                self.__strm(source_file)
+
     def __strm(self, source_file):
         """
-        判断文件是否有对应strm
+        生成strm文件
         """
         try:
             # 获取文件的转移路径
@@ -430,6 +446,7 @@ class CloudStrm(_PluginBase):
             "rebuild": self._rebuild,
             "copy_files": self._copy_files,
             "https": self._https,
+            "linkage": self._linkage,
             "cron": self._cron,
             "monitor_confs": self._monitor_confs
         })
@@ -634,6 +651,22 @@ class CloudStrm(_PluginBase):
                                     }
                                 ]
                             },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'linkage',
+                                            'label': '联动其他转移插件',
+                                        }
+                                    }
+                                ]
+                            },
                         ]
                     },
                     {
@@ -735,6 +768,7 @@ class CloudStrm(_PluginBase):
             "rebuild": False,
             "copy_files": False,
             "https": False,
+            "linkage": False,
             "monitor_confs": ""
         }
 

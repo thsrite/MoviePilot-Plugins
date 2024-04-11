@@ -11,7 +11,7 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 
 - 站点数据统计 1.4 （无未读消息版本）(废弃)
 - 站点未读消息 1.4
-- [云盘Strm生成 3.7](docs%2FCloudStrm.md)
+- [云盘Strm生成 3.8](docs%2FCloudStrm.md)
 - [Strm文件模式转换 1.0](docs%2FStrmConvert.md)
 - 清理订阅缓存 1.0
 - 添加种子下载 1.0
