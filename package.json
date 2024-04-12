@@ -78,13 +78,14 @@
         }
       },
       "PluginAutoUpdate": {
-        "name": "插件自动更新",
-        "description": "监测已安装插件，自动更新最新版本。",
-        "version": "1.2",
+        "name": "插件更新管理",
+        "description": "监测已安装插件，推送更新提醒，可配置自动更新。",
+        "version": "1.3",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/pluginupdate.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v1.3": "配置更新提醒",
           "v1.2": "重启后立即执行一遍更新插件",
           "v1.1": "修复插件重载",
           "v1.0": "监测已安装插件，自动更新最新版本"

@@ -12,17 +12,18 @@ from app.plugins import _PluginBase
 from typing import Any, List, Dict, Tuple, Optional
 from app.log import logger
 from app.schemas.types import SystemConfigKey
+from app.schemas import NotificationType
 
 
 class PluginAutoUpdate(_PluginBase):
     # 插件名称
-    plugin_name = "插件自动更新"
+    plugin_name = "插件更新管理"
     # 插件描述
-    plugin_desc = "监测已安装插件，自动更新最新版本。"
+    plugin_desc = "监测已安装插件，推送更新提醒，可配置自动更新。"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/pluginupdate.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -39,6 +40,9 @@ class PluginAutoUpdate(_PluginBase):
     # 任务执行间隔
     _cron = None
     _onlyonce = False
+    _update = False
+    _notify = False
+    _msgtype = None
     _run_cnt = 0
 
     # 定时器
@@ -52,6 +56,9 @@ class PluginAutoUpdate(_PluginBase):
             self._enabled = config.get("enabled")
             self._cron = config.get("cron")
             self._onlyonce = config.get("onlyonce")
+            self._update = config.get("update")
+            self._notify = config.get("notify")
+            self._msgtype = config.get("msgtype")
 
         if self._enabled:
             # 定时服务
@@ -106,22 +113,36 @@ class PluginAutoUpdate(_PluginBase):
             if str(plugin.get("id")) in install_plugins:
                 # 有更新 或者 本地未安装的
                 if plugin.get("has_update") or not plugin.get("installed"):
-                    # 下载安装
-                    state, msg = PluginHelper().install(pid=plugin.get("id"),
-                                                        repo_url=plugin.get("repo_url"))
-                    # 安装失败
-                    if not state:
-                        logger.error(
-                            f"插件 {plugin.get('plugin_name')} 更新失败，最新版本 {plugin.get('plugin_version')}")
-                        continue
-
-                    logger.info(f"插件 {plugin.get('plugin_name')} 更新成功，最新版本 {plugin.get('plugin_version')}")
                     plugin_reload = True
+
+                    msg = None
+                    # 自动更新
+                    if self._update:
+                        # 下载安装
+                        state, msg = PluginHelper().install(pid=plugin.get("id"),
+                                                            repo_url=plugin.get("repo_url"))
+                        # 安装失败
+                        if not state:
+                            msg = f"插件 {plugin.get('plugin_name')} 更新失败，最新版本 {plugin.get('plugin_version')}"
+                            logger.error(msg)
+                            continue
+                        msg = f"插件 {plugin.get('plugin_name')} 更新成功，最新版本 {plugin.get('plugin_version')}"
+                        logger.info(msg)
+
+                    # 发送通知
+                    if self._notify and self._msgtype:
+                        mtype = NotificationType.Manual
+                        if self._msgtype:
+                            mtype = NotificationType.__getitem__(str(self._msgtype)) or NotificationType.Manual
+                        self.post_message(title="插件更新提醒",
+                                          mtype=mtype,
+                                          text=msg if self._update else f"插件 {plugin.get('plugin_name')} 有更新，最新版本 {plugin.get('plugin_version')}")
 
         # 重载插件管理器
         if plugin_reload:
-            logger.info("开始插件重载")
-            PluginManager().init_config()
+            if self._update:
+                logger.info("开始插件重载")
+                PluginManager().init_config()
         else:
             logger.info("所有插件已是最新版本")
 
@@ -139,6 +160,13 @@ class PluginAutoUpdate(_PluginBase):
         """
         拼装插件配置页面，需要返回两块数据：1、页面配置；2、数据结构
         """
+        # 编历 NotificationType 枚举，生成消息类型选项
+        MsgTypeOptions = []
+        for item in NotificationType:
+            MsgTypeOptions.append({
+                "title": item.value,
+                "value": item.name
+            })
         return [
             {
                 'component': 'VForm',
@@ -150,7 +178,7 @@ class PluginAutoUpdate(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 6
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -166,7 +194,7 @@ class PluginAutoUpdate(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 6
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -174,6 +202,38 @@ class PluginAutoUpdate(_PluginBase):
                                         'props': {
                                             'model': 'onlyonce',
                                             'label': '立即运行一次',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'update',
+                                            'label': '自动更新',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'notify',
+                                            'label': '发送通知',
                                         }
                                     }
                                 ]
@@ -186,7 +246,8 @@ class PluginAutoUpdate(_PluginBase):
                             {
                                 'component': 'VCol',
                                 'props': {
-                                    'cols': 12
+                                    'cols': 12,
+                                    'md': 6
                                 },
                                 'content': [
                                     {
@@ -198,7 +259,31 @@ class PluginAutoUpdate(_PluginBase):
                                         }
                                     }
                                 ]
-                            }
+                            },
+                            {
+                                'component': 'VRow',
+                                'content': [
+                                    {
+                                        'component': 'VCol',
+                                        'props': {
+                                            'cols': 12,
+                                            'md': 6
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'VSelect',
+                                                'props': {
+                                                    'multiple': False,
+                                                    'chips': True,
+                                                    'model': 'msgtype',
+                                                    'label': '消息类型',
+                                                    'items': MsgTypeOptions
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
                         ]
                     },
                     {
@@ -228,7 +313,10 @@ class PluginAutoUpdate(_PluginBase):
         ], {
             "enabled": False,
             "onlyonce": False,
-            "cron": ""
+            "update": False,
+            "notify": False,
+            "cron": "",
+            "msgtype": ""
         }
 
     def get_page(self) -> List[dict]:
