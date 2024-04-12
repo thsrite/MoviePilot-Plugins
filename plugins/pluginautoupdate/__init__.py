@@ -303,8 +303,7 @@ class PluginAutoUpdate(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '已安装的三方插件重装容器自动安装。'
-                                                    '已安装的插件自动更新最新版本。'
+                                            'text': '已安装的插件自动更新最新版本。'
                                         }
                                     }
                                 ]
