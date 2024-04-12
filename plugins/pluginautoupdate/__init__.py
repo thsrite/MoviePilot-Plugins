@@ -126,10 +126,10 @@ class PluginAutoUpdate(_PluginBase):
                                                             repo_url=plugin.repo_url)
                         # 安装失败
                         if not state:
-                            msg = f"插件 {plugin.plugin_name} 更新失败，最新版本 {plugin.plugin_version}"
+                            msg = f"{plugin.plugin_name} 更新失败，最新版本 v{plugin.plugin_version}"
                             logger.error(msg)
                             continue
-                        msg = f"插件 {plugin.plugin_name} 更新成功，最新版本 {plugin.plugin_version}"
+                        msg = f"{plugin.plugin_name} 更新成功，最新版本 v{plugin.plugin_version}"
                         logger.info(msg)
 
                     # 发送通知
@@ -139,7 +139,7 @@ class PluginAutoUpdate(_PluginBase):
                             mtype = NotificationType.__getitem__(str(self._msgtype)) or NotificationType.Manual
                         self.post_message(title="插件更新提醒",
                                           mtype=mtype,
-                                          text=msg if self._update else f"插件 {plugin.plugin_name} 有更新，最新版本 {plugin.plugin_version}")
+                                          text=msg if self._update else f"{plugin.plugin_name} 待更新，最新版本 v{plugin.plugin_version}")
 
         # 重载插件管理器
         if plugin_reload:
