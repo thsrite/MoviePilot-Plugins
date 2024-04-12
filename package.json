@@ -261,11 +261,12 @@
     "CustomCommand": {
         "name": "自定义命令",
         "description": "自定义执行周期执行命令并推送结果。",
-        "version": "1.3",
-        "icon": "Ntfy_A.png",
+        "version": "1.4",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/code.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v1.4": "fix icon",
           "v1.3": "清除历史记录",
           "v1.2": "增加执行历史",
           "v1.1": "打印命令日志",

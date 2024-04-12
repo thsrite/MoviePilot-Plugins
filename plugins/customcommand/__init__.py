@@ -20,9 +20,9 @@ class CustomCommand(_PluginBase):
     # 插件描述
     plugin_desc = "自定义执行周期执行命令并推送结果。"
     # 插件图标
-    plugin_icon = "Ntfy_A.png"
+    plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/code.png"
     # 插件版本
-    plugin_version = "1.3"
+    plugin_version = "1.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
