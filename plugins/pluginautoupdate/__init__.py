@@ -303,7 +303,7 @@ class PluginAutoUpdate(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '已安装的插件自动更新最新版本。'
+                                            'text': '已安装的插件自动更新最新版本。如未开启自动更新则发送更新通知。'
                                         }
                                     }
                                 ]
