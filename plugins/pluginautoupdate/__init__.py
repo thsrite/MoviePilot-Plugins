@@ -137,9 +137,14 @@ class PluginAutoUpdate(_PluginBase):
                         mtype = NotificationType.Manual
                         if self._msgtype:
                             mtype = NotificationType.__getitem__(str(self._msgtype)) or NotificationType.Manual
+
+                        plugin_icon = plugin.plugin_icon
+                        if not str(plugin_icon).startswith("http"):
+                            plugin_icon = f"https://raw.githubusercontent.com/jxxghp/MoviePilot-Plugins/main/icons/{plugin_icon}"
                         self.post_message(title="插件更新提醒",
                                           mtype=mtype,
-                                          text=msg if self._update else f"{plugin.plugin_name} 待更新，最新版本 v{plugin.plugin_version}")
+                                          text=msg if self._update else f"{plugin.plugin_name} 待更新，最新版本 v{plugin.plugin_version}",
+                                          image=plugin_icon)
 
         # 重载插件管理器
         if plugin_reload:
