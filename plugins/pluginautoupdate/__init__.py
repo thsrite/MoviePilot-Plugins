@@ -261,29 +261,24 @@ class PluginAutoUpdate(_PluginBase):
                                 ]
                             },
                             {
-                                'component': 'VRow',
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
                                 'content': [
                                     {
-                                        'component': 'VCol',
+                                        'component': 'VSelect',
                                         'props': {
-                                            'cols': 12,
-                                            'md': 6
-                                        },
-                                        'content': [
-                                            {
-                                                'component': 'VSelect',
-                                                'props': {
-                                                    'multiple': False,
-                                                    'chips': True,
-                                                    'model': 'msgtype',
-                                                    'label': '消息类型',
-                                                    'items': MsgTypeOptions
-                                                }
-                                            }
-                                        ]
+                                            'multiple': False,
+                                            'chips': True,
+                                            'model': 'msgtype',
+                                            'label': '消息类型',
+                                            'items': MsgTypeOptions
+                                        }
                                     }
                                 ]
-                            },
+                            }
                         ]
                     },
                     {
