@@ -83,6 +83,9 @@ class PluginAutoUpdate(_PluginBase):
                     "onlyonce": False,
                     "cron": self._cron,
                     "enabled": self._enabled,
+                    "update": self._update,
+                    "notify": self._notify,
+                    "msgtype": self._msgtype,
                 })
 
                 self._scheduler.add_job(func=self.__plugin_update, trigger='date',
@@ -110,23 +113,23 @@ class PluginAutoUpdate(_PluginBase):
         # 支持更新的插件自动更新
         for plugin in online_plugins:
             # 只处理已安装的插件
-            if str(plugin.get("id")) in install_plugins:
+            if str(plugin.id) in install_plugins:
                 # 有更新 或者 本地未安装的
-                if plugin.get("has_update") or not plugin.get("installed"):
+                if plugin.has_update or not plugin.installed:
                     plugin_reload = True
 
                     msg = None
                     # 自动更新
                     if self._update:
                         # 下载安装
-                        state, msg = PluginHelper().install(pid=plugin.get("id"),
-                                                            repo_url=plugin.get("repo_url"))
+                        state, msg = PluginHelper().install(pid=plugin.id,
+                                                            repo_url=plugin.repo_url)
                         # 安装失败
                         if not state:
-                            msg = f"插件 {plugin.get('plugin_name')} 更新失败，最新版本 {plugin.get('plugin_version')}"
+                            msg = f"插件 {plugin.plugin_name} 更新失败，最新版本 {plugin.plugin_version}"
                             logger.error(msg)
                             continue
-                        msg = f"插件 {plugin.get('plugin_name')} 更新成功，最新版本 {plugin.get('plugin_version')}"
+                        msg = f"插件 {plugin.plugin_name} 更新成功，最新版本 {plugin.plugin_version}"
                         logger.info(msg)
 
                     # 发送通知
@@ -136,7 +139,7 @@ class PluginAutoUpdate(_PluginBase):
                             mtype = NotificationType.__getitem__(str(self._msgtype)) or NotificationType.Manual
                         self.post_message(title="插件更新提醒",
                                           mtype=mtype,
-                                          text=msg if self._update else f"插件 {plugin.get('plugin_name')} 有更新，最新版本 {plugin.get('plugin_version')}")
+                                          text=msg if self._update else f"插件 {plugin.plugin_name} 有更新，最新版本 {plugin.plugin_version}")
 
         # 重载插件管理器
         if plugin_reload:
