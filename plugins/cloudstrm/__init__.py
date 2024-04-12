@@ -26,7 +26,7 @@ class CloudStrm(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png"
     # 插件版本
-    plugin_version = "3.9"
+    plugin_version = "4.0"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -313,7 +313,7 @@ class CloudStrm(_PluginBase):
             event_data = event.event_data
             if not event_data or not event_data.get("transferinfo"):
                 return
-            source_file = event_data.get("transferinfo").target_path
+            source_file = str(event_data.get("transferinfo").target_path)
             logger.info(f"收到命令，开始处理单个文件 {source_file} ...")
             if source_file:
                 self.__strm(source_file)
