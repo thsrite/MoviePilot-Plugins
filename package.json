@@ -77,11 +77,12 @@
       "PluginAutoUpdate": {
         "name": "插件更新管理",
         "description": "监测已安装插件，推送更新提醒，可配置自动更新。",
-        "version": "1.5",
+        "version": "1.6",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/pluginupdate.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v1.6": "插件重载",
           "v1.5": "自动更新增加排除列表",
           "v1.4": "正在运行的插件跳过更新，可选更新插件列表",
           "v1.3": "配置更新提醒",
@@ -93,11 +94,12 @@
       "PluginReInstall": {
         "name": "插件强制重装",
         "description": "卸载当前插件，强制重装。",
-        "version": "1.2",
+        "version": "1.3",
         "icon": "refresh.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v1.3": "插件重载",
           "v1.2": "支持指定插件仓库地址",
           "v1.1": "修复插件重载",
           "v1.0": "卸载当前插件，强制重装"

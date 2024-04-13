@@ -24,7 +24,7 @@ class PluginAutoUpdate(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/pluginupdate.png"
     # 插件版本
-    plugin_version = "1.5"
+    plugin_version = "1.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -66,8 +66,6 @@ class PluginAutoUpdate(_PluginBase):
             self._exclude_ids = config.get("exclude_ids")
 
         if self._enabled:
-            # 已安装插件版本
-            self.__get_install_plugin_version()
             # 定时服务
             self._scheduler = BackgroundScheduler(timezone=settings.TZ)
 
@@ -116,6 +114,9 @@ class PluginAutoUpdate(_PluginBase):
             logger.error("未获取到在线插件，停止运行")
             return
 
+        # 已安装插件版本
+        self.__get_install_plugin_version()
+
         # 系统运行的服务
         schedulers = Scheduler().list()
         running_scheduler = []
@@ -162,6 +163,13 @@ class PluginAutoUpdate(_PluginBase):
                                 plugin_reload = True
                                 title = f"插件 {plugin.plugin_name} 更新成功"
                                 logger.info(f"{title} {version_text}")
+
+                                # 统计
+                                PluginHelper().install_reg(plugin.id)
+                                # 加载插件到内存
+                                PluginManager().reload_plugin(plugin.id)
+                                # 注册插件服务
+                                Scheduler().update_plugin_job(plugin.id)
                     else:
                         title = f"插件 {plugin.plugin_name} 有更新啦"
 
@@ -184,11 +192,7 @@ class PluginAutoUpdate(_PluginBase):
                                           image=plugin_icon)
 
         # 重载插件管理器
-        if plugin_reload:
-            if self._update:
-                logger.info("开始插件重载")
-                PluginManager().init_config()
-        else:
+        if not plugin_reload:
             logger.info("所有插件已是最新版本")
 
     def __get_install_plugin_version(self):

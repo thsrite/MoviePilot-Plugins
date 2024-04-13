@@ -9,6 +9,7 @@ from typing import Any, List, Dict, Tuple, Optional
 from app.log import logger
 from app.schemas.types import SystemConfigKey
 from app.utils.string import StringUtils
+from app.scheduler import Scheduler
 
 
 class PluginReInstall(_PluginBase):
@@ -19,7 +20,7 @@ class PluginReInstall(_PluginBase):
     # 插件图标
     plugin_icon = "refresh.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -63,7 +64,6 @@ class PluginReInstall(_PluginBase):
             local_plugins = self.get_local_plugins()
 
             # 开始重载插件
-            plugin_reload = False
             for plugin_id in list(local_plugins.keys()):
                 local_plugin = local_plugins.get(plugin_id)
                 if plugin_id in self._plugin_ids:
@@ -80,12 +80,14 @@ class PluginReInstall(_PluginBase):
 
                     logger.info(
                         f"插件 {local_plugin.get('plugin_name')} 重装成功，当前版本 {local_plugin.get('plugin_version')}")
-                    plugin_reload = True
 
-            # 重载插件管理器
-            if plugin_reload:
-                logger.info("开始插件重载")
-                PluginManager().init_config()
+                    # 统计
+                    PluginHelper().install_reg(plugin_id)
+                    # 加载插件到内存
+                    PluginManager().reload_plugin(plugin_id)
+                    # 注册插件服务
+                    Scheduler().update_plugin_job(plugin_id)
+
 
     @staticmethod
     def get_repo_info(repo_url: str) -> Tuple[Optional[str], Optional[str]]:
