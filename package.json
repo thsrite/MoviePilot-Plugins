@@ -278,11 +278,12 @@
     "DockerManager": {
         "name": "docker管理",
         "description": "管理宿主机docker，自定义容器定时任务。",
-        "version": "1.0",
+        "version": "1.1",
         "icon": "Docker_F.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v1.1": "修复多个任务立即运行一次",
           "v1.0": "init"
         }
     }

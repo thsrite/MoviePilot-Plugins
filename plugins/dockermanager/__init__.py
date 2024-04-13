@@ -21,7 +21,7 @@ class DockerManager(_PluginBase):
     # 插件图标
     plugin_icon = "Docker_F.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -81,11 +81,6 @@ class DockerManager(_PluginBase):
                                                             tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
                                                         name=f"{name} {command}",
                                                         args=[name, command])
-                                # 关闭一次性开关
-                                self._onlyonce = False
-
-                                # 保存配置
-                                self.__update_config()
                             else:
                                 try:
                                     self._scheduler.add_job(func=self.__execute_command,
@@ -99,6 +94,11 @@ class DockerManager(_PluginBase):
                         else:
                             logger.error(f"{time_conf} 配置错误，跳过处理")
 
+                if self._onlyonce:
+                    # 关闭一次性开关
+                    self._onlyonce = False
+                    # 保存配置
+                    self.__update_config()
                 # 启动任务
                 if self._scheduler.get_jobs():
                     self._scheduler.print_jobs()
