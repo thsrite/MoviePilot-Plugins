@@ -112,6 +112,9 @@ class DockerManager(_PluginBase):
         containers = self._docker_client.containers.list(all=True)
 
         container_names = str(name).split(",")
+
+        container_icon = None
+        log_text = ""
         # 遍历容器列表，找到对应名称的容器ID
         for container in containers:
             for env in container.attrs['Config']['Env']:
@@ -119,7 +122,7 @@ class DockerManager(_PluginBase):
                     if str(env.split('=')[1]) in container_names:
                         container_id = container.id
                         # 执行命令
-                        log_text = f"容器：{env.split('=')[1]} {command}"
+                        log_text += f"容器：{env.split('=')[1]} {command}"
 
                         try:
                             state = True
@@ -143,10 +146,10 @@ class DockerManager(_PluginBase):
                             state = False
 
                         if state:
-                            log_text += " success"
+                            log_text += " success\n"
                             logger.info(log_text)
                         else:
-                            log_text += " fail"
+                            log_text += " fail\n"
                             logger.error(log_text)
 
                         # 读取历史记录
@@ -161,18 +164,19 @@ class DockerManager(_PluginBase):
                         # 保存历史
                         self.save_data(key="history", value=history)
 
-                        if self._notify and self._msgtype:
-                            # 发送通知
-                            mtype = NotificationType.Manual
-                            if self._msgtype:
-                                mtype = NotificationType.__getitem__(str(self._msgtype)) or NotificationType.Manual
+                        container_icon = container.attrs['Config']['Labels']['net.unraid.docker.icon']
 
-                            container_icon = container.attrs['Config']['Labels']['net.unraid.docker.icon']
-                            self.post_message(title="docker管理",
-                                              mtype=mtype,
-                                              text=log_text,
-                                              image=container_icon if container_icon and str(container_icon).startswith(
-                                                  "http") else None)
+        if self._notify and self._msgtype:
+            # 发送通知
+            mtype = NotificationType.Manual
+            if self._msgtype:
+                mtype = NotificationType.__getitem__(str(self._msgtype)) or NotificationType.Manual
+
+            self.post_message(title="docker管理",
+                              mtype=mtype,
+                              text=log_text,
+                              image=container_icon if len(container_names) == 1 and container_icon and str(
+                                  container_icon).startswith("http") else None)
 
     def __update_config(self):
         self.update_config({
