@@ -69,6 +69,9 @@ class DockerManager(_PluginBase):
                 # 分别执行命令，输入结果
                 for time_conf in self._time_confs.split("\n"):
                     if time_conf:
+                        if str(time_conf).startswith("#"):
+                            logger.info(f"已被注释，跳过 {time_conf}")
+                            continue
                         if str(time_conf).count("#") == 2:
                             name = str(time_conf).split("#")[0]
                             cron = str(time_conf).split("#")[1]
