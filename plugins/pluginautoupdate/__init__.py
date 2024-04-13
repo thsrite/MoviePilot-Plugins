@@ -49,11 +49,13 @@ class PluginAutoUpdate(_PluginBase):
 
     # 定时器
     _scheduler: Optional[BackgroundScheduler] = None
+    _plugin_manager: PluginManager = None
     _plugin_version = {}
 
     def init_plugin(self, config: dict = None):
         # 停止现有任务
         self.stop_service()
+        self._plugin_manager = PluginManager()
 
         if config:
             self._enabled = config.get("enabled")
@@ -109,7 +111,7 @@ class PluginAutoUpdate(_PluginBase):
         install_plugins = SystemConfigOper().get(SystemConfigKey.UserInstalledPlugins) or []
 
         # 在线插件
-        online_plugins = PluginManager().get_online_plugins()
+        online_plugins = self._plugin_manager.get_online_plugins()
         if not online_plugins:
             logger.error("未获取到在线插件，停止运行")
             return
@@ -167,7 +169,7 @@ class PluginAutoUpdate(_PluginBase):
                                 # 统计
                                 PluginHelper().install_reg(plugin.id)
                                 # 加载插件到内存
-                                PluginManager().reload_plugin(plugin.id)
+                                self._plugin_manager.reload_plugin(plugin.id)
                                 # 注册插件服务
                                 Scheduler().update_plugin_job(plugin.id)
                     else:
@@ -200,7 +202,7 @@ class PluginAutoUpdate(_PluginBase):
         获取已安装插件版本
         """
         # 本地插件
-        local_plugins = PluginManager().get_local_plugins()
+        local_plugins = self._plugin_manager.get_local_plugins()
         for plugin in local_plugins:
             self._plugin_version[plugin.id] = plugin.plugin_version
 
@@ -229,7 +231,7 @@ class PluginAutoUpdate(_PluginBase):
         # 编历 local_plugins，生成插件类型选项
         pluginOptions = []
         # 本地插件
-        local_plugins = PluginManager().get_local_plugins()
+        local_plugins = self._plugin_manager.get_local_plugins()
         for plugin in local_plugins:
             pluginOptions.append({
                 "title": f"{plugin.plugin_name} v{plugin.plugin_version}",
