@@ -84,7 +84,7 @@ class PluginAutoUpdate(_PluginBase):
                 # 关闭一次性开关
                 self._onlyonce = False
                 self.update_config({
-                    "onlyonce": False,
+                    "onlyonce": self._onlyonce,
                     "cron": self._cron,
                     "enabled": self._enabled,
                     "update": self._update,
@@ -183,8 +183,6 @@ class PluginAutoUpdate(_PluginBase):
                                 title = f"插件 {plugin.plugin_name} 更新成功"
                                 logger.info(f"{title} {version_text}")
 
-                                # 统计
-                                PluginHelper().install_reg(plugin.id)
                                 # 加载插件到内存
                                 PluginManager().reload_plugin(plugin.id)
                                 # 注册插件服务
