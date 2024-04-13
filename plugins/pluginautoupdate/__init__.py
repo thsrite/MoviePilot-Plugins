@@ -139,10 +139,11 @@ class PluginAutoUpdate(_PluginBase):
                 # 有更新 或者 本地未安装的
                 if plugin.has_update or not plugin.installed:
                     plugin_reload = True
-                    msg = None
+                    title = None
 
                     # 已安装插件版本
                     install_plugin_version = self._plugin_version.get(str(plugin.id))
+                    version_text = f"更新版本：v{install_plugin_version} -> v{plugin.plugin_version}"
 
                     # 自动更新
                     if self._update:
@@ -156,13 +157,13 @@ class PluginAutoUpdate(_PluginBase):
                                                                 repo_url=plugin.repo_url)
                             # 安装失败
                             if not state:
-                                msg = (f"{plugin.plugin_name} v{install_plugin_version} -> v{plugin.plugin_version}"
-                                       f"\n更新失败")
-                                logger.error(msg)
+                                title = f"{plugin.plugin_name} 更新失败"
+                                logger.error(f"{title} {version_text}")
                             else:
-                                msg = (f"{plugin.plugin_name} v{install_plugin_version} -> v{plugin.plugin_version}"
-                                       f"\n更新成功")
-                                logger.info(msg)
+                                title = f"{plugin.plugin_name} 更新成功"
+                                logger.info(f"{title} {version_text}")
+                    else:
+                        title = f"{plugin.plugin_name} 有更新啦"
 
                     # 发送通知
                     if self._notify and self._msgtype:
@@ -173,15 +174,13 @@ class PluginAutoUpdate(_PluginBase):
                         plugin_icon = plugin.plugin_icon
                         if not str(plugin_icon).startswith("http"):
                             plugin_icon = f"https://raw.githubusercontent.com/jxxghp/MoviePilot-Plugins/main/icons/{plugin_icon}"
-                        text = msg if self._update else (f"{plugin.plugin_name} 有更新啦"
-                                                         f"\nv{install_plugin_version} -> v{plugin.plugin_version}")
                         if plugin.history:
                             for verison in plugin.history.keys():
                                 if str(verison).replace("v", "") == str(plugin.plugin_version).replace("v", ""):
-                                    text += f"\n更新记录：{plugin.history[verison]}"
-                        self.post_message(title="插件更新提醒",
+                                    version_text += f"\n更新记录：{plugin.history[verison]}"
+                        self.post_message(title=title,
                                           mtype=mtype,
-                                          text=text,
+                                          text=version_text,
                                           image=plugin_icon)
 
         # 重载插件管理器
