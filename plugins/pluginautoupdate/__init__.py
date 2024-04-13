@@ -13,6 +13,7 @@ from typing import Any, List, Dict, Tuple, Optional
 from app.log import logger
 from app.schemas.types import SystemConfigKey
 from app.schemas import NotificationType
+from app.scheduler import Scheduler
 
 
 class PluginAutoUpdate(_PluginBase):
@@ -23,7 +24,7 @@ class PluginAutoUpdate(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/pluginupdate.png"
     # 插件版本
-    plugin_version = "1.3"
+    plugin_version = "1.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -43,14 +44,18 @@ class PluginAutoUpdate(_PluginBase):
     _update = False
     _notify = False
     _msgtype = None
+    _plugin_ids = []
     _run_cnt = 0
 
     # 定时器
     _scheduler: Optional[BackgroundScheduler] = None
+    _pluginmanager: PluginManager = None
+    _plugin_version = {}
 
     def init_plugin(self, config: dict = None):
         # 停止现有任务
         self.stop_service()
+        self._pluginmanager = PluginManager()
 
         if config:
             self._enabled = config.get("enabled")
@@ -59,8 +64,11 @@ class PluginAutoUpdate(_PluginBase):
             self._update = config.get("update")
             self._notify = config.get("notify")
             self._msgtype = config.get("msgtype")
+            self._plugin_ids = config.get("plugin_ids")
 
         if self._enabled:
+            # 已安装插件版本
+            self.__get_install_plugin_version()
             # 定时服务
             self._scheduler = BackgroundScheduler(timezone=settings.TZ)
 
@@ -86,6 +94,7 @@ class PluginAutoUpdate(_PluginBase):
                     "update": self._update,
                     "notify": self._notify,
                     "msgtype": self._msgtype,
+                    "plugin_ids": self._plugin_ids,
                 })
 
                 self._scheduler.add_job(func=self.__plugin_update, trigger='date',
@@ -103,34 +112,57 @@ class PluginAutoUpdate(_PluginBase):
         """
         # 已安装插件
         install_plugins = SystemConfigOper().get(SystemConfigKey.UserInstalledPlugins) or []
+
         # 在线插件
-        online_plugins = PluginManager().get_online_plugins()
+        online_plugins = self._pluginmanager.get_online_plugins()
         if not online_plugins:
             logger.error("未获取到在线插件，停止运行")
             return
+
+        # 系统运行的服务
+        schedulers = Scheduler().list()
+        running_scheduler = []
+        for scheduler in schedulers:
+            if scheduler.status == "正在运行":
+                running_scheduler.append(scheduler.id)
 
         plugin_reload = False
         # 支持更新的插件自动更新
         for plugin in online_plugins:
             # 只处理已安装的插件
             if str(plugin.id) in install_plugins:
+                # 判断是否是已选择插件
+                if self._plugin_ids and str(plugin.id) not in self._plugin_ids:
+                    logger.info(f"{plugin.plugin_name} 不在自动更新列表中，跳过")
+                    continue
+
                 # 有更新 或者 本地未安装的
                 if plugin.has_update or not plugin.installed:
                     plugin_reload = True
-
                     msg = None
+
+                    # 已安装插件版本
+                    install_plugin_version = self._plugin_version.get(str(plugin.id))
+
                     # 自动更新
                     if self._update:
-                        # 下载安装
-                        state, msg = PluginHelper().install(pid=plugin.id,
-                                                            repo_url=plugin.repo_url)
-                        # 安装失败
-                        if not state:
-                            msg = f"{plugin.plugin_name} 更新失败，最新版本 v{plugin.plugin_version}"
-                            logger.error(msg)
-                            continue
-                        msg = f"{plugin.plugin_name} 更新成功，最新版本 v{plugin.plugin_version}"
-                        logger.info(msg)
+                        # 判断当前要升级的插件是否正在运行，正则运行则暂不更新
+                        if plugin.id in running_scheduler:
+                            msg = f"{plugin.plugin_name} 正在运行，跳过自动升级，最新版本 v{plugin.plugin_version}"
+                            logger.info(msg)
+                        else:
+                            # 下载安装
+                            state, msg = PluginHelper().install(pid=plugin.id,
+                                                                repo_url=plugin.repo_url)
+                            # 安装失败
+                            if not state:
+                                msg = (f"{plugin.plugin_name} v{install_plugin_version} -> v{plugin.plugin_version}"
+                                       f"\n更新失败")
+                                logger.error(msg)
+                            else:
+                                msg = (f"{plugin.plugin_name} v{install_plugin_version} -> v{plugin.plugin_version}"
+                                       f"\n更新成功")
+                                logger.info(msg)
 
                     # 发送通知
                     if self._notify and self._msgtype:
@@ -141,9 +173,15 @@ class PluginAutoUpdate(_PluginBase):
                         plugin_icon = plugin.plugin_icon
                         if not str(plugin_icon).startswith("http"):
                             plugin_icon = f"https://raw.githubusercontent.com/jxxghp/MoviePilot-Plugins/main/icons/{plugin_icon}"
+                        text = msg if self._update else (f"{plugin.plugin_name}有更新啦"
+                                                         f"\nv{install_plugin_version} -> v{plugin.plugin_version}")
+                        if plugin.history:
+                            for verison in plugin.history.keys():
+                                if str(verison).replace("v", "") == str(plugin.plugin_version).replace("v", ""):
+                                    text += f"\n更新记录：{plugin.history[verison]}"
                         self.post_message(title="插件更新提醒",
                                           mtype=mtype,
-                                          text=msg if self._update else f"{plugin.plugin_name} 待更新，最新版本 v{plugin.plugin_version}",
+                                          text=text,
                                           image=plugin_icon)
 
         # 重载插件管理器
@@ -153,6 +191,15 @@ class PluginAutoUpdate(_PluginBase):
                 PluginManager().init_config()
         else:
             logger.info("所有插件已是最新版本")
+
+    def __get_install_plugin_version(self):
+        """
+        获取已安装插件版本
+        """
+        # 本地插件
+        local_plugins = self._pluginmanager.get_local_plugins()
+        for plugin in local_plugins:
+            self._plugin_version[plugin.id] = plugin.plugin_version
 
     def get_state(self) -> bool:
         return self._enabled
@@ -174,6 +221,16 @@ class PluginAutoUpdate(_PluginBase):
             MsgTypeOptions.append({
                 "title": item.value,
                 "value": item.name
+            })
+
+        # 编历 local_plugins，生成插件类型选项
+        pluginOptions = []
+        # 本地插件
+        local_plugins = self._pluginmanager.get_local_plugins()
+        for plugin in local_plugins:
+            pluginOptions.append({
+                "title": f"{plugin.plugin_name} v{plugin.plugin_version}",
+                "value": plugin.id
             })
         return [
             {
@@ -255,7 +312,7 @@ class PluginAutoUpdate(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 6
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -272,7 +329,7 @@ class PluginAutoUpdate(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 6
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -283,6 +340,47 @@ class PluginAutoUpdate(_PluginBase):
                                             'model': 'msgtype',
                                             'label': '消息类型',
                                             'items': MsgTypeOptions
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'multiple': True,
+                                            'chips': True,
+                                            'model': 'plugin_ids',
+                                            'label': '更新插件',
+                                            'items': pluginOptions
+                                        }
+                                    }
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '已安装的插件自动更新最新版本。'
+                                                    '如未开启自动更新则发送更新通知。'
                                         }
                                     }
                                 ]
@@ -303,7 +401,8 @@ class PluginAutoUpdate(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '已安装的插件自动更新最新版本。如未开启自动更新则发送更新通知。'
+                                            'text': '如更新插件正在运行，则稍后自动更新。'
+                                                    '如为选择更新插件，则默认为更新所有。'
                                         }
                                     }
                                 ]
@@ -318,7 +417,8 @@ class PluginAutoUpdate(_PluginBase):
             "update": False,
             "notify": False,
             "cron": "",
-            "msgtype": ""
+            "msgtype": "",
+            "plugin_ids": []
         }
 
     def get_page(self) -> List[dict]:
