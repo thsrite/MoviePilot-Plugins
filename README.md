@@ -30,5 +30,5 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - [微信消息转发 1.5](docs%2FWeChatForward.md)
 - 订阅下载统计 1.5
 - [自定义命令 1.5](docs%2FCustomCommand.md)
-- docker管理 1.1
+- docker管理 1.2
 

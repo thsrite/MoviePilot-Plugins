@@ -21,7 +21,7 @@ class DockerManager(_PluginBase):
     # 插件图标
     plugin_icon = "Docker_F.png"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -111,14 +111,15 @@ class DockerManager(_PluginBase):
         # 获取所有容器列表
         containers = self._docker_client.containers.list(all=True)
 
+        container_names = str(name).split(",")
         # 遍历容器列表，找到对应名称的容器ID
         for container in containers:
             for env in container.attrs['Config']['Env']:
                 if str(env.split("=")[0]) == "HOST_CONTAINERNAME":
-                    if str(env.split("=")[1]) == str(name):
+                    if str(env.split('=')[1]) in container_names:
                         container_id = container.id
                         # 执行命令
-                        log_text = f"容器：{name} {command}"
+                        log_text = f"容器：{env.split('=')[1]} {command}"
 
                         try:
                             state = True
@@ -152,7 +153,7 @@ class DockerManager(_PluginBase):
                         history = self.get_data('history') or []
 
                         history.append({
-                            "name": name,
+                            "name": env.split('=')[1],
                             "command": command,
                             "result": 'success' if state else 'fail',
                             "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
@@ -172,7 +173,6 @@ class DockerManager(_PluginBase):
                                               text=log_text,
                                               image=container_icon if container_icon and str(container_icon).startswith(
                                                   "http") else None)
-                        break
 
     def __update_config(self):
         self.update_config({
@@ -333,7 +333,7 @@ class DockerManager(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '容器名#cron表达式#restart/start/stop/pause/unpause/update'
+                                            'text': '容器名(多个容器名,拼接)#cron表达式#restart/start/stop/pause/unpause/update'
                                         }
                                     }
                                 ]
