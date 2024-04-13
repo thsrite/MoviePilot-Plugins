@@ -120,7 +120,7 @@ class PluginAutoUpdate(_PluginBase):
             logger.info("收到命令，开始插件更新 ...")
             update_forced = True
             self.post_message(channel=event.event_data.get("channel"),
-                              title="插件更新 ...",
+                              title="开始插件更新 ...",
                               userid=event.event_data.get("user"))
 
         logger.info("插件更新任务开始")
