@@ -15,7 +15,7 @@ from app.schemas import NotificationType
 
 class DockerManager(_PluginBase):
     # 插件名称
-    plugin_name = "docker管理"
+    plugin_name = "docker自定义任务"
     # 插件描述
     plugin_desc = "管理宿主机docker，自定义容器定时任务。"
     # 插件图标
@@ -175,7 +175,7 @@ class DockerManager(_PluginBase):
             if self._msgtype:
                 mtype = NotificationType.__getitem__(str(self._msgtype)) or NotificationType.Manual
 
-            self.post_message(title="docker管理",
+            self.post_message(title="docker任务通知",
                               mtype=mtype,
                               text=log_text,
                               image=container_icon if len(container_names) == 1 and container_icon and str(
