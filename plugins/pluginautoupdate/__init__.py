@@ -105,10 +105,27 @@ class PluginAutoUpdate(_PluginBase):
                 self._scheduler.print_jobs()
                 self._scheduler.start()
 
-    def __plugin_update(self, update_forced: bool = False):
+    @eventmanager.register(EventType.PluginAction)
+    def __plugin_update(self, event: Event = None):
         """
         插件自动更新
         """
+        if not self._enabled:
+            logger.error("插件未开启")
+            return
+
+        update_forced: bool = False
+        if event:
+            event_data = event.event_data
+            if not event_data or event_data.get("action") != "plugin_update":
+                return
+            logger.info("收到命令，开始插件更新 ...")
+            update_forced = True
+            self.post_message(channel=event.event_data.get("channel"),
+                              title="插件更新 ...",
+                              userid=event.event_data.get("user"))
+
+        logger.info("插件更新任务开始")
         # 已安装插件
         install_plugins = SystemConfigOper().get(SystemConfigKey.UserInstalledPlugins) or []
 
@@ -198,6 +215,13 @@ class PluginAutoUpdate(_PluginBase):
         # 重载插件管理器
         if not plugin_reload:
             logger.info("所有插件已是最新版本")
+            if event:
+                event_data = event.event_data
+                if not event_data or event_data.get("action") != "plugin_update":
+                    return
+                self.post_message(channel=event.event_data.get("channel"),
+                                  title="所有插件已是最新版本",
+                                  userid=event.event_data.get("user"))
 
     def __get_install_plugin_version(self):
         """
@@ -207,27 +231,6 @@ class PluginAutoUpdate(_PluginBase):
         local_plugins = self._plugin_manager.get_local_plugins()
         for plugin in local_plugins:
             self._plugin_version[plugin.id] = plugin.plugin_version
-
-    @eventmanager.register(EventType.PluginAction)
-    def plugin_update(self, event: Event = None):
-        """
-        插件更新
-        """
-        if not self._enabled:
-            logger.error("插件未开启")
-            return
-
-        if event:
-            event_data = event.event_data
-            if not event_data or event_data.get("action") != "plugin_update":
-                return
-            logger.info("收到命令，开始插件更新 ...")
-            self.post_message(channel=event.event_data.get("channel"),
-                              title="插件更新 ...",
-                              userid=event.event_data.get("user"))
-
-        logger.info("插件更新任务开始")
-        self.__plugin_update(update_forced=True)
 
     def get_state(self) -> bool:
         return self._enabled
