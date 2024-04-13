@@ -143,15 +143,13 @@ class PluginAutoUpdate(_PluginBase):
             if scheduler.status == "正在运行":
                 running_scheduler.append(scheduler.id)
 
-        plugin_reload = False
+        title = None
         # 支持更新的插件自动更新
         for plugin in online_plugins:
             # 只处理已安装的插件
             if str(plugin.id) in install_plugins:
                 # 有更新 或者 本地未安装的
                 if plugin.has_update or not plugin.installed:
-                    title = None
-
                     # 已安装插件版本
                     install_plugin_version = self._plugin_version.get(str(plugin.id))
                     version_text = f"更新版本：v{install_plugin_version} -> v{plugin.plugin_version}"
@@ -170,6 +168,8 @@ class PluginAutoUpdate(_PluginBase):
                         if plugin.id in running_scheduler:
                             msg = f"插件 {plugin.plugin_name} 正在运行，跳过自动升级，最新版本 v{plugin.plugin_version}"
                             logger.info(msg)
+                            title = msg
+                            continue
                         else:
                             # 下载安装
                             state, msg = PluginHelper().install(pid=plugin.id,
@@ -179,7 +179,6 @@ class PluginAutoUpdate(_PluginBase):
                                 title = f"插件 {plugin.plugin_name} 更新失败"
                                 logger.error(f"{title} {version_text}")
                             else:
-                                plugin_reload = True
                                 title = f"插件 {plugin.plugin_name} 更新成功"
                                 logger.info(f"{title} {version_text}")
 
@@ -209,7 +208,7 @@ class PluginAutoUpdate(_PluginBase):
                                           image=plugin_icon)
 
         # 重载插件管理器
-        if not plugin_reload:
+        if not title:
             logger.info("所有插件已是最新版本")
             if event:
                 event_data = event.event_data
@@ -218,6 +217,16 @@ class PluginAutoUpdate(_PluginBase):
                 self.post_message(channel=event.event_data.get("channel"),
                                   title="所有插件已是最新版本",
                                   userid=event.event_data.get("user"))
+
+        else:
+            if '正在运行，跳过自动升级' in title:
+                if event:
+                    event_data = event.event_data
+                    if not event_data or event_data.get("action") != "plugin_update":
+                        return
+                    self.post_message(channel=event.event_data.get("channel"),
+                                      title=title,
+                                      userid=event.event_data.get("user"))
 
     def __get_install_plugin_version(self):
         """
