@@ -26,7 +26,7 @@ class CloudStrm(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png"
     # 插件版本
-    plugin_version = "4.0"
+    plugin_version = "4.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -316,9 +316,11 @@ class CloudStrm(_PluginBase):
             source_file = str(event_data.get("transferinfo").target_path)
             logger.info(f"收到命令，开始处理单个文件 {source_file} ...")
             if source_file:
-                self.__strm(source_file)
+                # 云盘文件json新增
+                self.__cloud_files.append(source_file)
+                self.__strm(source_file, True)
 
-    def __strm(self, source_file):
+    def __strm(self, source_file: str, linkage: bool = False):
         """
         生成strm文件
         """
@@ -367,6 +369,18 @@ class CloudStrm(_PluginBase):
                                                     cloud_type=cloud_type,
                                                     cloud_path=cloud_path,
                                                     cloud_url=cloud_url)
+                            # 联动的时候，同步处理同名非媒体文件
+                            if linkage and self._copy_files:
+                                # 查询其他文件
+                                pattern = Path(source_file).stem.replace('[', '?').replace(']', '?')
+                                logger.info(f"开始处理同名文件 {pattern}")
+                                other_files = Path(source_file).parent.glob(f"{pattern}.*")
+                                for file in other_files:
+                                    # 云盘文件json新增
+                                    self.__cloud_files.append(file)
+                                    # 其他nfo、jpg等复制文件
+                                    shutil.copy2(file, dest_file)
+                                    logger.info(f"复制其他文件 {file} 到 {dest_file}")
                         else:
                             if self._copy_files:
                                 # 其他nfo、jpg等复制文件

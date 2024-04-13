@@ -2,11 +2,12 @@
       "CloudStrm": {
         "name": "云盘Strm生成",
         "description": "监控文件创建，生成Strm文件。",
-        "version": "4.0",
+        "version": "4.1",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v4.1": "联动同时处理同名非媒体文件",
           "v4.0": "fix replace",
           "v3.9": "修复bug",
           "v3.8": "支持联动其他转移插件",
