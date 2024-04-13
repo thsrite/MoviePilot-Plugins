@@ -147,15 +147,15 @@ class PluginAutoUpdate(_PluginBase):
                     if self._update:
                         # 判断是否是排除插件
                         if self._exclude_ids and str(plugin.id) in self._exclude_ids:
-                            logger.info(f"{plugin.plugin_name} 已被排除自动更新，跳过")
+                            logger.info(f"插件 {plugin.plugin_name} 已被排除自动更新，跳过")
                             continue
                         # 判断是否是已选择插件
                         if self._update_ids and str(plugin.id) not in self._update_ids:
-                            logger.info(f"{plugin.plugin_name} 不在自动更新列表中，跳过")
+                            logger.info(f"插件 {plugin.plugin_name} 不在自动更新列表中，跳过")
                             continue
                         # 判断当前要升级的插件是否正在运行，正则运行则暂不更新
                         if plugin.id in running_scheduler:
-                            msg = f"{plugin.plugin_name} 正在运行，跳过自动升级，最新版本 v{plugin.plugin_version}"
+                            msg = f"插件 {plugin.plugin_name} 正在运行，跳过自动升级，最新版本 v{plugin.plugin_version}"
                             logger.info(msg)
                         else:
                             # 下载安装
