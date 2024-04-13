@@ -128,7 +128,7 @@ class PluginReInstall(_PluginBase):
         for plugin_id in list(local_plugins.keys()):
             local_plugin = local_plugins.get(plugin_id)
             pluginOptions.append({
-                "title": f"{local_plugin.get('plugin_name')} {local_plugin.get('plugin_version')}",
+                "title": f"{local_plugin.get('plugin_name')} v{local_plugin.get('plugin_version')}",
                 "value": local_plugin.get("id")
             })
         return [
