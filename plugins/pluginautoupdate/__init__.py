@@ -157,13 +157,13 @@ class PluginAutoUpdate(_PluginBase):
                                                                 repo_url=plugin.repo_url)
                             # 安装失败
                             if not state:
-                                title = f"{plugin.plugin_name} 更新失败"
+                                title = f"插件 {plugin.plugin_name} 更新失败"
                                 logger.error(f"{title} {version_text}")
                             else:
-                                title = f"{plugin.plugin_name} 更新成功"
+                                title = f"插件 {plugin.plugin_name} 更新成功"
                                 logger.info(f"{title} {version_text}")
                     else:
-                        title = f"{plugin.plugin_name} 有更新啦"
+                        title = f"插件 {plugin.plugin_name} 有更新啦"
 
                     # 发送通知
                     if self._notify and self._msgtype:
