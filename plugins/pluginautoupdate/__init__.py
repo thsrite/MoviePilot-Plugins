@@ -14,6 +14,8 @@ from app.log import logger
 from app.schemas.types import SystemConfigKey
 from app.schemas import NotificationType
 from app.scheduler import Scheduler
+from app.schemas.types import EventType
+from app.core.event import eventmanager, Event
 
 
 class PluginAutoUpdate(_PluginBase):
@@ -103,7 +105,7 @@ class PluginAutoUpdate(_PluginBase):
                 self._scheduler.print_jobs()
                 self._scheduler.start()
 
-    def __plugin_update(self):
+    def __plugin_update(self, update_forced: bool = False):
         """
         插件自动更新
         """
@@ -140,7 +142,7 @@ class PluginAutoUpdate(_PluginBase):
                     version_text = f"更新版本：v{install_plugin_version} -> v{plugin.plugin_version}"
 
                     # 自动更新
-                    if self._update:
+                    if self._update or update_forced:
                         # 判断是否是排除插件
                         if self._exclude_ids and str(plugin.id) in self._exclude_ids:
                             logger.info(f"插件 {plugin.plugin_name} 已被排除自动更新，跳过")
@@ -206,12 +208,62 @@ class PluginAutoUpdate(_PluginBase):
         for plugin in local_plugins:
             self._plugin_version[plugin.id] = plugin.plugin_version
 
+    @eventmanager.register(EventType.PluginAction)
+    def plugin_update(self, event: Event = None):
+        """
+        插件更新
+        """
+        if not self._enabled:
+            logger.error("插件未开启")
+            return
+
+        if event:
+            event_data = event.event_data
+            if not event_data or event_data.get("action") != "plugin_update":
+                return
+            logger.info("收到命令，开始插件更新 ...")
+            self.post_message(channel=event.event_data.get("channel"),
+                              title="插件更新 ...",
+                              userid=event.event_data.get("user"))
+
+        logger.info("插件更新任务开始")
+        self.__plugin_update(update_forced=True)
+
     def get_state(self) -> bool:
         return self._enabled
 
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
-        pass
+        return [{
+            "cmd": "/plugin_update",
+            "event": EventType.PluginAction,
+            "desc": "插件更新",
+            "category": "",
+            "data": {
+                "action": "plugin_update"
+            }
+        }]
+
+    def get_service(self) -> List[Dict[str, Any]]:
+        """
+        注册插件公共服务
+        [{
+            "id": "服务ID",
+            "name": "服务名称",
+            "trigger": "触发器：cron/interval/date/CronTrigger.from_crontab()",
+            "func": self.xxx,
+            "kwargs": {} # 定时器参数
+        }]
+        """
+        if self._enabled and self._cron:
+            return [{
+                "id": "PluginAutoUpdate",
+                "name": "插件自动更新",
+                "trigger": CronTrigger.from_crontab(self._cron),
+                "func": self.__plugin_update,
+                "kwargs": {}
+            }]
+        return []
 
     def get_api(self) -> List[Dict[str, Any]]:
         pass
