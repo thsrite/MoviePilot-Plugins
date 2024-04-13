@@ -274,5 +274,16 @@
           "v1.1": "打印命令日志",
           "v1.0": "自定义执行周期执行命令并推送结果"
         }
+    },
+    "DockerManager": {
+        "name": "docker管理",
+        "description": "管理宿主机docker，自定义容器定时任务。",
+        "version": "1.0",
+        "icon": "Docker_F.png",
+        "author": "thsrite",
+        "level": 1,
+        "history": {
+          "v1.0": "init"
+        }
     }
 }
