@@ -118,22 +118,28 @@ class DockerManager(_PluginBase):
                     if str(env.split("=")[1]) == str(name):
                         container_id = container.id
                         # 执行命令
-                        log_text = f"容器：{name} ID：{container_id} {command}"
-                        if str(command) == "restart":
-                            state = self._docker_client.containers.get(container_id).restart()
-                        elif str(command) == "start":
-                            state = self._docker_client.containers.get(container_id).start()
-                        elif str(command) == "stop":
-                            state = self._docker_client.containers.get(container_id).stop()
-                        elif str(command) == "pause":
-                            state = self._docker_client.containers.get(container_id).pause()
-                        elif str(command) == "unpause":
-                            state = self._docker_client.containers.get(container_id).unpause()
-                        elif str(command) == "update":
-                            state = self._docker_client.containers.get(container_id).update()
-                        else:
-                            logger.error(f"不支持的命令：{command}")
-                            break
+                        log_text = f"容器：{name} {command}"
+
+                        try:
+                            state = True
+                            if str(command) == "restart":
+                                self._docker_client.containers.get(container_id).restart()
+                            elif str(command) == "start":
+                                self._docker_client.containers.get(container_id).start()
+                            elif str(command) == "stop":
+                                self._docker_client.containers.get(container_id).stop()
+                            elif str(command) == "pause":
+                                self._docker_client.containers.get(container_id).pause()
+                            elif str(command) == "unpause":
+                                self._docker_client.containers.get(container_id).unpause()
+                            elif str(command) == "update":
+                                self._docker_client.containers.get(container_id).update()
+                            else:
+                                logger.error(f"不支持的命令：{command}")
+                                break
+                        except Exception as e:
+                            print(str(e))
+                            state = False
 
                         if state:
                             log_text += " success"
