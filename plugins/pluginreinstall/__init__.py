@@ -9,12 +9,14 @@ from typing import Any, List, Dict, Tuple, Optional
 from app.log import logger
 from app.schemas.types import SystemConfigKey
 from app.utils.string import StringUtils
+from app.helper.sites import SitesHelper
 
 
 class MyPluginManager(PluginManager):
     def __init__(self):
-        # 不调用父类PluginManager的__init__方法
-        pass
+        self.siteshelper = SitesHelper()
+        self.pluginhelper = PluginHelper()
+        self.systemconfig = SystemConfigOper()
 
 
 class PluginReInstall(_PluginBase):
