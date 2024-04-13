@@ -173,7 +173,7 @@ class PluginAutoUpdate(_PluginBase):
                         plugin_icon = plugin.plugin_icon
                         if not str(plugin_icon).startswith("http"):
                             plugin_icon = f"https://raw.githubusercontent.com/jxxghp/MoviePilot-Plugins/main/icons/{plugin_icon}"
-                        text = msg if self._update else (f"{plugin.plugin_name}有更新啦"
+                        text = msg if self._update else (f"{plugin.plugin_name} 有更新啦"
                                                          f"\nv{install_plugin_version} -> v{plugin.plugin_version}")
                         if plugin.history:
                             for verison in plugin.history.keys():
