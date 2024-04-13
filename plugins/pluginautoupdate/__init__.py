@@ -24,7 +24,7 @@ class PluginAutoUpdate(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/pluginupdate.png"
     # 插件版本
-    plugin_version = "1.4"
+    plugin_version = "1.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -44,7 +44,8 @@ class PluginAutoUpdate(_PluginBase):
     _update = False
     _notify = False
     _msgtype = None
-    _plugin_ids = []
+    _update_ids = []
+    _exclude_ids = []
     _run_cnt = 0
 
     # 定时器
@@ -64,7 +65,8 @@ class PluginAutoUpdate(_PluginBase):
             self._update = config.get("update")
             self._notify = config.get("notify")
             self._msgtype = config.get("msgtype")
-            self._plugin_ids = config.get("plugin_ids")
+            self._update_ids = config.get("update_ids")
+            self._exclude_ids = config.get("exclude_ids")
 
         if self._enabled:
             # 已安装插件版本
@@ -94,7 +96,8 @@ class PluginAutoUpdate(_PluginBase):
                     "update": self._update,
                     "notify": self._notify,
                     "msgtype": self._msgtype,
-                    "plugin_ids": self._plugin_ids,
+                    "update_ids": self._update_ids,
+                    "exclude_ids": self._exclude_ids,
                 })
 
                 self._scheduler.add_job(func=self.__plugin_update, trigger='date',
@@ -131,11 +134,6 @@ class PluginAutoUpdate(_PluginBase):
         for plugin in online_plugins:
             # 只处理已安装的插件
             if str(plugin.id) in install_plugins:
-                # 判断是否是已选择插件
-                if self._plugin_ids and str(plugin.id) not in self._plugin_ids:
-                    logger.info(f"{plugin.plugin_name} 不在自动更新列表中，跳过")
-                    continue
-
                 # 有更新 或者 本地未安装的
                 if plugin.has_update or not plugin.installed:
                     plugin_reload = True
@@ -147,6 +145,14 @@ class PluginAutoUpdate(_PluginBase):
 
                     # 自动更新
                     if self._update:
+                        # 判断是否是排除插件
+                        if self._exclude_ids and str(plugin.id) in self._exclude_ids:
+                            logger.info(f"{plugin.plugin_name} 已被排除自动更新，跳过")
+                            continue
+                        # 判断是否是已选择插件
+                        if self._update_ids and str(plugin.id) not in self._update_ids:
+                            logger.info(f"{plugin.plugin_name} 不在自动更新列表中，跳过")
+                            continue
                         # 判断当前要升级的插件是否正在运行，正则运行则暂不更新
                         if plugin.id in running_scheduler:
                             msg = f"{plugin.plugin_name} 正在运行，跳过自动升级，最新版本 v{plugin.plugin_version}"
@@ -347,7 +353,7 @@ class PluginAutoUpdate(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 6
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -355,8 +361,27 @@ class PluginAutoUpdate(_PluginBase):
                                         'props': {
                                             'multiple': True,
                                             'chips': True,
-                                            'model': 'plugin_ids',
+                                            'model': 'update_ids',
                                             'label': '更新插件',
+                                            'items': pluginOptions
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'multiple': True,
+                                            'chips': True,
+                                            'model': 'exclude_ids',
+                                            'label': '排除插件',
                                             'items': pluginOptions
                                         }
                                     }
@@ -380,6 +405,7 @@ class PluginAutoUpdate(_PluginBase):
                                             'variant': 'tonal',
                                             'text': '已安装的插件自动更新最新版本。'
                                                     '如未开启自动更新则发送更新通知。'
+                                                    '如更新插件正在运行，则本次跳过更新。'
                                         }
                                     }
                                 ]
@@ -400,8 +426,9 @@ class PluginAutoUpdate(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '如更新插件正在运行，则本次跳过更新。'
-                                                    '如未选择更新插件，则默认为更新所有。'
+                                            'text': '所有已安装插件均会检查更新，发送通知。'
+                                                    '更新插件/排除插件仅针对于自动更新场景。'
+                                                    '如未选择更新插件，则默认为自动更新所有。'
                                         }
                                     }
                                 ]
@@ -417,7 +444,8 @@ class PluginAutoUpdate(_PluginBase):
             "notify": False,
             "cron": "",
             "msgtype": "",
-            "plugin_ids": []
+            "update_ids": [],
+            "exclude_ids": [],
         }
 
     def get_page(self) -> List[dict]:
