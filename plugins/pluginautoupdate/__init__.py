@@ -73,7 +73,7 @@ class PluginAutoUpdate(_PluginBase):
 
             if self._cron:
                 try:
-                    self._scheduler.add_job(func=self.__plugin_update,
+                    self._scheduler.add_job(func=self.plugin_update,
                                             trigger=CronTrigger.from_crontab(self._cron),
                                             name="插件自动更新")
                 except Exception as err:
@@ -94,7 +94,7 @@ class PluginAutoUpdate(_PluginBase):
                     "exclude_ids": self._exclude_ids,
                 })
 
-                self._scheduler.add_job(func=self.__plugin_update, trigger='date',
+                self._scheduler.add_job(func=self.plugin_update, trigger='date',
                                         run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(seconds=1),
                                         name="插件自动更新")
 
@@ -104,7 +104,7 @@ class PluginAutoUpdate(_PluginBase):
                 self._scheduler.start()
 
     @eventmanager.register(EventType.PluginAction)
-    def __plugin_update(self, event: Event = None):
+    def plugin_update(self, event: Event = None):
         """
         插件自动更新
         """
@@ -259,7 +259,7 @@ class PluginAutoUpdate(_PluginBase):
                 "id": "PluginAutoUpdate",
                 "name": "插件自动更新",
                 "trigger": CronTrigger.from_crontab(self._cron),
-                "func": self.__plugin_update,
+                "func": self.plugin_update,
                 "kwargs": {}
             }]
         return []
