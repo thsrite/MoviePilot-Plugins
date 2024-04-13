@@ -14,14 +14,6 @@ from app.log import logger
 from app.schemas.types import SystemConfigKey
 from app.schemas import NotificationType
 from app.scheduler import Scheduler
-from app.helper.sites import SitesHelper
-
-
-class MyPluginManager(PluginManager):
-    def __init__(self):
-        self.siteshelper = SitesHelper()
-        self.pluginhelper = PluginHelper()
-        self.systemconfig = SystemConfigOper()
 
 
 class PluginAutoUpdate(_PluginBase):
@@ -57,13 +49,11 @@ class PluginAutoUpdate(_PluginBase):
 
     # 定时器
     _scheduler: Optional[BackgroundScheduler] = None
-    _pluginmanager: MyPluginManager = None
     _plugin_version = {}
 
     def init_plugin(self, config: dict = None):
         # 停止现有任务
         self.stop_service()
-        self._pluginmanager = MyPluginManager()
 
         if config:
             self._enabled = config.get("enabled")
@@ -121,7 +111,7 @@ class PluginAutoUpdate(_PluginBase):
         install_plugins = SystemConfigOper().get(SystemConfigKey.UserInstalledPlugins) or []
 
         # 在线插件
-        online_plugins = self._pluginmanager.get_online_plugins()
+        online_plugins = PluginManager().get_online_plugins()
         if not online_plugins:
             logger.error("未获取到在线插件，停止运行")
             return
@@ -197,7 +187,7 @@ class PluginAutoUpdate(_PluginBase):
         if plugin_reload:
             if self._update:
                 logger.info("开始插件重载")
-                self._pluginmanager.init_config()
+                PluginManager().init_config()
         else:
             logger.info("所有插件已是最新版本")
 
@@ -206,7 +196,7 @@ class PluginAutoUpdate(_PluginBase):
         获取已安装插件版本
         """
         # 本地插件
-        local_plugins = self._pluginmanager.get_local_plugins()
+        local_plugins = PluginManager().get_local_plugins()
         for plugin in local_plugins:
             self._plugin_version[plugin.id] = plugin.plugin_version
 
@@ -235,7 +225,7 @@ class PluginAutoUpdate(_PluginBase):
         # 编历 local_plugins，生成插件类型选项
         pluginOptions = []
         # 本地插件
-        local_plugins = self._pluginmanager.get_local_plugins()
+        local_plugins = PluginManager().get_local_plugins()
         for plugin in local_plugins:
             pluginOptions.append({
                 "title": f"{plugin.plugin_name} v{plugin.plugin_version}",
