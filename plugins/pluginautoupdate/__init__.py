@@ -188,6 +188,7 @@ class PluginAutoUpdate(_PluginBase):
                                 Scheduler().update_plugin_job(plugin.id)
                     else:
                         title = f"插件 {plugin.plugin_name} 有更新啦"
+                        logger.info(f"{title} {version_text}")
 
                     # 发送通知
                     if self._notify and self._msgtype:
