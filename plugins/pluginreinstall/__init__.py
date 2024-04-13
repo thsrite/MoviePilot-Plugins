@@ -11,6 +11,12 @@ from app.schemas.types import SystemConfigKey
 from app.utils.string import StringUtils
 
 
+class MyPluginManager(PluginManager):
+    def __init__(self):
+        # 不调用父类PluginManager的__init__方法
+        pass
+
+
 class PluginReInstall(_PluginBase):
     # 插件名称
     plugin_name = "插件强制重装"
@@ -35,6 +41,7 @@ class PluginReInstall(_PluginBase):
     _plugin_ids = []
     _plugin_url = []
     _base_url = "https://raw.githubusercontent.com/%s/%s/main/"
+    _pluginmanager: MyPluginManager = None
 
     def init_plugin(self, config: dict = None):
         if config:
@@ -42,6 +49,7 @@ class PluginReInstall(_PluginBase):
             if not self._plugin_ids:
                 return
             self._plugin_url = config.get("plugin_url")
+            self._pluginmanager = MyPluginManager()
 
             # 校验插件仓库格式
             plugin_url = None
@@ -85,7 +93,7 @@ class PluginReInstall(_PluginBase):
             # 重载插件管理器
             if plugin_reload:
                 logger.info("开始插件重载")
-                PluginManager().init_config()
+                self._pluginmanager.init_config()
 
     @staticmethod
     def get_repo_info(repo_url: str) -> Tuple[Optional[str], Optional[str]]:

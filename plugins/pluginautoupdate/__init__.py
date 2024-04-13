@@ -16,6 +16,12 @@ from app.schemas import NotificationType
 from app.scheduler import Scheduler
 
 
+class MyPluginManager(PluginManager):
+    def __init__(self):
+        # 不调用父类PluginManager的__init__方法
+        pass
+
+
 class PluginAutoUpdate(_PluginBase):
     # 插件名称
     plugin_name = "插件更新管理"
@@ -49,13 +55,13 @@ class PluginAutoUpdate(_PluginBase):
 
     # 定时器
     _scheduler: Optional[BackgroundScheduler] = None
-    _pluginmanager: PluginManager = None
+    _pluginmanager: MyPluginManager = None
     _plugin_version = {}
 
     def init_plugin(self, config: dict = None):
         # 停止现有任务
         self.stop_service()
-        self._pluginmanager = PluginManager()
+        self._pluginmanager = MyPluginManager()
 
         if config:
             self._enabled = config.get("enabled")
@@ -189,7 +195,7 @@ class PluginAutoUpdate(_PluginBase):
         if plugin_reload:
             if self._update:
                 logger.info("开始插件重载")
-                PluginManager().init_config()
+                self._pluginmanager.init_config()
         else:
             logger.info("所有插件已是最新版本")
 
