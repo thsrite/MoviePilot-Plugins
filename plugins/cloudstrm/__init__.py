@@ -26,7 +26,7 @@ class CloudStrm(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png"
     # 插件版本
-    plugin_version = "4.1"
+    plugin_version = "3.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -47,7 +47,6 @@ class CloudStrm(_PluginBase):
     _copy_files = False
     _rebuild = False
     _https = False
-    _linkage = False
     _observer = []
     _video_formats = ('.mp4', '.avi', '.rmvb', '.wmv', '.mov', '.mkv', '.flv', '.ts', '.webm', '.iso', '.mpg', '.m2ts')
     __cloud_files_json = "cloud_files.json"
@@ -78,7 +77,6 @@ class CloudStrm(_PluginBase):
             self._onlyonce = config.get("onlyonce")
             self._rebuild = config.get("rebuild")
             self._https = config.get("https")
-            self._linkage = config.get("linkage")
             self._copy_files = config.get("copy_files")
             self._monitor_confs = config.get("monitor_confs")
 
@@ -304,25 +302,9 @@ class CloudStrm(_PluginBase):
         file.write(json.dumps(self.__cloud_files))
         file.close()
 
-    @eventmanager.register(EventType.TransferComplete)
-    def _linkage_strm(self, event: Event = None):
+    def __strm(self, source_file):
         """
-        联动生成strm文件
-        """
-        if self._linkage and event:
-            event_data = event.event_data
-            if not event_data or not event_data.get("transferinfo"):
-                return
-            source_file = str(event_data.get("transferinfo").target_path)
-            logger.info(f"收到命令，开始处理单个文件 {source_file} ...")
-            if source_file:
-                # 云盘文件json新增
-                self.__cloud_files.append(source_file)
-                self.__strm(source_file, True)
-
-    def __strm(self, source_file: str, linkage: bool = False):
-        """
-        生成strm文件
+        判断文件是否有对应strm
         """
         try:
             # 获取文件的转移路径
@@ -369,18 +351,6 @@ class CloudStrm(_PluginBase):
                                                     cloud_type=cloud_type,
                                                     cloud_path=cloud_path,
                                                     cloud_url=cloud_url)
-                            # 联动的时候，同步处理同名非媒体文件
-                            if linkage and self._copy_files:
-                                # 查询其他文件
-                                pattern = Path(source_file).stem.replace('[', '?').replace(']', '?')
-                                logger.info(f"开始处理同名文件 {pattern}")
-                                other_files = Path(source_file).parent.glob(f"{pattern}.*")
-                                for file in other_files:
-                                    # 云盘文件json新增
-                                    self.__cloud_files.append(file)
-                                    # 其他nfo、jpg等复制文件
-                                    shutil.copy2(file, dest_file)
-                                    logger.info(f"复制其他文件 {file} 到 {dest_file}")
                         else:
                             if self._copy_files:
                                 # 其他nfo、jpg等复制文件
@@ -460,7 +430,6 @@ class CloudStrm(_PluginBase):
             "rebuild": self._rebuild,
             "copy_files": self._copy_files,
             "https": self._https,
-            "linkage": self._linkage,
             "cron": self._cron,
             "monitor_confs": self._monitor_confs
         })
@@ -665,22 +634,6 @@ class CloudStrm(_PluginBase):
                                     }
                                 ]
                             },
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VSwitch',
-                                        'props': {
-                                            'model': 'linkage',
-                                            'label': '联动其他转移插件',
-                                        }
-                                    }
-                                ]
-                            },
                         ]
                     },
                     {
@@ -782,7 +735,6 @@ class CloudStrm(_PluginBase):
             "rebuild": False,
             "copy_files": False,
             "https": False,
-            "linkage": False,
             "monitor_confs": ""
         }
 
