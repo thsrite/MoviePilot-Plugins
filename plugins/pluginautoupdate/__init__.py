@@ -46,7 +46,6 @@ class PluginAutoUpdate(_PluginBase):
     _msgtype = None
     _update_ids = []
     _exclude_ids = []
-    _run_cnt = 0
 
     # 定时器
     _scheduler: Optional[BackgroundScheduler] = None
@@ -79,13 +78,10 @@ class PluginAutoUpdate(_PluginBase):
                     self._scheduler.add_job(func=self.__plugin_update,
                                             trigger=CronTrigger.from_crontab(self._cron),
                                             name="插件自动更新")
-                    self._run_cnt += 1
                 except Exception as err:
                     logger.error(f"定时任务配置错误：{str(err)}")
 
-            if self._onlyonce or self._run_cnt == 0:
-                self._run_cnt += 1
-
+            if self._onlyonce:
                 logger.info(f"插件自动更新服务启动，立即运行一次")
                 # 关闭一次性开关
                 self._onlyonce = False
