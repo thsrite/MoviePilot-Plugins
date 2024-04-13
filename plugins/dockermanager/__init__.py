@@ -109,7 +109,7 @@ class DockerManager(_PluginBase):
         执行命令
         """
         # 获取所有容器列表
-        containers = self._docker_client.containers.list()
+        containers = self._docker_client.containers.list(all=True)
 
         # 遍历容器列表，找到对应名称的容器ID
         for container in containers:
