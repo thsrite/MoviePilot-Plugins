@@ -401,7 +401,7 @@ class PluginAutoUpdate(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '如更新插件正在运行，则稍后自动更新。'
+                                            'text': '如更新插件正在运行，则本次跳过更新。'
                                                     '如未选择更新插件，则默认为更新所有。'
                                         }
                                     }
