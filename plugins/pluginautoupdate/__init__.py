@@ -132,7 +132,6 @@ class PluginAutoUpdate(_PluginBase):
             if str(plugin.id) in install_plugins:
                 # 有更新 或者 本地未安装的
                 if plugin.has_update or not plugin.installed:
-                    plugin_reload = True
                     title = None
 
                     # 已安装插件版本
@@ -162,6 +161,7 @@ class PluginAutoUpdate(_PluginBase):
                                 title = f"插件 {plugin.plugin_name} 更新失败"
                                 logger.error(f"{title} {version_text}")
                             else:
+                                plugin_reload = True
                                 title = f"插件 {plugin.plugin_name} 更新成功"
                                 logger.info(f"{title} {version_text}")
                     else:
