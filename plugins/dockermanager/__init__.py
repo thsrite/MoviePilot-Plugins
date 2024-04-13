@@ -127,6 +127,10 @@ class DockerManager(_PluginBase):
                             state = self._docker_client.containers.get(container_id).stop()
                         elif str(command) == "pause":
                             state = self._docker_client.containers.get(container_id).pause()
+                        elif str(command) == "unpause":
+                            state = self._docker_client.containers.get(container_id).unpause()
+                        elif str(command) == "update":
+                            state = self._docker_client.containers.get(container_id).update()
                         else:
                             logger.error(f"不支持的命令：{command}")
                             break
@@ -302,7 +306,7 @@ class DockerManager(_PluginBase):
                                             'model': 'time_confs',
                                             'label': '执行命令',
                                             'rows': 2,
-                                            'placeholder': '容器名#cron表达式#restart/start/stop'
+                                            'placeholder': '容器名#cron表达式#restart/start/stop/unpause/update'
                                         }
                                     }
                                 ]
@@ -323,7 +327,7 @@ class DockerManager(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '容器名#cron表达式#restart/start/stop'
+                                            'text': '容器名#cron表达式#restart/start/stop/pause/unpause/update'
                                         }
                                     }
                                 ]
