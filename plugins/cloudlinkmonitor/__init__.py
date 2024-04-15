@@ -396,10 +396,6 @@ class CloudLinkMonitor(_PluginBase):
                         mediainfo.title = transfer_history.title
                 logger.info(f"{file_path.name} 识别为：{mediainfo.type.value} {mediainfo.title_year}")
 
-                if scraper_type:
-                    # 更新媒体图片
-                    self.chain.obtain_images(mediainfo=mediainfo)
-
                 # 获取集数据
                 if mediainfo.type == MediaType.TV:
                     episodes_info = self.tmdbchain.tmdb_episodes(tmdbid=mediainfo.tmdb_id,
@@ -409,13 +405,25 @@ class CloudLinkMonitor(_PluginBase):
 
                 # 拼装媒体库一、二级子目录
                 target = self.__get_dest_dir(mediainfo=mediainfo, target_dir=target)
-                # 转移
-                transferinfo: TransferInfo = self.filetransfer.transfer_media(in_path=file_path,
-                                                                              in_meta=file_meta,
-                                                                              mediainfo=mediainfo,
-                                                                              transfer_type=transfer_type,
-                                                                              target_dir=target,
-                                                                              episodes_info=episodes_info)
+
+                if scraper_type:
+                    # 更新媒体图片
+                    self.chain.obtain_images(mediainfo=mediainfo)
+                    # 转移
+                    transferinfo: TransferInfo = self.chain.transfer(mediainfo=mediainfo,
+                                                                     path=file_path,
+                                                                     transfer_type=transfer_type,
+                                                                     target=target,
+                                                                     meta=file_meta,
+                                                                     episodes_info=episodes_info)
+                else:
+                    # 转移
+                    transferinfo: TransferInfo = self.filetransfer.transfer_media(in_path=file_path,
+                                                                                  in_meta=file_meta,
+                                                                                  mediainfo=mediainfo,
+                                                                                  transfer_type=transfer_type,
+                                                                                  target_dir=target,
+                                                                                  episodes_info=episodes_info)
                 if not transferinfo:
                     logger.error("文件转移模块运行失败")
                     return
