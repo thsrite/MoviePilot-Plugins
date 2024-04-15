@@ -56,11 +56,11 @@ class CloudLinkMonitor(_PluginBase):
     # 插件名称
     plugin_name = "云盘实时链接"
     # 插件描述
-    plugin_desc = "监控云盘目录文件变化，自动转移链接（不刮削不生成目的二级目录）。"
+    plugin_desc = "监控云盘目录文件变化，自动转移链接。"
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
-    plugin_version = "1.5"
+    plugin_version = "1.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -109,6 +109,7 @@ class CloudLinkMonitor(_PluginBase):
         # 清空配置
         self._dirconf = {}
         self._transferconf = {}
+        self._scraperconf = {}
 
         # 读取配置
         if config:
@@ -141,6 +142,12 @@ class CloudLinkMonitor(_PluginBase):
                 if not mon_path:
                     continue
 
+                # 是否刮削
+                _scraper_type = False
+                if mon_path.count("$") == 1:
+                    _scraper_type = bool(mon_path.split("$")[1])
+                    mon_path = mon_path.split("$")[0]
+
                 # 自定义转移方式
                 _transfer_type = self._transfer_type
                 if mon_path.count("#") == 1:
@@ -165,6 +172,9 @@ class CloudLinkMonitor(_PluginBase):
                     self._dirconf[mon_path] = target_path
                 else:
                     self._dirconf[mon_path] = None
+
+                # 是否刮削
+                self._scraperconf[mon_path] = _scraper_type
 
                 # 转移方式
                 self._transferconf[mon_path] = _transfer_type
@@ -331,9 +341,7 @@ class CloudLinkMonitor(_PluginBase):
                     return
 
                 # 判断是不是蓝光目录
-                bluray_flag = False
                 if re.search(r"BDMV[/\\]STREAM", event_path, re.IGNORECASE):
-                    bluray_flag = True
                     # 截取BDMV前面的路径
                     blurray_dir = event_path[:event_path.find("BDMV")]
                     file_path = Path(blurray_dir)
@@ -359,6 +367,8 @@ class CloudLinkMonitor(_PluginBase):
                 target: Path = self._dirconf.get(mon_path)
                 # 查询转移方式
                 transfer_type = self._transferconf.get(mon_path)
+                # 是否刮削
+                scraper_type = self._scraperconf.get(mon_path)
 
                 # 识别媒体信息
                 mediainfo: MediaInfo = self.chain.recognize_media(meta=file_meta)
@@ -385,6 +395,10 @@ class CloudLinkMonitor(_PluginBase):
                     if transfer_history:
                         mediainfo.title = transfer_history.title
                 logger.info(f"{file_path.name} 识别为：{mediainfo.type.value} {mediainfo.title_year}")
+
+                if scraper_type:
+                    # 更新媒体图片
+                    self.chain.obtain_images(mediainfo=mediainfo)
 
                 # 获取集数据
                 if mediainfo.type == MediaType.TV:
@@ -854,7 +868,9 @@ class CloudLinkMonitor(_PluginBase):
                                             'rows': 5,
                                             'placeholder': '每一行一个目录，支持以下几种配置方式，转移方式支持 move、copy、link、softlink、rclone_copy、rclone_move：\n'
                                                            '监控目录:转移目的目录\n'
-                                                           '监控目录:转移目的目录#转移方式'
+                                                           '监控目录:转移目的目录$是否刮削（True/False）\n'
+                                                           '监控目录:转移目的目录#转移方式\n'
+                                                           '监控目录:转移目的目录#转移方式$是否刮削（True/False）\n'
                                         }
                                     }
                                 ]

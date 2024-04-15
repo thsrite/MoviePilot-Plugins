@@ -201,12 +201,13 @@
       },
       "CloudLinkMonitor": {
         "name": "云盘实时链接",
-        "description": "监控云盘目录文件变化，自动转移链接（不刮削）。",
-        "version": "1.5",
+        "description": "监控云盘目录文件变化，自动转移链接。",
+        "version": "1.6",
         "icon": "Linkease_A.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v1.6": "可配置是否刮削",
           "v1.5": "fix 消息推送",
           "v1.4": "fix 转移后路径",
           "v1.3": "修复bug",
