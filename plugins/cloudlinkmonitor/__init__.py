@@ -60,7 +60,7 @@ class CloudLinkMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
-    plugin_version = "1.6"
+    plugin_version = "1.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -406,24 +406,13 @@ class CloudLinkMonitor(_PluginBase):
                 # 拼装媒体库一、二级子目录
                 target = self.__get_dest_dir(mediainfo=mediainfo, target_dir=target)
 
-                if scraper_type:
-                    # 更新媒体图片
-                    self.chain.obtain_images(mediainfo=mediainfo)
-                    # 转移
-                    transferinfo: TransferInfo = self.chain.transfer(mediainfo=mediainfo,
-                                                                     path=file_path,
-                                                                     transfer_type=transfer_type,
-                                                                     target=target,
-                                                                     meta=file_meta,
-                                                                     episodes_info=episodes_info)
-                else:
-                    # 转移
-                    transferinfo: TransferInfo = self.filetransfer.transfer_media(in_path=file_path,
-                                                                                  in_meta=file_meta,
-                                                                                  mediainfo=mediainfo,
-                                                                                  transfer_type=transfer_type,
-                                                                                  target_dir=target,
-                                                                                  episodes_info=episodes_info)
+                # 转移
+                transferinfo: TransferInfo = self.filetransfer.transfer_media(in_path=file_path,
+                                                                              in_meta=file_meta,
+                                                                              mediainfo=mediainfo,
+                                                                              transfer_type=transfer_type,
+                                                                              target_dir=target,
+                                                                              episodes_info=episodes_info)
                 if not transferinfo:
                     logger.error("文件转移模块运行失败")
                     return
@@ -457,6 +446,16 @@ class CloudLinkMonitor(_PluginBase):
                     transferinfo=transferinfo
                 )
 
+                # 刮削
+                if scraper_type:
+                    # 更新媒体图片
+                    self.chain.obtain_images(mediainfo=mediainfo)
+
+                    # 刮削单个文件
+                    if settings.SCRAP_METADATA:
+                        self.chain.scrape_metadata(path=transferinfo.target_path,
+                                                   mediainfo=mediainfo,
+                                                   transfer_type=transfer_type)
                 """
                 {
                     "title_year season": {
