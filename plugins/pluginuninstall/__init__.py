@@ -93,7 +93,6 @@ class PluginUnInstall(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
                                 },
                                 'content': [
                                     {
@@ -102,7 +101,7 @@ class PluginUnInstall(_PluginBase):
                                             'multiple': True,
                                             'chips': True,
                                             'model': 'plugin_ids',
-                                            'label': '重装插件',
+                                            'label': '卸载插件',
                                             'items': pluginOptions
                                         }
                                     }
