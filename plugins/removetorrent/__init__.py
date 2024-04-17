@@ -13,7 +13,7 @@ class RemoveTorrent(_PluginBase):
     # 插件图标
     plugin_icon = "delete.png"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -31,6 +31,8 @@ class RemoveTorrent(_PluginBase):
     _delete_torrent = False
     _delete_file = False
     _trackers = None
+    qb = None
+    tr = None
 
     def init_plugin(self, config: dict = None):
         self.qb = Qbittorrent()
@@ -76,18 +78,19 @@ class RemoveTorrent(_PluginBase):
             torrent_name = self.__get_torrent_name(torrent, self._downloader)
             torrent_key = "%s-%s" % (torrent_name, torrent_size)
             all_torrents.append(torrent_key)
-            key_torrents[torrent_key] = torrent
 
             torrent_trackers = self.__get_torrent_trackers(torrent, self._downloader)
             if str(self._downloader) == "qb":
                 # 命中tracker的种子
                 if str(tracker) in torrent_trackers:
                     tracker_torrents.append(torrent_key)
+                    key_torrents[torrent_key] = torrent
             else:
                 for torrent_tracker in torrent_trackers:
                     # 命中tracker的种子
                     if str(tracker) in torrent_tracker.get('announce'):
                         tracker_torrents.append(torrent_key)
+                        key_torrents[torrent_key] = torrent
 
         if not tracker_torrents:
             logger.error(f"下载器 {self._downloader} 未获取到命中tracker {tracker} 的种子")

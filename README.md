@@ -15,7 +15,7 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - [Strm文件模式转换 1.0](docs%2FStrmConvert.md)
 - 清理订阅缓存 1.0
 - 添加种子下载 1.0
-- 删除站点种子 1.1
+- 删除站点种子 1.2
 - 插件更新管理 1.6
 - 插件强制重装 1.4
 - 群辉Webhook通知 1.1
