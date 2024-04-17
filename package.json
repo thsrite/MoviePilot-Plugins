@@ -290,5 +290,16 @@
           "v1.1": "修复多个任务立即运行一次",
           "v1.0": "init"
         }
+    },
+    "PluginUnInstall": {
+        "name": "插件彻底卸载",
+        "description": "删除数据库中已安装插件记录、清理插件文件。",
+        "version": "1.0",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/uninstall.png",
+        "author": "thsrite",
+        "level": 1,
+        "history": {
+          "v1.0": "init"
+        }
     }
 }
