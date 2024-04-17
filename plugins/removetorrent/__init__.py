@@ -68,6 +68,7 @@ class RemoveTorrent(_PluginBase):
         if not torrents:
             logger.info(f"下载器 {self._downloader} 未获取到已完成种子")
             return
+        logger.info(f"下载器 {self._downloader} 获取到已完成种子 {len(torrents)} 个")
 
         all_torrents = []
         tracker_torrents = []
@@ -95,6 +96,8 @@ class RemoveTorrent(_PluginBase):
         if not tracker_torrents:
             logger.error(f"下载器 {self._downloader} 未获取到命中tracker {tracker} 的种子")
             return
+
+        logger.info(f"下载器 {self._downloader} 获取到命中tracker {tracker} 已完成种子 {len(tracker_torrents)} 个")
 
         # 查询tracker种子是否有其他辅种
         for tracker_torrent in tracker_torrents:
