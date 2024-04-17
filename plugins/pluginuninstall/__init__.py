@@ -57,6 +57,10 @@ class PluginUnInstall(_PluginBase):
             # 保存已安装插件
             SystemConfigOper().set(SystemConfigKey.UserInstalledPlugins, new_install_plugins)
 
+            self.update_config({
+                "plugin_ids": ""
+            })
+
     def get_state(self) -> bool:
         return False
 
