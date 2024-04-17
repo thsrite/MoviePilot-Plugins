@@ -27,6 +27,7 @@ class RemoveTorrent(_PluginBase):
 
     # 私有属性
     _downloader = None
+    _onlyonce = None
     _delete_type = False
     _delete_torrent = False
     _delete_file = False
@@ -40,23 +41,26 @@ class RemoveTorrent(_PluginBase):
 
         if config:
             self._downloader = config.get("downloader")
+            self._onlyonce = config.get("onlyonce")
             self._delete_type = config.get("delete_type")
             self._delete_torrent = config.get("delete_torrent")
             self._delete_file = config.get("delete_file")
             self._trackers = config.get("trackers")
 
-            if self._trackers:
-                for tracker in str(self._trackers).split("\n"):
-                    logger.info(f"开始处理站点tracker {tracker}")
-                    self.__check_feed(tracker)
+            if self._trackers and self._onlyonce:
+                self.update_config({
+                    "downloader": self._downloader,
+                    "delete_type": self._delete_type,
+                    "delete_torrent": self._delete_torrent,
+                    "delete_file": self._delete_file,
+                    "trackers": self._trackers,
+                    "onlyonce": False
+                })
 
-            self.update_config({
-                "downloader": self._downloader,
-                "delete_type": self._delete_type,
-                "delete_torrent": self._delete_torrent,
-                "delete_file": self._delete_file,
-                "trackers": ""
-            })
+                for tracker in str(self._trackers).split("\n"):
+                    logger.info(f"下载器 {self._downloader} 开始处理站点tracker {tracker}")
+                    self.__check_feed(tracker)
+                    logger.info(f"下载器 {self._downloader} 处理站点tracker {tracker} 完成")
 
     def __check_feed(self, tracker: str):
         """
@@ -204,6 +208,27 @@ class RemoveTorrent(_PluginBase):
             {
                 'component': 'VForm',
                 'content': [
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'onlyonce',
+                                            'label': '立即运行一次',
+                                        }
+                                    }
+                                ]
+                            },
+                        ]
+                    },
                     {
                         'component': 'VRow',
                         'content': [
@@ -386,6 +411,7 @@ class RemoveTorrent(_PluginBase):
             "delete_type": True,
             "delete_torrent": False,
             "delete_file": False,
+            "onlyonce": False,
             "trackers": ""
         }
 
