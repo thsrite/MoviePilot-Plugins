@@ -47,7 +47,7 @@ class FileMonitorHandler(FileSystemEventHandler):
 
 class FileSoftLink(_PluginBase):
     # 插件名称
-    plugin_name = "文件软连接"
+    plugin_name = "实时软连接"
     # 插件描述
     plugin_desc = "监控目录文件变化，媒体文件软连接，其他文件可选复制。"
     # 插件图标
@@ -175,8 +175,8 @@ class FileSoftLink(_PluginBase):
 
             # 运行一次定时服务
             if self._onlyonce:
-                logger.info("软连接服务启动，立即运行一次")
-                self._scheduler.add_job(name="软连接", func=self.sync_all, trigger='date',
+                logger.info("实时软连接服务启动，立即运行一次")
+                self._scheduler.add_job(name="实时软连接", func=self.sync_all, trigger='date',
                                         run_date=datetime.datetime.now(
                                             tz=pytz.timezone(settings.TZ)) + datetime.timedelta(seconds=3)
                                         )
@@ -356,8 +356,8 @@ class FileSoftLink(_PluginBase):
             "path": "/softlink_sync",
             "endpoint": self.sync,
             "methods": ["GET"],
-            "summary": "文件软连接同步",
-            "description": "文件软连接同步",
+            "summary": "实时软连接同步",
+            "description": "实时软连接同步",
         }]
 
     def get_service(self) -> List[Dict[str, Any]]:
@@ -374,7 +374,7 @@ class FileSoftLink(_PluginBase):
         if self._enabled and self._cron:
             return [{
                 "id": "FileSoftLink",
-                "name": "文件软连接全量同步服务",
+                "name": "实时软连接全量同步服务",
                 "trigger": CronTrigger.from_crontab(self._cron),
                 "func": self.sync_all,
                 "kwargs": {}
