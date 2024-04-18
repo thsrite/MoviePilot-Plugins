@@ -329,8 +329,8 @@ class FileSoftLink(_PluginBase):
 
                     # 媒体文件软连接
                     if Path(target_file).suffix in settings.RMT_MEDIAEXT:
-                        SystemUtils.softlink(str(file_path), target_file)
-                        logger.info(f"创建媒体文件软连接 {str(file_path)} 到 {target_file}")
+                        retcode, retmsg = SystemUtils.softlink(str(file_path), target_file)
+                        logger.info(f"创建媒体文件软连接 {str(file_path)} 到 {target_file} {retcode} {retmsg}")
                     else:
                         if self._copy_files:
                             # 其他nfo、jpg等复制文件
