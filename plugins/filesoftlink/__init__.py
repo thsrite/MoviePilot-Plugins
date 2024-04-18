@@ -329,7 +329,7 @@ class FileSoftLink(_PluginBase):
 
                     # 媒体文件软连接
                     if Path(target_file).suffix in settings.RMT_MEDIAEXT:
-                        retcode, retmsg = SystemUtils.softlink(file_path, target_file)
+                        retcode, retmsg = SystemUtils.softlink(file_path, Path(target_file))
                         logger.info(f"创建媒体文件软连接 {str(file_path)} 到 {target_file} {retcode} {retmsg}")
                     else:
                         if self._copy_files:
