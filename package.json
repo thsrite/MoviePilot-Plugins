@@ -306,13 +306,12 @@
       "FileSoftLink": {
         "name": "实时软连接",
         "description": "监控目录文件变化，媒体文件软连接，其他文件可选复制。",
-        "version": "1.1",
+        "version": "1.2",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png",
         "author": "thsrite",
           "level": 1,
           "history": {
-            "v1.1": "fix bug",
-            "v1.0": "init"
+            "v1.2": "异步启动"
           }
       }
 }

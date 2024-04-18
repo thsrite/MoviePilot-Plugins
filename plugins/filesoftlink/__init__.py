@@ -53,7 +53,7 @@ class FileSoftLink(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -145,31 +145,15 @@ class FileSoftLink(_PluginBase):
                         logger.debug(str(e))
                         pass
 
-                    try:
-                        if self._mode == "compatibility":
-                            # 兼容模式，目录同步性能降低且NAS不能休眠，但可以兼容挂载的远程共享目录如SMB
-                            observer = PollingObserver(timeout=10)
-                        else:
-                            # 内部处理系统操作类型选择最优解
-                            observer = Observer(timeout=10)
-                        self._observer.append(observer)
-                        observer.schedule(FileMonitorHandler(mon_path, self), path=mon_path, recursive=True)
-                        observer.daemon = True
-                        observer.start()
-                        logger.info(f"{mon_path} 的目录监控服务启动")
-                    except Exception as e:
-                        err_msg = str(e)
-                        if "inotify" in err_msg and "reached" in err_msg:
-                            logger.warn(
-                                f"目录监控服务启动出现异常：{err_msg}，请在宿主机上（不是docker容器内）执行以下命令并重启："
-                                + """
-                                     echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
-                                     echo fs.inotify.max_user_instances=524288 | sudo tee -a /etc/sysctl.conf
-                                     sudo sysctl -p
-                                     """)
-                        else:
-                            logger.error(f"{mon_path} 启动目录监控失败：{err_msg}")
-                        self.systemmessage.put(f"{mon_path} 启动目录监控失败：{err_msg}")
+                    # 异步开启云盘监控
+                    logger.info(f"异步开启实时硬链接 {mon_path} {self._mode}，延迟5s启动")
+                    self._scheduler.add_job(func=self.start_monitor, trigger='date',
+                                            run_date=datetime.datetime.now(
+                                                tz=pytz.timezone(settings.TZ)) + datetime.timedelta(seconds=5),
+                                            name=f"实时硬链接 {mon_path}",
+                                            kwargs={
+                                                "source_dir": mon_path
+                                            })
 
             # 运行一次定时服务
             if self._onlyonce:
@@ -187,6 +171,36 @@ class FileSoftLink(_PluginBase):
             if self._scheduler.get_jobs():
                 self._scheduler.print_jobs()
                 self._scheduler.start()
+
+    def start_monitor(self, source_dir: str):
+        """
+        异步开启实时软链接
+        """
+        try:
+            if str(self._mode) == "compatibility":
+                # 兼容模式，目录同步性能降低且NAS不能休眠，但可以兼容挂载的远程共享目录如SMB
+                observer = PollingObserver(timeout=10)
+            else:
+                # 内部处理系统操作类型选择最优解
+                observer = Observer(timeout=10)
+            self._observer.append(observer)
+            observer.schedule(FileMonitorHandler(source_dir, self), path=source_dir, recursive=True)
+            observer.daemon = True
+            observer.start()
+            logger.info(f"{source_dir} 的实时软链接服务启动")
+        except Exception as e:
+            err_msg = str(e)
+            if "inotify" in err_msg and "reached" in err_msg:
+                logger.warn(
+                    f"云盘监控服务启动出现异常：{err_msg}，请在宿主机上（不是docker容器内）执行以下命令并重启："
+                    + """
+                                           echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
+                                           echo fs.inotify.max_user_instances=524288 | sudo tee -a /etc/sysctl.conf
+                                           sudo sysctl -p
+                                           """)
+            else:
+                logger.error(f"{source_dir} 启动云盘监控失败：{err_msg}")
+            self.systemmessage.put(f"{source_dir} 启动云盘监控失败：{err_msg}")
 
     def __update_config(self):
         """
@@ -228,7 +242,7 @@ class FileSoftLink(_PluginBase):
         # 遍历所有监控目录
         for mon_path in self._dirconf.keys():
             # 遍历目录下所有文件
-            for file_path in SystemUtils.list_files(Path(mon_path), settings.RMT_MEDIAEXT):
+            for file_path in SystemUtils.list_files(Path(mon_path), ['.*']):
                 self.__handle_file(event_path=str(file_path), mon_path=mon_path)
         logger.info("全量同步监控目录完成！")
 
@@ -321,7 +335,7 @@ class FileSoftLink(_PluginBase):
                         os.makedirs(Path(target_file).parent)
 
                     # 媒体文件软连接
-                    if target_file.lower().endswith(self._video_formats):
+                    if Path(target_file).suffix in settings.RMT_MEDIAEXT:
                         SystemUtils.softlink(str(file_path), target_file)
                     else:
                         if self._copy_files:

@@ -48,7 +48,6 @@ class CloudStrm(_PluginBase):
     _rebuild = False
     _https = False
     _observer = []
-    _video_formats = ('.mp4', '.avi', '.rmvb', '.wmv', '.mov', '.mkv', '.flv', '.ts', '.webm', '.iso', '.mpg', '.m2ts')
     __cloud_files_json = "cloud_files.json"
 
     _dirconf = {}
@@ -231,7 +230,7 @@ class CloudStrm(_PluginBase):
                             continue
 
                         # 不复制非媒体文件时直接过滤掉非媒体文件
-                        if not self._copy_files and not file.lower().endswith(self._video_formats):
+                        if not self._copy_files and Path(file).suffix not in settings.RMT_MEDIAEXT:
                             continue
 
                         if source_file not in self.__cloud_files:
@@ -278,7 +277,7 @@ class CloudStrm(_PluginBase):
                         continue
 
                     # 不复制非媒体文件时直接过滤掉非媒体文件
-                    if not self._copy_files and not file.lower().endswith(self._video_formats):
+                    if not self._copy_files and Path(file).suffix not in settings.RMT_MEDIAEXT:
                         continue
 
                     logger.info(f"扫描到新文件 {source_file}，正在开始处理")
@@ -341,7 +340,7 @@ class CloudStrm(_PluginBase):
                             os.makedirs(Path(dest_file).parent)
 
                         # 视频文件创建.strm文件
-                        if dest_file.lower().endswith(self._video_formats):
+                        if Path(dest_file).suffix in settings.RMT_MEDIAEXT:
                             # 创建.strm文件
                             self.__create_strm_file(scheme="https" if self._https else "http",
                                                     dest_file=dest_file,
