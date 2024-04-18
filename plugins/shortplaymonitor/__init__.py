@@ -503,7 +503,7 @@ class ShortPlayMonitor(_PluginBase):
             if transfer_type == 'link':
                 # 硬链接
                 retcode, retmsg = SystemUtils.link(file_item, target_file)
-            elif transfer_type == 'softlink':
+            elif transfer_type == 'filesoftlink':
                 # 软链接
                 retcode, retmsg = SystemUtils.softlink(file_item, target_file)
             elif transfer_type == 'move':
@@ -884,7 +884,7 @@ class ShortPlayMonitor(_PluginBase):
                                                 {'title': '移动', 'value': 'move'},
                                                 {'title': '复制', 'value': 'copy'},
                                                 {'title': '硬链接', 'value': 'link'},
-                                                {'title': '软链接', 'value': 'softlink'},
+                                                {'title': '软链接', 'value': 'filesoftlink'},
                                                 {'title': 'Rclone复制', 'value': 'rclone_copy'},
                                                 {'title': 'Rclone移动', 'value': 'rclone_move'}
                                             ]
