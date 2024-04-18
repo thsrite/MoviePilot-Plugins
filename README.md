@@ -32,5 +32,5 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - [自定义命令 1.5](docs%2FCustomCommand.md)
 - docker自定义任务 1.2
 - 插件彻底卸载 1.0
-- 实时软连接 1.2
+- 实时软连接 1.3
 

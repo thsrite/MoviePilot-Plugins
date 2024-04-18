@@ -52,7 +52,7 @@ class FileSoftLink(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -329,7 +329,7 @@ class FileSoftLink(_PluginBase):
 
                     # 媒体文件软连接
                     if Path(target_file).suffix in settings.RMT_MEDIAEXT:
-                        retcode, retmsg = SystemUtils.softlink(str(file_path), target_file)
+                        retcode, retmsg = SystemUtils.softlink(file_path, target_file)
                         logger.info(f"创建媒体文件软连接 {str(file_path)} 到 {target_file} {retcode} {retmsg}")
                     else:
                         if self._copy_files:
