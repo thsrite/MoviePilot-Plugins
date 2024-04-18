@@ -347,6 +347,10 @@ class CloudLinkMonitor(_PluginBase):
                     blurray_dir = event_path[:event_path.find("BDMV")]
                     file_path = Path(blurray_dir)
                     logger.info(f"{event_path} 是蓝光目录，更正文件路径为：{str(file_path)}")
+                    # 查询历史记录，已转移的不处理
+                    if self.transferhis.get_by_src(str(file_path)):
+                        logger.info(f"{file_path} 已整理过")
+                        return
 
                 # 元数据
                 file_meta = MetaInfoPath(file_path)
