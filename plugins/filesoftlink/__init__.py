@@ -17,7 +17,6 @@ from watchdog.observers.polling import PollingObserver
 from app import schemas
 from app.core.config import settings
 from app.core.event import eventmanager, Event
-from app.core.metainfo import MetaInfoPath
 from app.log import logger
 from app.plugins import _PluginBase
 from app.schemas.types import EventType, MediaType, SystemConfigKey
@@ -302,12 +301,6 @@ class FileSoftLink(_PluginBase):
                     blurray_dir = event_path[:event_path.find("BDMV")]
                     file_path = Path(blurray_dir)
                     logger.info(f"{event_path} 是蓝光目录，更正文件路径为：{str(file_path)}")
-
-                # 元数据
-                file_meta = MetaInfoPath(file_path)
-                if not file_meta.name:
-                    logger.error(f"{file_path.name} 无法识别有效信息")
-                    return
 
                 # 判断文件大小
                 if self._size and float(self._size) > 0 and file_path.stat().st_size < float(self._size) * 1024 ** 3:
