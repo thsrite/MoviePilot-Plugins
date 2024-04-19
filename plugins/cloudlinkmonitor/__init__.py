@@ -60,7 +60,7 @@ class CloudLinkMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
-    plugin_version = "1.7"
+    plugin_version = "1.8"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -399,7 +399,7 @@ class CloudLinkMonitor(_PluginBase):
                 # 获取集数据
                 if mediainfo.type == MediaType.TV:
                     episodes_info = self.tmdbchain.tmdb_episodes(tmdbid=mediainfo.tmdb_id,
-                                                                 season=file_meta.begin_season or 1)
+                                                                 season=1 if file_meta.begin_season is None else file_meta.begin_season)
                 else:
                     episodes_info = None
 
