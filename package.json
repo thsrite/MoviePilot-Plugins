@@ -203,7 +203,7 @@
       "CloudLinkMonitor": {
         "name": "云盘实时监控",
         "description": "监控云盘目录文件变化，自动转移链接。",
-        "version": "1.8",
+        "version": "1.9",
         "icon": "Linkease_A.png",
         "author": "thsrite",
         "level": 1,
