@@ -60,7 +60,7 @@ class CloudLinkMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
-    plugin_version = "1.8"
+    plugin_version = "1.9"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -873,7 +873,7 @@ class CloudLinkMonitor(_PluginBase):
                                             'model': 'monitor_dirs',
                                             'label': '监控目录',
                                             'rows': 5,
-                                            'placeholder': '每一行一个目录，支持以下几种配置方式，转移方式支持 move、copy、link、filesoftlink、rclone_copy、rclone_move：\n'
+                                            'placeholder': '每一行一个目录，支持以下几种配置方式，转移方式支持 move、copy、link、softlink、rclone_copy、rclone_move：\n'
                                                            '监控目录:转移目的目录\n'
                                                            '监控目录:转移目的目录$是否刮削（True/False）\n'
                                                            '监控目录:转移目的目录#转移方式\n'
