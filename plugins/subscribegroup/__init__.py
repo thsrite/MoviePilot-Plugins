@@ -13,7 +13,7 @@ class SubscribeGroup(_PluginBase):
     # 插件名称
     plugin_name = "订阅制作组填充"
     # 插件描述
-    plugin_desc = "订阅首次下载自动添加官组和站点到订阅信息，以保证订阅资源的统一性。"
+    plugin_desc = "电视剧订阅或搜索下载后自动添加官组和站点等信息到订阅，以保证后续订阅资源的统一性。"
     # 插件图标
     plugin_icon = "teamwork.png"
     # 插件版本
@@ -203,7 +203,7 @@ class SubscribeGroup(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '电视剧订阅未配置包含关键词和订阅站点时，订阅下载后，将下载种子的制作组和站点填充到订阅信息中，以保证订阅资源的统一性。'
+                                            'text': '电视剧订阅未配置包含关键词和订阅站点等配置时，订阅或搜索下载后，将下载种子的制作组和站点等信息填充到订阅信息中，以保证后续订阅资源的统一性。'
                                         }
                                     }
                                 ]
