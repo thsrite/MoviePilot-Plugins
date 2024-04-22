@@ -15,7 +15,7 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - [Strm文件模式转换 1.0](docs%2FStrmConvert.md)
 - 清理订阅缓存 1.0
 - 添加种子下载 1.0
-- 删除站点种子 1.1
+- 删除站点种子 1.2
 - 插件更新管理 1.6
 - 插件强制重装 1.4
 - 群辉Webhook通知 1.1
@@ -25,10 +25,12 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - [Emby观影报告 1.5](docs%2FEmbyReporter.md)
 - 演员订阅 1.5
 - [短剧刮削 3.2](docs%2FShortPlayMonitor.md)
-- 云盘实时链接 1.5
+- 云盘实时监控 1.8
 - 源文件恢复 1.2
 - [微信消息转发 1.5](docs%2FWeChatForward.md)
 - 订阅下载统计 1.5
 - [自定义命令 1.5](docs%2FCustomCommand.md)
 - docker自定义任务 1.2
+- 插件彻底卸载 1.0
+- 实时软连接 1.3
 

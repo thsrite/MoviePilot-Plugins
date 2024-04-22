@@ -65,11 +65,12 @@
       "RemoveTorrent": {
         "name": "删除站点种子",
         "description": "删除下载器中某站点种子。",
-        "version": "1.1",
+        "version": "1.2",
         "icon": "delete.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v1.2": "修复删除种子bug",
           "v1.1": "可选择删除有无辅种",
           "v1.0": "选择下载器，添加种子任务"
         }
@@ -200,13 +201,16 @@
         }
       },
       "CloudLinkMonitor": {
-        "name": "云盘实时链接",
-        "description": "监控云盘目录文件变化，自动转移链接（不刮削）。",
-        "version": "1.5",
+        "name": "云盘实时监控",
+        "description": "监控云盘目录文件变化，自动转移链接。",
+        "version": "1.9",
         "icon": "Linkease_A.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v1.8": "fix S00转移",
+          "v1.7": "fix 刮削",
+          "v1.6": "可配置是否刮削",
           "v1.5": "fix 消息推送",
           "v1.4": "fix 转移后路径",
           "v1.3": "修复bug",
@@ -243,8 +247,8 @@
           "v1.1": "自定义发送额外消息",
           "v1.0": "根据正则转发通知到其他WeChat应用"
         }
-    },
-    "SubscribeStatistic": {
+      },
+      "SubscribeStatistic": {
         "name": "订阅下载统计",
         "description": "统计指定时间内各站点订阅及下载情况。",
         "version": "1.5",
@@ -259,8 +263,8 @@
           "v1.1": "站点去重",
           "v1.0": "统计指定时间内各站点订阅及下载情况"
         }
-    },
-    "CustomCommand": {
+      },
+      "CustomCommand": {
         "name": "自定义命令",
         "description": "自定义执行周期执行命令并推送结果。",
         "version": "1.5",
@@ -275,8 +279,8 @@
           "v1.1": "打印命令日志",
           "v1.0": "自定义执行周期执行命令并推送结果"
         }
-    },
-    "DockerManager": {
+      },
+      "DockerManager": {
         "name": "docker自定义任务",
         "description": "管理宿主机docker，自定义容器定时任务。",
         "version": "1.2",
@@ -288,5 +292,27 @@
           "v1.1": "修复多个任务立即运行一次",
           "v1.0": "init"
         }
-    }
+      },
+      "PluginUnInstall": {
+        "name": "插件彻底卸载",
+        "description": "删除数据库中已安装插件记录、清理插件文件。",
+        "version": "1.0",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/uninstall.png",
+        "author": "thsrite",
+        "level": 1,
+        "history": {
+          "v1.0": "init"
+        }
+      },
+      "FileSoftLink": {
+        "name": "实时软连接",
+        "description": "监控目录文件变化，媒体文件软连接，其他文件可选复制。",
+        "version": "1.3",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png",
+        "author": "thsrite",
+          "level": 1,
+          "history": {
+            "v1.3": "异步启动"
+          }
+      }
 }

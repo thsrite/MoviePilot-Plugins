@@ -54,13 +54,13 @@ class FileMonitorHandler(FileSystemEventHandler):
 
 class CloudLinkMonitor(_PluginBase):
     # 插件名称
-    plugin_name = "云盘实时链接"
+    plugin_name = "云盘实时监控"
     # 插件描述
-    plugin_desc = "监控云盘目录文件变化，自动转移链接（不刮削不生成目的二级目录）。"
+    plugin_desc = "监控云盘目录文件变化，自动转移链接。"
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
-    plugin_version = "1.5"
+    plugin_version = "1.9"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -109,6 +109,7 @@ class CloudLinkMonitor(_PluginBase):
         # 清空配置
         self._dirconf = {}
         self._transferconf = {}
+        self._scraperconf = {}
 
         # 读取配置
         if config:
@@ -141,6 +142,12 @@ class CloudLinkMonitor(_PluginBase):
                 if not mon_path:
                     continue
 
+                # 是否刮削
+                _scraper_type = False
+                if mon_path.count("$") == 1:
+                    _scraper_type = bool(mon_path.split("$")[1])
+                    mon_path = mon_path.split("$")[0]
+
                 # 自定义转移方式
                 _transfer_type = self._transfer_type
                 if mon_path.count("#") == 1:
@@ -165,6 +172,9 @@ class CloudLinkMonitor(_PluginBase):
                     self._dirconf[mon_path] = target_path
                 else:
                     self._dirconf[mon_path] = None
+
+                # 是否刮削
+                self._scraperconf[mon_path] = _scraper_type
 
                 # 转移方式
                 self._transferconf[mon_path] = _transfer_type
@@ -209,8 +219,9 @@ class CloudLinkMonitor(_PluginBase):
 
             # 运行一次定时服务
             if self._onlyonce:
-                logger.info("目录监控服务启动，立即运行一次")
-                self._scheduler.add_job(func=self.sync_all, trigger='date',
+                logger.info("云盘实时监控服务启动，立即运行一次")
+                self._scheduler.add_job(name="云盘实时监控",
+                                        func=self.sync_all, trigger='date',
                                         run_date=datetime.datetime.now(
                                             tz=pytz.timezone(settings.TZ)) + datetime.timedelta(seconds=3)
                                         )
@@ -248,7 +259,7 @@ class CloudLinkMonitor(_PluginBase):
         """
         if event:
             event_data = event.event_data
-            if not event_data or event_data.get("action") != "directory_sync":
+            if not event_data or event_data.get("action") != "cloud_link_sync":
                 return
             self.post_message(channel=event.event_data.get("channel"),
                               title="开始同步监控目录 ...",
@@ -331,18 +342,15 @@ class CloudLinkMonitor(_PluginBase):
                     return
 
                 # 判断是不是蓝光目录
-                bluray_flag = False
                 if re.search(r"BDMV[/\\]STREAM", event_path, re.IGNORECASE):
-                    bluray_flag = True
                     # 截取BDMV前面的路径
                     blurray_dir = event_path[:event_path.find("BDMV")]
                     file_path = Path(blurray_dir)
                     logger.info(f"{event_path} 是蓝光目录，更正文件路径为：{str(file_path)}")
-
-                # 查询历史记录，已转移的不处理
-                if self.transferhis.get_by_src(str(file_path)):
-                    logger.info(f"{file_path} 已整理过")
-                    return
+                    # 查询历史记录，已转移的不处理
+                    if self.transferhis.get_by_src(str(file_path)):
+                        logger.info(f"{file_path} 已整理过")
+                        return
 
                 # 元数据
                 file_meta = MetaInfoPath(file_path)
@@ -359,6 +367,8 @@ class CloudLinkMonitor(_PluginBase):
                 target: Path = self._dirconf.get(mon_path)
                 # 查询转移方式
                 transfer_type = self._transferconf.get(mon_path)
+                # 是否刮削
+                scraper_type = self._scraperconf.get(mon_path)
 
                 # 识别媒体信息
                 mediainfo: MediaInfo = self.chain.recognize_media(meta=file_meta)
@@ -389,12 +399,13 @@ class CloudLinkMonitor(_PluginBase):
                 # 获取集数据
                 if mediainfo.type == MediaType.TV:
                     episodes_info = self.tmdbchain.tmdb_episodes(tmdbid=mediainfo.tmdb_id,
-                                                                 season=file_meta.begin_season or 1)
+                                                                 season=1 if file_meta.begin_season is None else file_meta.begin_season)
                 else:
                     episodes_info = None
 
                 # 拼装媒体库一、二级子目录
                 target = self.__get_dest_dir(mediainfo=mediainfo, target_dir=target)
+
                 # 转移
                 transferinfo: TransferInfo = self.filetransfer.transfer_media(in_path=file_path,
                                                                               in_meta=file_meta,
@@ -435,6 +446,16 @@ class CloudLinkMonitor(_PluginBase):
                     transferinfo=transferinfo
                 )
 
+                # 刮削
+                if scraper_type:
+                    # 更新媒体图片
+                    self.chain.obtain_images(mediainfo=mediainfo)
+
+                    # 刮削单个文件
+                    if settings.SCRAP_METADATA:
+                        self.chain.scrape_metadata(path=transferinfo.target_path,
+                                                   mediainfo=mediainfo,
+                                                   transfer_type=transfer_type)
                 """
                 {
                     "title_year season": {
@@ -628,22 +649,22 @@ class CloudLinkMonitor(_PluginBase):
         :return: 命令关键字、事件、描述、附带数据
         """
         return [{
-            "cmd": "/directory_sync",
+            "cmd": "/cloud_link_sync",
             "event": EventType.PluginAction,
-            "desc": "目录监控同步",
-            "category": "管理",
+            "desc": "云盘实时监控同步",
+            "category": "",
             "data": {
-                "action": "directory_sync"
+                "action": "cloud_link_sync"
             }
         }]
 
     def get_api(self) -> List[Dict[str, Any]]:
         return [{
-            "path": "/directory_sync",
+            "path": "/cloud_link_sync",
             "endpoint": self.sync,
             "methods": ["GET"],
-            "summary": "目录监控同步",
-            "description": "目录监控同步",
+            "summary": "云盘实时监控同步",
+            "description": "云盘实时监控同步",
         }]
 
     def get_service(self) -> List[Dict[str, Any]]:
@@ -659,8 +680,8 @@ class CloudLinkMonitor(_PluginBase):
         """
         if self._enabled and self._cron:
             return [{
-                "id": "DirMonitor",
-                "name": "目录监控全量同步服务",
+                "id": "CloudLinkMonitor",
+                "name": "云盘实时监控全量同步服务",
                 "trigger": CronTrigger.from_crontab(self._cron),
                 "func": self.sync_all,
                 "kwargs": {}
@@ -771,7 +792,7 @@ class CloudLinkMonitor(_PluginBase):
                                                 {'title': '移动', 'value': 'move'},
                                                 {'title': '复制', 'value': 'copy'},
                                                 {'title': '硬链接', 'value': 'link'},
-                                                {'title': '软链接', 'value': 'softlink'},
+                                                {'title': '软链接', 'value': 'filesoftlink'},
                                                 {'title': 'Rclone复制', 'value': 'rclone_copy'},
                                                 {'title': 'Rclone移动', 'value': 'rclone_move'}
                                             ]
@@ -854,7 +875,9 @@ class CloudLinkMonitor(_PluginBase):
                                             'rows': 5,
                                             'placeholder': '每一行一个目录，支持以下几种配置方式，转移方式支持 move、copy、link、softlink、rclone_copy、rclone_move：\n'
                                                            '监控目录:转移目的目录\n'
-                                                           '监控目录:转移目的目录#转移方式'
+                                                           '监控目录:转移目的目录$是否刮削（True/False）\n'
+                                                           '监控目录:转移目的目录#转移方式\n'
+                                                           '监控目录:转移目的目录#转移方式$是否刮削（True/False）\n'
                                         }
                                     }
                                 ]

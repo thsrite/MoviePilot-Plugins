@@ -13,7 +13,7 @@ class RemoveTorrent(_PluginBase):
     # 插件图标
     plugin_icon = "delete.png"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -27,10 +27,13 @@ class RemoveTorrent(_PluginBase):
 
     # 私有属性
     _downloader = None
+    _onlyonce = None
     _delete_type = False
     _delete_torrent = False
     _delete_file = False
     _trackers = None
+    qb = None
+    tr = None
 
     def init_plugin(self, config: dict = None):
         self.qb = Qbittorrent()
@@ -38,23 +41,26 @@ class RemoveTorrent(_PluginBase):
 
         if config:
             self._downloader = config.get("downloader")
+            self._onlyonce = config.get("onlyonce")
             self._delete_type = config.get("delete_type")
             self._delete_torrent = config.get("delete_torrent")
             self._delete_file = config.get("delete_file")
             self._trackers = config.get("trackers")
 
-            if self._trackers:
-                for tracker in str(self._trackers).split("\n"):
-                    logger.info(f"开始处理站点tracker {tracker}")
-                    self.__check_feed(tracker)
+            if self._trackers and self._onlyonce:
+                self.update_config({
+                    "downloader": self._downloader,
+                    "delete_type": self._delete_type,
+                    "delete_torrent": self._delete_torrent,
+                    "delete_file": self._delete_file,
+                    "trackers": self._trackers,
+                    "onlyonce": False
+                })
 
-            self.update_config({
-                "downloader": self._downloader,
-                "delete_type": self._delete_type,
-                "delete_torrent": self._delete_torrent,
-                "delete_file": self._delete_file,
-                "trackers": ""
-            })
+                for tracker in str(self._trackers).split("\n"):
+                    logger.info(f"下载器 {self._downloader} 开始处理站点tracker {tracker}")
+                    self.__check_feed(tracker)
+                    logger.info(f"下载器 {self._downloader} 处理站点tracker {tracker} 完成")
 
     def __check_feed(self, tracker: str):
         """
@@ -66,6 +72,7 @@ class RemoveTorrent(_PluginBase):
         if not torrents:
             logger.info(f"下载器 {self._downloader} 未获取到已完成种子")
             return
+        logger.info(f"下载器 {self._downloader} 获取到已完成种子 {len(torrents)} 个")
 
         all_torrents = []
         tracker_torrents = []
@@ -76,22 +83,25 @@ class RemoveTorrent(_PluginBase):
             torrent_name = self.__get_torrent_name(torrent, self._downloader)
             torrent_key = "%s-%s" % (torrent_name, torrent_size)
             all_torrents.append(torrent_key)
-            key_torrents[torrent_key] = torrent
 
             torrent_trackers = self.__get_torrent_trackers(torrent, self._downloader)
             if str(self._downloader) == "qb":
                 # 命中tracker的种子
                 if str(tracker) in torrent_trackers:
                     tracker_torrents.append(torrent_key)
+                    key_torrents[torrent_key] = torrent
             else:
                 for torrent_tracker in torrent_trackers:
                     # 命中tracker的种子
                     if str(tracker) in torrent_tracker.get('announce'):
                         tracker_torrents.append(torrent_key)
+                        key_torrents[torrent_key] = torrent
 
         if not tracker_torrents:
             logger.error(f"下载器 {self._downloader} 未获取到命中tracker {tracker} 的种子")
             return
+
+        logger.info(f"下载器 {self._downloader} 获取到命中tracker {tracker} 已完成种子 {len(tracker_torrents)} 个")
 
         # 查询tracker种子是否有其他辅种
         for tracker_torrent in tracker_torrents:
@@ -198,6 +208,27 @@ class RemoveTorrent(_PluginBase):
             {
                 'component': 'VForm',
                 'content': [
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'onlyonce',
+                                            'label': '立即运行一次',
+                                        }
+                                    }
+                                ]
+                            },
+                        ]
+                    },
                     {
                         'component': 'VRow',
                         'content': [
@@ -380,6 +411,7 @@ class RemoveTorrent(_PluginBase):
             "delete_type": True,
             "delete_torrent": False,
             "delete_file": False,
+            "onlyonce": False,
             "trackers": ""
         }
 

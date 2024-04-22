@@ -784,7 +784,7 @@ class DirMonitor(_PluginBase):
                                                 {'title': '移动', 'value': 'move'},
                                                 {'title': '复制', 'value': 'copy'},
                                                 {'title': '硬链接', 'value': 'link'},
-                                                {'title': '软链接', 'value': 'softlink'},
+                                                {'title': '软链接', 'value': 'filesoftlink'},
                                                 {'title': 'Rclone复制', 'value': 'rclone_copy'},
                                                 {'title': 'Rclone移动', 'value': 'rclone_move'}
                                             ]
@@ -847,7 +847,7 @@ class DirMonitor(_PluginBase):
                                             'model': 'monitor_dirs',
                                             'label': '监控目录',
                                             'rows': 5,
-                                            'placeholder': '每一行一个目录，支持以下几种配置方式，转移方式支持 move、copy、link、softlink、rclone_copy、rclone_move：\n'
+                                            'placeholder': '每一行一个目录，支持以下几种配置方式，转移方式支持 move、copy、link、filesoftlink、rclone_copy、rclone_move：\n'
                                                            '监控目录\n'
                                                            '监控目录#转移方式\n'
                                                            '监控目录:转移目的目录\n'
