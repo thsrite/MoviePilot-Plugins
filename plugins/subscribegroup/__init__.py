@@ -103,7 +103,8 @@ class SubscribeGroup(_PluginBase):
                 if subscribe.type != '电视剧':
                     logger.warning(f"订阅记录:{subscribe.name} 不是电视剧，不进行官组填充")
                     return
-                if subscribe.include or len(subscribe.sites) > 0:
+                sites = json.loads(subscribe.sites) or []
+                if subscribe.include or len(sites) > 0:
                     logger.warning(f"订阅记录:{subscribe.name} 已有官组或站点信息，不进行官组填充")
                     return
 
