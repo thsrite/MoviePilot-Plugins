@@ -37,7 +37,7 @@ class SiteUnreadMsg(_PluginBase):
     # 插件图标
     plugin_icon = "Synomail_A.png"
     # 插件版本
-    plugin_version = "1.5"
+    plugin_version = "1.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -526,7 +526,6 @@ class SiteUnreadMsg(_PluginBase):
         site_url = site_info.get('url')
         if not site_url:
             return None
-        unread_msg_notify = True
         try:
             site_user_info: ISiteUserInfo = self.build(site_info=site_info)
             if site_user_info:
@@ -536,22 +535,23 @@ class SiteUnreadMsg(_PluginBase):
                 logger.debug(f"站点 {site_name} 解析完成")
 
                 # 获取不到数据时，仅返回错误信息，不做历史数据更新
-                if site_user_info.err_msg:
+                if site_user_info.err_msg and site_user_info.message_unread <= 0:
+                    logger.error(f"站点 {site_name} 解析失败：{site_user_info.err_msg} {site_user_info.message_unread}")
                     return None
 
                 # 发送通知，存在未读消息
-                self.__notify_unread_msg(site_name, site_user_info, unread_msg_notify)
+                self.__notify_unread_msg(site_name, site_user_info)
         except Exception as e:
             logger.error(f"站点 {site_name} 获取流量数据失败：{str(e)}")
 
-    def __notify_unread_msg(self, site_name: str, site_user_info: ISiteUserInfo, unread_msg_notify: bool):
+    def __notify_unread_msg(self, site_name: str, site_user_info: ISiteUserInfo):
         if site_user_info.message_unread <= 0:
-            return
-        if not unread_msg_notify:
+            logger.debug(f"站点 {site_name} 没有新消息")
             return
 
         # 解析出内容，则发送内容
         if len(site_user_info.message_unread_contents) > 0:
+            logger.debug(f"开始解析站点 {site_name} 未读消息 {site_user_info.message_unread_contents}")
             for head, date, content in site_user_info.message_unread_contents:
                 msg_title = f"【站点 {site_user_info.site_name} 消息】"
                 msg_text = f"时间：{date}\n标题：{head}\n内容：\n{content}"
