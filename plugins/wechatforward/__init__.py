@@ -22,7 +22,7 @@ class WeChatForward(_PluginBase):
     # 插件图标
     plugin_icon = "Wechat_A.png"
     # 插件版本
-    plugin_version = "1.5"
+    plugin_version = "1.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -370,13 +370,14 @@ class WeChatForward(_PluginBase):
                                     f"额外消息 {self.__parse_tv_title(title)} 十分钟内重复发送，跳过。")
                                 continue
                         # 判断当前用户是否订阅，是否订阅后续消息
-                        subscribes = SubscribeOper().list(state="R")
+                        subscribes = SubscribeOper().list_by_username(username=str(user_id),
+                                                                      state="R",
+                                                                      mtype=MediaType.TV.value)
                         is_subscribe = False
                         for subscribe in subscribes:
-                            if subscribe.type == MediaType.TV.value and str(subscribe.username) == str(user_id):
-                                # 匹配订阅title
-                                if f"{subscribe.name} ({subscribe.year})" in title:
-                                    is_subscribe = True
+                            # 匹配订阅title
+                            if f"{subscribe.name} ({subscribe.year})" in title:
+                                is_subscribe = True
                         # 电视剧之前该用户订阅下载过，不再发送额外消息
                         if is_subscribe:
                             logger.warn(
@@ -605,7 +606,8 @@ class WeChatForward(_PluginBase):
                                                            retry=retry)
                     return False
             elif res is not None:
-                logger.error(f"转发 配置{index} 消息 {title} {req_json} 失败，错误码：{res.status_code}，错误原因：{res.reason}")
+                logger.error(
+                    f"转发 配置{index} 消息 {title} {req_json} 失败，错误码：{res.status_code}，错误原因：{res.reason}")
                 return False
             else:
                 logger.error(f"转发 配置{index} 消息 {title} {req_json} 失败，未获取到返回信息")

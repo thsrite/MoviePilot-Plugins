@@ -237,11 +237,12 @@
       "WeChatForward": {
         "name": "微信消息转发",
         "description": "根据正则转发通知到其他WeChat应用。",
-        "version": "1.5",
+        "version": "1.6",
         "icon": "Wechat_A.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v1.6": "修改获取指定用户订阅列表方法",
           "v1.5": "丰富日志",
           "v1.4": "特定消息强制指定userid",
           "v1.3": "防重复发送额外消息",
@@ -312,9 +313,20 @@
         "version": "1.3",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png",
         "author": "thsrite",
-          "level": 1,
-          "history": {
-            "v1.3": "异步启动"
-          }
+        "level": 1,
+        "history": {
+          "v1.3": "异步启动"
+        }
+      },
+      "SubscribeGroup": {
+        "name": "订阅制作组填充",
+        "description": "订阅首次下载自动添加官组和站点到订阅信息，以保证订阅资源的统一性。",
+        "version": "1.0",
+        "icon": "teamwork.png",
+        "author": "thsrite",
+        "level": 2,
+        "history": {
+          "v1.0": "init"
+        }
       }
 }
