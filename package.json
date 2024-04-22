@@ -320,7 +320,7 @@
       },
       "SubscribeGroup": {
         "name": "订阅制作组填充",
-        "description": "订阅首次下载自动添加官组和站点到订阅信息，以保证订阅资源的统一性。",
+        "description": "电视剧订阅或搜索下载后自动添加官组和站点等信息到订阅，以保证后续订阅资源的统一性。",
         "version": "1.2",
         "icon": "teamwork.png",
         "author": "thsrite",
