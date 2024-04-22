@@ -1,3 +1,5 @@
+import json
+
 from app.db.downloadhistory_oper import DownloadHistoryOper
 from app.db.subscribe_oper import SubscribeOper
 from app.plugins import _PluginBase
@@ -15,7 +17,7 @@ class SubscribeGroup(_PluginBase):
     # 插件图标
     plugin_icon = "teamwork.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -99,10 +101,10 @@ class SubscribeGroup(_PluginBase):
                 return
             for subscribe in subscribes:
                 if subscribe.type != '电视剧':
-                    logger.warning(f"订阅记录:{subscribe.title} 不是电视剧，不进行官组填充")
+                    logger.warning(f"订阅记录:{subscribe.name} 不是电视剧，不进行官组填充")
                     return
                 if subscribe.include or subscribe.sites:
-                    logger.warning(f"订阅记录:{subscribe.title} 已有官组或站点信息，不进行官组填充")
+                    logger.warning(f"订阅记录:{subscribe.name} 已有官组或站点信息，不进行官组填充")
                     return
 
                 # 开始填充官组和站点
@@ -111,25 +113,25 @@ class SubscribeGroup(_PluginBase):
                 _meta = context.meta_info
 
                 # 官组
+                resource_team = None
                 if _meta:
                     resource_team = _meta.resource_team
-                    if resource_team:
-                        subscribe.include = resource_team
 
                 # 站点
+                sites = None
                 if _torrent:
                     site_id = _torrent.site
                     if site_id:
-                        subscribe.sites = [site_id]
+                        sites = json.dumps([site_id])
 
                 # 更新订阅记录
-                if subscribe.include or subscribe.sites:
+                if resource_team or sites:
                     self._subscribeoper.update(subscribe.id, {
-                        'include': subscribe.include,
-                        'sites': subscribe.sites
+                        'include': resource_team,
+                        'sites':  sites
                     })
                     logger.info(
-                        f"订阅记录:{subscribe.title} 填充官组 {subscribe.include} 和站点 {subscribe.sites} 成功")
+                        f"订阅记录:{subscribe.name} 填充官组 {resource_team} 和站点 {sites} 成功")
 
     def get_state(self) -> bool:
         return self._enabled
