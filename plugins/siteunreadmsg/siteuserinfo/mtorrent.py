@@ -102,7 +102,7 @@ class MTorrentSiteUserInfo(ISiteUserInfo):
         self.download = int(user_info.get("memberCount", {}).get("downloaded") or '0')
         self.ratio = user_info.get("memberCount", {}).get("shareRate") or 0
         self.bonus = user_info.get("memberCount", {}).get("bonus") or 0
-        self.message_unread = 1
+        self.message_unread = 0
 
         self._torrent_seeding_params = {
             "pageNumber": 1,
