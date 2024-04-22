@@ -175,6 +175,27 @@ class SynologyNotify(_PluginBase):
                                 ]
                             }
                         ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '如安装完插件后，群晖发送webhook提示404，重启MoviePilot即可。'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
                     }
                 ]
             }
