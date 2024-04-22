@@ -321,11 +321,12 @@
       "SubscribeGroup": {
         "name": "订阅制作组填充",
         "description": "订阅首次下载自动添加官组和站点到订阅信息，以保证订阅资源的统一性。",
-        "version": "1.1",
+        "version": "1.2",
         "icon": "teamwork.png",
         "author": "thsrite",
         "level": 2,
         "history": {
+          "v1.2": "修复订阅已存在包含关键词和订阅站点",
           "v1.1": "fix bug",
           "v1.0": "init"
         }
