@@ -34,6 +34,7 @@ class SubscribeGroup(_PluginBase):
 
     # 私有属性
     _enabled: bool = False
+    _category: bool = False
     _clear = False
     _clear_handle = False
     _update_details = []
@@ -50,6 +51,7 @@ class SubscribeGroup(_PluginBase):
 
         if config:
             self._enabled = config.get("enabled")
+            self._category = config.get("category")
             self._clear = config.get("clear")
             self._clear_handle = config.get("clear_handle")
             self._update_details = config.get("update_details") or []
@@ -119,6 +121,7 @@ class SubscribeGroup(_PluginBase):
     def __update_config(self):
         self.update_config({
             "enabled": self._enabled,
+            "category": self._category,
             "clear": self._clear,
             "clear_handle": self._clear_handle,
             "update_details": self._update_details,
@@ -130,8 +133,8 @@ class SubscribeGroup(_PluginBase):
         """
         添加订阅根据二级分类填充订阅
         """
-        if not self._enabled:
-            logger.error("插件未开启")
+        if not self._category:
+            logger.error("二级分类自定义填充未开启")
             return
 
         if len(self._subscribe_confs.keys()) == 0:
@@ -197,7 +200,7 @@ class SubscribeGroup(_PluginBase):
         添加下载填充订阅制作组等信息
         """
         if not self._enabled:
-            logger.error("插件未开启")
+            logger.error("种子下载自定义填充未开启")
             return
 
         if len(self._update_details) == 0:
@@ -346,7 +349,7 @@ class SubscribeGroup(_PluginBase):
         return resource_effect
 
     def get_state(self) -> bool:
-        return self._enabled
+        return self._enabled or self._category
 
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
@@ -377,7 +380,23 @@ class SubscribeGroup(_PluginBase):
                                         'component': 'VSwitch',
                                         'props': {
                                             'model': 'enabled',
-                                            'label': '启用插件',
+                                            'label': '种子下载自定义填充',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'category',
+                                            'label': '二级分类自定义填充',
                                         }
                                     }
                                 ]
@@ -431,7 +450,7 @@ class SubscribeGroup(_PluginBase):
                                             'multiple': True,
                                             'chips': True,
                                             'model': 'update_details',
-                                            'label': '填充内容',
+                                            'label': '种子下载填充内容',
                                             'items': [
                                                 {
                                                     "title": "资源质量",
@@ -493,7 +512,7 @@ class SubscribeGroup(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '电视剧订阅未配置包含关键词和订阅站点等配置时，订阅或搜索下载后，'
+                                            'text': '种子下载自定义填充:电视剧订阅未配置包含关键词和订阅站点等配置时，订阅或搜索下载后，'
                                                     '将下载种子的制作组和站点等信息填充到订阅信息中，以保证后续订阅资源的统一性。'
                                                     '（适用于订阅新出的电视剧。）'
                                         }
@@ -516,7 +535,7 @@ class SubscribeGroup(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '二级分类自定义填充用于根据二级分类自定义订阅规则，具体属性明细请查看电视剧订阅设置页面。'
+                                            'text': '二级分类自定义填充:用于根据二级分类自定义订阅规则，具体属性明细请查看电视剧订阅设置页面。'
                                         }
                                     }
                                 ]
@@ -551,6 +570,7 @@ class SubscribeGroup(_PluginBase):
             }
         ], {
             "enabled": False,
+            "category": False,
             "clear": False,
             "clear_handle": False,
             "update_details": [],
