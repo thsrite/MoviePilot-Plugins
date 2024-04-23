@@ -83,7 +83,7 @@ class PluginReInstall(_PluginBase):
                     local_plugin = local_plugins.get(plugin_id)
                     if plugin_id in self._plugin_ids:
                         logger.info(
-                            f"开始重载插件 {local_plugin.get('plugin_name')} {local_plugin.get('plugin_version')}")
+                            f"开始重载插件 {local_plugin.get('plugin_name')} v{local_plugin.get('plugin_version')}")
 
                         # 开始安装线上插件
                         state, msg = self.install(pid=plugin_id,
@@ -91,11 +91,11 @@ class PluginReInstall(_PluginBase):
                         # 安装失败
                         if not state:
                             logger.error(
-                                f"插件 {local_plugin.get('plugin_name')} 重装失败，当前版本 {local_plugin.get('plugin_version')}")
+                                f"插件 {local_plugin.get('plugin_name')} 重装失败，当前版本 v{local_plugin.get('plugin_version')}")
                             continue
 
                         logger.info(
-                            f"插件 {local_plugin.get('plugin_name')} 重装成功，当前版本 {local_plugin.get('plugin_version')}")
+                            f"插件 {local_plugin.get('plugin_name')} 重装成功，当前版本 v{local_plugin.get('plugin_version')}")
 
                         # 加载插件到内存
                         PluginManager().reload_plugin(plugin_id)
