@@ -319,13 +319,14 @@
         }
       },
       "SubscribeGroup": {
-        "name": "订阅制作组填充",
+        "name": "订阅规则自动填充",
         "description": "电视剧订阅或搜索下载后自动添加官组和站点等信息到订阅，以保证后续订阅资源的统一性。",
-        "version": "1.2",
+        "version": "1.3",
         "icon": "teamwork.png",
         "author": "thsrite",
         "level": 2,
         "history": {
+          "v1.3": "增加质量、分辨率、特效信息填充",
           "v1.2": "修复订阅已存在包含关键词和订阅站点",
           "v1.1": "fix bug",
           "v1.0": "init"

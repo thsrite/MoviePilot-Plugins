@@ -1,4 +1,5 @@
 import json
+import re
 
 from app.db.downloadhistory_oper import DownloadHistoryOper
 from app.db.subscribe_oper import SubscribeOper
@@ -11,13 +12,13 @@ from app.schemas.types import EventType
 
 class SubscribeGroup(_PluginBase):
     # 插件名称
-    plugin_name = "订阅制作组填充"
+    plugin_name = "订阅规则自动填充"
     # 插件描述
     plugin_desc = "电视剧订阅或搜索下载后自动添加官组和站点等信息到订阅，以保证后续订阅资源的统一性。"
     # 插件图标
     plugin_icon = "teamwork.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -32,6 +33,7 @@ class SubscribeGroup(_PluginBase):
     # 私有属性
     _enabled: bool = False
     _clear = False
+    _update_details = []
     _subscribeoper = None
     _downloadhistoryoper = None
 
@@ -42,6 +44,7 @@ class SubscribeGroup(_PluginBase):
         if config:
             self._enabled = config.get("enabled")
             self._clear = config.get("clear")
+            self._update_details = config.get("update_details")
 
         # 清理已处理历史
         if self._clear:
@@ -55,15 +58,20 @@ class SubscribeGroup(_PluginBase):
         self.update_config({
             "enabled": self._enabled,
             "clear": self._clear,
+            "update_details": self._update_details,
         })
 
     @eventmanager.register(EventType.DownloadAdded)
-    def download_added(self, event: Event = None):
+    def subscribe_update(self, event: Event = None):
         """
-        下载通知
+        填充订阅
         """
         if not self._enabled:
             logger.error("插件未开启")
+            return
+
+        if not self._update_details:
+            logger.error("插件未开启更新填充内容")
             return
 
         history: List[str] = self.get_data('history') or []
@@ -103,36 +111,85 @@ class SubscribeGroup(_PluginBase):
                 if subscribe.type != '电视剧':
                     logger.warning(f"订阅记录:{subscribe.name} 不是电视剧，不进行官组填充")
                     return
-                sites = json.loads(subscribe.sites) or []
-                if subscribe.include or len(sites) > 0:
-                    logger.warning(f"订阅记录:{subscribe.name} 已有官组或站点信息，不进行官组填充")
-                    return
-
                 # 开始填充官组和站点
                 context = event_data.get("context")
                 _torrent = context.torrent_info
                 _meta = context.meta_info
 
-                # 官组
-                resource_team = None
-                if _meta:
-                    resource_team = _meta.resource_team
+                # 分辨率
+                resource_pix = None
+                if "resource_pix" in self._update_details and not subscribe.resolution:
+                    resource_pix = _meta.resource_pix if _meta else None
+                    if resource_pix:
+                        # 识别1080或者4k或720
+                        if re.match(r"1080[pi]|x1080", resource_pix):
+                            resource_pix = "1080[pi]|x1080"
+                        if re.match(r"4K|2160p|x2160", resource_pix):
+                            resource_pix = "4K|2160p|x2160"
+                        if re.match(r"720[pi]|x720", resource_pix):
+                            resource_pix = "720[pi]|x720"
 
-                # 站点
+                # 资源类型
+                resource_type = None
+                if "resource_type" in self._update_details and not subscribe.quality:
+                    resource_type = _meta.resource_type if _meta else None
+                    if resource_type:
+                        if re.match(r"Blu-?Ray.+VC-?1|Blu-?Ray.+AVC|UHD.+blu-?ray.+HEVC|MiniBD", resource_type):
+                            resource_type = "Blu-?Ray.+VC-?1|Blu-?Ray.+AVC|UHD.+blu-?ray.+HEVC|MiniBD"
+                        if re.match(r"Remux", resource_type):
+                            resource_type = "Remux"
+                        if re.match(r"Blu-?Ray", resource_type):
+                            resource_type = "Blu-?Ray"
+                        if re.match(r"UHD|UltraHD", resource_type):
+                            resource_type = "UHD|UltraHD"
+                        if re.match(r"WEB-?DL|WEB-?RIP", resource_type):
+                            resource_type = "WEB-?DL|WEB-?RIP"
+                        if re.match(r"HDTV", resource_type):
+                            resource_type = "HDTV"
+                        if re.match(r"[Hx].?265|HEVC", resource_type):
+                            resource_type = "[Hx].?265|HEVC"
+                        if re.match(r"[Hx].?264|AVC", resource_type):
+                            resource_type = "[Hx].?264|AVC"
+
+                # 特效
+                resource_effect = None
+                if "resource_effect" in self._update_details and not subscribe.effect:
+                    resource_effect = _meta.resource_effect if _meta else None
+                    if resource_effect:
+                        if re.match(r"Dolby[\\s.]+Vision|DOVI|[\\s.]+DV[\\s.]+", resource_effect):
+                            resource_effect = "Dolby[\\s.]+Vision|DOVI|[\\s.]+DV[\\s.]+"
+                        if re.match(r"Dolby[\\s.]*\\+?Atmos|Atmos", resource_effect):
+                            resource_effect = "Dolby[\\s.]*\\+?Atmos|Atmos"
+                        if re.match(r"[\\s.]+HDR[\\s.]+|HDR10|HDR10\\+", resource_effect):
+                            resource_effect = "[\\s.]+HDR[\\s.]+|HDR10|HDR10\\+"
+                        if re.match(r"[\\s.]+SDR[\\s.]+", resource_effect):
+                            resource_effect = "[\\s.]+SDR[\\s.]+"
+
+                resource_team = None
                 sites = None
-                if _torrent:
-                    site_id = _torrent.site
-                    if site_id:
-                        sites = json.dumps([site_id])
+                if "group" in self._update_details and not subscribe.include and not subscribe.sites:
+                    # 官组
+                    resource_team = _meta.resource_team if _meta else None
+                    # 站点
+                    sites = json.dumps([_torrent.site]) if _torrent and _torrent.site else None
 
                 # 更新订阅记录
-                if resource_team or sites:
+                if resource_pix or resource_type or resource_effect or resource_team or sites:
                     self._subscribeoper.update(subscribe.id, {
                         'include': resource_team,
-                        'sites':  sites
+                        'sites': sites,
+                        'quality': resource_type,
+                        'resolution': resource_pix,
+                        'effect': resource_effect,
                     })
-                    logger.info(
-                        f"订阅记录:{subscribe.name} 填充官组 {resource_team} 和站点 {sites} 成功")
+                    logger.info(f"订阅记录:{subscribe.name} 填充成功\n"
+                                f"官组 {resource_team} \n"
+                                f"站点 {sites} \n"
+                                f"分辨率 {resource_pix} \n"
+                                f"质量 {resource_type} \n"
+                                f"特效 {resource_effect}")
+                else:
+                    logger.warning(f"订阅记录:{subscribe.name} 已配置相关参数，无需自动填充")
 
     def get_state(self) -> bool:
         return self._enabled
@@ -196,6 +253,47 @@ class SubscribeGroup(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'multiple': True,
+                                            'chips': True,
+                                            'model': 'update_details',
+                                            'label': '填充内容',
+                                            'items': [
+                                                {
+                                                    "title": "资源质量",
+                                                    "vale": "resource_type"
+                                                },
+                                                {
+                                                    "title": "分辨率",
+                                                    "vale": "resource_pix"
+                                                },
+                                                {
+                                                    "title": "特效",
+                                                    "vale": "resource_effect"
+                                                },
+                                                {
+                                                    "title": "制作组",
+                                                    "vale": "group"
+                                                }
+                                            ]
+                                        }
+                                    }
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
                                 },
                                 'content': [
                                     {
@@ -215,6 +313,7 @@ class SubscribeGroup(_PluginBase):
         ], {
             "enabled": False,
             "clear": False,
+            "update_details": []
         }
 
     def get_page(self) -> List[dict]:
