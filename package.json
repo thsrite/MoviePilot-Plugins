@@ -97,11 +97,12 @@
       "PluginReInstall": {
         "name": "插件强制重装",
         "description": "卸载当前插件，强制重装。",
-        "version": "1.4",
+        "version": "1.5",
         "icon": "refresh.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v1.5": "支持插件热重载",
           "v1.4": "支持代理地址",
           "v1.3": "插件重载",
           "v1.2": "支持指定插件仓库地址",

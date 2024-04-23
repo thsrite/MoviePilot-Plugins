@@ -24,7 +24,7 @@ class PluginReInstall(_PluginBase):
     # 插件图标
     plugin_icon = "refresh.png"
     # 插件版本
-    plugin_version = "1.4"
+    plugin_version = "1.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -37,6 +37,7 @@ class PluginReInstall(_PluginBase):
     auth_level = 1
 
     # 私有属性
+    _reload = False
     _plugin_ids = []
     _plugin_url = []
     _proxy_url = ""
@@ -44,54 +45,71 @@ class PluginReInstall(_PluginBase):
 
     def init_plugin(self, config: dict = None):
         if config:
+            self._reload = config.get("reload")
             self._plugin_ids = config.get("plugin_ids") or []
             if not self._plugin_ids:
                 return
             self._plugin_url = config.get("plugin_url")
             self._proxy_url = config.get("proxy_url") or ""
 
-            # 校验插件仓库格式
-            plugin_url = None
-            if self._plugin_url:
-                pattern = "https://github.com/(.*?)/(.*?)/"
-                matches = re.findall(pattern, str(self._plugin_url))
-                if not matches:
-                    logger.warn(f"指定插件仓库地址 {self._plugin_url} 错误，将使用插件默认地址重装")
-                    self._plugin_url = ""
+            # 仅重载插件
+            if self._reload:
+                self._reload = False
+                self.__update_conifg()
 
-                user, repo = PluginHelper().get_repo_info(self._plugin_url)
-                plugin_url = self._base_url % (user, repo)
-
-            self.update_config({
-                "plugin_url": self._plugin_url,
-                "proxy_url": self._proxy_url
-            })
-
-            # 本地插件
-            local_plugins = self.get_local_plugins()
-
-            # 开始重载插件
-            for plugin_id in list(local_plugins.keys()):
-                local_plugin = local_plugins.get(plugin_id)
-                if plugin_id in self._plugin_ids:
-                    logger.info(f"开始重载插件 {local_plugin.get('plugin_name')} {local_plugin.get('plugin_version')}")
-
-                    # 开始安装线上插件
-                    state, msg = self.install(pid=plugin_id,
-                                              repo_url=plugin_url or local_plugin.get("repo_url"))
-                    # 安装失败
-                    if not state:
-                        logger.error(
-                            f"插件 {local_plugin.get('plugin_name')} 重装失败，当前版本 {local_plugin.get('plugin_version')}")
-                        continue
-
-                    logger.info(
-                        f"插件 {local_plugin.get('plugin_name')} 重装成功，当前版本 {local_plugin.get('plugin_version')}")
-
+                for plugin_id in self._plugin_ids:
                     # 加载插件到内存
                     PluginManager().reload_plugin(plugin_id)
                     # 注册插件服务
                     Scheduler().update_plugin_job(plugin_id)
+                    logger.info(f"插件 {plugin_id} 热重载成功")
+            else:
+                # 校验插件仓库格式
+                plugin_url = None
+                if self._plugin_url:
+                    pattern = "https://github.com/(.*?)/(.*?)/"
+                    matches = re.findall(pattern, str(self._plugin_url))
+                    if not matches:
+                        logger.warn(f"指定插件仓库地址 {self._plugin_url} 错误，将使用插件默认地址重装")
+                        self._plugin_url = ""
+
+                    user, repo = PluginHelper().get_repo_info(self._plugin_url)
+                    plugin_url = self._base_url % (user, repo)
+                    self.__update_conifg()
+
+                # 本地插件
+                local_plugins = self.get_local_plugins()
+
+                # 开始重载插件
+                for plugin_id in list(local_plugins.keys()):
+                    local_plugin = local_plugins.get(plugin_id)
+                    if plugin_id in self._plugin_ids:
+                        logger.info(
+                            f"开始重载插件 {local_plugin.get('plugin_name')} {local_plugin.get('plugin_version')}")
+
+                        # 开始安装线上插件
+                        state, msg = self.install(pid=plugin_id,
+                                                  repo_url=plugin_url or local_plugin.get("repo_url"))
+                        # 安装失败
+                        if not state:
+                            logger.error(
+                                f"插件 {local_plugin.get('plugin_name')} 重装失败，当前版本 {local_plugin.get('plugin_version')}")
+                            continue
+
+                        logger.info(
+                            f"插件 {local_plugin.get('plugin_name')} 重装成功，当前版本 {local_plugin.get('plugin_version')}")
+
+                        # 加载插件到内存
+                        PluginManager().reload_plugin(plugin_id)
+                        # 注册插件服务
+                        Scheduler().update_plugin_job(plugin_id)
+
+    def __update_conifg(self):
+        self.update_config({
+            "reload": self._reload,
+            "plugin_url": self._plugin_url,
+            "proxy_url": self._proxy_url
+        })
 
     def install(self, pid: str, repo_url: str) -> Tuple[bool, str]:
         """
@@ -230,6 +248,27 @@ class PluginReInstall(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'reload',
+                                            'label': '仅重载',
+                                        }
+                                    }
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
                                     'md': 4
                                 },
                                 'content': [
@@ -326,6 +365,7 @@ class PluginReInstall(_PluginBase):
                 ]
             }
         ], {
+            "reload": False,
             "plugin_ids": [],
             "plugin_url": "",
             "proxy_url": ""
