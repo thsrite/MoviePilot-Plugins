@@ -37,7 +37,7 @@ class SiteUnreadMsg(_PluginBase):
     # 插件图标
     plugin_icon = "Synomail_A.png"
     # 插件版本
-    plugin_version = "1.7"
+    plugin_version = "1.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -88,7 +88,7 @@ class SiteUnreadMsg(_PluginBase):
 
         if self._enabled or self._onlyonce:
             # 加载模块
-            self._site_schema = ModuleHelper.load('app.plugins.sitestatistic.siteuserinfo',
+            self._site_schema = ModuleHelper.load('app.plugins.siteunreadmsg.siteuserinfo',
                                                   filter_func=lambda _, obj: hasattr(obj, 'schema'))
 
             # 定时服务
@@ -269,27 +269,6 @@ class SiteUnreadMsg(_PluginBase):
                                             'model': 'unread_sites',
                                             'label': '未读消息站点',
                                             'items': site_options
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VAlert',
-                                        'props': {
-                                            'type': 'info',
-                                            'variant': 'tonal',
-                                            'text': '依赖于[站点数据统计]插件。'
                                         }
                                     }
                                 ]
