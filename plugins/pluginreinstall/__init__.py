@@ -60,6 +60,7 @@ class PluginReInstall(_PluginBase):
                     # 注册插件服务
                     Scheduler().update_plugin_job(plugin_id)
                     logger.info(f"插件 {plugin_id} 热重载成功")
+                self.__update_conifg()
             else:
                 # 校验插件仓库格式
                 plugin_url = None
