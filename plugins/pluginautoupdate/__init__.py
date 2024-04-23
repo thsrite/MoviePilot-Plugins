@@ -253,27 +253,6 @@ class PluginAutoUpdate(_PluginBase):
             }
         }]
 
-    def get_service(self) -> List[Dict[str, Any]]:
-        """
-        注册插件公共服务
-        [{
-            "id": "服务ID",
-            "name": "服务名称",
-            "trigger": "触发器：cron/interval/date/CronTrigger.from_crontab()",
-            "func": self.xxx,
-            "kwargs": {} # 定时器参数
-        }]
-        """
-        if self._enabled and self._cron:
-            return [{
-                "id": "PluginAutoUpdate",
-                "name": "插件自动更新",
-                "trigger": CronTrigger.from_crontab(self._cron),
-                "func": self.plugin_update,
-                "kwargs": {}
-            }]
-        return []
-
     def get_api(self) -> List[Dict[str, Any]]:
         pass
 
