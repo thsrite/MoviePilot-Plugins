@@ -66,7 +66,7 @@ class SubscribeGroup(_PluginBase):
                     exclude = None
                     sites = []
                     for conf in str(confs).split("#"):
-                        if "=" in conf:
+                        if ":" in conf:
                             k, v = conf.split("=")
                             if k == "category":
                                 category = v
@@ -95,6 +95,7 @@ class SubscribeGroup(_PluginBase):
                             'exclude': exclude,
                             'sites': sites
                         }
+                logger.info(f"获取到二级分类自定义配置 {len(self._subscribe_confs.keys())} 个")
 
             # 清理已处理历史
             if self._clear_handle:
