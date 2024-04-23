@@ -167,7 +167,8 @@ class SubscribeGroup(_PluginBase):
 
                 resource_team = None
                 sites = None
-                if "group" in self._update_details and not subscribe.include and not subscribe.sites:
+                if ("group" in self._update_details and not subscribe.include
+                        and (not subscribe.sites or len(json.loads(subscribe.sites)) == 0)):
                     # 官组
                     resource_team = _meta.resource_team if _meta else None
                     # 站点
