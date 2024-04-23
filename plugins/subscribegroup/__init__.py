@@ -67,7 +67,7 @@ class SubscribeGroup(_PluginBase):
                     sites = []
                     for conf in str(confs).split("#"):
                         if ":" in conf:
-                            k, v = conf.split("=")
+                            k, v = conf.split("：")
                             if k == "category":
                                 category = v
                             if k == "resolution":
