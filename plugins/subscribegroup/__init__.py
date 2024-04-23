@@ -49,8 +49,8 @@ class SubscribeGroup(_PluginBase):
         if config:
             self._enabled = config.get("enabled")
             self._clear = config.get("clear")
-            self._update_details = config.get("update_details")
-            self._update_confs = config.get("update_confs")
+            self._update_details = config.get("update_details") or []
+            self._update_confs = config.get("update_confs") or []
 
             if len(self._update_confs) > 0:
                 active_sites = self._siteoper.list_active()
