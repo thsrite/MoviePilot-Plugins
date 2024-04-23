@@ -54,9 +54,6 @@ class PluginReInstall(_PluginBase):
 
             # 仅重载插件
             if self._reload:
-                self._reload = False
-                self.__update_conifg()
-
                 for plugin_id in self._plugin_ids:
                     # 加载插件到内存
                     PluginManager().reload_plugin(plugin_id)
