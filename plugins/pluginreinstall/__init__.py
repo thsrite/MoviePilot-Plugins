@@ -72,7 +72,8 @@ class PluginReInstall(_PluginBase):
 
                     user, repo = PluginHelper().get_repo_info(self._plugin_url)
                     plugin_url = self._base_url % (user, repo)
-                    self.__update_conifg()
+
+                self.__update_conifg()
 
                 # 本地插件
                 local_plugins = self.get_local_plugins()
