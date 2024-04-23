@@ -20,7 +20,7 @@ class SubscribeGroup(_PluginBase):
     # 插件图标
     plugin_icon = "teamwork.png"
     # 插件版本
-    plugin_version = "1.5"
+    plugin_version = "1.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -87,14 +87,15 @@ class SubscribeGroup(_PluginBase):
                                             sites.append(active_site.id)
                                             break
                     if category:
-                        self._subscribe_confs[category] = {
-                            'resolution': resolution,
-                            'quality': quality,
-                            'effect': effect,
-                            'include': include,
-                            'exclude': exclude,
-                            'sites': sites
-                        }
+                        for c in str(category).split(","):
+                            self._subscribe_confs[c] = {
+                                'resolution': resolution,
+                                'quality': quality,
+                                'effect': effect,
+                                'include': include,
+                                'exclude': exclude,
+                                'sites': sites
+                            }
                 logger.info(f"获取到二级分类自定义配置 {len(self._subscribe_confs.keys())} 个")
             else:
                 self._subscribe_confs = {}
@@ -471,7 +472,7 @@ class SubscribeGroup(_PluginBase):
                                             'label': '二级分类自定义填充',
                                             'rows': 3,
                                             'placeholder': 'category:日番#include:.*(CR.*简繁|简繁英).RLWeb|ADWeb.#sites:观众,红叶PT\n'
-                                                           'category:港台剧#include:国粤'
+                                                           'category:港台剧,日韩剧#include:国粤'
                                         }
                                     }
                                 ]
@@ -536,7 +537,7 @@ class SubscribeGroup(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': 'category:二级分类名称,resolution:分辨率,quality:质量,effect:特效,include:包含关键词,'
+                                            'text': 'category:二级分类名称（多个分类名称逗号拼接）,resolution:分辨率,quality:质量,effect:特效,include:包含关键词,'
                                                     'exclude:排除关键词,sites:站点名称（多个站点用逗号拼接）。'
                                                     'category必填，多组属性用#分割。例如category:动漫#resolution:1080p'
                                                     '（添加的动漫订阅，指定分辨率为1080p）。'
