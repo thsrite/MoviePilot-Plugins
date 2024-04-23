@@ -96,6 +96,8 @@ class SubscribeGroup(_PluginBase):
                             'sites': sites
                         }
                 logger.info(f"获取到二级分类自定义配置 {len(self._subscribe_confs.keys())} 个")
+            else:
+                self._subscribe_confs = {}
 
             # 清理已处理历史
             if self._clear_handle:
