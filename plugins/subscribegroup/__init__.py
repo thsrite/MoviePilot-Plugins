@@ -37,7 +37,7 @@ class SubscribeGroup(_PluginBase):
     _clear = False
     _clear_handle = False
     _update_details = []
-    _update_confs = []
+    _update_confs = None
     _subscribe_confs = {}
     _subscribeoper = None
     _downloadhistoryoper = None
@@ -53,11 +53,11 @@ class SubscribeGroup(_PluginBase):
             self._clear = config.get("clear")
             self._clear_handle = config.get("clear_handle")
             self._update_details = config.get("update_details") or []
-            self._update_confs = config.get("update_confs") or []
+            self._update_confs = config.get("update_confs")
 
-            if len(self._update_confs) > 0:
+            if self._update_confs:
                 active_sites = self._siteoper.list_active()
-                for confs in self._update_confs:
+                for confs in str(self._update_confs).split("\n"):
                     category = None
                     resolution = None
                     quality = None
@@ -550,7 +550,7 @@ class SubscribeGroup(_PluginBase):
             "clear": False,
             "clear_handle": False,
             "update_details": [],
-            "update_confs": [],
+            "update_confs": "",
         }
 
     def get_page(self) -> List[dict]:
