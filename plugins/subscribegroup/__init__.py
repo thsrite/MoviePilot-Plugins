@@ -1,5 +1,6 @@
 import json
 import re
+import time
 
 from app.db.downloadhistory_oper import DownloadHistoryOper
 from app.db.subscribe_oper import SubscribeOper
@@ -19,7 +20,7 @@ class SubscribeGroup(_PluginBase):
     # 插件图标
     plugin_icon = "teamwork.png"
     # 插件版本
-    plugin_version = "1.4"
+    plugin_version = "1.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -34,6 +35,7 @@ class SubscribeGroup(_PluginBase):
     # 私有属性
     _enabled: bool = False
     _clear = False
+    _clear_handle = False
     _update_details = []
     _update_confs = []
     _subscribe_confs = {}
@@ -49,6 +51,7 @@ class SubscribeGroup(_PluginBase):
         if config:
             self._enabled = config.get("enabled")
             self._clear = config.get("clear")
+            self._clear_handle = config.get("clear_handle")
             self._update_details = config.get("update_details") or []
             self._update_confs = config.get("update_confs") or []
 
@@ -93,18 +96,27 @@ class SubscribeGroup(_PluginBase):
                             'sites': sites
                         }
 
-        # 清理已处理历史
-        if self._clear:
-            self.del_data(key="history")
+            # 清理已处理历史
+            if self._clear_handle:
+                self.del_data(key="history_handle")
 
-            self._clear = False
-            self.__update_config()
-            logger.info("已处理历史清理完成")
+                self._clear_handle = False
+                self.__update_config()
+                logger.info("已处理历史清理完成")
+
+            # 清理历史记录
+            if self._clear:
+                self.del_data(key="history")
+
+                self._clear = False
+                self.__update_config()
+                logger.info("历史记录清理完成")
 
     def __update_config(self):
         self.update_config({
             "enabled": self._enabled,
             "clear": self._clear,
+            "clear_handle": self._clear_handle,
             "update_details": self._update_details,
             "update_confs": self._update_confs,
         })
@@ -163,6 +175,18 @@ class SubscribeGroup(_PluginBase):
                         f"质量 {self.__parse_type(category_conf.get('quality')) if category_conf.get('quality') else subscribe.quality} \n"
                         f"特效 {self.__parse_effect(category_conf.get('effect')) if category_conf.get('effect') else subscribe.effect}")
 
+            # 读取历史记录
+            history = self.get_data('history') or []
+
+            history.append({
+                'name': subscribe.name,
+                'type': f'{category}订阅自定义配置',
+                'content': json.dumps(category_conf),
+                "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
+            })
+            # 保存历史
+            self.save_data(key="history", value=history)
+
     @eventmanager.register(EventType.DownloadAdded)
     def download_notice(self, event: Event = None):
         """
@@ -176,7 +200,7 @@ class SubscribeGroup(_PluginBase):
             logger.error("插件未开启更新填充内容")
             return
 
-        history: List[str] = self.get_data('history') or []
+        history_handle: List[str] = self.get_data('history_handle') or []
 
         if event:
             event_data = event.event_data
@@ -189,13 +213,13 @@ class SubscribeGroup(_PluginBase):
                 logger.warning(f"种子hash:{download_hash} 对应下载记录不存在")
                 return
 
-            if f"{download_history.type}:{download_history.tmdbid}" in history:
+            if f"{download_history.type}:{download_history.tmdbid}" in history_handle:
                 logger.warning(f"下载历史:{download_history.title} 已处理过，不再重复处理")
                 return
 
             # 保存已处理历史
-            history.append(f"{download_history.type}:{download_history.tmdbid}")
-            self.save_data('history', history)
+            history_handle.append(f"{download_history.type}:{download_history.tmdbid}")
+            self.save_data('history_handle', history_handle)
 
             if download_history.type != '电视剧':
                 logger.warning(f"下载历史:{download_history.title} 不是电视剧，不进行官组填充")
@@ -209,6 +233,7 @@ class SubscribeGroup(_PluginBase):
             if not subscribes or len(subscribes) == 0:
                 logger.warning(f"下载历史:{download_history.title} tmdbid:{download_history.tmdbid} 对应订阅记录不存在")
                 return
+
             for subscribe in subscribes:
                 if subscribe.type != '电视剧':
                     logger.warning(f"订阅记录:{subscribe.name} 不是电视剧，不进行官组填充")
@@ -262,6 +287,17 @@ class SubscribeGroup(_PluginBase):
                                 f"分辨率 {resource_pix} \n"
                                 f"质量 {resource_type} \n"
                                 f"特效 {resource_effect}")
+
+                    # 读取历史记录
+                    history = self.get_data('history') or []
+                    history.append({
+                        'name': subscribe.name,
+                        'type': '种子下载自定义配置',
+                        'content': f'官组 {resource_team} 站点 {sites} 分辨率 {resource_pix} 质量 {resource_type} 特效 {resource_effect}',
+                        "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
+                    })
+                    # 保存历史
+                    self.save_data(key="history", value=history)
                 else:
                     logger.warning(f"订阅记录:{subscribe.name} 已配置相关参数，无需自动填充")
 
@@ -353,6 +389,22 @@ class SubscribeGroup(_PluginBase):
                                         'component': 'VSwitch',
                                         'props': {
                                             'model': 'clear',
+                                            'label': '清理历史记录',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'clear_handle',
                                             'label': '清理已处理记录',
                                         }
                                     }
@@ -367,7 +419,6 @@ class SubscribeGroup(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 6
                                 },
                                 'content': [
                                     {
@@ -496,12 +547,118 @@ class SubscribeGroup(_PluginBase):
         ], {
             "enabled": False,
             "clear": False,
+            "clear_handle": False,
             "update_details": [],
             "update_confs": [],
         }
 
     def get_page(self) -> List[dict]:
-        pass
+        historys = self.get_data('history')
+        if not historys:
+            return [
+                {
+                    'component': 'div',
+                    'text': '暂无数据',
+                    'props': {
+                        'class': 'text-center',
+                    }
+                }
+            ]
+
+        if not isinstance(historys, list):
+            historys = [historys]
+
+        # 按照时间倒序
+        historys = sorted(historys, key=lambda x: x.get("time") or 0, reverse=True)
+
+        contens = [
+            {
+                'component': 'tr',
+                'props': {
+                    'class': 'text-sm'
+                },
+                'content': [
+                    {
+                        'component': 'td',
+                        'text': history.get("time")
+                    },
+                    {
+                        'component': 'td',
+                        'text': history.get("name")
+                    },
+                    {
+                        'component': 'td',
+                        'text': history.get("type")
+                    },
+                    {
+                        'component': 'td',
+                        'text': history.get("content")
+                    }
+                ]
+            } for history in historys
+        ]
+
+        # 拼装页面
+        return [
+            {
+                'component': 'VRow',
+                'content': [
+                    {
+                        'component': 'VCol',
+                        'props': {
+                            'cols': 12,
+                        },
+                        'content': [
+                            {
+                                'component': 'VTable',
+                                'props': {
+                                    'hover': True
+                                },
+                                'content': [
+                                    {
+                                        'component': 'thead',
+                                        'content': [
+                                            {
+                                                'component': 'th',
+                                                'props': {
+                                                    'class': 'text-start ps-4'
+                                                },
+                                                'text': '执行时间'
+                                            },
+                                            {
+                                                'component': 'th',
+                                                'props': {
+                                                    'class': 'text-start ps-4'
+                                                },
+                                                'text': '订阅名称'
+                                            },
+                                            {
+                                                'component': 'th',
+                                                'props': {
+                                                    'class': 'text-start ps-4'
+                                                },
+                                                'text': '更新类型'
+                                            },
+                                            {
+                                                'component': 'th',
+                                                'props': {
+                                                    'class': 'text-start ps-4'
+                                                },
+                                                'text': '更新内容'
+                                            },
+                                        ]
+                                    },
+                                    {
+                                        'component': 'tbody',
+                                        'content': contens
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
 
     def stop_service(self):
         """
