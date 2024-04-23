@@ -470,7 +470,7 @@ class SubscribeGroup(_PluginBase):
                                             'model': 'update_confs',
                                             'label': '二级分类自定义填充',
                                             'rows': 3,
-                                            'placeholder': 'category:日番#include:.*(CR.*简繁|简繁英).RLWeb|ADWeb.#sites:观众,红叶PT\n
+                                            'placeholder': 'category:日番#include:.*(CR.*简繁|简繁英).RLWeb|ADWeb.#sites:观众,红叶PT\n'
                                                            'category:港台剧#include:国粤'
                                         }
                                     }
