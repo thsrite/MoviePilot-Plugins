@@ -20,7 +20,7 @@ class SubscribeGroup(_PluginBase):
     # 插件图标
     plugin_icon = "teamwork.png"
     # 插件版本
-    plugin_version = "1.7"
+    plugin_version = "1.8"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -247,6 +247,9 @@ class SubscribeGroup(_PluginBase):
                 logger.warning(f"下载历史:{download_history.title} tmdbid:{download_history.tmdbid} 对应订阅记录不存在")
                 return
 
+            logger.info(
+                f"获取到tmdbid {download_history.tmdbid} season {int(download_history.seasons.replace('S', '')) if download_history.seasons and download_history.seasons.count('-') == 0 else None} 订阅记录:{len(subscribes)} 个")
+
             for subscribe in subscribes:
                 if subscribe.type != '电视剧':
                     logger.warning(f"订阅记录:{subscribe.name} 不是电视剧，不进行官组填充")
@@ -258,29 +261,27 @@ class SubscribeGroup(_PluginBase):
 
                 # 分辨率
                 resource_pix = None
-                if "resource_pix" in self._update_details and not subscribe.resolution:
+                if "分辨率" in self._update_details and not subscribe.resolution:
                     resource_pix = _meta.resource_pix if _meta else None
                     if resource_pix:
                         resource_pix = self.__parse_pix(resource_pix)
                 # 资源类型
                 resource_type = None
-                if "resource_type" in self._update_details and not subscribe.quality:
+                if "资源类型" in self._update_details and not subscribe.quality:
                     resource_type = _meta.resource_type if _meta else None
                     if resource_type:
                         resource_type = self.__parse_type(resource_type)
                 # 特效
                 resource_effect = None
-                if "resource_effect" in self._update_details and not subscribe.effect:
+                if "特效" in self._update_details and not subscribe.effect:
                     resource_effect = _meta.resource_effect if _meta else None
                     if resource_effect:
                         resource_effect = self.__parse_effect(resource_effect)
 
                 resource_team = None
                 sites = None
-                logger.error(subscribe.include, subscribe.sites, json.loads(subscribe.sites),
-                             len(json.loads(subscribe.sites)))
-                if ("group" in self._update_details and not subscribe.include
-                        and (not subscribe.sites or len(json.loads(subscribe.sites)) == 0)):
+                if ("制作组" in self._update_details and not subscribe.include
+                        and (not subscribe.sites or (subscribe.sites and len(json.loads(subscribe.sites)) == 0))):
                     logger.error("官组")
                     # 官组
                     resource_team = _meta.resource_team if _meta else None
@@ -463,19 +464,19 @@ class SubscribeGroup(_PluginBase):
                                             'items': [
                                                 {
                                                     "title": "资源质量",
-                                                    "vale": "resource_type"
+                                                    "vale": "资源质量"
                                                 },
                                                 {
                                                     "title": "分辨率",
-                                                    "vale": "resource_pix"
+                                                    "vale": "分辨率"
                                                 },
                                                 {
                                                     "title": "特效",
-                                                    "vale": "resource_effect"
+                                                    "vale": "特效"
                                                 },
                                                 {
                                                     "title": "制作组",
-                                                    "vale": "group"
+                                                    "vale": "制作组"
                                                 }
                                             ]
                                         }
