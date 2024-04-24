@@ -228,6 +228,8 @@ class SubscribeGroup(_PluginBase):
                 logger.warning(f"种子hash:{download_hash} 对应下载记录不存在")
                 return
 
+            history_handle: List[str] = self.get_data('history_handle') or []
+
             if f"{download_history.type}:{download_history.tmdbid}" in history_handle:
                 logger.warning(f"下载历史:{download_history.title} 已处理过，不再重复处理")
                 return
@@ -312,7 +314,6 @@ class SubscribeGroup(_PluginBase):
                 self.save_data(key="history", value=history)
 
                 # 保存已处理历史
-                history_handle: List[str] = self.get_data('history_handle') or []
                 history_handle.append(f"{download_history.type}:{download_history.tmdbid}")
                 self.save_data('history_handle', history_handle)
 
