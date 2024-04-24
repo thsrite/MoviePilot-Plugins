@@ -541,11 +541,9 @@ class SubscribeGroup(_PluginBase):
                                     {
                                         'component': 'VAlert',
                                         'props': {
-                                            'type': 'info',
+                                            'type': 'error',
                                             'variant': 'tonal',
-                                            'text': '种子下载自定义填充：电视剧订阅未配置包含关键词和订阅站点等配置时，订阅或搜索下载后，'
-                                                    '将下载种子的制作组和站点等信息填充到订阅信息中，以保证后续订阅资源的统一性。'
-                                                    '（适用于订阅新出的电视剧。）'
+                                            'text': '种子下载自定义填充：需要下载种子才会填充订阅属性，且不会覆盖原有属性！'
                                         }
                                     }
                                 ]
@@ -566,7 +564,30 @@ class SubscribeGroup(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '二级分类自定义填充：用于根据二级分类自定义订阅规则，具体属性明细请查看电视剧订阅设置页面。'
+                                            'text': '种子下载自定义填充：电视剧订阅未配置包含关键词、订阅站点等配置时，订阅或搜索下载后，'
+                                                    '将下载种子的制作组、站点等信息填充到订阅信息中，以保证后续订阅资源的统一性。'
+                                                    '（订阅新出的电视剧效果更佳。）'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'error',
+                                            'variant': 'tonal',
+                                            'text': '二级分类自定义填充：添加订阅才会填充订阅属性，会强制覆盖！用于根据二级分类自定义订阅规则，具体属性明细请查看电视剧订阅设置页面。'
                                         }
                                     }
                                 ]
@@ -596,29 +617,7 @@ class SubscribeGroup(_PluginBase):
                                 ]
                             }
                         ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VAlert',
-                                        'props': {
-                                            'type': 'error',
-                                            'variant': 'tonal',
-                                            'text': '种子下载自定义填充：需要下载种子才会填充订阅属性，且不会覆盖！'
-                                                    '二级分类自定义填充：添加订阅才会填充订阅属性，会强制覆盖！请打开相应开关后，点击保存生效！！！'
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
+                    }
                 ]
             }
         ], {
