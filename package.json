@@ -322,11 +322,12 @@
       "SubscribeGroup": {
         "name": "订阅规则自动填充",
         "description": "电视剧下载后自动添加官组等信息到订阅；添加订阅后根据二级分类名称自定义订阅规则。",
-        "version": "2.1",
+        "version": "2.2",
         "icon": "teamwork.png",
         "author": "thsrite",
         "level": 2,
         "history": {
+          "v2.2": "优化",
           "v2.1": "站点与官组分开，修复质量无填充",
           "v2.0": "种子下载自定义填充支持自定义占位符",
           "v1.8": "修复种子下载不填充bug",

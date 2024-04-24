@@ -33,5 +33,5 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - docker自定义任务 1.2
 - 插件彻底卸载 1.0
 - 实时软连接 1.3
-- 订阅规则自动填充 2.1
+- 订阅规则自动填充 2.2
 

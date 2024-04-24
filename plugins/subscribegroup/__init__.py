@@ -20,7 +20,7 @@ class SubscribeGroup(_PluginBase):
     # 插件图标
     plugin_icon = "teamwork.png"
     # 插件版本
-    plugin_version = "2.1"
+    plugin_version = "2.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -253,70 +253,75 @@ class SubscribeGroup(_PluginBase):
             for subscribe in subscribes:
                 if subscribe.type != '电视剧':
                     logger.warning(f"订阅记录:{subscribe.name} 不是电视剧，不进行官组填充")
-                    return
+                    continue
+
                 # 开始填充官组和站点
                 context = event_data.get("context")
                 _torrent = context.torrent_info
                 _meta = context.meta_info
 
+                # 填充数据
+                update_dict = {}
                 # 分辨率
-                resource_pix = None
                 if "分辨率" in self._update_details and not subscribe.resolution:
                     resource_pix = _meta.resource_pix if _meta else None
                     if resource_pix:
                         resource_pix = self.__parse_pix(resource_pix)
+                        if resource_pix:
+                            update_dict['resolution'] = resource_pix
+                        else:
+                            logger.warning(f"订阅记录:{subscribe.name} 未获取到分辨率信息")
                 # 资源质量
-                resource_type = None
                 if "资源质量" in self._update_details and not subscribe.quality:
                     resource_type = _meta.resource_type if _meta else None
                     if resource_type:
                         resource_type = self.__parse_type(resource_type)
+                        if resource_type:
+                            update_dict['quality'] = resource_type
+                        else:
+                            logger.warning(f"订阅记录:{subscribe.name} 未获取到资源质量信息")
                 # 特效
-                resource_effect = None
                 if "特效" in self._update_details and not subscribe.effect:
                     resource_effect = _meta.resource_effect if _meta else None
                     if resource_effect:
                         resource_effect = self.__parse_effect(resource_effect)
-
-                resource_team = None
+                        if resource_effect:
+                            update_dict['effect'] = resource_effect
+                        else:
+                            logger.warning(f"订阅记录:{subscribe.name} 未获取到特效信息")
+                # 制作组
                 if "制作组" in self._update_details and not subscribe.include:
                     # 官组
                     resource_team = _meta.resource_team if _meta else None
                     customization = _meta.customization if _meta else None
                     if resource_team and customization:
                         resource_team = f"{customization}.+{resource_team}"
-
-                sites = None
+                    if not resource_team and customization:
+                        resource_team = customization
+                    if resource_team:
+                        update_dict['include'] = resource_team
+                # 站点
                 if "站点" in self._update_details and (
                         not subscribe.sites or (subscribe.sites and len(json.loads(subscribe.sites)) == 0)):
                     # 站点
                     sites = json.dumps([_torrent.site]) if _torrent and _torrent.site else None
+                    if sites:
+                        update_dict['sites'] = sites
+
+                if len(update_dict.keys()) == 0:
+                    logger.info(f"订阅记录:{subscribe.name} 无需填充")
+                    continue
 
                 # 更新订阅记录
-                self._subscribeoper.update(subscribe.id, {
-                    'include': resource_team if resource_team else subscribe.include,
-                    'sites': sites if sites else subscribe.sites,
-                    'resolution': resource_pix if resource_pix else subscribe.resolution,
-                    'quality': resource_type if resource_type else subscribe.quality,
-                    'effect': resource_effect if resource_effect else subscribe.effect
-                })
-                logger.info(f"订阅记录:{subscribe.name} 填充成功\n"
-                            f"官组 {resource_team if resource_team else subscribe.include} \n"
-                            f"站点 {sites if sites else subscribe.sites} \n"
-                            f"分辨率 {resource_pix if resource_pix else subscribe.resolution} \n"
-                            f"质量 {resource_type if resource_type else subscribe.quality} \n"
-                            f"特效 {resource_effect if resource_effect else subscribe.effect}")
+                self._subscribeoper.update(subscribe.id, update_dict)
+                logger.info(f"订阅记录:{subscribe.name} 填充成功\n {update_dict}")
 
                 # 读取历史记录
                 history = self.get_data('history') or []
                 history.append({
                     'name': subscribe.name,
                     'type': '种子下载自定义配置',
-                    'content': f'包含关键词 {resource_team if resource_team else subscribe.include} '
-                               f'站点 {sites if sites else subscribe.sites} '
-                               f'分辨率 {resource_pix if resource_pix else subscribe.resolution} '
-                               f'质量 {resource_type if resource_type else subscribe.quality} '
-                               f'特效 {resource_effect if resource_effect else subscribe.effect}',
+                    'content': json.dumps(update_dict),
                     "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
                 })
                 # 保存历史
