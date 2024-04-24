@@ -20,7 +20,7 @@ class SubscribeGroup(_PluginBase):
     # 插件图标
     plugin_icon = "teamwork.png"
     # 插件版本
-    plugin_version = "2.2"
+    plugin_version = "2.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -66,6 +66,7 @@ class SubscribeGroup(_PluginBase):
                     effect = None
                     include = None
                     exclude = None
+                    savepath = None
                     sites = []
                     for conf in str(confs).split("#"):
                         if ":" in conf:
@@ -82,6 +83,8 @@ class SubscribeGroup(_PluginBase):
                                 include = v
                             if k == "exclude":
                                 exclude = v
+                            if k == "savepath":
+                                savepath = v
                             if k == "sites":
                                 for site_name in str(v).split(","):
                                     for active_site in active_sites:
@@ -96,6 +99,7 @@ class SubscribeGroup(_PluginBase):
                                 'effect': effect,
                                 'include': include,
                                 'exclude': exclude,
+                                'savepath': savepath,
                                 'sites': sites
                             }
                 logger.info(f"获取到二级分类自定义配置 {len(self._subscribe_confs.keys())} 个")
@@ -167,25 +171,25 @@ class SubscribeGroup(_PluginBase):
             # 二级分类自定义配置
             category_conf = self._subscribe_confs.get(category)
 
+            update_dict = {}
+            if category_conf.get('include'):
+                update_dict['include'] = category_conf.get('include')
+            if category_conf.get('exclude'):
+                update_dict['exclude'] = category_conf.get('exclude')
+            if category_conf.get('sites'):
+                update_dict['sites'] = json.dumps(category_conf.get('sites'))
+            if category_conf.get('resolution'):
+                update_dict['resolution'] = self.__parse_pix(category_conf.get('resolution'))
+            if category_conf.get('quality'):
+                update_dict['quality'] = self.__parse_type(category_conf.get('quality'))
+            if category_conf.get('effect'):
+                update_dict['effect'] = self.__parse_effect(category_conf.get('effect'))
+            if category_conf.get('savepath'):
+                update_dict['savepath'] = category_conf.get('savepath')
+
             # 更新订阅自定义配置
-            self._subscribeoper.update(sid, {
-                'include': category_conf.get('include') if category_conf.get('include') else subscribe.include,
-                'exclude': category_conf.get('exclude') if category_conf.get('exclude') else subscribe.exclude,
-                'sites': json.dumps(category_conf.get('sites')) if category_conf.get('sites') else subscribe.sites,
-                'resolution': self.__parse_pix(category_conf.get('resolution')) if category_conf.get(
-                    'resolution') else subscribe.resolution,
-                'quality': self.__parse_type(category_conf.get('quality')) if category_conf.get(
-                    'quality') else subscribe.quality,
-                'effect': self.__parse_effect(category_conf.get('effect')) if category_conf.get(
-                    'effect') else subscribe.effect,
-            })
-            logger.info(f"订阅记录:{subscribe.name} 填充成功\n"
-                        f"包含关键词 {category_conf.get('include') if category_conf.get('include') else subscribe.include} \n"
-                        f"排除关键词 {category_conf.get('exclude') if category_conf.get('exclude') else subscribe.exclude} \n"
-                        f"站点 {json.dumps(category_conf.get('sites')) if category_conf.get('sites') else subscribe.sites} \n"
-                        f"分辨率 {self.__parse_pix(category_conf.get('resolution')) if category_conf.get('resolution') else subscribe.resolution} \n"
-                        f"质量 {self.__parse_type(category_conf.get('quality')) if category_conf.get('quality') else subscribe.quality} \n"
-                        f"特效 {self.__parse_effect(category_conf.get('effect')) if category_conf.get('effect') else subscribe.effect}")
+            self._subscribeoper.update(sid, update_dict)
+            logger.info(f"订阅记录:{subscribe.name} 填充成功\n{update_dict}")
 
             # 读取历史记录
             history = self.get_data('history') or []
@@ -193,7 +197,7 @@ class SubscribeGroup(_PluginBase):
             history.append({
                 'name': subscribe.name,
                 'type': f'二级分类自定义配置 {category}',
-                'content': json.dumps(category_conf),
+                'content': json.dumps(update_dict),
                 "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
             })
             # 保存历史
@@ -584,7 +588,7 @@ class SubscribeGroup(_PluginBase):
                                             'type': 'info',
                                             'variant': 'tonal',
                                             'text': 'category:二级分类名称（多个分类名称逗号拼接）,resolution:分辨率,quality:质量,effect:特效,include:包含关键词,'
-                                                    'exclude:排除关键词,sites:站点名称（多个站点用逗号拼接）。'
+                                                    'exclude:排除关键词,sites:站点名称（多个站点用逗号拼接）,savepath:保存路径。'
                                                     'category必填，多组属性用#分割。例如category:动漫#resolution:1080p'
                                                     '（添加的动漫订阅，指定分辨率为1080p）。'
                                         }
