@@ -188,9 +188,9 @@ class SubscribeGroup(_PluginBase):
                 # 判断是否有变量{name}
                 if '{name}' in category_conf.get('savepath'):
                     savepath = category_conf.get('savepath').replace('{name}', f"{subscribe.name} ({subscribe.year})")
-                    update_dict['savepath'] = savepath
+                    update_dict['save_path'] = savepath
                 else:
-                    update_dict['savepath'] = category_conf.get('savepath')
+                    update_dict['save_path'] = category_conf.get('savepath')
 
             # 更新订阅自定义配置
             self._subscribeoper.update(sid, update_dict)
