@@ -133,6 +133,10 @@ class SubscribeGroup(_PluginBase):
         """
         添加订阅根据二级分类填充订阅
         """
+        if not event:
+            logger.error("订阅事件数据为空")
+            return
+
         if not self._category:
             logger.error("二级分类自定义填充未开启")
             return
@@ -144,6 +148,7 @@ class SubscribeGroup(_PluginBase):
         if event:
             event_data = event.event_data
             if not event_data or not event_data.get("subscribe_id") or not event_data.get("mediainfo"):
+                logger.error(f"订阅事件数据不完整 {event_data}")
                 return
 
             sid = event_data.get("subscribe_id")
@@ -199,6 +204,10 @@ class SubscribeGroup(_PluginBase):
         """
         添加下载填充订阅制作组等信息
         """
+        if not event:
+            logger.error("下载事件数据为空")
+            return
+
         if not self._enabled:
             logger.error("种子下载自定义填充未开启")
             return
@@ -207,11 +216,10 @@ class SubscribeGroup(_PluginBase):
             logger.error("插件未开启更新填充内容")
             return
 
-        history_handle: List[str] = self.get_data('history_handle') or []
-
         if event:
             event_data = event.event_data
             if not event_data or not event_data.get("hash") or not event_data.get("context"):
+                logger.error(f"下载事件数据不完整 {event_data}")
                 return
             download_hash = event_data.get("hash")
             # 根据hash查询下载记录
@@ -223,10 +231,6 @@ class SubscribeGroup(_PluginBase):
             if f"{download_history.type}:{download_history.tmdbid}" in history_handle:
                 logger.warning(f"下载历史:{download_history.title} 已处理过，不再重复处理")
                 return
-
-            # 保存已处理历史
-            history_handle.append(f"{download_history.type}:{download_history.tmdbid}")
-            self.save_data('history_handle', history_handle)
 
             if download_history.type != '电视剧':
                 logger.warning(f"下载历史:{download_history.title} 不是电视剧，不进行官组填充")
@@ -256,7 +260,6 @@ class SubscribeGroup(_PluginBase):
                     resource_pix = _meta.resource_pix if _meta else None
                     if resource_pix:
                         resource_pix = self.__parse_pix(resource_pix)
-
                 # 资源类型
                 resource_type = None
                 if "resource_type" in self._update_details and not subscribe.quality:
@@ -272,8 +275,11 @@ class SubscribeGroup(_PluginBase):
 
                 resource_team = None
                 sites = None
+                logger.error(subscribe.include, subscribe.sites, json.loads(subscribe.sites),
+                             len(json.loads(subscribe.sites)))
                 if ("group" in self._update_details and not subscribe.include
                         and (not subscribe.sites or len(json.loads(subscribe.sites)) == 0)):
+                    logger.error("官组")
                     # 官组
                     resource_team = _meta.resource_team if _meta else None
                     # 站点
@@ -304,6 +310,11 @@ class SubscribeGroup(_PluginBase):
                 })
                 # 保存历史
                 self.save_data(key="history", value=history)
+
+                # 保存已处理历史
+                history_handle: List[str] = self.get_data('history_handle') or []
+                history_handle.append(f"{download_history.type}:{download_history.tmdbid}")
+                self.save_data('history_handle', history_handle)
 
     def __parse_pix(self, resource_pix):
         # 识别1080或者4k或720
