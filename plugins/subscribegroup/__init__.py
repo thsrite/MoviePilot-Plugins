@@ -280,33 +280,30 @@ class SubscribeGroup(_PluginBase):
                     sites = json.dumps([_torrent.site]) if _torrent and _torrent.site else None
 
                 # 更新订阅记录
-                if resource_pix or resource_type or resource_effect or resource_team or sites:
-                    self._subscribeoper.update(subscribe.id, {
-                        'include': resource_team,
-                        'sites': sites,
-                        'quality': resource_type,
-                        'resolution': resource_pix,
-                        'effect': resource_effect,
-                    })
-                    logger.info(f"订阅记录:{subscribe.name} 填充成功\n"
-                                f"官组 {resource_team} \n"
-                                f"站点 {sites} \n"
-                                f"分辨率 {resource_pix} \n"
-                                f"质量 {resource_type} \n"
-                                f"特效 {resource_effect}")
+                self._subscribeoper.update(subscribe.id, {
+                    'include': resource_team if resource_team else subscribe.include,
+                    'sites': sites if sites else subscribe.sites,
+                    'quality': resource_type if resource_type else subscribe.quality,
+                    'resolution': resource_pix if resource_pix else subscribe.resolution,
+                    'effect': resource_effect if resource_effect else subscribe.effect
+                })
+                logger.info(f"订阅记录:{subscribe.name} 填充成功\n"
+                            f"官组 {resource_team} \n"
+                            f"站点 {sites} \n"
+                            f"分辨率 {resource_pix} \n"
+                            f"质量 {resource_type} \n"
+                            f"特效 {resource_effect}")
 
-                    # 读取历史记录
-                    history = self.get_data('history') or []
-                    history.append({
-                        'name': subscribe.name,
-                        'type': '种子下载自定义配置',
-                        'content': f'官组 {resource_team} 站点 {sites} 分辨率 {resource_pix} 质量 {resource_type} 特效 {resource_effect}',
-                        "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
-                    })
-                    # 保存历史
-                    self.save_data(key="history", value=history)
-                else:
-                    logger.warning(f"订阅记录:{subscribe.name} 已配置相关参数，无需自动填充")
+                # 读取历史记录
+                history = self.get_data('history') or []
+                history.append({
+                    'name': subscribe.name,
+                    'type': '种子下载自定义配置',
+                    'content': f'官组 {resource_team} 站点 {sites} 分辨率 {resource_pix} 质量 {resource_type} 特效 {resource_effect}',
+                    "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
+                })
+                # 保存历史
+                self.save_data(key="history", value=history)
 
     def __parse_pix(self, resource_pix):
         # 识别1080或者4k或720
