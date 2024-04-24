@@ -282,7 +282,6 @@ class SubscribeGroup(_PluginBase):
                 sites = None
                 if ("制作组" in self._update_details and not subscribe.include
                         and (not subscribe.sites or (subscribe.sites and len(json.loads(subscribe.sites)) == 0))):
-                    logger.error("官组")
                     # 官组
                     resource_team = _meta.resource_team if _meta else None
                     # 站点
