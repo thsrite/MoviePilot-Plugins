@@ -20,7 +20,7 @@ class SubscribeGroup(_PluginBase):
     # 插件图标
     plugin_icon = "teamwork.png"
     # 插件版本
-    plugin_version = "2.3"
+    plugin_version = "2.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -185,7 +185,12 @@ class SubscribeGroup(_PluginBase):
             if category_conf.get('effect'):
                 update_dict['effect'] = self.__parse_effect(category_conf.get('effect'))
             if category_conf.get('savepath'):
-                update_dict['savepath'] = category_conf.get('savepath')
+                # 判断是否有变量{name}
+                if '{name}' in category_conf.get('savepath'):
+                    savepath = category_conf.get('savepath').replace('{name}', f"{subscribe.name} ({subscribe.year})")
+                    update_dict['savepath'] = savepath
+                else:
+                    update_dict['savepath'] = category_conf.get('savepath')
 
             # 更新订阅自定义配置
             self._subscribeoper.update(sid, update_dict)
@@ -609,7 +614,7 @@ class SubscribeGroup(_PluginBase):
                                             'type': 'info',
                                             'variant': 'tonal',
                                             'text': 'category:二级分类名称（多个分类名称逗号拼接）,resolution:分辨率,quality:质量,effect:特效,include:包含关键词,'
-                                                    'exclude:排除关键词,sites:站点名称（多个站点用逗号拼接）,savepath:保存路径。'
+                                                    'exclude:排除关键词,sites:站点名称（多个站点用逗号拼接）,savepath:保存路径/{name}（{name}为当前订阅的名称和年份）。'
                                                     'category必填，多组属性用#分割。例如category:动漫#resolution:1080p'
                                                     '（添加的动漫订阅，指定分辨率为1080p）。'
                                         }
