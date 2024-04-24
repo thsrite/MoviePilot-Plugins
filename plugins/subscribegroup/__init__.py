@@ -20,7 +20,7 @@ class SubscribeGroup(_PluginBase):
     # 插件图标
     plugin_icon = "teamwork.png"
     # 插件版本
-    plugin_version = "1.8"
+    plugin_version = "2.0"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -310,7 +310,7 @@ class SubscribeGroup(_PluginBase):
                 history.append({
                     'name': subscribe.name,
                     'type': '种子下载自定义配置',
-                    'content': f'官组 {resource_team} 站点 {sites} 分辨率 {resource_pix} 质量 {resource_type} 特效 {resource_effect}',
+                    'content': f'包含关键词 {resource_team} 站点 {sites} 分辨率 {resource_pix} 质量 {resource_type} 特效 {resource_effect}',
                     "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
                 })
                 # 保存历史
@@ -651,7 +651,7 @@ class SubscribeGroup(_PluginBase):
                     },
                     {
                         'component': 'td',
-                        'text': history.get("content").encode('utf-8').decode('unicode-escape')
+                        'text': history.get("content").encode('utf-8').decode() if history.get("content") else ''
                     }
                 ]
             } for history in historys
