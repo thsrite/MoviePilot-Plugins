@@ -566,6 +566,28 @@ class SubscribeGroup(_PluginBase):
                             }
                         ]
                     },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'error',
+                                            'variant': 'tonal',
+                                            'text': '种子下载自定义填充： 需要下载种子才会填充订阅属性，且不会覆盖！'
+                                                    '二级分类自定义填充:添加订阅才会填充订阅属性，会强制覆盖！'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
                 ]
             }
         ], {
