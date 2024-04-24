@@ -322,11 +322,12 @@
       "SubscribeGroup": {
         "name": "订阅规则自动填充",
         "description": "电视剧下载后自动添加官组等信息到订阅；添加订阅后根据二级分类名称自定义订阅规则。",
-        "version": "1.6",
+        "version": "1.7",
         "icon": "teamwork.png",
         "author": "thsrite",
         "level": 2,
         "history": {
+          "v1.7": "操作历史Unicode编码转中文",
           "v1.6": "支持一行配置多个二级分类名称",
           "v1.5": "支持操作历史",
           "v1.4": "支持根据二级分类名称自定义订阅规则",

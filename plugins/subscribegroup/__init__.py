@@ -20,7 +20,7 @@ class SubscribeGroup(_PluginBase):
     # 插件图标
     plugin_icon = "teamwork.png"
     # 插件版本
-    plugin_version = "1.6"
+    plugin_version = "1.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -187,7 +187,7 @@ class SubscribeGroup(_PluginBase):
 
             history.append({
                 'name': subscribe.name,
-                'type': f'{category}订阅自定义配置',
+                'type': f'二级分类自定义配置 {category}',
                 'content': json.dumps(category_conf),
                 "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
             })
@@ -639,7 +639,7 @@ class SubscribeGroup(_PluginBase):
                     },
                     {
                         'component': 'td',
-                        'text': history.get("content")
+                        'text': history.get("content").encode('utf-8').decode('unicode-escape')
                     }
                 ]
             } for history in historys
