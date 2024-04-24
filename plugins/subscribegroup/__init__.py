@@ -20,7 +20,7 @@ class SubscribeGroup(_PluginBase):
     # 插件图标
     plugin_icon = "teamwork.png"
     # 插件版本
-    plugin_version = "2.0"
+    plugin_version = "2.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -265,9 +265,9 @@ class SubscribeGroup(_PluginBase):
                     resource_pix = _meta.resource_pix if _meta else None
                     if resource_pix:
                         resource_pix = self.__parse_pix(resource_pix)
-                # 资源类型
+                # 资源质量
                 resource_type = None
-                if "资源类型" in self._update_details and not subscribe.quality:
+                if "资源质量" in self._update_details and not subscribe.quality:
                     resource_type = _meta.resource_type if _meta else None
                     if resource_type:
                         resource_type = self.__parse_type(resource_type)
@@ -279,14 +279,16 @@ class SubscribeGroup(_PluginBase):
                         resource_effect = self.__parse_effect(resource_effect)
 
                 resource_team = None
-                sites = None
-                if ("制作组" in self._update_details and not subscribe.include
-                        and (not subscribe.sites or (subscribe.sites and len(json.loads(subscribe.sites)) == 0))):
+                if "制作组" in self._update_details and not subscribe.include:
                     # 官组
                     resource_team = _meta.resource_team if _meta else None
                     customization = _meta.customization if _meta else None
                     if resource_team and customization:
                         resource_team = f"{customization}.+{resource_team}"
+
+                sites = None
+                if "站点" in self._update_details and (
+                        not subscribe.sites or (subscribe.sites and len(json.loads(subscribe.sites)) == 0)):
                     # 站点
                     sites = json.dumps([_torrent.site]) if _torrent and _torrent.site else None
 
@@ -294,23 +296,27 @@ class SubscribeGroup(_PluginBase):
                 self._subscribeoper.update(subscribe.id, {
                     'include': resource_team if resource_team else subscribe.include,
                     'sites': sites if sites else subscribe.sites,
-                    'quality': resource_type if resource_type else subscribe.quality,
                     'resolution': resource_pix if resource_pix else subscribe.resolution,
+                    'quality': resource_type if resource_type else subscribe.quality,
                     'effect': resource_effect if resource_effect else subscribe.effect
                 })
                 logger.info(f"订阅记录:{subscribe.name} 填充成功\n"
-                            f"官组 {resource_team} \n"
-                            f"站点 {sites} \n"
-                            f"分辨率 {resource_pix} \n"
-                            f"质量 {resource_type} \n"
-                            f"特效 {resource_effect}")
+                            f"官组 {resource_team if resource_team else subscribe.include} \n"
+                            f"站点 {sites if sites else subscribe.sites} \n"
+                            f"分辨率 {resource_pix if resource_pix else subscribe.resolution} \n"
+                            f"质量 {resource_type if resource_type else subscribe.quality} \n"
+                            f"特效 {resource_effect if resource_effect else subscribe.effect}")
 
                 # 读取历史记录
                 history = self.get_data('history') or []
                 history.append({
                     'name': subscribe.name,
                     'type': '种子下载自定义配置',
-                    'content': f'包含关键词 {resource_team} 站点 {sites} 分辨率 {resource_pix} 质量 {resource_type} 特效 {resource_effect}',
+                    'content': f'包含关键词 {resource_team if resource_team else subscribe.include} '
+                               f'站点 {sites if sites else subscribe.sites} '
+                               f'分辨率 {resource_pix if resource_pix else subscribe.resolution} '
+                               f'质量 {resource_type if resource_type else subscribe.quality} '
+                               f'特效 {resource_effect if resource_effect else subscribe.effect}',
                     "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
                 })
                 # 保存历史
@@ -479,6 +485,10 @@ class SubscribeGroup(_PluginBase):
                                                 {
                                                     "title": "制作组",
                                                     "vale": "制作组"
+                                                },
+                                                {
+                                                    "title": "站点",
+                                                    "vale": "站点"
                                                 }
                                             ]
                                         }
