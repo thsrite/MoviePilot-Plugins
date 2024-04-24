@@ -284,6 +284,9 @@ class SubscribeGroup(_PluginBase):
                         and (not subscribe.sites or (subscribe.sites and len(json.loads(subscribe.sites)) == 0))):
                     # 官组
                     resource_team = _meta.resource_team if _meta else None
+                    customization = _meta.customization if _meta else None
+                    if resource_team and customization:
+                        resource_team = f"{customization}.+{resource_team}"
                     # 站点
                     sites = json.dumps([_torrent.site]) if _torrent and _torrent.site else None
 
