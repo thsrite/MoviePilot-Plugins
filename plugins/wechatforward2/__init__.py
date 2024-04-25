@@ -14,7 +14,7 @@ from typing import Any, List, Dict, Tuple, Optional
 from app.log import logger
 
 
-class WeChatForward(_PluginBase):
+class WeChatForward2(_PluginBase):
     # 插件名称
     plugin_name = "微信消息转发"
     # 插件描述
@@ -129,6 +129,22 @@ class WeChatForward(_PluginBase):
                                     }
                                 ]
                             },
+                            {
+                                "component": "VCol",
+                                "props": {
+                                    "cols": 12,
+                                    "md": 4
+                                },
+                                "content": [
+                                    {
+                                        "component": "VSwitch",
+                                        "props": {
+                                            "model": "dialog_closed",
+                                            "label": "设置站点"
+                                        }
+                                    }
+                                ]
+                            }
                         ]
                     },
                     {
@@ -264,6 +280,93 @@ class WeChatForward(_PluginBase):
                             }
                         ]
                     },
+                    {
+                        "component": "VDialog",
+                        "props": {
+                            "model": "dialog_closed",
+                            "max-width": "65rem",
+                            "overlay-class": "v-dialog--scrollable v-overlay--scroll-blocked",
+                            "content-class": "v-card v-card--density-default v-card--variant-elevated rounded-t"
+                        },
+                        "content": [
+                            {
+                                "component": "VCard",
+                                "props": {
+                                    "title": "设置站点配置"
+                                },
+                                "content": [
+                                    {
+                                        "component": "VDialogCloseBtn",
+                                        "props": {
+                                            "model": "dialog_closed"
+                                        }
+                                    },
+                                    {
+                                        "component": "VCardText",
+                                        "props": {},
+                                        "content": [
+                                            {
+                                                'component': 'VRow',
+                                                'content': [
+                                                    {
+                                                        'component': 'VCol',
+                                                        'props': {
+                                                            'cols': 12,
+                                                        },
+                                                        'content': [
+                                                            {
+                                                                'component': 'VAceEditor',
+                                                                'props': {
+                                                                    'modelvalue': 'site_config',
+                                                                    'lang': 'json',
+                                                                    'theme': 'monokai',
+                                                                    'style': 'height: 30rem',
+                                                                }
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                'component': 'VRow',
+                                                'content': [
+                                                    {
+                                                        'component': 'VCol',
+                                                        'props': {
+                                                            'cols': 12,
+                                                        },
+                                                        'content': [
+                                                            {
+                                                                'component': 'VAlert',
+                                                                'props': {
+                                                                    'type': 'info',
+                                                                    'variant': 'tonal'
+                                                                },
+                                                                'content': [
+                                                                    {
+                                                                        'component': 'span',
+                                                                        'text': '注意：只有启用站点独立配置时，该配置项才会生效，详细配置参考：'
+                                                                    },
+                                                                    {
+                                                                        'component': 'a',
+                                                                        'props': {
+                                                                            'href': 'https://github.com/InfinityPacer/MoviePilot-Plugins/blob/main/README.md',
+                                                                            'target': '_blank'
+                                                                        },
+                                                                        'text': 'https://github.com/InfinityPacer/MoviePilot-Plugins/blob/main/README.md'
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
                 ]
             }
         ], {
@@ -272,8 +375,52 @@ class WeChatForward(_PluginBase):
             "pattern": "",
             "ignore_userid": "",
             "specify_confs": "",
-            "extra_confs": ""
+            "extra_confs": "",
+            "site_config": WeChatForward2.get_demo_site_config()
         }
+
+    @staticmethod
+    def get_demo_site_config() -> str:
+        desc = ("// 以下为配置示例，请参考：https://github.com/InfinityPacer/MoviePilot-Plugins/blob/main/README.md 进行配置\n"
+                "// 如与全局保持一致的配置项，请勿在站点配置中配置\n"
+                "// 注意无关内容需使用 // 注释\n")
+        config = """[{
+        "sitename": "站点1",
+        "seed_time": 96,
+        "hr_seed_time": 144
+    }, {
+        "sitename": "站点2",
+        "hr": "yes",
+        "size": "10-500",
+        "seeder": "5-10",
+        "pubtime": "5-120",
+        "seed_time": 96,
+        "save_path": "/downloads/site2",
+        "proxy_download": true,
+        "hr_seed_time": 144
+    }, {
+        "sitename": "站点3",
+        "freeleech": "free",
+        "hr": "yes",
+        "include": "",
+        "exclude": "",
+        "size": "10-500",
+        "seeder": "1",
+        "pubtime": "5-120",
+        "seed_time": 120,
+        "hr_seed_time": 144,
+        "seed_ratio": "",
+        "seed_size": "",
+        "download_time": "",
+        "seed_avgspeed": "",
+        "seed_inactivetime": "",
+        "save_path": "/downloads/site1",
+        "proxy_download": false,
+        "proxy_delete": false,
+        "qb_category": "刷流",
+        "auto_qb_category": true
+    }]"""
+        return desc + config
 
     def get_page(self) -> List[dict]:
         pass
