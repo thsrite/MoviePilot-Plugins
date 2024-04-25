@@ -22,7 +22,7 @@ class WeChatForward(_PluginBase):
     # 插件图标
     plugin_icon = "Wechat_A.png"
     # 插件版本
-    plugin_version = "2.0"
+    plugin_version = "2.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -150,36 +150,53 @@ class WeChatForward(_PluginBase):
         """
         获取并存储wechat token
         """
-        # 解析配置
-        for wechat in json.loads(self._wechat_confs):
-            remark = wechat.get("remark")
-            appid = wechat.get("appid")
-            corpid = wechat.get("corpid")
-            appsecret = wechat.get("appsecret")
-            pattern = wechat.get("pattern")
-            extra_confs = wechat.get("extra_confs")
-            if not appid or not corpid or not appsecret:
-                logger.error(f"{remark} 应用配置不正确, 跳过处理")
-                continue
+        # 从数据库获取token
+        wechat_confs = self.get_data('wechat_confs')
+        if wechat_confs:
+            self._wechat_token_pattern_confs = wechat_confs
+            logger.info(f"WeChat配置 从数据库获取成功：{len(self._wechat_token_pattern_confs.keys())}条配置")
+        else:
+            # 解析配置
+            for wechat in json.loads(self._wechat_confs):
+                remark = wechat.get("remark")
+                appid = wechat.get("appid")
+                corpid = wechat.get("corpid")
+                appsecret = wechat.get("appsecret")
+                pattern = wechat.get("pattern")
+                extra_confs = wechat.get("extra_confs")
+                if not appid or not corpid or not appsecret:
+                    logger.error(f"{remark} 应用配置不正确, 跳过处理")
+                    continue
 
-            # 已过期，重新获取token
-            access_token, expires_in, access_token_time = self.__get_access_token(corpid=corpid,
-                                                                                  appsecret=appsecret)
-            if not access_token:
-                # 没有token，获取token
-                logger.error(f"wechat配置 {remark} 获取token失败，请检查配置")
-                continue
+                # 获取token
+                access_token, expires_in, access_token_time = self.__get_access_token(corpid=corpid,
+                                                                                      appsecret=appsecret)
+                if not access_token:
+                    # 没有token，获取token
+                    logger.error(f"WeChat配置 {remark} 获取token失败，请检查配置")
+                    continue
 
-            self._wechat_token_pattern_confs[appid] = {
-                "corpid": corpid,
-                "appsecret": appsecret,
-                "access_token": access_token,
-                "expires_in": expires_in,
-                "access_token_time": access_token_time,
-                "pattern": pattern,
-                "extra_confs": extra_confs,
-            }
-            logger.info(f"wechat配置 {remark} token保存成功")
+                self._wechat_token_pattern_confs[appid] = {
+                    "corpid": corpid,
+                    "appsecret": appsecret,
+                    "access_token": access_token,
+                    "expires_in": expires_in,
+                    "access_token_time": access_token_time,
+                    "pattern": pattern,
+                    "extra_confs": extra_confs,
+                }
+                logger.info(f"WeChat配置 {remark} token请求成功")
+
+            # token存库
+            if len(self._wechat_token_pattern_confs.keys()) > 0:
+                self.__save_wechat_confs()
+
+    def __save_wechat_confs(self):
+        """
+        保存wechat配置
+        """
+        self.save_data(key="wechat_confs",
+                       value=self._wechat_token_pattern_confs)
 
     def get_state(self) -> bool:
         return self._enabled
@@ -630,10 +647,14 @@ class WeChatForward(_PluginBase):
         appsecret = wechat_confs.get("appsecret")
 
         # 判断token有效期
-        if force or (datetime.now() - access_token_time).seconds >= expires_in:
+        if force or (datetime.now() - datetime.strptime(access_token_time, '%Y-%m-%d %H:%M:%S')).seconds >= expires_in:
             # 重新获取token
             access_token, expires_in, access_token_time = self.__get_access_token(corpid=corpid,
                                                                                   appsecret=appsecret)
+
+            if not access_token:
+                logger.error(f"WeChat配置 {appid} 获取token失败，请检查配置")
+                return None
 
             # 更新token回配置
             wechat_confs.update({
@@ -642,10 +663,8 @@ class WeChatForward(_PluginBase):
                 "access_token_time": access_token_time,
             })
             self._wechat_token_pattern_confs[appid] = wechat_confs
-
-            if not access_token:
-                logger.error(f"wechat配置 {appid} 获取token失败，请检查配置")
-                return None
+            # 更新回库
+            self.__save_wechat_confs()
 
         return access_token
 
@@ -768,7 +787,7 @@ class WeChatForward(_PluginBase):
                 if ret_json.get('errcode') == 0:
                     access_token = ret_json.get('access_token')
                     expires_in = ret_json.get('expires_in')
-                    access_token_time = datetime.now()
+                    access_token_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
                     return access_token, expires_in, access_token_time
                 else:
