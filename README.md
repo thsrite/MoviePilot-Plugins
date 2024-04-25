@@ -27,7 +27,7 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - [短剧刮削 3.2](docs%2FShortPlayMonitor.md)
 - 云盘实时监控 1.8
 - 源文件恢复 1.2
-- [微信消息转发 2.0](docs%2FWeChatForward.md)
+- [微信消息转发 2.1](docs%2FWeChatForward.md)
 - 订阅下载统计 1.5
 - [自定义命令 1.5](docs%2FCustomCommand.md)
 - docker自定义任务 1.2
