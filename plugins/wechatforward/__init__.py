@@ -22,7 +22,7 @@ class WeChatForward(_PluginBase):
     # 插件图标
     plugin_icon = "Wechat_A.png"
     # 插件版本
-    plugin_version = "1.6"
+    plugin_version = "2.0"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -36,13 +36,11 @@ class WeChatForward(_PluginBase):
 
     # 私有属性
     _enabled = False
-    _wechat = None
-    _pattern = None
+    _wechat_confs = None
+    _specify_confs = None
     _ignore_userid = None
-    _extra_confs = None
-    _pattern_token = {}
+    _wechat_token_pattern_confs = {}
     _extra_msg_history = {}
-    _specify_confs = {}
 
     # 企业微信发送消息URL
     _send_msg_url = f"{settings.WECHAT_PROXY}/cgi-bin/message/send?access_token=%s"
@@ -51,46 +49,137 @@ class WeChatForward(_PluginBase):
 
     example = [
         {
-            'comment': '入库消息',
-            'appid': 1000003,
-            'corpid': None,
-            'appsecret': None,
-            'pattern': '已入库',
-            'extra_confs': None,
+            "remark": "入库消息",
+            "appid": 1000001,
+            "corpid": "",
+            "appsecret": "",
+            "pattern": "已入库",
+            "extra_confs": [],
         },
         {
-            'comment': '站点签到数据统计',
-            'appid': 1000005,
-            'corpid': None,
-            'appsecret': None,
-            'pattern': '自动签到|自动登录|数据统计|刷流任务|药丸签到|订阅下载统计|98堂签到',
-            'extra_confs': [
-                {
-                    'pattern': '开始下载',
-                    'userid': 'test,test2',
-                    'msg': '{name} 后台下载任务已提交，请耐心等候入库通知。'
-                },
-                {
-                    'pattern': '已添加订阅',
-                    'userid': 'test,test2',
-                    'msg': '{name} 电视剧正在更新，待更新后自动下载。'
-                }
-            ]
+            "remark": "站点签到数据统计",
+            "appid": 1000002,
+            "corpid": "",
+            "appsecret": "",
+            "pattern": "自动签到|自动登录|数据统计|刷流任务",
+            "extra_confs": []
         }
     ]
 
     def init_plugin(self, config: dict = None):
         if config:
             self._enabled = config.get("enabled")
-            self._wechat = config.get("wechat")
-            self._pattern = config.get("pattern")
+            self._wechat_confs = config.get("wechat_confs") or []
             self._ignore_userid = config.get("ignore_userid")
-            self._extra_confs = config.get("extra_confs")
             self._specify_confs = config.get("specify_confs")
 
+            # 兼容旧版本配置
+            self.__sync_old_config()
+
             # 获取token存库
-            if self._enabled and self._wechat:
+            if self._enabled and self._wechat_confs:
                 self.__save_wechat_token()
+
+    def __sync_old_config(self):
+        """
+        兼容旧版本配置
+        """
+        config = self.get_config()
+        if not config or not config.get("wechat") or not config.get("pattern"):
+            return
+
+        __extra_confs = {}
+        if config.get("extra_confs"):
+            for extra_conf in config.get("extra_confs").split("\n"):
+                if not extra_conf:
+                    continue
+                if str(extra_conf).startswith("#"):
+                    extra_conf = extra_conf.strip()[1:]
+                extras = str(extra_conf).split(" > ")
+                if len(extras) != 4:
+                    continue
+                extra_pattern = extras[0]
+                extra_userid = extras[1]
+                extra_title = extras[2]
+                extra_appid = extras[3]
+                __extra = __extra_confs.get(extra_appid, [])
+                __extra.append({
+                    "pattern": extra_pattern,
+                    "userid": extra_userid,
+                    "msg": extra_title,
+                })
+                __extra_confs[extra_appid] = __extra
+
+        wechat_confs = []
+        for index, wechat in enumerate(config.get("wechat").split("\n")):
+            remark = ""
+            if wechat.count("#") == 1:
+                remark = wechat.split("#")[1]
+                wechat = wechat.split("#")[0]
+            wechat_config = wechat.split(":")
+            if len(wechat_config) != 3:
+                continue
+            appid = wechat_config[0]
+            corpid = wechat_config[1]
+            appsecret = wechat_config[2]
+            if not remark:
+                remark = f"{appid}配置"
+
+            # 获取对应appid的正则
+            pattern = config.get("pattern").split("\n")[index] or ""
+            wechat_confs.append({
+                "remark": remark,
+                "appid": appid,
+                "corpid": corpid,
+                "appsecret": appsecret,
+                "pattern": pattern,
+                "extra_confs": __extra_confs.get(appid, []) if __extra_confs else []
+            })
+
+        if wechat_confs:
+            self._wechat_confs = json.dumps(wechat_confs, indent=4, ensure_ascii=False)
+            self.update_config({
+                "enabled": self._enabled,
+                "wechat_confs": self._wechat_confs,
+                "ignore_userid": self._ignore_userid,
+                "specify_confs": self._specify_confs,
+            })
+            logger.info("旧版本配置已转为新版本配置")
+
+    def __save_wechat_token(self):
+        """
+        获取并存储wechat token
+        """
+        # 解析配置
+        for wechat in json.loads(self._wechat_confs):
+            remark = wechat.get("remark")
+            appid = wechat.get("appid")
+            corpid = wechat.get("corpid")
+            appsecret = wechat.get("appsecret")
+            pattern = wechat.get("pattern")
+            extra_confs = wechat.get("extra_confs")
+            if not appid or not corpid or not appsecret:
+                logger.error(f"{remark} 应用配置不正确, 跳过处理")
+                continue
+
+            # 已过期，重新获取token
+            access_token, expires_in, access_token_time = self.__get_access_token(corpid=corpid,
+                                                                                  appsecret=appsecret)
+            if not access_token:
+                # 没有token，获取token
+                logger.error(f"wechat配置 {remark} 获取token失败，请检查配置")
+                continue
+
+            self._wechat_token_pattern_confs[appid] = {
+                "corpid": corpid,
+                "appsecret": appsecret,
+                "access_token": access_token,
+                "expires_in": expires_in,
+                "access_token_time": access_token_time,
+                "pattern": pattern,
+                "extra_confs": extra_confs,
+            }
+            logger.info(f"wechat配置 {remark} token保存成功")
 
     def get_state(self) -> bool:
         return self._enabled
@@ -129,68 +218,18 @@ class WeChatForward(_PluginBase):
                                     }
                                 ]
                             },
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
                             {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
+                                "component": "VCol",
+                                "props": {
+                                    "cols": 12,
+                                    "md": 4
                                 },
-                                'content': [
+                                "content": [
                                     {
-                                        'component': 'VTextarea',
-                                        'props': {
-                                            'model': 'wechat',
-                                            'rows': '5',
-                                            'label': '应用配置',
-                                            'placeholder': 'appid:corpid:appsecret（一行一个配置）'
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextarea',
-                                        'props': {
-                                            'model': 'pattern',
-                                            'rows': '6',
-                                            'label': '正则配置',
-                                            'placeholder': '对应上方应用配置，一行一个，一一对应'
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextarea',
-                                        'props': {
-                                            'model': 'extra_confs',
-                                            'rows': '4',
-                                            'label': '额外消息配置',
-                                            'placeholder': '开始下载 > userid > 后台下载任务已提交，请耐心等候入库通知。 > appid'
+                                        "component": "VSwitch",
+                                        "props": {
+                                            "model": "dialog_closed",
+                                            "label": "设置微信配置"
                                         }
                                     }
                                 ]
@@ -243,6 +282,11 @@ class WeChatForward(_PluginBase):
                     },
                     {
                         'component': 'VRow',
+                        'props': {
+                            'style': {
+                                'margin-top': '12px'
+                            },
+                        },
                         'content': [
                             {
                                 'component': 'VCol',
@@ -253,26 +297,114 @@ class WeChatForward(_PluginBase):
                                     {
                                         'component': 'VAlert',
                                         'props': {
-                                            'type': 'info',
-                                            'variant': 'tonal',
-                                            'text': '根据正则表达式，把MoviePilot的消息转发到多个微信应用。'
-                                                    '应用配置可加注释：'
-                                                    'appid:corpid:appsecret#站点通知'
-                                        }
+                                            'type': 'success',
+                                            'variant': 'tonal'
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'span',
+                                                'text': '配置教程请参考：'
+                                            },
+                                            {
+                                                'component': 'a',
+                                                'props': {
+                                                    'href': 'https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/docs/WeChatForward.md',
+                                                    'target': '_blank'
+                                                },
+                                                'text': 'https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/docs/WeChatForward.md'
+                                            }
+                                        ]
                                     }
                                 ]
                             }
                         ]
                     },
+                    {
+                        "component": "VDialog",
+                        "props": {
+                            "model": "dialog_closed",
+                            "max-width": "65rem",
+                            "overlay-class": "v-dialog--scrollable v-overlay--scroll-blocked",
+                            "content-class": "v-card v-card--density-default v-card--variant-elevated rounded-t"
+                        },
+                        "content": [
+                            {
+                                "component": "VCard",
+                                "props": {
+                                    "title": "设置微信配置"
+                                },
+                                "content": [
+                                    {
+                                        "component": "VDialogCloseBtn",
+                                        "props": {
+                                            "model": "dialog_closed"
+                                        }
+                                    },
+                                    {
+                                        "component": "VCardText",
+                                        "props": {},
+                                        "content": [
+                                            {
+                                                'component': 'VRow',
+                                                'content': [
+                                                    {
+                                                        'component': 'VCol',
+                                                        'props': {
+                                                            'cols': 12,
+                                                        },
+                                                        'content': [
+                                                            {
+                                                                'component': 'VAceEditor',
+                                                                'props': {
+                                                                    'modelvalue': 'wechat_confs',
+                                                                    'lang': 'json',
+                                                                    'theme': 'monokai',
+                                                                    'style': 'height: 30rem',
+                                                                }
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                'component': 'VRow',
+                                                'content': [
+                                                    {
+                                                        'component': 'VCol',
+                                                        'props': {
+                                                            'cols': 12,
+                                                        },
+                                                        'content': [
+                                                            {
+                                                                'component': 'VAlert',
+                                                                'props': {
+                                                                    'type': 'info',
+                                                                    'variant': 'tonal'
+                                                                },
+                                                                'content': [
+                                                                    {
+                                                                        'component': 'span',
+                                                                        'text': '注意：只有正确配置微信配置时，该配置项才会生效，详细配置参考。'
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
                 ]
             }
         ], {
             "enabled": False,
-            "wechat": "",
-            "pattern": "",
             "ignore_userid": "",
             "specify_confs": "",
-            "extra_confs": ""
+            "wechat_confs": json.dumps(WeChatForward.example, indent=4, ensure_ascii=False)
         }
 
     def get_page(self) -> List[dict]:
@@ -283,49 +415,58 @@ class WeChatForward(_PluginBase):
         """
         消息转发
         """
-        if not self._enabled:
+        if not self._enabled or not self._wechat_token_pattern_confs:
+            logger.error("插件未启用或未配置微信配置")
             return
 
         # 消息体
         data = event.event_data
-        channel = data['channel']
+        channel = data.get("channel")
         if channel and channel != MessageChannel.Wechat:
             return
 
-        title = data['title']
-        text = data['text']
-        image = data['image']
-        userid = data['userid']
+        title = data.get("title")
+        text = data.get("text")
+        image = data.get("image")
+        userid = data.get("userid")
 
-        # 正则匹配
-        patterns = self._pattern.split("\n")
-        for index, pattern in enumerate(patterns):
-            msg_match = re.search(pattern, title)
-            if msg_match:
-                access_token, appid = self.__flush_access_token(index=index)
-                if not access_token:
-                    logger.error("未获取到有效token，请检查配置")
-                    continue
+        # 遍历配置 匹配正则 发送消息
+        for wechat_appid in self._wechat_token_pattern_confs.keys():
+            wechat_conf = self._wechat_token_pattern_confs.get(wechat_appid)
+            if not wechat_conf or not wechat_conf.get("pattern"):
+                continue
+            # 匹配正则
+            if not re.search(wechat_conf.get("pattern"), title):
+                continue
 
-                # 忽略userid正则表达式
-                if self._ignore_userid and re.search(self._ignore_userid, title):
-                    userid = None
-                else:
-                    # 特定消息指定用户
-                    userid = self.__specify_userid(title=title, text=text, userid=userid)
+            # 忽略userid
+            if self._ignore_userid and re.search(self._ignore_userid, title):
+                userid = None
+            else:
+                # 特定消息指定用户
+                userid = self.__specify_userid(title=title, text=text, userid=userid)
 
-                # 发送消息
-                if image:
-                    self.__send_image_message(title=title, text=text, image_url=image, userid=userid,
-                                              access_token=access_token, appid=appid, index=index)
-                else:
-                    self.__send_message(title=title, text=text, userid=userid, access_token=access_token, appid=appid,
-                                        index=index)
+            access_token = self.__flush_access_token(appid=wechat_appid)
+            if not access_token:
+                logger.error("未获取到有效token，请检查配置")
+                continue
 
-                # 开始下载 > userid > {name} 后台下载任务已提交，请耐心等候入库通知。 > appid
-                # 已添加订阅 > userid > {name} 电视剧正在更新，已添加订阅，待更新后自动下载。 > appid
-                if self._extra_confs:
-                    self.__send_extra_msg(title=title, text=text)
+            # 发送消息
+            if image:
+                self.__send_image_message(title=title, text=text, image_url=image, userid=userid,
+                                          access_token=wechat_conf.get("access_token"), appid=wechat_appid)
+            else:
+                self.__send_message(title=title, text=text, userid=userid, access_token=wechat_conf.get("access_token"),
+                                    appid=wechat_appid)
+
+            # 发送额外消息
+            # 开始下载 > userid > {name} 后台下载任务已提交，请耐心等候入库通知。 > appid
+            # 已添加订阅 > userid > {name} 电视剧正在更新，已添加订阅，待更新后自动下载。 > appid
+            if wechat_conf.get("extra_confs"):
+                self.__send_extra_msg(wechat_appid=wechat_appid,
+                                      extra_confs=wechat_conf.get("extra_confs"),
+                                      title=title,
+                                      text=text)
 
     def __specify_userid(self, title, text, userid):
         """
@@ -348,28 +489,28 @@ class WeChatForward(_PluginBase):
 
         return userid
 
-    def __send_extra_msg(self, title, text):
+    def __send_extra_msg(self, wechat_appid, extra_confs, title, text):
         """
         根据自定义规则发送额外消息
         """
         self._extra_msg_history = self.get_data(key="extra_msg") or {}
         is_save_history = False
-        extra_confs = self._extra_confs.split("\n")
         for extra_conf in extra_confs:
             if not extra_conf:
                 continue
-            # 跳过注释
-            if str(extra_conf).startswith("#"):
-                continue
+
             extras = str(extra_conf).split(" > ")
             if len(extras) != 4:
                 continue
-            extra_pattern = extras[0]
-            extra_userid = extras[1]
-            extra_title = extras[2]
-            extra_appid = extras[3]
-            if str(extra_title).find('{name}') != -1:
-                extra_title = extra_title.replace('{name}', self.__parse_tv_title(title))
+            extra_pattern = extra_conf.get("pattern")
+            extra_userid = extra_conf.get("userid")
+            extra_msg = extra_conf.get("msg")
+
+            # 处理变量{name}
+            if str(extra_msg).find('{name}') != -1:
+                extra_title = extra_msg.replace('{name}', self.__parse_tv_title(title))
+
+            # 正则匹配额外消息表达式
             if re.search(extra_pattern, title):
                 logger.info(f"{title} 正则匹配到额外消息 {extra_pattern}")
                 # 搜索消息，获取消息text中的用户
@@ -382,6 +523,7 @@ class WeChatForward(_PluginBase):
                     if not result:
                         logger.error("未获取到用户，跳过处理")
                         continue
+
                 # 获取消息text中的用户
                 user_id = result.group(1)
                 logger.info(f"获取到消息用户 {user_id}")
@@ -416,10 +558,10 @@ class WeChatForward(_PluginBase):
 
                     logger.info(f"消息用户{user_id} 匹配到目标用户 {extra_userid}")
                     # 发送额外消息
-                    if str(settings.WECHAT_APP_ID) == str(extra_appid):
+                    if str(settings.WECHAT_APP_ID) == str(wechat_appid):
                         # 直接发送
-                        WeChat().send_msg(title=extra_title, userid=user_id)
-                        logger.info(f"{settings.WECHAT_APP_ID} 发送额外消息 {extra_title} 成功")
+                        WeChat().send_msg(title=extra_msg, userid=user_id)
+                        logger.info(f"{settings.WECHAT_APP_ID} 发送额外消息 {extra_msg} 成功")
                         # 保存已发送消息
                         if "开始下载" in str(title):
                             self._extra_msg_history[f"{user_id}-{self.__parse_tv_title(title)}"] = time.strftime(
@@ -429,17 +571,16 @@ class WeChatForward(_PluginBase):
                         for wechat_idx in self._pattern_token.keys():
                             wechat_conf = self._pattern_token.get(wechat_idx)
                             if (wechat_conf and wechat_conf.get("appid")
-                                    and str(wechat_conf.get("appid")) == str(extra_appid)):
-                                access_token, appid = self.__flush_access_token(index=wechat_idx)
+                                    and str(wechat_conf.get("appid")) == str(wechat_appid)):
+                                access_token, appid = self.__flush_access_token(appid=wechat_appid)
                                 if not access_token:
                                     logger.error("未获取到有效token，请检查配置")
                                     continue
-                                self.__send_message(title=extra_title,
+                                self.__send_message(title=extra_msg,
                                                     userid=user_id,
                                                     access_token=access_token,
-                                                    appid=appid,
-                                                    index=wechat_idx)
-                                logger.info(f"{appid} 发送额外消息 {extra_title} 成功")
+                                                    appid=appid)
+                                logger.info(f"{appid} 发送额外消息 {extra_msg} 成功")
                                 # 保存已发送消息
                                 if "开始下载" in str(title):
                                     self._extra_msg_history[
@@ -452,7 +593,8 @@ class WeChatForward(_PluginBase):
             self.save_data(key="extra_msg",
                            value=self._extra_msg_history)
 
-    def __parse_tv_title(self, title):
+    @staticmethod
+    def __parse_tv_title(title):
         """
         解析title标题
         """
@@ -472,76 +614,43 @@ class WeChatForward(_PluginBase):
             _title += f"{sub_title_str} "
         return str(_title.rstrip())
 
-    def __save_wechat_token(self):
+    def __flush_access_token(self, appid: int, force: bool = False):
         """
-        获取并存储wechat token
+        获取appid wechat token
         """
-        # 解析配置
-        wechats = self._wechat.split("\n")
-        for index, wechat in enumerate(wechats):
-            # 排除注释
-            wechat = wechat.split("#")[0]
-            wechat_config = wechat.split(":")
-            if len(wechat_config) != 3:
-                logger.error(f"{wechat} 应用配置不正确")
-                continue
-            appid = wechat_config[0]
-            corpid = wechat_config[1]
-            appsecret = wechat_config[2]
-
-            # 已过期，重新获取token
-            access_token, expires_in, access_token_time = self.__get_access_token(corpid=corpid,
-                                                                                  appsecret=appsecret)
-            if not access_token:
-                # 没有token，获取token
-                logger.error(f"wechat配置 appid = {appid} 获取token失败，请检查配置")
-                continue
-
-            self._pattern_token[index] = {
-                "appid": appid,
-                "corpid": corpid,
-                "appsecret": appsecret,
-                "access_token": access_token,
-                "expires_in": expires_in,
-                "access_token_time": access_token_time,
-            }
-
-    def __flush_access_token(self, index: int, force: bool = False):
-        """
-        获取第i个配置wechat token
-        """
-        wechat_token = self._pattern_token[index]
-        if not wechat_token:
-            logger.error(f"未获取到第 {index} 条正则对应的wechat应用token，请检查配置")
+        wechat_confs = self._wechat_token_pattern_confs[appid]
+        if not wechat_confs:
+            logger.error(f"未获取到 {appid} 配置信息，请检查配置")
             return None
-        access_token = wechat_token['access_token']
-        expires_in = wechat_token['expires_in']
-        access_token_time = wechat_token['access_token_time']
-        appid = wechat_token['appid']
-        corpid = wechat_token['corpid']
-        appsecret = wechat_token['appsecret']
+
+        access_token = wechat_confs.get("access_token")
+        expires_in = wechat_confs.get("expires_in")
+        access_token_time = wechat_confs.get("access_token_time")
+        corpid = wechat_confs.get("corpid")
+        appsecret = wechat_confs.get("appsecret")
 
         # 判断token有效期
         if force or (datetime.now() - access_token_time).seconds >= expires_in:
             # 重新获取token
             access_token, expires_in, access_token_time = self.__get_access_token(corpid=corpid,
                                                                                   appsecret=appsecret)
+
+            # 更新token回配置
+            wechat_confs.update({
+                "access_token": access_token,
+                "expires_in": expires_in,
+                "access_token_time": access_token_time,
+            })
+            self._wechat_token_pattern_confs[appid] = wechat_confs
+
             if not access_token:
-                logger.error(f"wechat配置 appid = {appid} 获取token失败，请检查配置")
-                return None, None
+                logger.error(f"wechat配置 {appid} 获取token失败，请检查配置")
+                return None
 
-        self._pattern_token[index] = {
-            "appid": appid,
-            "corpid": corpid,
-            "appsecret": appsecret,
-            "access_token": access_token,
-            "expires_in": expires_in,
-            "access_token_time": access_token_time,
-        }
-        return access_token, appid
+        return access_token
 
-    def __send_message(self, title: str, text: str = None, userid: str = None, access_token: str = None,
-                       appid: str = None, index: int = None) -> Optional[bool]:
+    def __send_message(self, title: str, text: str = None, userid: str = None,
+                       access_token: str = None, appid: int = None) -> Optional[bool]:
         """
         发送文本消息
         :param title: 消息标题
@@ -567,10 +676,10 @@ class WeChatForward(_PluginBase):
             "enable_id_trans": 0,
             "enable_duplicate_check": 0
         }
-        return self.__post_request(access_token=access_token, req_json=req_json, index=index, title=title)
+        return self.__post_request(access_token=access_token, req_json=req_json, appid=appid, title=title)
 
     def __send_image_message(self, title: str, text: str, image_url: str, userid: str = None,
-                             access_token: str = None, appid: str = None, index: int = None) -> Optional[bool]:
+                             access_token: str = None, appid: int = None) -> Optional[bool]:
         """
         发送图文消息
         :param title: 消息标题
@@ -598,9 +707,9 @@ class WeChatForward(_PluginBase):
                 ]
             }
         }
-        return self.__post_request(access_token=access_token, req_json=req_json, index=index, title=title)
+        return self.__post_request(access_token=access_token, req_json=req_json, appid=appid, title=title)
 
-    def __post_request(self, access_token: str, req_json: dict, index: int, title: str, retry: int = 0) -> bool:
+    def __post_request(self, access_token: str, req_json: dict, appid: int, title: str, retry: int = 0) -> bool:
         message_url = self._send_msg_url % access_token
         """
         向微信发送请求
@@ -613,37 +722,37 @@ class WeChatForward(_PluginBase):
             if res and res.status_code == 200:
                 ret_json = res.json()
                 if ret_json.get('errcode') == 0:
-                    logger.info(f"转发 配置{index} 消息 {title} {req_json} 成功")
+                    logger.info(f"转发 配置 {appid} 消息 {title} {req_json} 成功")
                     return True
                 else:
                     if ret_json.get('errcode') == 81013:
                         return False
 
-                    logger.error(f"转发 配置{index} 消息 {title} {req_json} 失败，错误信息：{ret_json}")
+                    logger.error(f"转发 配置 {appid} 消息 {title} {req_json} 失败，错误信息：{ret_json}")
                     if ret_json.get('errcode') == 42001 or ret_json.get('errcode') == 40014:
                         logger.info("token已过期，正在重新刷新token重试")
                         # 重新获取token
-                        access_token, appid = self.__flush_access_token(index=index,
-                                                                        force=True)
+                        access_token = self.__flush_access_token(appid=appid,
+                                                                 force=True)
                         if access_token:
                             retry += 1
                             # 重发请求
                             if retry <= 3:
                                 return self.__post_request(access_token=access_token,
                                                            req_json=req_json,
-                                                           index=index,
+                                                           appid=appid,
                                                            title=title,
                                                            retry=retry)
                     return False
             elif res is not None:
                 logger.error(
-                    f"转发 配置{index} 消息 {title} {req_json} 失败，错误码：{res.status_code}，错误原因：{res.reason}")
+                    f"转发 配置 {appid} 消息 {title} {req_json} 失败，错误码：{res.status_code}，错误原因：{res.reason}")
                 return False
             else:
-                logger.error(f"转发 配置{index} 消息 {title} {req_json} 失败，未获取到返回信息")
+                logger.error(f"转发 配置 {appid} 消息 {title} {req_json} 失败，未获取到返回信息")
                 return False
         except Exception as err:
-            logger.error(f"转发 配置{index} 消息 {title} {req_json} 异常，错误信息：{str(err)}")
+            logger.error(f"转发 配置 {appid} 消息 {title} {req_json} 异常，错误信息：{str(err)}")
             return False
 
     def __get_access_token(self, corpid: str, appsecret: str):

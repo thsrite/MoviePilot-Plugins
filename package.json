@@ -238,11 +238,12 @@
       "WeChatForward": {
         "name": "微信消息转发",
         "description": "根据正则转发通知到其他WeChat应用。",
-        "version": "1.6",
+        "version": "2.0",
         "icon": "Wechat_A.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v2.0": "优化微信配置",
           "v1.6": "修改获取指定用户订阅列表方法",
           "v1.5": "丰富日志",
           "v1.4": "特定消息强制指定userid",
@@ -341,23 +342,6 @@
           "v1.2": "修复订阅已存在包含关键词和订阅站点",
           "v1.1": "fix bug",
           "v1.0": "init"
-        }
-      },
-      "WeChatForward2": {
-        "name": "微信消息转发(测试)",
-        "description": "根据正则转发通知到其他WeChat应用。",
-        "version": "2.0",
-        "icon": "Wechat_A.png",
-        "author": "thsrite",
-        "level": 1,
-        "history": {
-          "v1.6": "修改获取指定用户订阅列表方法",
-          "v1.5": "丰富日志",
-          "v1.4": "特定消息强制指定userid",
-          "v1.3": "防重复发送额外消息",
-          "v1.2": "fix规则",
-          "v1.1": "自定义发送额外消息",
-          "v1.0": "根据正则转发通知到其他WeChat应用"
         }
       }
 }
