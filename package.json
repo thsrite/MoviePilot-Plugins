@@ -346,7 +346,7 @@
       "WeChatForward2": {
         "name": "微信消息转发(测试)",
         "description": "根据正则转发通知到其他WeChat应用。",
-        "version": "1.6",
+        "version": "2.0",
         "icon": "Wechat_A.png",
         "author": "thsrite",
         "level": 1,

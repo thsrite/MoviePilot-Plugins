@@ -16,13 +16,13 @@ from app.log import logger
 
 class WeChatForward2(_PluginBase):
     # 插件名称
-    plugin_name = "微信消息转发"
+    plugin_name = "微信消息转发(测试)"
     # 插件描述
     plugin_desc = "根据正则转发通知到其他WeChat应用。"
     # 插件图标
     plugin_icon = "Wechat_A.png"
     # 插件版本
-    plugin_version = "1.6"
+    plugin_version = "2.0"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -140,73 +140,7 @@ class WeChatForward2(_PluginBase):
                                         "component": "VSwitch",
                                         "props": {
                                             "model": "dialog_closed",
-                                            "label": "设置站点"
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextarea',
-                                        'props': {
-                                            'model': 'wechat',
-                                            'rows': '5',
-                                            'label': '应用配置',
-                                            'placeholder': 'appid:corpid:appsecret（一行一个配置）'
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextarea',
-                                        'props': {
-                                            'model': 'pattern',
-                                            'rows': '6',
-                                            'label': '正则配置',
-                                            'placeholder': '对应上方应用配置，一行一个，一一对应'
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextarea',
-                                        'props': {
-                                            'model': 'extra_confs',
-                                            'rows': '4',
-                                            'label': '额外消息配置',
-                                            'placeholder': '开始下载 > userid > 后台下载任务已提交，请耐心等候入库通知。 > appid'
+                                            "label": "设置微信配置"
                                         }
                                     }
                                 ]
@@ -258,29 +192,6 @@ class WeChatForward2(_PluginBase):
                         ]
                     },
                     {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VAlert',
-                                        'props': {
-                                            'type': 'info',
-                                            'variant': 'tonal',
-                                            'text': '根据正则表达式，把MoviePilot的消息转发到多个微信应用。'
-                                                    '应用配置可加注释：'
-                                                    'appid:corpid:appsecret#站点通知'
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
                         "component": "VDialog",
                         "props": {
                             "model": "dialog_closed",
@@ -292,7 +203,7 @@ class WeChatForward2(_PluginBase):
                             {
                                 "component": "VCard",
                                 "props": {
-                                    "title": "设置站点配置"
+                                    "title": "设置微信配置"
                                 },
                                 "content": [
                                     {
@@ -317,7 +228,7 @@ class WeChatForward2(_PluginBase):
                                                             {
                                                                 'component': 'VAceEditor',
                                                                 'props': {
-                                                                    'modelvalue': 'site_config',
+                                                                    'modelvalue': 'wechat_config',
                                                                     'lang': 'json',
                                                                     'theme': 'monokai',
                                                                     'style': 'height: 30rem',
@@ -345,15 +256,7 @@ class WeChatForward2(_PluginBase):
                                                                 'content': [
                                                                     {
                                                                         'component': 'span',
-                                                                        'text': '注意：只有启用站点独立配置时，该配置项才会生效，详细配置参考：'
-                                                                    },
-                                                                    {
-                                                                        'component': 'a',
-                                                                        'props': {
-                                                                            'href': 'https://github.com/InfinityPacer/MoviePilot-Plugins/blob/main/README.md',
-                                                                            'target': '_blank'
-                                                                        },
-                                                                        'text': 'https://github.com/InfinityPacer/MoviePilot-Plugins/blob/main/README.md'
+                                                                        'text': '注意：只有正确配置微信配置时，该配置项才会生效，详细配置参考：'
                                                                     }
                                                                 ]
                                                             }
@@ -376,50 +279,41 @@ class WeChatForward2(_PluginBase):
             "ignore_userid": "",
             "specify_confs": "",
             "extra_confs": "",
-            "site_config": WeChatForward2.get_demo_site_config()
+            "wechat_config": WeChatForward2.get_demo_wechat_config()
         }
 
     @staticmethod
-    def get_demo_site_config() -> str:
-        desc = ("// 以下为配置示例，请参考：https://github.com/InfinityPacer/MoviePilot-Plugins/blob/main/README.md 进行配置\n"
-                "// 如与全局保持一致的配置项，请勿在站点配置中配置\n"
-                "// 注意无关内容需使用 // 注释\n")
-        config = """[{
-        "sitename": "站点1",
-        "seed_time": 96,
-        "hr_seed_time": 144
-    }, {
-        "sitename": "站点2",
-        "hr": "yes",
-        "size": "10-500",
-        "seeder": "5-10",
-        "pubtime": "5-120",
-        "seed_time": 96,
-        "save_path": "/downloads/site2",
-        "proxy_download": true,
-        "hr_seed_time": 144
-    }, {
-        "sitename": "站点3",
-        "freeleech": "free",
-        "hr": "yes",
-        "include": "",
-        "exclude": "",
-        "size": "10-500",
-        "seeder": "1",
-        "pubtime": "5-120",
-        "seed_time": 120,
-        "hr_seed_time": 144,
-        "seed_ratio": "",
-        "seed_size": "",
-        "download_time": "",
-        "seed_avgspeed": "",
-        "seed_inactivetime": "",
-        "save_path": "/downloads/site1",
-        "proxy_download": false,
-        "proxy_delete": false,
-        "qb_category": "刷流",
-        "auto_qb_category": true
-    }]"""
+    def get_demo_wechat_config() -> str:
+        desc = "// 该配置项为示例，请根据实际情况配置\n"
+        config = """ [
+        {
+            'comment': '入库消息',
+            'appid': 1000003,
+            'corpid': None,
+            'appsecret': None,
+            'pattern': '已入库',
+            'extra_confs': None,
+        },
+        {
+            'comment': '站点签到数据统计',
+            'appid': 1000005,
+            'corpid': None,
+            'appsecret': None,
+            'pattern': '自动签到|自动登录|数据统计|刷流任务|药丸签到|订阅下载统计|98堂签到',
+            'extra_confs': [
+                {
+                    'pattern': '开始下载',
+                    'userid': 'test,test2',
+                    'msg': '{name} 后台下载任务已提交，请耐心等候入库通知。'
+                },
+                {
+                    'pattern': '已添加订阅',
+                    'userid': 'test,test2',
+                    'msg': '{name} 电视剧正在更新，待更新后自动下载。'
+                }
+            ]
+        }
+    ]"""
         return desc + config
 
     def get_page(self) -> List[dict]:
