@@ -18,7 +18,7 @@ class MetaRefresh(_PluginBase):
     # 插件名称
     plugin_name = "媒体库元数据刷新"
     # 插件描述
-    plugin_desc = "定时刷新媒体库元数据，获取TMDB最新元数据信息。"
+    plugin_desc = "定时刷新媒体库元数据。"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/media.png"
     # 插件版本
@@ -270,6 +270,27 @@ class MetaRefresh(_PluginBase):
                             },
                         ],
                     },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '查询入库记录，周期请求媒体服务器元数据刷新接口。注：Jellyfin会刷新根目录。'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    }
                 ],
             }
         ], {
