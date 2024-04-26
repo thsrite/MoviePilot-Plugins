@@ -28,11 +28,12 @@
       "SiteUnreadMsg": {
         "name": "站点未读消息",
         "description": "发送站点未读消息。",
-        "version": "1.7",
+        "version": "1.8",
         "icon": "Synomail_A.png",
         "author": "thsrite",
         "level": 2,
         "history": {
+          "v1.8": "自定义保留消息天数",
           "v1.7": "删除重复代码、依赖于[站点数据统计]插件",
           "v1.6": "增加解析失败日志",
           "v1.5": "修复馒头未读消息1",
@@ -274,11 +275,12 @@
       "CustomCommand": {
         "name": "自定义命令",
         "description": "自定义执行周期执行命令并推送结果。",
-        "version": "1.5",
+        "version": "1.6",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/code.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v1.6": "自定义保留消息天数",
           "v1.5": "修复多个任务立即运行一次",
           "v1.4": "fix icon",
           "v1.3": "清除历史记录",
@@ -290,11 +292,12 @@
       "DockerManager": {
         "name": "docker自定义任务",
         "description": "管理宿主机docker，自定义容器定时任务。",
-        "version": "1.2",
+        "version": "1.3",
         "icon": "Docker_F.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v1.3": "自定义保留消息天数",
           "v1.2": "多个容器名,拼接",
           "v1.1": "修复多个任务立即运行一次",
           "v1.0": "init"

@@ -21,7 +21,7 @@ class DockerManager(_PluginBase):
     # 插件图标
     plugin_icon = "Docker_F.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -41,6 +41,7 @@ class DockerManager(_PluginBase):
     _msgtype: str = None
     _time_confs = None
     _docker_client = None
+    _history_days = None
     _scheduler: Optional[BackgroundScheduler] = None
 
     def init_plugin(self, config: dict = None):
@@ -54,6 +55,7 @@ class DockerManager(_PluginBase):
             self._msgtype = config.get("msgtype")
             self._clear = config.get("clear")
             self._time_confs = config.get("time_confs")
+            self._history_days = config.get("history_days") or 30
 
             # 清除历史
             if self._clear:
@@ -164,6 +166,11 @@ class DockerManager(_PluginBase):
                             "result": 'success' if state else 'fail',
                             "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
                         })
+
+                        thirty_days_ago = time.time() - int(self._history_days) * 24 * 60 * 60
+                        history = [record for record in history if
+                                   datetime.strptime(record["time"],
+                                                     '%Y-%m-%d %H:%M:%S').timestamp() >= thirty_days_ago]
                         # 保存历史
                         self.save_data(key="history", value=history)
 
@@ -188,6 +195,7 @@ class DockerManager(_PluginBase):
             "notify": self._notify,
             "msgtype": self._msgtype,
             "time_confs": self._time_confs,
+            "history_days": self._history_days,
             "clear": self._clear
         })
 
@@ -223,7 +231,7 @@ class DockerManager(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 2
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -239,7 +247,7 @@ class DockerManager(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 2
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -283,11 +291,16 @@ class DockerManager(_PluginBase):
                                     }
                                 ]
                             },
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
                             {
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 2
+                                    'md': 6
                                 },
                                 'content': [
                                     {
@@ -298,6 +311,22 @@ class DockerManager(_PluginBase):
                                             'model': 'msgtype',
                                             'label': '消息类型',
                                             'items': MsgTypeOptions
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'history_days',
+                                            'label': '保留历史天数'
                                         }
                                     }
                                 ]
@@ -355,6 +384,7 @@ class DockerManager(_PluginBase):
             "onlyonce": False,
             "clear": False,
             "time_confs": "",
+            "history_days": 30,
             "msgtype": ""
         }
 

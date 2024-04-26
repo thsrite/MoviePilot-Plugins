@@ -10,7 +10,7 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 ### 插件新增
 
 - 站点数据统计 1.4 （无未读消息版本）(废弃)
-- 站点未读消息 1.7
+- 站点未读消息 1.8 （依赖于[站点数据统计]插件）
 - [云盘Strm生成 3.7](docs%2FCloudStrm.md)
 - [Strm文件模式转换 1.0](docs%2FStrmConvert.md)
 - 清理订阅缓存 1.0
@@ -29,8 +29,8 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - 源文件恢复 1.2
 - [微信消息转发 2.1](docs%2FWeChatForward.md)
 - 订阅下载统计 1.5
-- [自定义命令 1.5](docs%2FCustomCommand.md)
-- docker自定义任务 1.2
+- [自定义命令 1.6](docs%2FCustomCommand.md)
+- docker自定义任务 1.3
 - 插件彻底卸载 1.0
 - 实时软连接 1.3
 - 订阅规则自动填充 2.5

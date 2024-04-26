@@ -37,7 +37,7 @@ class SiteUnreadMsg(_PluginBase):
     # 插件图标
     plugin_icon = "Synomail_A.png"
     # 插件版本
-    plugin_version = "1.7"
+    plugin_version = "1.8"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -63,6 +63,7 @@ class SiteUnreadMsg(_PluginBase):
     _cron: str = ""
     _notify: bool = False
     _queue_cnt: int = 5
+    _history_days: int = 30
     _unread_sites: list = []
 
     def init_plugin(self, config: dict = None):
@@ -78,6 +79,7 @@ class SiteUnreadMsg(_PluginBase):
             self._cron = config.get("cron")
             self._notify = config.get("notify")
             self._queue_cnt = config.get("queue_cnt")
+            self._history_days = config.get("history_days") or 30
             self._unread_sites = config.get("unread_sites") or []
 
             # 过滤掉已删除的站点
@@ -224,7 +226,7 @@ class SiteUnreadMsg(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 6
+                                    'md': 4
                                 },
                                 'content': [
                                     {
@@ -241,7 +243,7 @@ class SiteUnreadMsg(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 6
+                                    'md': 4
                                 },
                                 'content': [
                                     {
@@ -249,6 +251,22 @@ class SiteUnreadMsg(_PluginBase):
                                         'props': {
                                             'model': 'queue_cnt',
                                             'label': '队列数量'
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'history_days',
+                                            'label': '保留历史天数'
                                         }
                                     }
                                 ]
@@ -289,7 +307,7 @@ class SiteUnreadMsg(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '依赖于[站点数据统计]插件。'
+                                            'text': '依赖于[站点数据统计]插件，解析邮件失败请去[站点数据统计]插件仓库提交issue。'
                                         }
                                     }
                                 ]
@@ -304,6 +322,7 @@ class SiteUnreadMsg(_PluginBase):
             "notify": True,
             "cron": "5 1 * * *",
             "queue_cnt": 5,
+            "history_days": 30,
             "unread_sites": []
         }
 
@@ -619,6 +638,10 @@ class SiteUnreadMsg(_PluginBase):
                 p.map(self.__refresh_site_data, refresh_sites)
 
             if self._history:
+                thirty_days_ago = time.time() - int(self._history_days) * 24 * 60 * 60
+                self._history = [record for record in self._history if
+                                 datetime.strptime(record["time"], '%Y-%m-%d %H:%M:%S').timestamp() >= thirty_days_ago]
+
                 # 保存数据
                 self.save_data("history", self._history)
 
@@ -638,6 +661,7 @@ class SiteUnreadMsg(_PluginBase):
             "cron": self._cron,
             "notify": self._notify,
             "queue_cnt": self._queue_cnt,
+            "history_days": self._history_days,
             "unread_sites": self._unread_sites,
         })
 
