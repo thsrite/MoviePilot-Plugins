@@ -20,7 +20,7 @@ class SubscribeGroup(_PluginBase):
     # 插件图标
     plugin_icon = "teamwork.png"
     # 插件版本
-    plugin_version = "2.4"
+    plugin_version = "2.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -674,7 +674,8 @@ class SubscribeGroup(_PluginBase):
                     },
                     {
                         'component': 'td',
-                        'text': history.get("content").encode('utf-8').decode() if history.get("content") else ''
+                        'text': history.get("content").encode('utf-8').decode('unicode_escape') if history.get(
+                            "content") else ''
                     }
                 ]
             } for history in historys
