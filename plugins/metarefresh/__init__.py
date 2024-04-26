@@ -110,6 +110,10 @@ class MetaRefresh(_PluginBase):
             logger.error("没有选择刷新媒体服务器")
             return
 
+        if not settings.MEDIASERVER:
+            logger.error("没有配置媒体服务器")
+            return
+
         # 获取days内入库的媒体
         current_date = datetime.now()
         # 计算几天前的日期
