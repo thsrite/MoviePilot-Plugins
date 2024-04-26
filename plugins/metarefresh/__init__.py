@@ -125,24 +125,28 @@ class MetaRefresh(_PluginBase):
 
         logger.info(f"开始刷新媒体库元数据，最近{self._days}天内入库媒体：{len(transferhistorys)}个")
         # 刷新媒体库
-        items = [
-            RefreshMediaItem(
-                title=transferinfo.title,
-                year=transferinfo.year,
-                type=transferinfo.type,
-                category=transferinfo.category,
-                target_path=transferinfo.dest
-            )
-            for transferinfo in transferhistorys
-        ]
+        for transferinfo in transferhistorys:
+            logger.info(
+                f"开始刷新媒体库元数据：{transferinfo.title} ({transferinfo.year}) {transferinfo.type} {transferinfo.category} {transferinfo.seasons} {transferinfo.episodes}")
+            items = [
+                RefreshMediaItem(
+                    title=transferinfo.title,
+                    year=transferinfo.year,
+                    type=transferinfo.type,
+                    category=transferinfo.category,
+                    target_path=transferinfo.dest
+                )
+            ]
+            if "emby" in self._servers and "emby" in settings.MEDIASERVER:
+                Emby().refresh_library_by_items(items)
+            if "plex" in self._servers and "plex" in settings.MEDIASERVER:
+                Plex().refresh_library_by_items(items)
 
-        if "emby" in self._servers and "emby" in settings.MEDIASERVER:
-            Emby().refresh_library_by_items(items)
         if "jellyfin" in self._servers and "jellyfin" in settings.MEDIASERVER:
             # FIXME Jellyfin未找到刷新单个项目的API
             Jellyfin().refresh_root_library()
-        if "plex" in self._servers and "plex" in settings.MEDIASERVER:
-            Plex().refresh_library_by_items(items)
+
+        logger.info(f"刷新媒体库元数据完成")
 
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
