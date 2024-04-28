@@ -654,7 +654,7 @@ class WeChatForward(_PluginBase):
 
             # 处理变量{name}
             if str(extra_msg).find('{name}') != -1:
-                extra_title = extra_msg.replace('{name}', self.__parse_tv_title(title))
+                extra_msg = extra_msg.replace('{name}', self.__parse_tv_title(title))
 
             # 正则匹配额外消息表达式
             if re.search(extra_pattern, title):
