@@ -22,7 +22,7 @@ class WeChatForward(_PluginBase):
     # 插件图标
     plugin_icon = "Wechat_A.png"
     # 插件版本
-    plugin_version = "2.1"
+    plugin_version = "2.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -41,6 +41,7 @@ class WeChatForward(_PluginBase):
     _ignore_userid = None
     _wechat_token_pattern_confs = {}
     _extra_msg_history = {}
+    _history_days = None
 
     # 企业微信发送消息URL
     _send_msg_url = f"{settings.WECHAT_PROXY}/cgi-bin/message/send?access_token=%s"
@@ -72,6 +73,7 @@ class WeChatForward(_PluginBase):
             self._wechat_confs = config.get("wechat_confs") or []
             self._ignore_userid = config.get("ignore_userid")
             self._specify_confs = config.get("specify_confs")
+            self._history_days = config.get("history_days") or 7
 
             # 兼容旧版本配置
             self.__sync_old_config()
@@ -239,7 +241,7 @@ class WeChatForward(_PluginBase):
                                 "component": "VCol",
                                 "props": {
                                     "cols": 12,
-                                    "md": 4
+                                    "md": 6
                                 },
                                 "content": [
                                     {
@@ -247,6 +249,45 @@ class WeChatForward(_PluginBase):
                                         "props": {
                                             "model": "dialog_closed",
                                             "label": "设置微信配置"
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'history_days',
+                                            'label': '保留历史天数'
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 9
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextarea',
+                                        'props': {
+                                            'model': 'ignore_userid',
+                                            'rows': '1',
+                                            'label': '忽略userid',
+                                            'placeholder': '开始下载|添加下载任务失败'
                                         }
                                     }
                                 ]
@@ -269,28 +310,6 @@ class WeChatForward(_PluginBase):
                                             'rows': '2',
                                             'label': '特定消息指定用户',
                                             'placeholder': 'title > text > userid'
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextarea',
-                                        'props': {
-                                            'model': 'ignore_userid',
-                                            'rows': '1',
-                                            'label': '忽略userid',
-                                            'placeholder': '开始下载|添加下载任务失败'
                                         }
                                     }
                                 ]
@@ -421,11 +440,121 @@ class WeChatForward(_PluginBase):
             "enabled": False,
             "ignore_userid": "",
             "specify_confs": "",
+            "history_days": 7,
             "wechat_confs": json.dumps(WeChatForward.example, indent=4, ensure_ascii=False)
         }
 
     def get_page(self) -> List[dict]:
-        pass
+        # 查询同步详情
+        historys = self.get_data('history')
+        if not historys:
+            return [
+                {
+                    'component': 'div',
+                    'text': '暂无数据',
+                    'props': {
+                        'class': 'text-center',
+                    }
+                }
+            ]
+
+        if not isinstance(historys, list):
+            historys = [historys]
+
+        # 按照时间倒序
+        historys = sorted(historys, key=lambda x: x.get("time") or 0, reverse=True)
+
+        msgs = [
+            {
+                'component': 'tr',
+                'props': {
+                    'class': 'text-sm'
+                },
+                'content': [
+                    {
+                        'component': 'td',
+                        'props': {
+                            'class': 'whitespace-nowrap break-keep text-high-emphasis'
+                        },
+                        'text': history.get("time")
+                    },
+                    {
+                        'component': 'td',
+                        'text': history.get("appid")
+                    },
+                    {
+                        'component': 'td',
+                        'text': history.get("text")
+                    },
+                    {
+                        'component': 'td',
+                        'text': history.get("time")
+                    }
+                ]
+            } for history in historys
+        ]
+
+        # 拼装页面
+        return [
+            {
+                'component': 'VRow',
+                'content': [
+                    {
+                        'component': 'VCol',
+                        'props': {
+                            'cols': 12,
+                        },
+                        'content': [
+                            {
+                                'component': 'VTable',
+                                'props': {
+                                    'hover': True
+                                },
+                                'content': [
+                                    {
+                                        'component': 'thead',
+                                        'content': [
+                                            {
+                                                'component': 'th',
+                                                'props': {
+                                                    'class': 'text-start ps-4'
+                                                },
+                                                'text': 'time'
+                                            },
+                                            {
+                                                'component': 'th',
+                                                'props': {
+                                                    'class': 'text-start ps-4'
+                                                },
+                                                'text': 'appid'
+                                            },
+                                            {
+                                                'component': 'th',
+                                                'props': {
+                                                    'class': 'text-start ps-4'
+                                                },
+                                                'text': 'title'
+                                            },
+                                            {
+                                                'component': 'th',
+                                                'props': {
+                                                    'class': 'text-start ps-4'
+                                                },
+                                                'text': 'text'
+                                            },
+                                        ]
+                                    },
+                                    {
+                                        'component': 'tbody',
+                                        'content': msgs
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
 
     @eventmanager.register(EventType.NoticeMessage)
     def send(self, event):
@@ -695,7 +824,7 @@ class WeChatForward(_PluginBase):
             "enable_id_trans": 0,
             "enable_duplicate_check": 0
         }
-        return self.__post_request(access_token=access_token, req_json=req_json, appid=appid, title=title)
+        return self.__post_request(access_token=access_token, req_json=req_json, appid=appid, title=title, text=text)
 
     def __send_image_message(self, title: str, text: str, image_url: str, userid: str = None,
                              access_token: str = None, appid: int = None) -> Optional[bool]:
@@ -726,9 +855,10 @@ class WeChatForward(_PluginBase):
                 ]
             }
         }
-        return self.__post_request(access_token=access_token, req_json=req_json, appid=appid, title=title)
+        return self.__post_request(access_token=access_token, req_json=req_json, appid=appid, title=title, text=text)
 
-    def __post_request(self, access_token: str, req_json: dict, appid: int, title: str, retry: int = 0) -> bool:
+    def __post_request(self, access_token: str, req_json: dict, appid: int, title: str, retry: int = 0,
+                       text: str = None) -> bool:
         message_url = self._send_msg_url % access_token
         """
         向微信发送请求
@@ -742,6 +872,20 @@ class WeChatForward(_PluginBase):
                 ret_json = res.json()
                 if ret_json.get('errcode') == 0:
                     logger.info(f"转发 配置 {appid} 消息 {title} {req_json} 成功")
+                    # 读取历史记录
+                    history = self.get_data('history') or []
+                    history.append({
+                        "appid": appid,
+                        "title": title,
+                        "text": text,
+                        "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
+                    })
+                    thirty_days_ago = time.time() - int(self._history_days) * 24 * 60 * 60
+                    history = [record for record in history if
+                               datetime.strptime(record["time"],
+                                                 '%Y-%m-%d %H:%M:%S').timestamp() >= thirty_days_ago]
+                    # 保存历史
+                    self.save_data(key="history", value=history)
                     return True
                 else:
                     if ret_json.get('errcode') == 81013:
@@ -761,7 +905,8 @@ class WeChatForward(_PluginBase):
                                                            req_json=req_json,
                                                            appid=appid,
                                                            title=title,
-                                                           retry=retry)
+                                                           retry=retry,
+                                                           text=text)
                     return False
             elif res is not None:
                 logger.error(

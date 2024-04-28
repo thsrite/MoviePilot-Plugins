@@ -662,6 +662,9 @@ class SubscribeGroup(_PluginBase):
                 'content': [
                     {
                         'component': 'td',
+                        'props': {
+                            'class': 'whitespace-nowrap break-keep text-high-emphasis'
+                        },
                         'text': history.get("time")
                     },
                     {

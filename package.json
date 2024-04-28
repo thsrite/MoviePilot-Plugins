@@ -240,11 +240,12 @@
       "WeChatForward": {
         "name": "微信消息转发",
         "description": "根据正则转发通知到其他WeChat应用。",
-        "version": "2.1",
+        "version": "2.2",
         "icon": "Wechat_A.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v2.2": "增加消息发送历史",
           "v2.1": "微信配置持久化存库",
           "v2.0": "优化微信配置，兼容旧版本配置",
           "v1.6": "修改获取指定用户订阅列表方法",
