@@ -14,11 +14,11 @@ from app.utils.http import RequestUtils
 
 class EmbyMetaRefresh(_PluginBase):
     # 插件名称
-    plugin_name = "Emby媒体库元数据刷新"
+    plugin_name = "Emby元数据刷新"
     # 插件描述
     plugin_desc = "定时刷新Emby媒体库元数据。"
     # 插件图标
-    plugin_icon = "Emby_A.png"
+    plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
     plugin_version = "1.0"
     # 插件作者
