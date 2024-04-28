@@ -349,15 +349,15 @@
           "v1.2": "修复订阅已存在包含关键词和订阅站点"
         }
       },
-      "MetaRefresh": {
-        "name": "媒体库元数据刷新",
-        "description": "定时刷新媒体库元数据。",
+      "EmbyMetaRefresh": {
+        "name": "Emby媒体库元数据刷新",
+        "description": "定时刷新Emby媒体库元数据。",
         "version": "1.0",
-        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/media.png",
+        "icon": "Emby_A.png",
         "author": "thsrite",
         "level": 1,
         "history": {
-          "v1.0": "定时刷新媒体库元数据"
+          "v1.0": "定时刷新Emby媒体库元数据"
         }
       }
 }
