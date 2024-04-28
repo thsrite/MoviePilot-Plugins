@@ -484,11 +484,11 @@ class WeChatForward(_PluginBase):
                     },
                     {
                         'component': 'td',
-                        'text': history.get("text")
+                        'text': history.get("title")
                     },
                     {
                         'component': 'td',
-                        'text': history.get("time")
+                        'text': history.get("text")
                     }
                 ]
             } for history in historys
