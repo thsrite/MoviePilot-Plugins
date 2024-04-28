@@ -1,4 +1,5 @@
 import random
+import re
 import subprocess
 import time
 from datetime import datetime, timedelta
@@ -22,7 +23,7 @@ class CustomCommand(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/code.png"
     # 插件版本
-    plugin_version = "1.6"
+    plugin_version = "1.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -42,6 +43,7 @@ class CustomCommand(_PluginBase):
     _msgtype: str = None
     _time_confs = None
     _history_days = None
+    _notify_keywords = None
     _scheduler: Optional[BackgroundScheduler] = None
 
     def init_plugin(self, config: dict = None):
@@ -55,6 +57,7 @@ class CustomCommand(_PluginBase):
             self._msgtype = config.get("msgtype")
             self._clear = config.get("clear")
             self._history_days = config.get("history_days") or 30
+            self._notify_keywords = config.get("notify_keywords")
             self._time_confs = config.get("time_confs")
 
             # 清除历史
@@ -160,6 +163,11 @@ class CustomCommand(_PluginBase):
         self.save_data(key="history", value=history)
 
         if self._notify and self._msgtype:
+            if self._notify_keywords and not re.search(self._notify_keywords,
+                                                       last_output if last_output else last_error):
+                logger.info(f"通知关键词 {self._notify_keywords} 不匹配，跳过通知")
+                return
+
             # 发送通知
             mtype = NotificationType.Manual
             if self._msgtype:
@@ -177,6 +185,7 @@ class CustomCommand(_PluginBase):
             "msgtype": self._msgtype,
             "time_confs": self._time_confs,
             "history_days": self._history_days,
+            "notify_keywords": self._notify_keywords,
             "clear": self._clear
         })
 
@@ -281,7 +290,7 @@ class CustomCommand(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 6
+                                    'md': 4
                                 },
                                 'content': [
                                     {
@@ -300,7 +309,7 @@ class CustomCommand(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 6
+                                    'md': 4
                                 },
                                 'content': [
                                     {
@@ -308,6 +317,23 @@ class CustomCommand(_PluginBase):
                                         'props': {
                                             'model': 'history_days',
                                             'label': '保留历史天数'
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'notify_keywords',
+                                            'label': '通知关键词',
+                                            'placeholder': '支持正则表达式，未配置时所有通知均推送'
                                         }
                                     }
                                 ]
@@ -388,6 +414,7 @@ class CustomCommand(_PluginBase):
             "clear": False,
             "time_confs": "",
             "history_days": 30,
+            "notify_keywords": "",
             "msgtype": ""
         }
 

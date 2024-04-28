@@ -275,11 +275,12 @@
       "CustomCommand": {
         "name": "自定义命令",
         "description": "自定义执行周期执行命令并推送结果。",
-        "version": "1.6",
+        "version": "1.7",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/code.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v1.7": "自定义通知关键词",
           "v1.6": "自定义保留消息天数",
           "v1.5": "修复多个任务立即运行一次",
           "v1.4": "fix icon",
