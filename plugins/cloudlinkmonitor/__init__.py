@@ -96,8 +96,9 @@ class CloudLinkMonitor(_PluginBase):
     _dirconf: Dict[str, Optional[Path]] = {}
     # 存储源目录转移方式
     _transferconf: Dict[str, Optional[str]] = {}
-    _scraperconf: Dict[str, Optional[str]] = {}
-    _historyconf: Dict[str, Optional[str]] = {}
+    _scraperconf: Dict[str, Optional[bool]] = {}
+    _historyconf: Dict[str, Optional[bool]] = {}
+    _categoryconf: Dict[str, Optional[bool]] = {}
     _medias = {}
     # 退出事件
     _event = threading.Event()
@@ -113,6 +114,7 @@ class CloudLinkMonitor(_PluginBase):
         self._transferconf = {}
         self._scraperconf = {}
         self._historyconf = {}
+        self._categoryconf = {}
 
         # 读取配置
         if config:
@@ -145,11 +147,18 @@ class CloudLinkMonitor(_PluginBase):
                 if not mon_path:
                     continue
 
+                # 是否添加二级分类
+                _category = True
+                if mon_path.count("@") == 1:
+                    _category = mon_path.split("@")[1]
+                    _category = True if _category == "True" else False
+                    mon_path = mon_path.split("@")[0]
+
                 # 是否刮削
                 _history = True
                 if mon_path.count("%") == 1:
-                    _scraper_type = mon_path.split("%")[1]
-                    _history = True if _scraper_type == "True" else False
+                    _history = mon_path.split("%")[1]
+                    _history = True if _history == "True" else False
                     mon_path = mon_path.split("%")[0]
 
                 # 是否刮削
@@ -183,6 +192,9 @@ class CloudLinkMonitor(_PluginBase):
                     self._dirconf[mon_path] = target_path
                 else:
                     self._dirconf[mon_path] = None
+
+                # 是否二级分类
+                self._categoryconf[mon_path] = _category
 
                 # 是否存历史
                 self._historyconf[mon_path] = _history
@@ -385,6 +397,8 @@ class CloudLinkMonitor(_PluginBase):
                 scraper_type = self._scraperconf.get(mon_path)
                 # 是否存历史
                 history_type = self._historyconf.get(mon_path)
+                # 是否添加二级分类
+                category_type = self._categoryconf.get(mon_path)
 
                 # 识别媒体信息
                 mediainfo: MediaInfo = self.chain.recognize_media(meta=file_meta)
@@ -419,8 +433,9 @@ class CloudLinkMonitor(_PluginBase):
                 else:
                     episodes_info = None
 
-                # 拼装媒体库一、二级子目录
-                target = self.__get_dest_dir(mediainfo=mediainfo, target_dir=target)
+                if category_type:
+                    # 拼装媒体库一、二级子目录
+                    target = self.__get_dest_dir(mediainfo=mediainfo, target_dir=target)
 
                 # 转移
                 transferinfo: TransferInfo = self.filetransfer.transfer_media(in_path=file_path,
