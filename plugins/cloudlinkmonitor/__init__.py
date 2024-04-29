@@ -60,7 +60,7 @@ class CloudLinkMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
-    plugin_version = "1.9"
+    plugin_version = "2.0"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -145,7 +145,8 @@ class CloudLinkMonitor(_PluginBase):
                 # 是否刮削
                 _scraper_type = False
                 if mon_path.count("$") == 1:
-                    _scraper_type = bool(mon_path.split("$")[1])
+                    _scraper_type = mon_path.split("$")[1]
+                    _scraper_type = True if _scraper_type == "True" else False
                     mon_path = mon_path.split("$")[0]
 
                 # 自定义转移方式
