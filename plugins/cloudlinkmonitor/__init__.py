@@ -60,7 +60,7 @@ class CloudLinkMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
-    plugin_version = "2.0"
+    plugin_version = "2.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -96,6 +96,8 @@ class CloudLinkMonitor(_PluginBase):
     _dirconf: Dict[str, Optional[Path]] = {}
     # 存储源目录转移方式
     _transferconf: Dict[str, Optional[str]] = {}
+    _scraperconf: Dict[str, Optional[str]] = {}
+    _historyconf: Dict[str, Optional[str]] = {}
     _medias = {}
     # 退出事件
     _event = threading.Event()
@@ -110,6 +112,7 @@ class CloudLinkMonitor(_PluginBase):
         self._dirconf = {}
         self._transferconf = {}
         self._scraperconf = {}
+        self._historyconf = {}
 
         # 读取配置
         if config:
@@ -143,6 +146,13 @@ class CloudLinkMonitor(_PluginBase):
                     continue
 
                 # 是否刮削
+                _history = True
+                if mon_path.count("%") == 1:
+                    _scraper_type = mon_path.split("%")[1]
+                    _history = True if _scraper_type == "True" else False
+                    mon_path = mon_path.split("%")[0]
+
+                # 是否刮削
                 _scraper_type = False
                 if mon_path.count("$") == 1:
                     _scraper_type = mon_path.split("$")[1]
@@ -173,6 +183,9 @@ class CloudLinkMonitor(_PluginBase):
                     self._dirconf[mon_path] = target_path
                 else:
                     self._dirconf[mon_path] = None
+
+                # 是否存历史
+                self._historyconf[mon_path] = _history
 
                 # 是否刮削
                 self._scraperconf[mon_path] = _scraper_type
@@ -370,6 +383,8 @@ class CloudLinkMonitor(_PluginBase):
                 transfer_type = self._transferconf.get(mon_path)
                 # 是否刮削
                 scraper_type = self._scraperconf.get(mon_path)
+                # 是否存历史
+                history_type = self._historyconf.get(mon_path)
 
                 # 识别媒体信息
                 mediainfo: MediaInfo = self.chain.recognize_media(meta=file_meta)
@@ -421,14 +436,16 @@ class CloudLinkMonitor(_PluginBase):
                 if not transferinfo.success:
                     # 转移失败
                     logger.warn(f"{file_path.name} 入库失败：{transferinfo.message}")
-                    # 新增转移失败历史记录
-                    self.transferhis.add_fail(
-                        src_path=file_path,
-                        mode=transfer_type,
-                        meta=file_meta,
-                        mediainfo=mediainfo,
-                        transferinfo=transferinfo
-                    )
+
+                    if history_type:
+                        # 新增转移失败历史记录
+                        self.transferhis.add_fail(
+                            src_path=file_path,
+                            mode=transfer_type,
+                            meta=file_meta,
+                            mediainfo=mediainfo,
+                            transferinfo=transferinfo
+                        )
                     if self._notify:
                         self.post_message(
                             mtype=NotificationType.Manual,
@@ -438,14 +455,15 @@ class CloudLinkMonitor(_PluginBase):
                         )
                     return
 
-                # 新增转移成功历史记录
-                self.transferhis.add_success(
-                    src_path=file_path,
-                    mode=transfer_type,
-                    meta=file_meta,
-                    mediainfo=mediainfo,
-                    transferinfo=transferinfo
-                )
+                if history_type:
+                    # 新增转移成功历史记录
+                    self.transferhis.add_success(
+                        src_path=file_path,
+                        mode=transfer_type,
+                        meta=file_meta,
+                        mediainfo=mediainfo,
+                        transferinfo=transferinfo
+                    )
 
                 # 刮削
                 if scraper_type:

@@ -224,11 +224,12 @@
         "name": "云盘实时监控",
         "description": "监控云盘目录文件变化，自动转移链接。",
         "labels": "云盘",
-        "version": "2.0",
+        "version": "2.1",
         "icon": "Linkease_A.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v2.1": "可配置是否存储转移记录",
           "v2.0": "修复不刮削不生效bug",
           "v1.8": "fix S00转移",
           "v1.7": "fix 刮削",
