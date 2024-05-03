@@ -484,6 +484,10 @@ class WeChatForward(_PluginBase):
                     },
                     {
                         'component': 'td',
+                        'text': history.get("userid")
+                    },
+                    {
+                        'component': 'td',
                         'text': history.get("title")
                     },
                     {
@@ -527,6 +531,13 @@ class WeChatForward(_PluginBase):
                                                     'class': 'text-start ps-4'
                                                 },
                                                 'text': 'appid'
+                                            },
+                                            {
+                                                'component': 'th',
+                                                'props': {
+                                                    'class': 'text-start ps-4'
+                                                },
+                                                'text': 'userid'
                                             },
                                             {
                                                 'component': 'th',
@@ -824,7 +835,7 @@ class WeChatForward(_PluginBase):
             "enable_id_trans": 0,
             "enable_duplicate_check": 0
         }
-        return self.__post_request(access_token=access_token, req_json=req_json, appid=appid, title=title, text=text)
+        return self.__post_request(access_token=access_token, req_json=req_json, appid=appid, title=title, text=text, userid=userid)
 
     def __send_image_message(self, title: str, text: str, image_url: str, userid: str = None,
                              access_token: str = None, appid: int = None) -> Optional[bool]:
@@ -855,10 +866,10 @@ class WeChatForward(_PluginBase):
                 ]
             }
         }
-        return self.__post_request(access_token=access_token, req_json=req_json, appid=appid, title=title, text=text)
+        return self.__post_request(access_token=access_token, req_json=req_json, appid=appid, title=title, text=text, userid=userid)
 
     def __post_request(self, access_token: str, req_json: dict, appid: int, title: str, retry: int = 0,
-                       text: str = None) -> bool:
+                       text: str = None, userid: str = None) -> bool:
         message_url = self._send_msg_url % access_token
         """
         向微信发送请求
@@ -878,6 +889,7 @@ class WeChatForward(_PluginBase):
                         "appid": appid,
                         "title": title,
                         "text": text,
+                        "userid": userid,
                         "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
                     })
                     thirty_days_ago = time.time() - int(self._history_days) * 24 * 60 * 60
