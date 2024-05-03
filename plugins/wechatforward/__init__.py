@@ -36,6 +36,7 @@ class WeChatForward(_PluginBase):
 
     # 私有属性
     _enabled = False
+    _rebuild = False
     _wechat_confs = None
     _specify_confs = None
     _ignore_userid = None
@@ -70,6 +71,7 @@ class WeChatForward(_PluginBase):
     def init_plugin(self, config: dict = None):
         if config:
             self._enabled = config.get("enabled")
+            self._rebuild = config.get("rebuild")
             self._wechat_confs = config.get("wechat_confs") or []
             self._ignore_userid = config.get("ignore_userid")
             self._specify_confs = config.get("specify_confs")
@@ -154,7 +156,7 @@ class WeChatForward(_PluginBase):
         """
         # 从数据库获取token
         wechat_confs = self.get_data('wechat_confs')
-        if wechat_confs:
+        if not self._rebuild and wechat_confs:
             self._wechat_token_pattern_confs = wechat_confs
             logger.info(f"WeChat配置 从数据库获取成功：{len(self._wechat_token_pattern_confs.keys())}条配置")
         else:
@@ -226,7 +228,7 @@ class WeChatForward(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 6
+                                    'md': 4
                                 },
                                 'content': [
                                     {
@@ -239,10 +241,26 @@ class WeChatForward(_PluginBase):
                                 ]
                             },
                             {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'rebuild',
+                                            'label': '重建缓存'
+                                        }
+                                    }
+                                ]
+                            },
+                            {
                                 "component": "VCol",
                                 "props": {
                                     "cols": 12,
-                                    "md": 6
+                                    "md": 4
                                 },
                                 "content": [
                                     {
@@ -439,6 +457,7 @@ class WeChatForward(_PluginBase):
             }
         ], {
             "enabled": False,
+            "rebuild": False,
             "ignore_userid": "",
             "specify_confs": "",
             "history_days": 7,
