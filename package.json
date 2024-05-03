@@ -260,11 +260,12 @@
         "name": "微信消息转发",
         "description": "根据正则转发通知到其他WeChat应用。",
         "labels": "消息通知",
-        "version": "2.2",
+        "version": "2.3",
         "icon": "Wechat_A.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v2.3": "增加重建缓存，丰富转发历史",
           "v2.2": "增加消息发送历史",
           "v2.1": "微信配置持久化存库",
           "v2.0": "优化微信配置，兼容旧版本配置",
