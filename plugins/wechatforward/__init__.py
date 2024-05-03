@@ -179,6 +179,7 @@ class WeChatForward(_PluginBase):
                     continue
 
                 self._wechat_token_pattern_confs[appid] = {
+                    "remark": remark,
                     "corpid": corpid,
                     "appsecret": appsecret,
                     "access_token": access_token,
@@ -480,7 +481,7 @@ class WeChatForward(_PluginBase):
                     },
                     {
                         'component': 'td',
-                        'text': history.get("appid")
+                        'text': f"{history.get('appid')}{history.get('remark')}"
                     },
                     {
                         'component': 'td',
@@ -887,6 +888,7 @@ class WeChatForward(_PluginBase):
                     history = self.get_data('history') or []
                     history.append({
                         "appid": appid,
+                        "remark": f"({self._wechat_token_pattern_confs.get(appid).get('remark')})" if self._wechat_token_pattern_confs.get(appid).get('remark') else ""
                         "title": title,
                         "text": text,
                         "userid": userid,
