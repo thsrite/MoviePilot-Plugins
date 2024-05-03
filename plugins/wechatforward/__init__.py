@@ -888,7 +888,7 @@ class WeChatForward(_PluginBase):
                     history = self.get_data('history') or []
                     history.append({
                         "appid": appid,
-                        "remark": f"({self._wechat_token_pattern_confs.get(appid).get('remark')})" if self._wechat_token_pattern_confs.get(appid).get('remark') else ""
+                        "remark": f"({self._wechat_token_pattern_confs.get(appid).get('remark')})" if self._wechat_token_pattern_confs.get(appid).get('remark') else "",
                         "title": title,
                         "text": text,
                         "userid": userid,
