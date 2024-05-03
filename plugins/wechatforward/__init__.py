@@ -192,10 +192,24 @@ class WeChatForward(_PluginBase):
                 }
                 logger.info(f"WeChat配置 {remark} token请求成功")
 
+            if self._rebuild:
+                self._rebuild = False
+                self.__update_config()
+                
             # token存库
             if len(self._wechat_token_pattern_confs.keys()) > 0:
                 self.__save_wechat_confs()
-
+   
+    def __update_config(self):
+        self.update_config({
+            "enabled": self._enabled,
+            "rebuild": self._rebuild,
+            "wechat_confs": self._wechat_confs,
+            "ignore_userid": self._ignore_userid,
+            "specify_confs": self._specify_confs,
+            "history_days": self._history_days
+        })
+        
     def __save_wechat_confs(self):
         """
         保存wechat配置
