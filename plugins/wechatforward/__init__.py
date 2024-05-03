@@ -500,7 +500,7 @@ class WeChatForward(_PluginBase):
                     },
                     {
                         'component': 'td',
-                        'text': f"{history.get('appid')}{history.get('remark')}"
+                        'text': f"{history.get('appid')}{history.get('remark') if history.get('remark') else ''}"
                     },
                     {
                         'component': 'td',
