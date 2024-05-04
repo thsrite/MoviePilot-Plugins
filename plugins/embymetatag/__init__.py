@@ -4,7 +4,7 @@ from typing import Optional, Any, List, Dict, Tuple
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from app.db.transferhistory_oper import TransferHistoryOper
+
 from app.core.config import settings
 from app.log import logger
 from app.plugins import _PluginBase
@@ -12,13 +12,13 @@ from app.modules.emby import Emby
 from app.utils.http import RequestUtils
 
 
-class EmbyMetaRefresh(_PluginBase):
+class EmbyMetaTag(_PluginBase):
     # 插件名称
-    plugin_name = "Emby元数据刷新"
+    plugin_name = "Emby媒体标签"
     # 插件描述
-    plugin_desc = "定时刷新Emby媒体库元数据。"
+    plugin_desc = "自动给媒体库媒体添加标签。"
     # 插件图标
-    plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
+    plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/tag.png"
     # 插件版本
     plugin_version = "1.0"
     # 插件作者
@@ -26,9 +26,9 @@ class EmbyMetaRefresh(_PluginBase):
     # 作者主页
     author_url = "https://github.com/thsrite"
     # 插件配置项ID前缀
-    plugin_config_prefix = "embymetarefresh_"
+    plugin_config_prefix = "embymetatag_"
     # 加载顺序
-    plugin_order = 15
+    plugin_order = 16
     # 可使用的用户级别
     auth_level = 1
 
@@ -36,28 +36,41 @@ class EmbyMetaRefresh(_PluginBase):
     _enabled = False
     _onlyonce = False
     _cron = None
-    _days = None
+    _tag_confs = None
     _emby = None
     _EMBY_HOST = settings.EMBY_HOST
     _EMBY_APIKEY = settings.EMBY_API_KEY
+    _EMBY_USER = Emby().get_user()
     _scheduler: Optional[BackgroundScheduler] = None
+
+    _tags = {}
 
     def init_plugin(self, config: dict = None):
         # 停止现有任务
         self.stop_service()
-        self._emby = Emby()
+        _emby = Emby()
 
         if config:
             self._enabled = config.get("enabled")
             self._onlyonce = config.get("onlyonce")
             self._cron = config.get("cron")
-            self._days = config.get("days") or 5
+            self._tag_confs = config.get("tag_confs")
 
             if self._EMBY_HOST:
                 if not self._EMBY_HOST.endswith("/"):
                     self._EMBY_HOST += "/"
                 if not self._EMBY_HOST.startswith("http"):
                     self._EMBY_HOST = "http://" + self._EMBY_HOST
+
+            if self._tag_confs:
+                tag_confs = self._tag_confs.split("\n")
+                for tag_conf in tag_confs:
+                    if tag_conf:
+                        tag_conf = tag_conf.split("#")
+                        if len(tag_conf) == 2:
+                            librarys = tag_conf[0].split(',')
+                            for library in librarys:
+                                self._tags[library] = tag_conf[1].split(',')
 
             # 加载模块
             if self._enabled or self._onlyonce:
@@ -66,11 +79,11 @@ class EmbyMetaRefresh(_PluginBase):
 
                 # 立即运行一次
                 if self._onlyonce:
-                    logger.info(f"媒体库元数据刷新服务启动，立即运行一次")
-                    self._scheduler.add_job(self.refresh, 'date',
+                    logger.info(f"Emby媒体标签服务启动，立即运行一次")
+                    self._scheduler.add_job(self.auto_tag, 'date',
                                             run_date=datetime.now(
                                                 tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
-                                            name="媒体库元数据")
+                                            name="Emby媒体标签")
 
                     # 关闭一次性开关
                     self._onlyonce = False
@@ -81,9 +94,9 @@ class EmbyMetaRefresh(_PluginBase):
                 # 周期运行
                 if self._cron:
                     try:
-                        self._scheduler.add_job(func=self.refresh,
+                        self._scheduler.add_job(func=self.auto_tag,
                                                 trigger=CronTrigger.from_crontab(self._cron),
-                                                name="媒体库元数据")
+                                                name="Emby媒体标签")
                     except Exception as err:
                         logger.error(f"定时任务配置错误：{str(err)}")
                         # 推送实时消息
@@ -103,155 +116,82 @@ class EmbyMetaRefresh(_PluginBase):
                 "onlyonce": self._onlyonce,
                 "cron": self._cron,
                 "enabled": self._enabled,
-                "days": self._days
+                "tag_confs": self._tag_confs,
             }
         )
 
-    def refresh(self):
+    def auto_tag(self):
         """
-        刷新媒体库元数据
+        给设定媒体库打标签
         """
         if "emby" not in settings.MEDIASERVER:
             logger.error("未配置Emby媒体服务器")
             return
 
-        # 获取days内入库的媒体
-        current_date = datetime.now()
-        # 计算几天前的日期
-        target_date = current_date - timedelta(days=int(self._days))
-        transferhistorys = TransferHistoryOper().list_by_date(target_date.strftime('%Y-%m-%d'))
-        if not transferhistorys:
-            logger.error(f"{self._days}天内没有媒体库入库记录")
+        if not self._tags or len(self._tags.keys()) == 0:
+            logger.error("未配置Emby媒体标签")
             return
 
-        logger.info(f"开始刷新媒体库元数据，最近{self._days}天内入库媒体：{len(transferhistorys)}个")
-        # 刷新媒体库
-        for transferinfo in transferhistorys:
-            self.__refresh_emby(transferinfo)
-        logger.info(f"刷新媒体库元数据完成")
+        # 获取emby 媒体库
+        librarys = self._emby.get_librarys()
+        if not librarys:
+            logger.error("获取媒体库失败")
+            return
 
-    def __refresh_emby(self, transferinfo):
-        """
-        刷新emby
-        """
-        if transferinfo.type == "电影":
-            movies = self._emby.get_movies(title=transferinfo.title, year=transferinfo.year)
-            if not movies:
-                logger.error(f"Emby中没有找到{transferinfo.title} ({transferinfo.year})")
-                return
-            for movie in movies:
-                self.__refresh_emby_library_by_id(item_id=movie.item_id)
-                logger.info(f"已通知刷新Emby电影：{movie.title} ({movie.year}) item_id:{movie.item_id}")
-        else:
-            item_id = self.__get_emby_series_id_by_name(name=transferinfo.title, year=transferinfo.year)
-            if not item_id or item_id is None:
-                logger.error(f"Emby中没有找到{transferinfo.title} ({transferinfo.year})")
-                return
+        # 遍历媒体库，获取媒体库媒体
+        for library in librarys:
+            library_tags = self._tags.get(library.name)
+            if not library_tags:
+                continue
 
-            # 验证tmdbid是否相同
-            item_info = self._emby.get_iteminfo(item_id)
-            if item_info:
-                if transferinfo.tmdbid and item_info.tmdbid:
-                    if str(transferinfo.tmdbid) != str(item_info.tmdbid):
-                        logger.error(f"Emby中{transferinfo.title} ({transferinfo.year})的tmdbId与入库记录不一致")
-                        return
+            # 获取媒体库媒体
+            library_items = self._emby.get_items(library.id)
+            if not library_items:
+                continue
 
-            # 查询集的item_id
-            season = int(transferinfo.seasons.replace("S", ""))
-            episode = int(transferinfo.episodes.replace("E", ""))
-            episode_item_id = self.__get_emby_episode_item_id(item_id=item_id, season=season, episode=episode)
-            if not episode_item_id or episode_item_id is None:
-                logger.error(
-                    f"Emby中没有找到{transferinfo.title} ({transferinfo.year}) {transferinfo.seasons}{transferinfo.episodes}")
-                return
+            for library_item in library_items:
+                # 获取item的tag
+                item_tags = self.__get_item_tags(library_item.id) or []
 
-            self.__refresh_emby_library_by_id(item_id=episode_item_id)
-            logger.info(
-                f"已通知刷新Emby电视剧：{transferinfo.title} ({transferinfo.year}) {transferinfo.seasons}{transferinfo.episodes} item_id:{episode_item_id}")
+                # 获取缺少的tag
+                add_tags = []
+                for library_tag in library_tags:
+                    if not item_tags or library_tag not in item_tags:
+                        add_tags.append(library_tag)
 
-    def __get_emby_episode_item_id(self, item_id: str, season: int, episode: int) -> Optional[str]:
-        """
-        根据剧集信息查询Emby中集的item_id
-        """
-        if not self._EMBY_HOST or not self._EMBY_APIKEY:
-            return None
-        req_url = "%semby/Shows/%s/Episodes?Season=%s&IsMissing=false&api_key=%s" % (
-            self._EMBY_HOST, item_id, season, self._EMBY_APIKEY)
+                # 添加标签
+                if add_tags:
+                    tags = [{'Name': add_tag} for add_tag in add_tags]
+                    self.__add_tag(library_item.id, {"Tags": tags})
+                    logger.info(f"添加标签成功：{library.name} {library_item.name} {add_tags}")
+
+    def __add_tag(self, itemid: str, tags: dict):
+        req_url = "%semby/Items/%s/Tags/Add?api_key=%s" % (self._EMBY_HOST, self._EMBY_USER, itemid, self._EMBY_APIKEY)
         try:
-            with RequestUtils().get_res(req_url) as res_json:
-                if res_json:
-                    tv_item = res_json.json()
-                    res_items = tv_item.get("Items")
-                    for res_item in res_items:
-                        season_index = res_item.get("ParentIndexNumber")
-                        if not season_index:
-                            continue
-                        if season and season != season_index:
-                            continue
-                        episode_index = res_item.get("IndexNumber")
-                        if not episode_index:
-                            continue
-                        if episode and episode != episode_index:
-                            continue
-                        episode_item_id = res_item.get("Id")
-                        return episode_item_id
-        except Exception as e:
-            logger.error(f"连接Shows/Id/Episodes出错：" + str(e))
-            return None
-        return None
-
-    def __refresh_emby_library_by_id(self, item_id: str) -> bool:
-        """
-        通知Emby刷新一个项目的媒体库
-        """
-        if not self._EMBY_HOST or not self._EMBY_APIKEY:
-            return False
-        req_url = "%semby/Items/%s/Refresh?MetadataRefreshMode=FullRefresh" \
-                  "&ImageRefreshMode=FullRefresh&ReplaceAllMetadata=true&ReplaceAllImages=true&api_key=%s" % (
-                      self._EMBY_HOST, item_id, self._EMBY_APIKEY)
-        try:
-            with RequestUtils().post_res(req_url) as res:
-                if res:
+            with RequestUtils().post_res(url=req_url, json=tags) as res:
+                if res and res.status_code == 204:
                     return True
-                else:
-                    logger.info(f"刷新媒体库对象 {item_id} 失败，无法连接Emby！")
         except Exception as e:
-            logger.error(f"连接Items/Id/Refresh出错：" + str(e))
-            return False
+            logger.error(f"连接Items/Id/Tags/Add出错：" + str(e))
         return False
 
-    def __get_emby_series_id_by_name(self, name: str, year: str) -> Optional[str]:
+    def __get_item_tags(self, itemid: str):
         """
-        根据名称查询Emby中剧集的SeriesId
-        :param name: 标题
-        :param year: 年份
-        :return: None 表示连不通，""表示未找到，找到返回ID
+        获取单个项目详情
         """
+        if not itemid:
+            return None
         if not self._EMBY_HOST or not self._EMBY_APIKEY:
             return None
-        req_url = ("%semby/Items?"
-                   "IncludeItemTypes=Series"
-                   "&Fields=ProductionYear"
-                   "&StartIndex=0"
-                   "&Recursive=true"
-                   "&SearchTerm=%s"
-                   "&Limit=10"
-                   "&IncludeSearchTypes=false"
-                   "&api_key=%s") % (
-                      self._EMBY_HOST, name, self._EMBY_APIKEY)
+        req_url = "%semby/Users/%s/Items/%s?api_key=%s" % (self._EMBY_HOST, self._EMBY_USER, itemid, self._EMBY_APIKEY)
         try:
             with RequestUtils().get_res(req_url) as res:
-                if res:
-                    res_items = res.json().get("Items")
-                    if res_items:
-                        for res_item in res_items:
-                            if res_item.get('Name') == name and (
-                                    not year or str(res_item.get('ProductionYear')) == str(year)):
-                                return res_item.get('Id')
+                if res and res.status_code == 200:
+                    item = res.json()
+                    return [tag.get('Name') for tag in item.get("TagItems")]
         except Exception as e:
-            logger.error(f"连接Items出错：" + str(e))
-            return None
-        return ""
+            logger.error(f"连接Items/Id出错：" + str(e))
+        return []
 
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
@@ -324,24 +264,30 @@ class EmbyMetaRefresh(_PluginBase):
                                         }
                                     }
                                 ]
-                            },
+                            }
+                        ],
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
                             {
                                 'component': 'VCol',
                                 'props': {
-                                    'cols': 12,
-                                    'md': 6
+                                    'cols': 12
                                 },
                                 'content': [
                                     {
-                                        'component': 'VTextField',
+                                        'component': 'VTextarea',
                                         'props': {
-                                            'model': 'days',
-                                            'label': '最新入库天数'
+                                            'model': 'tag_confs',
+                                            'label': '标签配置',
+                                            'rows': 3,
+                                            'placeholder': '媒体库名,媒体库名#标签名,标签名'
                                         }
                                     }
                                 ]
                             }
-                        ],
+                        ]
                     },
                     {
                         'component': 'VRow',
@@ -357,7 +303,7 @@ class EmbyMetaRefresh(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '查询入库记录，周期请求媒体服务器元数据刷新接口。注：只支持Emby。'
+                                            'text': '定时刷新Emby媒体库媒体，添加自定义标签。'
                                         }
                                     }
                                 ]
@@ -370,7 +316,7 @@ class EmbyMetaRefresh(_PluginBase):
             "enabled": False,
             "onlyonce": False,
             "cron": "5 1 * * *",
-            "days": 5
+            "tag_confs": "",
         }
 
     def get_page(self) -> List[dict]:

@@ -35,3 +35,4 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - 实时软连接 1.3
 - 订阅规则自动填充 2.5
 - Emby元数据刷新 1.0
+- Emby媒体标签 1.0
