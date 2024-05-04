@@ -178,7 +178,7 @@ class EmbyMetaTag(_PluginBase):
         """
         if event:
             event_data = event.event_data
-            if not event_data or event_data.get("action") != "emby_tag":
+            if not event_data or event_data.get("action") != "emby_meta_tag":
                 return
             self.post_message(channel=event.event_data.get("channel"),
                               title="开始添加媒体标签 ...",
@@ -225,7 +225,7 @@ class EmbyMetaTag(_PluginBase):
             "desc": "Emby媒体标签",
             "category": "",
             "data": {
-                "action": "emby_tag"
+                "action": "emby_meta_tag"
             }
         }]
 

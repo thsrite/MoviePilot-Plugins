@@ -138,7 +138,7 @@ class EmbyMetaRefresh(_PluginBase):
         """
         if event:
             event_data = event.event_data
-            if not event_data or event_data.get("action") != "emby_refresh":
+            if not event_data or event_data.get("action") != "emby_meta_refresh":
                 return
             self.post_message(channel=event.event_data.get("channel"),
                               title="开始刷新Emby元数据 ...",
@@ -279,7 +279,7 @@ class EmbyMetaRefresh(_PluginBase):
             "desc": "Emby媒体库刷新",
             "category": "",
             "data": {
-                "action": "emby_refresh"
+                "action": "emby_meta_refresh"
             }
         }]
 
