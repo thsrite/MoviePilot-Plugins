@@ -37,7 +37,7 @@ class SiteUnreadMsg(_PluginBase):
     # 插件图标
     plugin_icon = "Synomail_A.png"
     # 插件版本
-    plugin_version = "1.8"
+    plugin_version = "1.9"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -470,6 +470,8 @@ class SiteUnreadMsg(_PluginBase):
         if not site_cookie:
             return None
         site_name = site_info.get("name")
+        apikey = site_info.get("apikey")
+        token = site_info.get("token")
         url = site_info.get("url")
         proxy = site_info.get("proxy")
         ua = site_info.get("ua")
@@ -522,9 +524,12 @@ class SiteUnreadMsg(_PluginBase):
                             html_text = res.text
                             if not html_text:
                                 return None
-                        else:
-                            logger.error("站点 %s 被反爬限制：%s, 状态码：%s" % (site_name, url, res.status_code))
-                            return None
+                            elif res is not None:
+                                logger.error("站点 %s 被反爬限制：%s, 状态码：%s" % (site_name, url, res.status_code))
+                                return None
+                            else:
+                                logger.error("站点 %s 无法访问：%s" % (site_name, url))
+                                return None
 
                     # 兼容假首页情况，假首页通常没有 <link rel="search" 属性
                     if '"search"' not in html_text and '"csrf-token"' not in html_text:
@@ -553,7 +558,16 @@ class SiteUnreadMsg(_PluginBase):
                 if not site_schema:
                     logger.error("站点 %s 无法识别站点类型" % site_name)
                     return None
-                return site_schema(site_name, url, site_cookie, html_text, session=session, ua=ua, proxy=proxy)
+                return site_schema(
+                    site_name=site_name,
+                    url=url,
+                    site_cookie=site_cookie,
+                    apikey=apikey,
+                    token=token,
+                    index_html=html_text,
+                    session=session,
+                    ua=ua,
+                    proxy=proxy)
             return None
 
     def __refresh_site_data(self, site_info: CommentedMap):

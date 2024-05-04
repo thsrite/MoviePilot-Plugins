@@ -31,11 +31,12 @@
         "name": "站点未读消息",
         "description": "发送站点未读消息。",
         "labels": "站点",
-        "version": "1.8",
+        "version": "1.9",
         "icon": "Synomail_A.png",
         "author": "thsrite",
         "level": 2,
         "history": {
+          "v1.9": "同步主仓库",
           "v1.8": "自定义保留消息天数",
           "v1.7": "删除重复代码、依赖于[站点数据统计]插件",
           "v1.6": "增加解析失败日志",
