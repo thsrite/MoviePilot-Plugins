@@ -4,11 +4,14 @@ from typing import Optional, Any, List, Dict, Tuple
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+
+from app.core.event import eventmanager, Event
 from app.db.transferhistory_oper import TransferHistoryOper
 from app.core.config import settings
 from app.log import logger
 from app.plugins import _PluginBase
 from app.modules.emby import Emby
+from app.schemas.types import EventType
 from app.utils.http import RequestUtils
 
 
@@ -20,7 +23,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -127,6 +130,23 @@ class EmbyMetaRefresh(_PluginBase):
         for transferinfo in transferhistorys:
             self.__refresh_emby(transferinfo)
         logger.info(f"刷新媒体库元数据完成")
+
+    @eventmanager.register(EventType.PluginAction)
+    def remote_sync(self, event: Event):
+        """
+        远程刷新媒体库
+        """
+        if event:
+            event_data = event.event_data
+            if not event_data or event_data.get("action") != "emby_refresh":
+                return
+            self.post_message(channel=event.event_data.get("channel"),
+                              title="开始刷新媒体库 ...",
+                              userid=event.event_data.get("user"))
+        self.refresh()
+        if event:
+            self.post_message(channel=event.event_data.get("channel"),
+                              title="刷新媒体库完成！", userid=event.event_data.get("user"))
 
     def __refresh_emby(self, transferinfo):
         """
@@ -253,7 +273,15 @@ class EmbyMetaRefresh(_PluginBase):
 
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
-        pass
+        return [{
+            "cmd": "/emby_meta_refresh",
+            "event": EventType.PluginAction,
+            "desc": "Emby媒体库刷新",
+            "category": "",
+            "data": {
+                "action": "emby_refresh"
+            }
+        }]
 
     def get_api(self) -> List[Dict[str, Any]]:
         pass

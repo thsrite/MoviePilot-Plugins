@@ -6,9 +6,11 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from app.core.config import settings
+from app.core.event import eventmanager, Event
 from app.log import logger
 from app.plugins import _PluginBase
 from app.modules.emby import Emby
+from app.schemas.types import EventType
 from app.utils.http import RequestUtils
 
 
@@ -20,7 +22,7 @@ class EmbyMetaTag(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/tag.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -169,6 +171,23 @@ class EmbyMetaTag(_PluginBase):
 
         logger.info("Emby媒体标签任务完成")
 
+    @eventmanager.register(EventType.PluginAction)
+    def remote_sync(self, event: Event):
+        """
+        远程添加媒体标签
+        """
+        if event:
+            event_data = event.event_data
+            if not event_data or event_data.get("action") != "emby_tag":
+                return
+            self.post_message(channel=event.event_data.get("channel"),
+                              title="开始添加媒体标签 ...",
+                              userid=event.event_data.get("user"))
+        self.auto_tag()
+        if event:
+            self.post_message(channel=event.event_data.get("channel"),
+                              title="添加媒体标签完成！", userid=event.event_data.get("user"))
+
     def __add_tag(self, itemid: str, tags: dict):
         req_url = "%semby/Items/%s/Tags/Add?api_key=%s" % (self._EMBY_HOST, itemid, self._EMBY_APIKEY)
         try:
@@ -200,7 +219,15 @@ class EmbyMetaTag(_PluginBase):
 
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
-        pass
+        return [{
+            "cmd": "/emby_meta_tag",
+            "event": EventType.PluginAction,
+            "desc": "Emby媒体标签",
+            "category": "",
+            "data": {
+                "action": "emby_tag"
+            }
+        }]
 
     def get_api(self) -> List[Dict[str, Any]]:
         pass
