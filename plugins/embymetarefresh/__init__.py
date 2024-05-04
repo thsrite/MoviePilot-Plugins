@@ -141,12 +141,12 @@ class EmbyMetaRefresh(_PluginBase):
             if not event_data or event_data.get("action") != "emby_refresh":
                 return
             self.post_message(channel=event.event_data.get("channel"),
-                              title="开始刷新媒体库 ...",
+                              title="开始刷新Emby元数据 ...",
                               userid=event.event_data.get("user"))
         self.refresh()
         if event:
             self.post_message(channel=event.event_data.get("channel"),
-                              title="刷新媒体库完成！", userid=event.event_data.get("user"))
+                              title="刷新Emby元数据完成！", userid=event.event_data.get("user"))
 
     def __refresh_emby(self, transferinfo):
         """
