@@ -37,7 +37,6 @@ class EmbyMetaRefresh(_PluginBase):
     _onlyonce = False
     _cron = None
     _days = None
-    _emby = None
     _EMBY_HOST = settings.EMBY_HOST
     _EMBY_APIKEY = settings.EMBY_API_KEY
     _scheduler: Optional[BackgroundScheduler] = None
@@ -45,7 +44,6 @@ class EmbyMetaRefresh(_PluginBase):
     def init_plugin(self, config: dict = None):
         # 停止现有任务
         self.stop_service()
-        self._emby = Emby()
 
         if config:
             self._enabled = config.get("enabled")
@@ -135,7 +133,7 @@ class EmbyMetaRefresh(_PluginBase):
         刷新emby
         """
         if transferinfo.type == "电影":
-            movies = self._emby.get_movies(title=transferinfo.title, year=transferinfo.year)
+            movies = Emby().get_movies(title=transferinfo.title, year=transferinfo.year)
             if not movies:
                 logger.error(f"Emby中没有找到{transferinfo.title} ({transferinfo.year})")
                 return
@@ -149,7 +147,7 @@ class EmbyMetaRefresh(_PluginBase):
                 return
 
             # 验证tmdbid是否相同
-            item_info = self._emby.get_iteminfo(item_id)
+            item_info = Emby().get_iteminfo(item_id)
             if item_info:
                 if transferinfo.tmdbid and item_info.tmdbid:
                     if str(transferinfo.tmdbid) != str(item_info.tmdbid):

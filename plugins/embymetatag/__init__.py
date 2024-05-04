@@ -37,7 +37,6 @@ class EmbyMetaTag(_PluginBase):
     _onlyonce = False
     _cron = None
     _tag_confs = None
-    _emby = None
     _EMBY_HOST = settings.EMBY_HOST
     _EMBY_APIKEY = settings.EMBY_API_KEY
     _EMBY_USER = Emby().get_user()
@@ -48,7 +47,6 @@ class EmbyMetaTag(_PluginBase):
     def init_plugin(self, config: dict = None):
         # 停止现有任务
         self.stop_service()
-        _emby = Emby()
 
         if config:
             self._enabled = config.get("enabled")
@@ -133,25 +131,28 @@ class EmbyMetaTag(_PluginBase):
             return
 
         # 获取emby 媒体库
-        librarys = self._emby.get_librarys()
+        librarys = Emby().get_librarys()
         if not librarys:
             logger.error("获取媒体库失败")
             return
 
         # 遍历媒体库，获取媒体库媒体
         for library in librarys:
+            # 获取媒体库标签
             library_tags = self._tags.get(library.name)
             if not library_tags:
                 continue
 
             # 获取媒体库媒体
-            library_items = self._emby.get_items(library.id)
+            library_items = Emby().get_items(library.id)
             if not library_items:
                 continue
 
             for library_item in library_items:
+                if not library_item:
+                    continue
                 # 获取item的tag
-                item_tags = self.__get_item_tags(library_item.id) or []
+                item_tags = self.__get_item_tags(library_item.item_id) or []
 
                 # 获取缺少的tag
                 add_tags = []
@@ -161,15 +162,19 @@ class EmbyMetaTag(_PluginBase):
 
                 # 添加标签
                 if add_tags:
-                    tags = [{'Name': add_tag} for add_tag in add_tags]
-                    self.__add_tag(library_item.id, {"Tags": tags})
-                    logger.info(f"添加标签成功：{library.name} {library_item.name} {add_tags}")
+                    tags = [{"Name": str(add_tag)} for add_tag in add_tags]
+                    tags = {"Tags": tags}
+                    add_flag = self.__add_tag(library_item.item_id, tags)
+                    logger.info(f"添加标签成功：{library.name} {library_item.title} {tags} {add_flag}")
+
+        logger.info("Emby媒体标签任务完成")
 
     def __add_tag(self, itemid: str, tags: dict):
-        req_url = "%semby/Items/%s/Tags/Add?api_key=%s" % (self._EMBY_HOST, self._EMBY_USER, itemid, self._EMBY_APIKEY)
+        req_url = "%semby/Items/%s/Tags/Add?api_key=%s" % (self._EMBY_HOST, itemid, self._EMBY_APIKEY)
         try:
-            with RequestUtils().post_res(url=req_url, json=tags) as res:
+            with RequestUtils(content_type="application/json").post_res(url=req_url, json=tags) as res:
                 if res and res.status_code == 204:
+                    logger.info(f"{req_url} {res}")
                     return True
         except Exception as e:
             logger.error(f"连接Items/Id/Tags/Add出错：" + str(e))
