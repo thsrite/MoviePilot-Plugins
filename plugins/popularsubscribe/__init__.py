@@ -108,7 +108,7 @@ class PopularSubscribe(_PluginBase):
 
         # 遍历热门订阅检查流行度是否达到要求
         for sub in subscribes:
-            if popular_cnt and sub.get("popularity") and int(popular_cnt) > int(sub.get("popularity")):
+            if popular_cnt and sub.get("count") and int(popular_cnt) > int(sub.get("count")):
                 continue
             media = MediaInfo()
             media.type = MediaType(sub.get("type"))
@@ -144,7 +144,7 @@ class PopularSubscribe(_PluginBase):
                                     doubanid=media.douban_id,
                                     exist_ok=True,
                                     username=settings.SUPERUSER)
-            logger.info(f'{media.title_year} 流行度 {sub.get("popularity")} 添加订阅')
+            logger.info(f'{media.title_year} 流行度 {sub.get("count")} 添加订阅')
 
             # 存储历史记录
             history.append({
@@ -335,7 +335,7 @@ class PopularSubscribe(_PluginBase):
                                     {
                                         'component': 'VAlert',
                                         'props': {
-                                            'type': 'error',
+                                            'type': 'info',
                                             'variant': 'tonal',
                                             'text': '获取指定条数的热门媒体，自定义流行度进行订阅。'
                                         }
