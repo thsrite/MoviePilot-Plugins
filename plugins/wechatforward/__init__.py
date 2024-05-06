@@ -690,9 +690,6 @@ class WeChatForward(_PluginBase):
             if not extra_conf:
                 continue
 
-            extras = str(extra_conf).split(" > ")
-            if len(extras) != 4:
-                continue
             extra_pattern = extra_conf.get("pattern")
             extra_userid = extra_conf.get("userid")
             extra_msg = extra_conf.get("msg")
