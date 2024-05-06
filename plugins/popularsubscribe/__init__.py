@@ -479,7 +479,28 @@ class PopularSubscribe(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '获取指定条数的热门媒体，自定义流行度进行订阅。'
+                                            'text': '获取指定条数的热门媒体，自定义流行度（订阅人数）进行订阅。'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'error',
+                                            'variant': 'tonal',
+                                            'text': '立即运行一次：立即运行一次已开启的电影/电视剧订阅。'
                                         }
                                     }
                                 ]
