@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from app import schemas
 from app.chain.download import DownloadChain
 from app.chain.subscribe import SubscribeChain
 from app.core.config import settings
@@ -161,6 +162,21 @@ class PopularSubscribe(_PluginBase):
 
         # 保存历史记录
         self.save_data('history', history)
+
+    def delete_history(self, key: str, apikey: str):
+        """
+        删除同步历史记录
+        """
+        if apikey != settings.API_TOKEN:
+            return schemas.Response(success=False, message="API密钥错误")
+        # 历史记录
+        historys = self.get_data('history')
+        if not historys:
+            return schemas.Response(success=False, message="未找到历史记录")
+        # 删除指定记录
+        historys = [h for h in historys if h.get("unique") != key]
+        self.save_data('history', historys)
+        return schemas.Response(success=True, message="删除成功")
 
     def get_state(self) -> bool:
         return self._movie_enabled or self._tv_enabled
@@ -388,6 +404,22 @@ class PopularSubscribe(_PluginBase):
                 {
                     'component': 'VCard',
                     'content': [
+                        {
+                            "component": "VDialogCloseBtn",
+                            "props": {
+                                'innerClass': 'absolute top-0 right-0',
+                            },
+                            'events': {
+                                'click': {
+                                    'api': 'plugin/subscribechain/delete_history',
+                                    'method': 'get',
+                                    'params': {
+                                        'key': f"doubanrank: {title} (DB:{doubanid})",
+                                        'apikey': settings.API_TOKEN
+                                    }
+                                }
+                            },
+                        },
                         {
                             'component': 'div',
                             'props': {
