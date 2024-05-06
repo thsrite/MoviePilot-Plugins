@@ -112,6 +112,12 @@ class PopularSubscribe(_PluginBase):
             logger.info(f"热门订阅检查：{sub.get('name')} 流行度：{sub.get('count')}")
             if popular_cnt and sub.get("count") and int(popular_cnt) > int(sub.get("count")):
                 continue
+
+            unique_flag = f"popularsubscribe: {sub.get('name')} (DB:{sub.get('tmdbid')})"
+            # 检查是否已处理过
+            if unique_flag in [h.get("unique") for h in history]:
+                continue
+
             media = MediaInfo()
             media.type = MediaType(sub.get("type"))
             media.title = sub.get("name")
@@ -157,7 +163,8 @@ class PopularSubscribe(_PluginBase):
                 "overview": media.overview,
                 "tmdbid": media.tmdb_id,
                 "doubanid": media.douban_id,
-                "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "unique": unique_flag
             })
 
         # 保存历史记录
@@ -399,6 +406,7 @@ class PopularSubscribe(_PluginBase):
             poster = history.get("poster")
             mtype = history.get("type")
             time_str = history.get("time")
+            tmdbid = history.get("tmdbid")
             doubanid = history.get("doubanid")
             contents.append(
                 {
@@ -411,10 +419,10 @@ class PopularSubscribe(_PluginBase):
                             },
                             'events': {
                                 'click': {
-                                    'api': 'plugin/subscribechain/delete_history',
+                                    'api': 'plugin/PopularSubscribe/delete_history',
                                     'method': 'get',
                                     'params': {
-                                        'key': f"doubanrank: {title} (DB:{doubanid})",
+                                        'key': f"popularsubscribe: {title} (DB:{tmdbid})",
                                         'apikey': settings.API_TOKEN
                                     }
                                 }

@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 
 import pytz
 
+from app import schemas
 from app.chain.douban import DoubanChain
 from app.chain.tmdb import TmdbChain
 from app.chain.download import DownloadChain
@@ -262,11 +263,13 @@ class ActorSubscribe(_PluginBase):
                             "overview": mediainfo.overview,
                             "tmdbid": mediainfo.tmdb_id,
                             "doubanid": mediainfo.douban_id,
-                            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                            "unique": f"actorsubscribe: {mediainfo.title} (DB:{mediainfo.tmdb_id})"
                         })
 
                 if not is_subscribe:
-                    logger.info(f"{mediainfo.type.value} {mediainfo.title_year} {mediainfo.tmdb_id or mediainfo.douban_id} 未命中订阅演员，跳过")
+                    logger.info(
+                        f"{mediainfo.type.value} {mediainfo.title_year} {mediainfo.tmdb_id or mediainfo.douban_id} 未命中订阅演员，跳过")
 
         # 保存历史记录
         self.save_data('history', history)
@@ -450,6 +453,21 @@ class ActorSubscribe(_PluginBase):
             "clear_already_handle": self._clear_already_handle,
             "source": self._source,
         })
+
+    def delete_history(self, key: str, apikey: str):
+        """
+        删除同步历史记录
+        """
+        if apikey != settings.API_TOKEN:
+            return schemas.Response(success=False, message="API密钥错误")
+        # 历史记录
+        historys = self.get_data('history')
+        if not historys:
+            return schemas.Response(success=False, message="未找到历史记录")
+        # 删除指定记录
+        historys = [h for h in historys if h.get("unique") != key]
+        self.save_data('history', historys)
+        return schemas.Response(success=True, message="删除成功")
 
     def get_state(self) -> bool:
         return self._enabled
@@ -716,11 +734,28 @@ class ActorSubscribe(_PluginBase):
             poster = history.get("poster")
             mtype = history.get("type")
             time_str = history.get("time")
+            tmdbid = history.get("tmdbid")
             doubanid = history.get("doubanid")
             contents.append(
                 {
                     'component': 'VCard',
                     'content': [
+                        {
+                            "component": "VDialogCloseBtn",
+                            "props": {
+                                'innerClass': 'absolute top-0 right-0',
+                            },
+                            'events': {
+                                'click': {
+                                    'api': 'plugin/ActorSubscribe/delete_history',
+                                    'method': 'get',
+                                    'params': {
+                                        'key': f"actorsubscribe: {title} (DB:{tmdbid})",
+                                        'apikey': settings.API_TOKEN
+                                    }
+                                }
+                            },
+                        },
                         {
                             'component': 'div',
                             'props': {
