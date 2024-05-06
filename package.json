@@ -408,11 +408,12 @@
         "name": "热门媒体订阅",
         "description": "自定添加热门媒体到订阅。",
         "labels": "订阅",
-        "version": "1.1",
+        "version": "1.2",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/popular.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v1.2": "增加历史删除按钮",
           "v1.1": "修正流行度校验",
           "v1.0": "自定添加热门媒体到订阅"
         }
