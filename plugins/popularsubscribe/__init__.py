@@ -1,10 +1,5 @@
-import time
-from datetime import datetime, timedelta
+from datetime import datetime
 
-import pytz
-
-from app.chain.douban import DoubanChain
-from app.chain.tmdb import TmdbChain
 from app.chain.download import DownloadChain
 from app.chain.subscribe import SubscribeChain
 from app.core.config import settings
@@ -35,7 +30,7 @@ class PopularSubscribe(_PluginBase):
     # 插件配置项ID前缀
     plugin_config_prefix = "popularsubscribe_"
     # 加载顺序
-    plugin_order = 26
+    plugin_order = 25
     # 可使用的用户级别
     auth_level = 2
 
@@ -47,7 +42,7 @@ class PopularSubscribe(_PluginBase):
     _tv_page_cnt: int = 30
     # 流行度最低多少
     _movie_popular_cnt: int = 0
-    _tv_popula_cnt: int = 0
+    _tv_popular_cnt: int = 0
     _movie_cron: str = ""
     _tv_cron: str = ""
 
@@ -68,37 +63,37 @@ class PopularSubscribe(_PluginBase):
             self._movie_page_cnt = config.get("movie_page_cnt")
             self._tv_page_cnt = config.get("tv_page_cnt")
             self._movie_popular_cnt = config.get("movie_popular_cnt")
-            self._tv_popula_cnt = config.get("tv_popula_cnt")
+            self._tv_popular_cnt = config.get("tv_popular_cnt")
 
-            if self._movie_enabled or self._tv_enabled:
-                # 定时服务
-                self._scheduler = BackgroundScheduler(timezone=settings.TZ)
+            # 定时服务
+            self._scheduler = BackgroundScheduler(timezone=settings.TZ)
 
-                if self._movie_cron:
-                    try:
-                        self._scheduler.add_job(func=self.__popular_subscribe,
-                                                trigger=CronTrigger.from_crontab(self._movie_cron),
-                                                name="电影热门订阅",
-                                                args=['电影', self._movie_page_cnt, self._movie_popula_cnt])
-                    except Exception as err:
-                        logger.error(f"电影热门订阅定时任务配置错误：{err}")
-                        # 推送实时消息
-                        self.systemmessage.put(f"电影热门订阅执行周期配置错误：{err}")
+            if self._movie_enabled and self._movie_cron:
+                try:
+                    self._scheduler.add_job(func=self.__popular_subscribe,
+                                            trigger=CronTrigger.from_crontab(self._movie_cron),
+                                            name="电影热门订阅",
+                                            args=['电影', self._movie_page_cnt, self._movie_popular_cnt])
+                except Exception as err:
+                    logger.error(f"电影热门订阅定时任务配置错误：{err}")
+                    # 推送实时消息
+                    self.systemmessage.put(f"电影热门订阅执行周期配置错误：{err}")
 
-                if self._tv_cron:
-                    try:
-                        self._scheduler.add_job(func=self.__popular_subscribe,
-                                                trigger=CronTrigger.from_crontab(self._tv_cron),
-                                                name="电视剧热门订阅",
-                                                args=['电视剧', self._tv_page_cnt, self._tv_popula_cnt])
-                    except Exception as err:
-                        logger.error(f"电视剧热门订阅定时任务配置错误：{err}")
-                        # 推送实时消息
-                        self.systemmessage.put(f"电视剧热门订阅执行周期配置错误：{err}")
-                # 启动任务
-                if self._scheduler.get_jobs():
-                    self._scheduler.print_jobs()
-                    self._scheduler.start()
+            if self._tv_enabled and self._tv_cron:
+                try:
+                    self._scheduler.add_job(func=self.__popular_subscribe,
+                                            trigger=CronTrigger.from_crontab(self._tv_cron),
+                                            name="电视剧热门订阅",
+                                            args=['电视剧', self._tv_page_cnt, self._tv_popular_cnt])
+                except Exception as err:
+                    logger.error(f"电视剧热门订阅定时任务配置错误：{err}")
+                    # 推送实时消息
+                    self.systemmessage.put(f"电视剧热门订阅执行周期配置错误：{err}")
+
+            # 启动任务
+            if self._scheduler.get_jobs():
+                self._scheduler.print_jobs()
+                self._scheduler.start()
 
     def __popular_subscribe(self, stype, page_cnt, popular_cnt):
         """
@@ -113,6 +108,8 @@ class PopularSubscribe(_PluginBase):
 
         # 遍历热门订阅检查流行度是否达到要求
         for sub in subscribes:
+            if popular_cnt and sub.get("popularity") and int(popular_cnt) > int(sub.get("popularity")):
+                continue
             media = MediaInfo()
             media.type = MediaType(sub.get("type"))
             media.title = sub.get("name")
@@ -147,7 +144,7 @@ class PopularSubscribe(_PluginBase):
                                     doubanid=media.douban_id,
                                     exist_ok=True,
                                     username=settings.SUPERUSER)
-            logger.info(f'{media.title_year} 添加订阅')
+            logger.info(f'{media.title_year} 流行度 {sub.get("popularity")} 添加订阅')
 
             # 存储历史记录
             history.append({
