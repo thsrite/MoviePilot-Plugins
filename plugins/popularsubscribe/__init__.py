@@ -1,4 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timedelta
+
+import pytz
 
 from app import schemas
 from app.chain.download import DownloadChain
@@ -23,7 +25,7 @@ class PopularSubscribe(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/popular.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -46,6 +48,9 @@ class PopularSubscribe(_PluginBase):
     _tv_popular_cnt: int = 0
     _movie_cron: str = ""
     _tv_cron: str = ""
+    _onlyonce: bool = False
+    _clear = False
+    _clear_already_handle = False
 
     subscribechain = None
     _scheduler: Optional[BackgroundScheduler] = None
@@ -65,11 +70,30 @@ class PopularSubscribe(_PluginBase):
             self._tv_page_cnt = config.get("tv_page_cnt")
             self._movie_popular_cnt = config.get("movie_popular_cnt")
             self._tv_popular_cnt = config.get("tv_popular_cnt")
+            self._clear = config.get("clear")
+            self._clear_already_handle = config.get("clear_already_handle")
+            _onlyonce2 = config.get("onlyonce")
+
+            # 清理插件订阅历史
+            if self._clear:
+                self.del_data(key="history")
+
+                self._clear = False
+                self.__update_config()
+                logger.info("订阅历史清理完成")
+
+            # 清理已处理历史
+            if self._clear_already_handle:
+                self.del_data(key="already_handle")
+
+                self._clear_already_handle = False
+                self.__update_config()
+                logger.info("已处理历史清理完成")
 
             # 定时服务
             self._scheduler = BackgroundScheduler(timezone=settings.TZ)
 
-            if self._movie_enabled and self._movie_cron:
+            if self._movie_enabled and (self._movie_cron or _onlyonce2):
                 try:
                     self._scheduler.add_job(func=self.__popular_subscribe,
                                             trigger=CronTrigger.from_crontab(self._movie_cron),
@@ -80,7 +104,15 @@ class PopularSubscribe(_PluginBase):
                     # 推送实时消息
                     self.systemmessage.put(f"电影热门订阅执行周期配置错误：{err}")
 
-            if self._tv_enabled and self._tv_cron:
+                if _onlyonce2:
+                    logger.info(f"电影热门订阅服务启动，立即运行一次")
+                    self._scheduler.add_job(self.__popular_subscribe, 'date',
+                                            run_date=datetime.now(
+                                                tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
+                                            name="电影热门订阅",
+                                            args=['电影', self._movie_page_cnt, self._movie_popular_cnt])
+
+            if self._tv_enabled and (self._tv_cron or _onlyonce2):
                 try:
                     self._scheduler.add_job(func=self.__popular_subscribe,
                                             trigger=CronTrigger.from_crontab(self._tv_cron),
@@ -91,10 +123,33 @@ class PopularSubscribe(_PluginBase):
                     # 推送实时消息
                     self.systemmessage.put(f"电视剧热门订阅执行周期配置错误：{err}")
 
+                if _onlyonce2:
+                    logger.info(f"电视剧热门订阅服务启动，立即运行一次")
+                    self._scheduler.add_job(self.__popular_subscribe, 'date',
+                                            run_date=datetime.now(
+                                                tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
+                                            name="电视剧热门订阅",
+                                            args=['电视剧', self._tv_page_cnt, self._tv_popular_cnt])
+
             # 启动任务
             if self._scheduler.get_jobs():
                 self._scheduler.print_jobs()
                 self._scheduler.start()
+
+    def __update_config(self):
+        self.update_config({
+            "movie_enabled": self._movie_enabled,
+            "tv_enabled": self._tv_enabled,
+            "movie_cron": self._movie_cron,
+            "tv_cron": self._tv_cron,
+            "movie_page_cnt": self._movie_page_cnt,
+            "tv_page_cnt": self._tv_page_cnt,
+            "movie_popular_cnt": self._movie_popular_cnt,
+            "tv_popular_cnt": self._tv_popular_cnt,
+            "clear": self._clear,
+            "clear_already_handle": self._clear_already_handle,
+            "onlyonce": False
+        })
 
     def __popular_subscribe(self, stype, page_cnt, popular_cnt):
         """
@@ -106,16 +161,12 @@ class PopularSubscribe(_PluginBase):
             return
 
         history: List[dict] = self.get_data('history') or []
+        already_handle: List[dict] = self.get_data('already_handle') or []
 
         # 遍历热门订阅检查流行度是否达到要求
         for sub in subscribes:
             logger.info(f"热门订阅检查：{sub.get('name')} 流行度：{sub.get('count')}")
             if popular_cnt and sub.get("count") and int(popular_cnt) > int(sub.get("count")):
-                continue
-
-            unique_flag = f"popularsubscribe: {sub.get('name')} (DB:{sub.get('tmdbid')})"
-            # 检查是否已处理过
-            if unique_flag in [h.get("unique") for h in history]:
                 continue
 
             media = MediaInfo()
@@ -129,6 +180,12 @@ class PopularSubscribe(_PluginBase):
             media.imdb_id = sub.get("imdbid")
             media.season = sub.get("season")
             media.poster_path = sub.get("poster")
+
+            if media.title_year in already_handle:
+                logger.info(f"{media.type.value} {media.title_year} 已被处理，跳过")
+                continue
+
+            already_handle.append(media.title_year)
 
             # 元数据
             meta = MetaInfo(media.title)
@@ -164,11 +221,12 @@ class PopularSubscribe(_PluginBase):
                 "tmdbid": media.tmdb_id,
                 "doubanid": media.douban_id,
                 "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "unique": unique_flag
+                "unique": f"popularsubscribe: {sub.get('name')} (DB:{sub.get('tmdbid')})"
             })
 
         # 保存历史记录
         self.save_data('history', history)
+        self.save_data('already_handle', already_handle)
 
     def delete_history(self, key: str, apikey: str):
         """
@@ -210,6 +268,59 @@ class PopularSubscribe(_PluginBase):
             {
                 'component': 'VForm',
                 'content': [
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'onlyonce',
+                                            'label': '立即运行一次',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'clear',
+                                            'label': '清理订阅记录',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'clear_already_handle',
+                                            'label': '清理已处理记录',
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
                     {
                         'component': 'VRow',
                         'content': [
@@ -386,6 +497,9 @@ class PopularSubscribe(_PluginBase):
             "tv_page_cnt": "",
             "movie_popular_cnt": "",
             "tv_popular_cnt": "",
+            "onlyonce": False,
+            "clear": False,
+            "clear_already_handle": False,
         }
 
     def get_page(self) -> List[dict]:
