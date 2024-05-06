@@ -111,6 +111,8 @@ class PopularSubscribe(_PluginBase):
                                                 tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
                                             name="电影热门订阅",
                                             args=['电影', self._movie_page_cnt, self._movie_popular_cnt])
+                    self._onlyonce = False
+                    self.__update_config()
 
             if self._tv_enabled and (self._tv_cron or _onlyonce2):
                 try:
@@ -130,6 +132,8 @@ class PopularSubscribe(_PluginBase):
                                                 tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
                                             name="电视剧热门订阅",
                                             args=['电视剧', self._tv_page_cnt, self._tv_popular_cnt])
+                    self._onlyonce = False
+                    self.__update_config()
 
             # 启动任务
             if self._scheduler.get_jobs():
