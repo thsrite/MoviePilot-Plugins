@@ -402,5 +402,17 @@
           "v1.1": "添加远程交互命令",
           "v1.0": "自动给媒体库媒体添加标签"
         }
+      },
+      "PopularSubscribe": {
+        "name": "热门媒体订阅",
+        "description": "自定添加热门订阅。",
+        "labels": "订阅",
+        "version": "1.0",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/popular.png",
+        "author": "thsrite",
+        "level": 1,
+        "history": {
+          "v1.0": "自定添加热门订阅"
+        }
       }
 }
