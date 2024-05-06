@@ -22,7 +22,7 @@ class PopularSubscribe(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/popular.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -108,6 +108,7 @@ class PopularSubscribe(_PluginBase):
 
         # 遍历热门订阅检查流行度是否达到要求
         for sub in subscribes:
+            logger.info(f"热门订阅检查：{sub.get('name')} 流行度：{sub.get('count')}")
             if popular_cnt and sub.get("count") and int(popular_cnt) > int(sub.get("count")):
                 continue
             media = MediaInfo()
@@ -144,7 +145,7 @@ class PopularSubscribe(_PluginBase):
                                     doubanid=media.douban_id,
                                     exist_ok=True,
                                     username=settings.SUPERUSER)
-            logger.info(f'{media.title_year} 流行度 {sub.get("count")} 添加订阅')
+            logger.info(f'{media.title_year} 流行度：{sub.get("count")} 添加订阅')
 
             # 存储历史记录
             history.append({
