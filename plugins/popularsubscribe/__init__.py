@@ -152,7 +152,7 @@ class PopularSubscribe(_PluginBase):
             "tv_popular_cnt": self._tv_popular_cnt,
             "clear": self._clear,
             "clear_already_handle": self._clear_already_handle,
-            "onlyonce": False
+            "onlyonce": self._onlyonce
         })
 
     def __popular_subscribe(self, stype, page_cnt, popular_cnt):
