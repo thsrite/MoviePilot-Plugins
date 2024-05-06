@@ -389,7 +389,7 @@ class PopularSubscribe(_PluginBase):
                                         'component': 'VTextField',
                                         'props': {
                                             'model': 'movie_popular_cnt',
-                                            'label': '电影流行指数',
+                                            'label': '电影订阅人次',
                                             'placeholder': '0'
                                         }
                                     }
@@ -461,7 +461,7 @@ class PopularSubscribe(_PluginBase):
                                         'component': 'VTextField',
                                         'props': {
                                             'model': 'tv_popular_cnt',
-                                            'label': '电视剧流行指数',
+                                            'label': '电视剧订阅人次',
                                             'placeholder': '0'
                                         }
                                     }
