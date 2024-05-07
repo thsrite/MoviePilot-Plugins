@@ -13,19 +13,21 @@ from app.schemas import MediaType
 from app.plugins import _PluginBase
 from typing import Any, List, Dict, Tuple, Optional
 from app.log import logger
+from app.modules.themoviedb.category import CategoryHelper
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from app.modules.themoviedb.tmdbapi import TmdbApi
 
 
 class PopularSubscribe(_PluginBase):
     # 插件名称
     plugin_name = "热门媒体订阅"
     # 插件描述
-    plugin_desc = "自定添加热门媒体到订阅。"
+    plugin_desc = "自定添加热门电影、电视剧、动漫到订阅。"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/popular.png"
     # 插件版本
-    plugin_version = "1.3"
+    plugin_version = "1.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -40,36 +42,47 @@ class PopularSubscribe(_PluginBase):
     # 私有属性
     _movie_enabled: bool = False
     _tv_enabled: bool = False
+    _anime_enabled: bool = False
     # 一页多少条数据
     _movie_page_cnt: int = 30
     _tv_page_cnt: int = 30
+    _anime_page_cnt: int = 30
     # 流行度最低多少
     _movie_popular_cnt: int = 0
     _tv_popular_cnt: int = 0
+    _anime_popular_cnt: int = 0
     _movie_cron: str = ""
     _tv_cron: str = ""
+    _anime_cron: str = ""
     _onlyonce: bool = False
     _clear = False
     _clear_already_handle = False
 
+    downloadchain = None
     subscribechain = None
+    tmdb = None
     _scheduler: Optional[BackgroundScheduler] = None
 
     def init_plugin(self, config: dict = None):
         self.downloadchain = DownloadChain()
         self.subscribechain = SubscribeChain()
+        self.tmdb = TmdbApi()
         # 停止现有任务
         self.stop_service()
 
         if config:
             self._movie_enabled = config.get("movie_enabled")
             self._tv_enabled = config.get("tv_enabled")
+            self._anime_enabled = config.get("anime_enabled")
             self._movie_cron = config.get("movie_cron")
             self._tv_cron = config.get("tv_cron")
+            self._anime_cron = config.get("anime_cron")
             self._movie_page_cnt = config.get("movie_page_cnt")
             self._tv_page_cnt = config.get("tv_page_cnt")
+            self._anime_page_cnt = config.get("anime_page_cnt")
             self._movie_popular_cnt = config.get("movie_popular_cnt")
             self._tv_popular_cnt = config.get("tv_popular_cnt")
+            self._anime_popular_cnt = config.get("anime_popular_cnt")
             self._clear = config.get("clear")
             self._clear_already_handle = config.get("clear_already_handle")
             _onlyonce2 = config.get("onlyonce")
@@ -94,15 +107,16 @@ class PopularSubscribe(_PluginBase):
             self._scheduler = BackgroundScheduler(timezone=settings.TZ)
 
             if self._movie_enabled and (self._movie_cron or _onlyonce2):
-                try:
-                    self._scheduler.add_job(func=self.__popular_subscribe,
-                                            trigger=CronTrigger.from_crontab(self._movie_cron),
-                                            name="电影热门订阅",
-                                            args=['电影', self._movie_page_cnt, self._movie_popular_cnt])
-                except Exception as err:
-                    logger.error(f"电影热门订阅定时任务配置错误：{err}")
-                    # 推送实时消息
-                    self.systemmessage.put(f"电影热门订阅执行周期配置错误：{err}")
+                if self._movie_cron:
+                    try:
+                        self._scheduler.add_job(func=self.__popular_subscribe,
+                                                trigger=CronTrigger.from_crontab(self._movie_cron),
+                                                name="电影热门订阅",
+                                                args=['电影', self._movie_page_cnt, self._movie_popular_cnt])
+                    except Exception as err:
+                        logger.error(f"电影热门订阅定时任务配置错误：{err}")
+                        # 推送实时消息
+                        self.systemmessage.put(f"电影热门订阅执行周期配置错误：{err}")
 
                 if _onlyonce2:
                     logger.info(f"电影热门订阅服务启动，立即运行一次")
@@ -115,23 +129,46 @@ class PopularSubscribe(_PluginBase):
                     self.__update_config()
 
             if self._tv_enabled and (self._tv_cron or _onlyonce2):
-                try:
-                    self._scheduler.add_job(func=self.__popular_subscribe,
-                                            trigger=CronTrigger.from_crontab(self._tv_cron),
-                                            name="电视剧热门订阅",
-                                            args=['电视剧', self._tv_page_cnt, self._tv_popular_cnt])
-                except Exception as err:
-                    logger.error(f"电视剧热门订阅定时任务配置错误：{err}")
-                    # 推送实时消息
-                    self.systemmessage.put(f"电视剧热门订阅执行周期配置错误：{err}")
+                if self._tv_cron:
+                    try:
+                        self._scheduler.add_job(func=self.__popular_subscribe,
+                                                trigger=CronTrigger.from_crontab(self._tv_cron),
+                                                name="电视剧热门订阅",
+                                                args=['电视剧', self._tv_page_cnt, self._tv_popular_cnt])
+                    except Exception as err:
+                        logger.error(f"电视剧热门订阅定时任务配置错误：{err}")
+                        # 推送实时消息
+                        self.systemmessage.put(f"电视剧热门订阅执行周期配置错误：{err}")
+
+                    if _onlyonce2:
+                        logger.info(f"电视剧热门订阅服务启动，立即运行一次")
+                        self._scheduler.add_job(self.__popular_subscribe, 'date',
+                                                run_date=datetime.now(
+                                                    tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
+                                                name="电视剧热门订阅",
+                                                args=['电视剧', self._tv_page_cnt, self._tv_popular_cnt])
+                        self._onlyonce = False
+                        self.__update_config()
+
+            if self._anime_enabled and (self._anime_cron or _onlyonce2):
+                if self._anime_cron:
+                    try:
+                        self._scheduler.add_job(func=self.__popular_subscribe,
+                                                trigger=CronTrigger.from_crontab(self._anime_cron),
+                                                name="动漫热门订阅",
+                                                args=['动漫', self._anime_page_cnt, self._anime_popular_cnt])
+                    except Exception as err:
+                        logger.error(f"动漫热门订阅定时任务配置错误：{err}")
+                        # 推送实时消息
+                        self.systemmessage.put(f"动漫热门订阅执行周期配置错误：{err}")
 
                 if _onlyonce2:
-                    logger.info(f"电视剧热门订阅服务启动，立即运行一次")
+                    logger.info(f"动漫热门订阅服务启动，立即运行一次")
                     self._scheduler.add_job(self.__popular_subscribe, 'date',
                                             run_date=datetime.now(
                                                 tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
-                                            name="电视剧热门订阅",
-                                            args=['电视剧', self._tv_page_cnt, self._tv_popular_cnt])
+                                            name="动漫热门订阅",
+                                            args=['动漫', self._anime_page_cnt, self._anime_popular_cnt])
                     self._onlyonce = False
                     self.__update_config()
 
@@ -144,12 +181,16 @@ class PopularSubscribe(_PluginBase):
         self.update_config({
             "movie_enabled": self._movie_enabled,
             "tv_enabled": self._tv_enabled,
+            "anime_enabled": self._anime_enabled,
             "movie_cron": self._movie_cron,
             "tv_cron": self._tv_cron,
+            "anime_cron": self._anime_cron,
             "movie_page_cnt": self._movie_page_cnt,
             "tv_page_cnt": self._tv_page_cnt,
+            "anime_page_cnt": self._anime_page_cnt,
             "movie_popular_cnt": self._movie_popular_cnt,
             "tv_popular_cnt": self._tv_popular_cnt,
+            "anime_popular_cnt": self._anime_popular_cnt,
             "clear": self._clear,
             "clear_already_handle": self._clear_already_handle,
             "onlyonce": self._onlyonce
@@ -159,25 +200,33 @@ class PopularSubscribe(_PluginBase):
         """
         热门订阅
         """
+        true_type = stype
+        true_cnt = page_cnt
+        if str(stype) == '动漫':
+            stype = "电视剧"
+            # 动漫|电视剧 公用一组数据，取所需数据的20倍应该ok吧
+            page_cnt = int(page_cnt) * 20
+
         subscribes = SubscribeHelper().get_statistic(stype=stype, page=1, count=page_cnt)
         if not subscribes:
-            logger.error(f"没有获取到{stype}热门订阅")
+            logger.error(f"没有获取到{true_type}热门订阅")
             return
 
         history: List[dict] = self.get_data('history') or []
         already_handle: List[dict] = self.get_data('already_handle') or []
 
         # 遍历热门订阅检查流行度是否达到要求
+        tv_anime_cnt = 0
         for sub in subscribes:
-            logger.info(f"热门订阅检查：{sub.get('name')} 流行度：{sub.get('count')}")
+            logger.info(f"热门订阅检查：{sub.get('name')} 订阅人数：{sub.get('count')}")
             if popular_cnt and sub.get("count") and int(popular_cnt) > int(sub.get("count")):
                 continue
 
             media = MediaInfo()
+            media.tmdb_id = sub.get("tmdbid")
             media.type = MediaType(sub.get("type"))
             media.title = sub.get("name")
             media.year = sub.get("year")
-            media.tmdb_id = sub.get("tmdbid")
             media.douban_id = sub.get("doubanid")
             media.bangumi_id = sub.get("bangumiid")
             media.tvdb_id = sub.get("tvdbid")
@@ -185,14 +234,42 @@ class PopularSubscribe(_PluginBase):
             media.season = sub.get("season")
             media.poster_path = sub.get("poster")
 
+            # 元数据
+            meta = MetaInfo(media.title)
+
+            # 电视剧特殊处理：动漫|电视剧
+            if str(stype) == "电视剧":
+                # 动漫|电视剧所需请求数量以达到
+                if int(tv_anime_cnt) > int(true_cnt):
+                    break
+
+                # 根据tmdbid获取媒体信息
+                tmdb_info = self.tmdb.get_info(mtype=media.type, tmdbid=media.tmdb_id)
+                if not tmdb_info:
+                    logger.warn(f'未识别到媒体信息，标题：{media.title}，tmdbid：{media.tmdb_id}')
+                    continue
+
+                # 获取媒体类型
+                genre_ids = tmdb_info.get("genre_ids") or []
+                if genre_ids:
+                    # 判断是不是动漫
+                    if str(true_type) == '动漫':
+                        # 如果当前是动漫订阅，则判断是否在动漫分类中，如果不在则跳过
+                        if not CategoryHelper.anime_categorys \
+                                or not set(genre_ids).intersection(set(settings.ANIME_GENREIDS)):
+                            continue
+                    else:
+                        # 如果当前是电视剧订阅，则判断是否在动漫分类中，如果在则跳过
+                        if set(genre_ids).intersection(set(settings.TV_GENREIDS)):
+                            continue
+
+                # 电视剧|动漫分类都通过，则计数
+                tv_anime_cnt += 1
+
             if media.title_year in already_handle:
                 logger.info(f"{media.type.value} {media.title_year} 已被处理，跳过")
                 continue
-
             already_handle.append(media.title_year)
-
-            # 元数据
-            meta = MetaInfo(media.title)
 
             # 查询缺失的媒体信息
             exist_flag, _ = self.downloadchain.get_no_exists_info(meta=meta, mediainfo=media)
@@ -213,7 +290,7 @@ class PopularSubscribe(_PluginBase):
                                     doubanid=media.douban_id,
                                     exist_ok=True,
                                     username=settings.SUPERUSER)
-            logger.info(f'{media.title_year} 流行度：{sub.get("count")} 添加订阅')
+            logger.info(f'{media.title_year} 订阅人数：{sub.get("count")} 添加订阅')
 
             # 存储历史记录
             history.append({
@@ -231,6 +308,7 @@ class PopularSubscribe(_PluginBase):
         # 保存历史记录
         self.save_data('history', history)
         self.save_data('already_handle', already_handle)
+        logger.info(f"{true_type} 热门订阅检查完成")
 
     def delete_history(self, key: str, apikey: str):
         """
@@ -476,6 +554,78 @@ class PopularSubscribe(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'anime_enabled',
+                                            'label': '动漫热门订阅',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'anime_cron',
+                                            'label': '动漫订阅周期',
+                                            'placeholder': '5位cron表达式，留空自动'
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'anime_page_cnt',
+                                            'label': '动漫获取条数',
+                                            'placeholder': '30'
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'anime_popular_cnt',
+                                            'label': '动漫订阅人次',
+                                            'placeholder': '0'
+                                        }
+                                    }
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
                                 },
                                 'content': [
                                     {
@@ -483,7 +633,7 @@ class PopularSubscribe(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '获取指定条数的热门媒体，自定义流行度（订阅人数）进行订阅。'
+                                            'text': '获取指定条数的热门媒体，自定义最低订阅人数要求进行订阅。'
                                         }
                                     }
                                 ]
@@ -504,7 +654,7 @@ class PopularSubscribe(_PluginBase):
                                         'props': {
                                             'type': 'error',
                                             'variant': 'tonal',
-                                            'text': '立即运行一次：立即运行一次已开启的电影/电视剧订阅。'
+                                            'text': '立即运行一次：立即运行一次已开启的电影/电视剧/动漫订阅。'
                                         }
                                     }
                                 ]
@@ -516,12 +666,16 @@ class PopularSubscribe(_PluginBase):
         ], {
             "movie_enabled": False,
             "tv_enabled": False,
+            "anime_enabled": False,
             "movie_cron": "5 1 * * *",
             "tv_cron": "5 1 * * *",
+            "anime_cron": "5 1 * * *",
             "movie_page_cnt": "",
             "tv_page_cnt": "",
+            "anime_page_cnt": "",
             "movie_popular_cnt": "",
             "tv_popular_cnt": "",
+            "anime_popular_cnt": "",
             "onlyonce": False,
             "clear": False,
             "clear_already_handle": False,
