@@ -553,7 +553,7 @@ class EmbyReporter(_PluginBase):
         font_small = ImageFont.truetype(font_path, 14)
         font_count = ImageFont.truetype(font_path, 8)
 
-        exites_movies = []
+        exists_movies = []
         for i in movies:
             try:
                 # 榜单项数据
@@ -563,19 +563,19 @@ class EmbyReporter(_PluginBase):
                 success, data = self.primary(item_id)
                 if not success:
                     continue
-                exites_movies.append(i)
+                exists_movies.append(i)
             except Exception:
                 continue
 
-        logger.info(f"过滤后未删除电影 {len(exites_movies)} 部")
+        logger.info(f"过滤后未删除电影 {len(exists_movies)} 部")
         # 合并绘制
-        if len(exites_movies) < 5:
-            for i in range(5 - len(exites_movies) + 1):
-                exites_movies.append({"item_id": i})
-        if len(exites_movies) > 5:
-            exites_movies = exites_movies[:5]
+        if len(exists_movies) < 5:
+            for i in range(5 - len(exists_movies) + 1):
+                exists_movies.append({"item_id": i})
+        if len(exists_movies) > 5:
+            exists_movies = exists_movies[:5]
 
-        exites_tvs = []
+        exists_tvs = []
         for i in tvshows:
             try:
                 # 榜单项数据
@@ -591,15 +591,15 @@ class EmbyReporter(_PluginBase):
                 success, data = self.primary(item_id)
                 if not success:
                     continue
-                exites_tvs.append(i)
+                exists_tvs.append(i)
             except Exception as e:
                 print(str(e))
                 continue
-        logger.info(f"过滤后未删除电视剧 {len(exites_tvs)} 部")
-        if len(exites_tvs) > 5:
-            exites_tvs = exites_tvs[:5]
+        logger.info(f"过滤后未删除电视剧 {len(exists_tvs)} 部")
+        if len(exists_tvs) > 5:
+            exists_tvs = exists_tvs[:5]
 
-        all_ranks = exites_movies + exites_tvs
+        all_ranks = exists_movies + exists_tvs
         index, offset_y = (-1, 0)
         for i in all_ranks:
             index += 1
