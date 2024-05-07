@@ -218,9 +218,11 @@ class PopularSubscribe(_PluginBase):
         # 遍历热门订阅检查流行度是否达到要求
         tv_anime_cnt = 0
         for sub in subscribes:
-            logger.info(f"热门订阅检查：{sub.get('name')} 订阅人数：{sub.get('count')}")
             if popular_cnt and sub.get("count") and int(popular_cnt) > int(sub.get("count")):
+                logger.info(
+                    f"{sub.get('name')} 订阅人数：{sub.get('count')} 小于 设定人数：{popular_cnt}，跳过")
                 continue
+            logger.info(f"{sub.get('name')} 订阅人数：{sub.get('count')} 满足 设定人数：{popular_cnt}")
 
             media = MediaInfo()
             media.tmdb_id = sub.get("tmdbid")
@@ -308,7 +310,7 @@ class PopularSubscribe(_PluginBase):
         # 保存历史记录
         self.save_data('history', history)
         self.save_data('already_handle', already_handle)
-        logger.info(f"{true_type} 热门订阅检查完成")
+        logger.info(f"{true_type}热门订阅检查完成")
 
     def delete_history(self, key: str, apikey: str):
         """
