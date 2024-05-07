@@ -27,5 +27,5 @@ https://yijuzhan.com/api/word.php
 
 点点推荐舔狗
 ``
-https://cloud.qqshabi.cn/api/tiangou/api.php
+https://v.api.aa1.cn/api/tiangou/index.php
 ``
