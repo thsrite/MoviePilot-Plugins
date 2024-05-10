@@ -193,7 +193,6 @@ class EmbyMetaTag(_PluginBase):
         try:
             with RequestUtils(content_type="application/json").post_res(url=req_url, json=tags) as res:
                 if res and res.status_code == 204:
-                    logger.info(f"{req_url} {res}")
                     return True
         except Exception as e:
             logger.error(f"连接Items/Id/Tags/Add出错：" + str(e))
