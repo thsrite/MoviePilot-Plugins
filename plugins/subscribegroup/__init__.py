@@ -20,7 +20,7 @@ class SubscribeGroup(_PluginBase):
     # 插件图标
     plugin_icon = "teamwork.png"
     # 插件版本
-    plugin_version = "2.5"
+    plugin_version = "2.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -70,7 +70,8 @@ class SubscribeGroup(_PluginBase):
                     sites = []
                     for conf in str(confs).split("#"):
                         if ":" in conf:
-                            k, v = conf.split(":")
+                            k = conf.split(":")[0]
+                            v = ":".join(conf.split(":")[1:])
                             if k == "category":
                                 category = v
                             if k == "resolution":
