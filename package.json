@@ -409,11 +409,12 @@
         "name": "热门媒体订阅",
         "description": "自定添加热门媒体到订阅。",
         "labels": "订阅",
-        "version": "1.4",
+        "version": "1.5",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/popular.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v1.5": "修复电视剧订阅、订阅历史展示",
           "v1.4": "动漫单独订阅（本子佬启动！）",
           "v1.3": "增加立即运行、历史删除按钮",
           "v1.2": "增加历史删除按钮",

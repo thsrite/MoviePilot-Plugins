@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
 import pytz
+import cn2an
 
 from app import schemas
 from app.chain.download import DownloadChain
@@ -13,7 +14,6 @@ from app.schemas import MediaType
 from app.plugins import _PluginBase
 from typing import Any, List, Dict, Tuple, Optional
 from app.log import logger
-from app.modules.themoviedb.category import CategoryHelper
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from app.modules.themoviedb.tmdbapi import TmdbApi
@@ -27,7 +27,7 @@ class PopularSubscribe(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/popular.png"
     # 插件版本
-    plugin_version = "1.4"
+    plugin_version = "1.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -222,7 +222,6 @@ class PopularSubscribe(_PluginBase):
                 logger.info(
                     f"{sub.get('name')} 订阅人数：{sub.get('count')} 小于 设定人数：{popular_cnt}，跳过")
                 continue
-            logger.info(f"{sub.get('name')} 订阅人数：{sub.get('count')} 满足 设定人数：{popular_cnt}")
 
             media = MediaInfo()
             media.tmdb_id = sub.get("tmdbid")
@@ -242,7 +241,7 @@ class PopularSubscribe(_PluginBase):
             # 电视剧特殊处理：动漫|电视剧
             if str(stype) == "电视剧":
                 # 动漫|电视剧所需请求数量以达到
-                if int(tv_anime_cnt) > int(true_cnt):
+                if int(tv_anime_cnt) >= int(true_cnt):
                     break
 
                 # 根据tmdbid获取媒体信息
@@ -254,16 +253,14 @@ class PopularSubscribe(_PluginBase):
                 # 获取媒体类型
                 genre_ids = tmdb_info.get("genre_ids") or []
                 if genre_ids:
-                    # 判断是不是动漫
-                    if str(true_type) == '动漫':
-                        # 如果当前是动漫订阅，则判断是否在动漫分类中，如果不在则跳过
-                        if not CategoryHelper.anime_categorys \
-                                or not set(genre_ids).intersection(set(settings.ANIME_GENREIDS)):
-                            continue
-                    else:
-                        # 如果当前是电视剧订阅，则判断是否在动漫分类中，如果在则跳过
-                        if set(genre_ids).intersection(set(settings.TV_GENREIDS)):
-                            continue
+                    # 如果当前是动漫订阅，则判断是否在动漫分类中，如果不在则跳过
+                    if str(true_type) == '动漫' and not set(genre_ids).intersection(set(settings.ANIME_GENREIDS)):
+                        logger.debug(f'{media.title_year} 不在动漫分类中，跳过')
+                        continue
+                    # 如果当前是电视剧订阅，则判断是否在动漫分类中，如果在则跳过
+                    if str(true_type) == '电视剧' and set(genre_ids).intersection(set(settings.ANIME_GENREIDS)):
+                        logger.debug(f'{media.title_year} 在动漫分类中，跳过')
+                        continue
 
                 # 电视剧|动漫分类都通过，则计数
                 tv_anime_cnt += 1
@@ -272,6 +269,14 @@ class PopularSubscribe(_PluginBase):
                 logger.info(f"{media.type.value} {media.title_year} 已被处理，跳过")
                 continue
             already_handle.append(media.title_year)
+
+            title = media.title_year
+            season_str = None
+            if media.season and int(media.season) > 1:
+                # 小写数据转大写
+                season_str = f"第{cn2an.an2cn(media.season, 'low')}季"
+                title = f"{media.title_year} {season_str}"
+            logger.info(f"{title} 订阅人数：{sub.get('count')} 满足 设定人数：{popular_cnt}")
 
             # 查询缺失的媒体信息
             exist_flag, _ = self.downloadchain.get_no_exists_info(meta=meta, mediainfo=media)
@@ -289,6 +294,7 @@ class PopularSubscribe(_PluginBase):
                                     year=media.year,
                                     mtype=media.type,
                                     tmdbid=media.tmdb_id,
+                                    season=media.season,
                                     doubanid=media.douban_id,
                                     exist_ok=True,
                                     username=settings.SUPERUSER)
@@ -299,6 +305,7 @@ class PopularSubscribe(_PluginBase):
                 "title": media.title,
                 "type": media.type.value,
                 "year": media.year,
+                "season": season_str,
                 "poster": media.get_poster_image(),
                 "overview": media.overview,
                 "tmdbid": media.tmdb_id,
@@ -705,94 +712,201 @@ class PopularSubscribe(_PluginBase):
         contents = []
         for history in historys:
             title = history.get("title")
+            year = history.get("year")
+            season = history.get("season")
             poster = history.get("poster")
             mtype = history.get("type")
             time_str = history.get("time")
             tmdbid = history.get("tmdbid")
             doubanid = history.get("doubanid")
-            contents.append(
-                {
-                    'component': 'VCard',
-                    'content': [
-                        {
-                            "component": "VDialogCloseBtn",
-                            "props": {
-                                'innerClass': 'absolute top-0 right-0',
-                            },
-                            'events': {
-                                'click': {
-                                    'api': 'plugin/PopularSubscribe/delete_history',
-                                    'method': 'get',
-                                    'params': {
-                                        'key': f"popularsubscribe: {title} (DB:{tmdbid})",
-                                        'apikey': settings.API_TOKEN
-                                    }
-                                }
-                            },
-                        },
-                        {
-                            'component': 'div',
-                            'props': {
-                                'class': 'd-flex justify-space-start flex-nowrap flex-row',
-                            },
-                            'content': [
-                                {
-                                    'component': 'div',
-                                    'content': [
-                                        {
-                                            'component': 'VImg',
-                                            'props': {
-                                                'src': poster,
-                                                'height': 120,
-                                                'width': 80,
-                                                'aspect-ratio': '2/3',
-                                                'class': 'object-cover shadow ring-gray-500',
-                                                'cover': True
-                                            }
-                                        }
-                                    ]
-                                },
-                                {
-                                    'component': 'div',
-                                    'content': [
-                                        {
-                                            'component': 'VCardSubtitle',
-                                            'props': {
-                                                'class': 'pa-2 font-bold break-words whitespace-break-spaces'
-                                            },
-                                            'content': [
-                                                {
-                                                    'component': 'a',
-                                                    'props': {
-                                                        'href': f"https://movie.douban.com/subject/{doubanid}",
-                                                        'target': '_blank'
-                                                    },
-                                                    'text': title
-                                                }
-                                            ]
-                                        },
-                                        {
-                                            'component': 'VCardText',
-                                            'props': {
-                                                'class': 'pa-0 px-2'
-                                            },
-                                            'text': f'类型：{mtype}'
-                                        },
-                                        {
-                                            'component': 'VCardText',
-                                            'props': {
-                                                'class': 'pa-0 px-2'
-                                            },
-                                            'text': f'时间：{time_str}'
-                                        }
-                                    ]
-                                }
-                            ]
-                        }
-                    ]
-                }
-            )
 
+            if season:
+                contents.append(
+                    {
+                        'component': 'VCard',
+                        'content': [
+                            {
+                                "component": "VDialogCloseBtn",
+                                "props": {
+                                    'innerClass': 'absolute top-0 right-0',
+                                },
+                                'events': {
+                                    'click': {
+                                        'api': 'plugin/PopularSubscribe/delete_history',
+                                        'method': 'get',
+                                        'params': {
+                                            'key': f"popularsubscribe: {title} (DB:{tmdbid})",
+                                            'apikey': settings.API_TOKEN
+                                        }
+                                    }
+                                },
+                            },
+                            {
+                                'component': 'div',
+                                'props': {
+                                    'class': 'd-flex justify-space-start flex-nowrap flex-row',
+                                },
+                                'content': [
+                                    {
+                                        'component': 'div',
+                                        'content': [
+                                            {
+                                                'component': 'VImg',
+                                                'props': {
+                                                    'src': poster,
+                                                    'height': 120,
+                                                    'width': 80,
+                                                    'aspect-ratio': '2/3',
+                                                    'class': 'object-cover shadow ring-gray-500',
+                                                    'cover': True
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        'component': 'div',
+                                        'content': [
+                                            {
+                                                'component': 'VCardSubtitle',
+                                                'props': {
+                                                    'class': 'pa-2 font-bold break-words whitespace-break-spaces'
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'a',
+                                                        'props': {
+                                                            'href': f"https://movie.douban.com/subject/{doubanid}",
+                                                            'target': '_blank'
+                                                        },
+                                                        'text': title
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                'component': 'VCardText',
+                                                'props': {
+                                                    'class': 'pa-0 px-2'
+                                                },
+                                                'text': f'类型：{mtype}'
+                                            },
+                                            {
+                                                'component': 'VCardText',
+                                                'props': {
+                                                    'class': 'pa-0 px-2'
+                                                },
+                                                'text': f'年份：{year}'
+                                            },
+                                            {
+                                                'component': 'VCardText',
+                                                'props': {
+                                                    'class': 'pa-0 px-2'
+                                                },
+                                                'text': f'季度：{season}'
+                                            },
+                                            {
+                                                'component': 'VCardText',
+                                                'props': {
+                                                    'class': 'pa-0 px-2'
+                                                },
+                                                'text': f'时间：{time_str}'
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                )
+            else:
+                contents.append(
+                    {
+                        'component': 'VCard',
+                        'content': [
+                            {
+                                "component": "VDialogCloseBtn",
+                                "props": {
+                                    'innerClass': 'absolute top-0 right-0',
+                                },
+                                'events': {
+                                    'click': {
+                                        'api': 'plugin/PopularSubscribe/delete_history',
+                                        'method': 'get',
+                                        'params': {
+                                            'key': f"popularsubscribe: {title} (DB:{tmdbid})",
+                                            'apikey': settings.API_TOKEN
+                                        }
+                                    }
+                                },
+                            },
+                            {
+                                'component': 'div',
+                                'props': {
+                                    'class': 'd-flex justify-space-start flex-nowrap flex-row',
+                                },
+                                'content': [
+                                    {
+                                        'component': 'div',
+                                        'content': [
+                                            {
+                                                'component': 'VImg',
+                                                'props': {
+                                                    'src': poster,
+                                                    'height': 120,
+                                                    'width': 80,
+                                                    'aspect-ratio': '2/3',
+                                                    'class': 'object-cover shadow ring-gray-500',
+                                                    'cover': True
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        'component': 'div',
+                                        'content': [
+                                            {
+                                                'component': 'VCardSubtitle',
+                                                'props': {
+                                                    'class': 'pa-2 font-bold break-words whitespace-break-spaces'
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'a',
+                                                        'props': {
+                                                            'href': f"https://movie.douban.com/subject/{doubanid}",
+                                                            'target': '_blank'
+                                                        },
+                                                        'text': title
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                'component': 'VCardText',
+                                                'props': {
+                                                    'class': 'pa-0 px-2'
+                                                },
+                                                'text': f'类型：{mtype}'
+                                            },
+                                            {
+                                                'component': 'VCardText',
+                                                'props': {
+                                                    'class': 'pa-0 px-2'
+                                                },
+                                                'text': f'年份：{year}'
+                                            },
+                                            {
+                                                'component': 'VCardText',
+                                                'props': {
+                                                    'class': 'pa-0 px-2'
+                                                },
+                                                'text': f'时间：{time_str}'
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                )
         return [
             {
                 'component': 'div',

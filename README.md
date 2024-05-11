@@ -36,4 +36,4 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - 订阅规则自动填充 2.6
 - Emby元数据刷新 1.1
 - Emby媒体标签 1.1
-- 热门媒体订阅 1.4
+- 热门媒体订阅 1.5
