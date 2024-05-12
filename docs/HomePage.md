@@ -1,7 +1,8 @@
 # HomePage自定义API
 
-HomePage services.yaml配置
+![img.png](../img/img.png)
 
+HomePage services.yaml配置
 ```angular2html
 - MoviePilot:
     icon: /icons/icon/MoviePilot.png
