@@ -5,6 +5,7 @@ from app.plugins import _PluginBase
 from typing import Any, List, Dict, Tuple, Optional
 from app.schemas import NotificationType
 from app import schemas
+from app.utils.string import StringUtils
 from app.utils.system import SystemUtils
 
 
@@ -71,16 +72,17 @@ class HomePage(_PluginBase):
                 movie_subscribes += 1
             else:
                 tv_subscribes += 1
-        return schemas.Response(success=True, data={
+        return {
             'movie_count': movie_count,
             'tv_count': tv_count,
             'episode_count': episode_count,
             'user_count': user_count,
-            'total_storage': total_storage,
-            'free_storage': free_storage,
+            'total_storage': StringUtils.num_filesize(total_storage),
+            'free_storage': StringUtils.num_filesize(free_storage),
+            'used_storage': StringUtils.num_filesize(total_storage - free_storage),
             'movie_subscribes': movie_subscribes,
             'tv_subscribes': tv_subscribes,
-        })
+        }
 
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
