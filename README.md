@@ -37,3 +37,4 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - Emby元数据刷新 1.1
 - Emby媒体标签 1.1
 - 热门媒体订阅 1.5
+- [HomePage 1.0](docs%2FHomePage.md)
