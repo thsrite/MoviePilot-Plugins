@@ -1,6 +1,6 @@
 # HomePage自定义API
 
-![img.png](../img/img.png)
+![img.png](../img/HomePage/img.png)
 
 HomePage services.yaml配置
 ```angular2html
