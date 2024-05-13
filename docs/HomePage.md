@@ -4,34 +4,36 @@
 
 HomePage services.yaml配置
 ```angular2html
-- MoviePilot:
-    icon: /icons/icon/MoviePilot.png
-    href: http://192.168.31.103:3003
-    ping: http://192.168.31.103:3003
-    # server: unraid
-    # container: MoviePilot
-    showStats: true
-    widget:
-        type: customapi
-        url: http://192.168.31.103:3003/api/v1/plugin/HomePage/statistic?apikey=XGV2BNoRjK5YPD
-        method: GET
-        mappings:
-            - field: movie_subscribes
-              label: 电影订阅
-            - field: tv_subscribes
-              label: 电视剧订阅
-            - field: movie_count
-              label: 电影数量
-            - field: tv_count
-              label: 电视剧数量
-            # - field: episode_count
-            #   label: 电影剧集数量
-            # - field: user_count
-            #   label: 用户数量
-            # - field: total_storage
-            #   label: 总空间
-            # - field: free_storage
-            #   label: 剩余空间
+- Media:
+    - MoviePilot:
+        icon: /icons/icon/MoviePilot.png
+        href: http://MoviePilot_IP:NGINX_PORT
+        ping: http://MoviePilot_IP:NGINX_PORT
+        # server: unraid
+        # container: MoviePilot
+        showStats: true
+        widget:
+            type: customapi
+            url: http://MoviePilot_IP:NGINX_PORT/api/v1/plugin/HomePage/statistic?apikey=api_token
+            method: GET
+            mappings:
+                - field: movie_subscribes
+                  label: 电影订阅
+                - field: tv_subscribes
+                  label: 电视剧订阅
+                - field: movie_count
+                  label: 电影数量
+                - field: tv_count
+                  label: 电视剧数量
+                # - field: episode_count
+                #   label: 电影剧集数量
+                # - field: user_count
+                #   label: 用户数量
+                # - field: total_storage
+                #   label: 总空间
+                # - field: free_storage
+                #   label: 剩余空间
+                # - field: now_tasks
 ```
 
 ### 自定义API Response字段
