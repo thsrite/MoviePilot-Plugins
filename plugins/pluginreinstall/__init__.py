@@ -63,6 +63,8 @@ class PluginReInstall(_PluginBase):
                     PluginManager().reload_plugin(plugin_id)
                     # 注册插件服务
                     Scheduler().update_plugin_job(plugin_id)
+                    # 注册插件API
+                    self.register_plugin_api(plugin_id)
                     logger.info(f"插件 {plugin_id} 热重载成功")
                 self.__update_conifg()
             else:
