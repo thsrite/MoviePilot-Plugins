@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from fastapi import APIRouter
 
 from app.core.config import settings
 from app.core.plugin import PluginManager
@@ -17,6 +18,8 @@ from app.scheduler import Scheduler
 from app.schemas.types import EventType
 from app.core.event import eventmanager, Event
 
+router = APIRouter()
+
 
 class PluginAutoUpdate(_PluginBase):
     # 插件名称
@@ -26,7 +29,7 @@ class PluginAutoUpdate(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/pluginupdate.png"
     # 插件版本
-    plugin_version = "1.6"
+    plugin_version = "1.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -186,6 +189,8 @@ class PluginAutoUpdate(_PluginBase):
                                 PluginManager().reload_plugin(plugin.id)
                                 # 注册插件服务
                                 Scheduler().update_plugin_job(plugin.id)
+                                # 注册插件API
+                                self.register_plugin_api(plugin.id)
                     else:
                         title = f"插件 {plugin.plugin_name} 有更新啦"
                         logger.info(f"{title} {version_text}")
@@ -255,6 +260,18 @@ class PluginAutoUpdate(_PluginBase):
 
     def get_api(self) -> List[Dict[str, Any]]:
         pass
+
+    @staticmethod
+    def register_plugin_api(plugin_id: str = None):
+        """
+        注册插件API（先删除后新增）
+        """
+        for api in PluginManager().get_plugin_apis(plugin_id):
+            for r in router.routes:
+                if r.path == api.get("path"):
+                    router.routes.remove(r)
+                    break
+            router.add_api_route(**api)
 
     def get_form(self) -> Tuple[List[dict], Dict[str, Any]]:
         """

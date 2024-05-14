@@ -2,6 +2,8 @@ import re
 import shutil
 from pathlib import Path
 
+from fastapi import APIRouter
+
 from app.core.config import settings
 from app.core.plugin import PluginManager
 from app.db.systemconfig_oper import SystemConfigOper
@@ -15,6 +17,8 @@ from app.utils.string import StringUtils
 from app.scheduler import Scheduler
 from app.utils.system import SystemUtils
 
+router = APIRouter()
+
 
 class PluginReInstall(_PluginBase):
     # 插件名称
@@ -24,7 +28,7 @@ class PluginReInstall(_PluginBase):
     # 插件图标
     plugin_icon = "refresh.png"
     # 插件版本
-    plugin_version = "1.5"
+    plugin_version = "1.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -102,6 +106,8 @@ class PluginReInstall(_PluginBase):
                         PluginManager().reload_plugin(plugin_id)
                         # 注册插件服务
                         Scheduler().update_plugin_job(plugin_id)
+                        # 注册插件API
+                        self.register_plugin_api(plugin_id)
 
     def __update_conifg(self):
         self.update_config({
@@ -210,6 +216,18 @@ class PluginReInstall(_PluginBase):
         PluginHelper().install_reg(pid)
 
         return True, ""
+
+    @staticmethod
+    def register_plugin_api(plugin_id: str = None):
+        """
+        注册插件API（先删除后新增）
+        """
+        for api in PluginManager().get_plugin_apis(plugin_id):
+            for r in router.routes:
+                if r.path == api.get("path"):
+                    router.routes.remove(r)
+                    break
+            router.add_api_route(**api)
 
     def get_state(self) -> bool:
         return False
