@@ -59,12 +59,7 @@ class PluginReInstall(_PluginBase):
             # 仅重载插件
             if self._reload:
                 for plugin_id in self._plugin_ids:
-                    # 加载插件到内存
-                    PluginManager().reload_plugin(plugin_id)
-                    # 注册插件服务
-                    Scheduler().update_plugin_job(plugin_id)
-                    # 注册插件API
-                    self.register_plugin_api(plugin_id)
+                    self.__reload_plugin(plugin_id)
                     logger.info(f"插件 {plugin_id} 热重载成功")
                 self.__update_conifg()
             else:
@@ -104,12 +99,7 @@ class PluginReInstall(_PluginBase):
                         logger.info(
                             f"插件 {local_plugin.get('plugin_name')} 重装成功，当前版本 v{local_plugin.get('plugin_version')}")
 
-                        # 加载插件到内存
-                        PluginManager().reload_plugin(plugin_id)
-                        # 注册插件服务
-                        Scheduler().update_plugin_job(plugin_id)
-                        # 注册插件API
-                        self.register_plugin_api(plugin_id)
+                        self.__reload_plugin(plugin_id)
 
     def __update_conifg(self):
         self.update_config({
@@ -117,6 +107,17 @@ class PluginReInstall(_PluginBase):
             "plugin_url": self._plugin_url,
             "proxy_url": self._proxy_url
         })
+
+    def __reload_plugin(self, plugin_id):
+        """
+        重载插件
+        """
+        # 加载插件到内存
+        PluginManager().reload_plugin(plugin_id)
+        # 注册插件服务
+        Scheduler().update_plugin_job(plugin_id)
+        # 注册插件API
+        self.register_plugin_api(plugin_id)
 
     def install(self, pid: str, repo_url: str) -> Tuple[bool, str]:
         """
