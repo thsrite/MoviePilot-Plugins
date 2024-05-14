@@ -311,7 +311,7 @@ class PopularSubscribe(_PluginBase):
                 "tmdbid": media.tmdb_id,
                 "doubanid": media.douban_id,
                 "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "unique": f"popularsubscribe: {sub.get('name')} (DB:{sub.get('tmdbid')})"
+                "unique": f"popularsubscribe: {media.title} (DB:{sub.get('tmdbid')})"
             })
 
         # 保存历史记录
