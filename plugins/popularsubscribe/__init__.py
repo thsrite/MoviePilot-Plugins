@@ -27,7 +27,7 @@ class PopularSubscribe(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/popular.png"
     # 插件版本
-    plugin_version = "1.5"
+    plugin_version = "1.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -311,7 +311,7 @@ class PopularSubscribe(_PluginBase):
                 "tmdbid": media.tmdb_id,
                 "doubanid": media.douban_id,
                 "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "unique": f"popularsubscribe: {media.title} (DB:{sub.get('tmdbid')})"
+                "unique": f"{media.title}:{media.tmdb_id}:{datetime.now().strftime('%Y-%m-%d %H:%M:%S')})"
             })
 
         # 保存历史记录
@@ -719,6 +719,7 @@ class PopularSubscribe(_PluginBase):
             time_str = history.get("time")
             tmdbid = history.get("tmdbid")
             doubanid = history.get("doubanid")
+            unique = history.get("unique")
 
             if season:
                 contents.append(
@@ -735,7 +736,7 @@ class PopularSubscribe(_PluginBase):
                                         'api': 'plugin/PopularSubscribe/delete_history',
                                         'method': 'get',
                                         'params': {
-                                            'key': f"popularsubscribe: {title} (DB:{tmdbid})",
+                                            'key': unique,
                                             'apikey': settings.API_TOKEN
                                         }
                                     }
