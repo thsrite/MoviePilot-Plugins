@@ -225,18 +225,13 @@ class PluginReInstall(_PluginBase):
         """
         注册插件API（先删除后新增）
         """
-        apis: List[Dict[str, Any]] = []
-        for api in PluginManager().get_plugin_apis():
-            if plugin_id in api.get("path"):
-                apis.append(api)
-
-        for api in apis:
+        for api in PluginManager().get_plugin_apis(plugin_id):
             for r in router.routes:
                 if r.path == api.get("path"):
                     router.routes.remove(r)
                     break
             router.add_api_route(**api)
-            
+
     def get_state(self) -> bool:
         return False
 
