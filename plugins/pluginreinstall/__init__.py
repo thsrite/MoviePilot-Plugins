@@ -236,6 +236,7 @@ class PluginReInstall(_PluginBase):
                     router.routes.remove(r)
                     break
             router.add_api_route(**api)
+            
     def get_state(self) -> bool:
         return False
 
