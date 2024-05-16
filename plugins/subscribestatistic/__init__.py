@@ -166,7 +166,7 @@ class SubscribeStatistic(_PluginBase):
         if self._msgtype:
             mtype = NotificationType.__getitem__(str(self._msgtype)) or NotificationType.Manual
 
-        self.post_message(title="订阅下载统计",
+        self.post_message(title="【订阅下载统计】",
                           mtype=mtype,
                           text=text)
 
