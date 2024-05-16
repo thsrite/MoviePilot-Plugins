@@ -27,7 +27,7 @@ class PopularSubscribe(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/popular.png"
     # 插件版本
-    plugin_version = "1.6"
+    plugin_version = "1.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -57,6 +57,7 @@ class PopularSubscribe(_PluginBase):
     _onlyonce: bool = False
     _clear = False
     _clear_already_handle = False
+    _username = None
 
     downloadchain = None
     subscribechain = None
@@ -85,6 +86,7 @@ class PopularSubscribe(_PluginBase):
             self._anime_popular_cnt = config.get("anime_popular_cnt")
             self._clear = config.get("clear")
             self._clear_already_handle = config.get("clear_already_handle")
+            self._username = config.get("username") or '热门订阅'
             _onlyonce2 = config.get("onlyonce")
 
             # 清理插件订阅历史
@@ -193,7 +195,8 @@ class PopularSubscribe(_PluginBase):
             "anime_popular_cnt": self._anime_popular_cnt,
             "clear": self._clear,
             "clear_already_handle": self._clear_already_handle,
-            "onlyonce": self._onlyonce
+            "onlyonce": self._onlyonce,
+            "username": self._username
         })
 
     def __popular_subscribe(self, stype, page_cnt, popular_cnt):
@@ -297,7 +300,7 @@ class PopularSubscribe(_PluginBase):
                                     season=media.season,
                                     doubanid=media.douban_id,
                                     exist_ok=True,
-                                    username=settings.SUPERUSER)
+                                    username=self._username)
             logger.info(f'{media.title_year} 订阅人数：{sub.get("count")} 添加订阅')
 
             # 存储历史记录
@@ -667,7 +670,24 @@ class PopularSubscribe(_PluginBase):
                                         }
                                     }
                                 ]
-                            }
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'username',
+                                            'label': '订阅用户',
+                                            'placeholder': '默认为`热门订阅`'
+                                        }
+                                    }
+                                ]
+                            },
                         ]
                     }
                 ]
@@ -688,6 +708,7 @@ class PopularSubscribe(_PluginBase):
             "onlyonce": False,
             "clear": False,
             "clear_already_handle": False,
+            "username": "热门订阅"
         }
 
     def get_page(self) -> List[dict]:
