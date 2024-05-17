@@ -33,7 +33,7 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - docker自定义任务 1.3
 - 插件彻底卸载 1.0
 - 实时软连接 1.3
-- 订阅规则自动填充 2.6
+- 订阅规则自动填充 2.7
 - Emby元数据刷新 1.1
 - Emby媒体标签 1.1
 - 热门媒体订阅 1.7

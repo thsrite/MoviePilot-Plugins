@@ -9,7 +9,7 @@ from app.plugins import _PluginBase
 from typing import Any, List, Dict, Tuple
 from app.log import logger
 from app.core.event import eventmanager, Event
-from app.schemas.types import EventType
+from app.schemas.types import EventType, SystemConfigKey
 
 
 class SubscribeGroup(_PluginBase):
@@ -20,7 +20,7 @@ class SubscribeGroup(_PluginBase):
     # 插件图标
     plugin_icon = "teamwork.png"
     # 插件版本
-    plugin_version = "2.6"
+    plugin_version = "2.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -313,9 +313,10 @@ class SubscribeGroup(_PluginBase):
                 # 站点
                 if "站点" in self._update_details and (
                         not subscribe.sites or (subscribe.sites and len(json.loads(subscribe.sites)) == 0)):
-                    # 站点
-                    sites = json.dumps([_torrent.site]) if _torrent and _torrent.site else None
-                    if sites:
+                    # 站点 判断是否在订阅站点范围内
+                    rss_sites = self.systemconfig.get(SystemConfigKey.RssSites) or []
+                    if _torrent and _torrent.site and int(_torrent.site) in rss_sites:
+                        sites = json.dumps([_torrent.site])
                         update_dict['sites'] = sites
 
                 if len(update_dict.keys()) == 0:
