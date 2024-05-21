@@ -22,7 +22,7 @@ class WeChatForward(_PluginBase):
     # 插件图标
     plugin_icon = "Wechat_A.png"
     # 插件版本
-    plugin_version = "2.3"
+    plugin_version = "2.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -154,52 +154,63 @@ class WeChatForward(_PluginBase):
         """
         获取并存储wechat token
         """
-        # 从数据库获取token
-        wechat_confs = self.get_data('wechat_confs')
-        if not self._rebuild and wechat_confs:
-            self._wechat_token_pattern_confs = wechat_confs
-            logger.info(f"WeChat配置 从数据库获取成功：{len(self._wechat_token_pattern_confs.keys())}条配置")
+        # 如果重建则重新解析存库
+        if self._rebuild:
+            self.__parse_token()
         else:
-            # 解析配置
-            for wechat in json.loads(self._wechat_confs):
-                remark = wechat.get("remark")
-                appid = wechat.get("appid")
-                corpid = wechat.get("corpid")
-                appsecret = wechat.get("appsecret")
-                pattern = wechat.get("pattern")
-                extra_confs = wechat.get("extra_confs")
-                if not appid or not corpid or not appsecret:
-                    logger.error(f"{remark} 应用配置不正确, 跳过处理")
-                    continue
+            # 从数据库获取token
+            wechat_confs = self.get_data('wechat_confs')
 
-                # 获取token
-                access_token, expires_in, access_token_time = self.__get_access_token(corpid=corpid,
-                                                                                      appsecret=appsecret)
-                if not access_token:
-                    # 没有token，获取token
-                    logger.error(f"WeChat配置 {remark} 获取token失败，请检查配置")
-                    continue
+            if wechat_confs:
+                self._wechat_token_pattern_confs = wechat_confs
+                logger.info(f"WeChat配置 从数据库获取成功：{len(self._wechat_token_pattern_confs.keys())}条配置")
+            else:
+                self.__parse_token()
 
-                self._wechat_token_pattern_confs[appid] = {
-                    "remark": remark,
-                    "corpid": corpid,
-                    "appsecret": appsecret,
-                    "access_token": access_token,
-                    "expires_in": expires_in,
-                    "access_token_time": access_token_time,
-                    "pattern": pattern,
-                    "extra_confs": extra_confs,
-                }
-                logger.info(f"WeChat配置 {remark} token请求成功")
+    def __parse_token(self):
+        """
+        解析token存库
+        """
+        # 解析配置
+        for wechat in json.loads(self._wechat_confs):
+            remark = wechat.get("remark")
+            appid = wechat.get("appid")
+            corpid = wechat.get("corpid")
+            appsecret = wechat.get("appsecret")
+            pattern = wechat.get("pattern")
+            extra_confs = wechat.get("extra_confs")
+            if not appid or not corpid or not appsecret:
+                logger.error(f"{remark} 应用配置不正确, 跳过处理")
+                continue
 
-            if self._rebuild:
-                self._rebuild = False
-                self.__update_config()
-                
-            # token存库
-            if len(self._wechat_token_pattern_confs.keys()) > 0:
-                self.__save_wechat_confs()
-   
+            # 获取token
+            access_token, expires_in, access_token_time = self.__get_access_token(corpid=corpid,
+                                                                                  appsecret=appsecret)
+            if not access_token:
+                # 没有token，获取token
+                logger.error(f"WeChat配置 {remark} 获取token失败，请检查配置")
+                continue
+
+            self._wechat_token_pattern_confs[appid] = {
+                "remark": remark,
+                "corpid": corpid,
+                "appsecret": appsecret,
+                "access_token": access_token,
+                "expires_in": expires_in,
+                "access_token_time": access_token_time,
+                "pattern": pattern,
+                "extra_confs": extra_confs,
+            }
+            logger.info(f"WeChat配置 {remark} token请求成功")
+
+        if self._rebuild:
+            self._rebuild = False
+            self.__update_config()
+
+        # token存库
+        if len(self._wechat_token_pattern_confs.keys()) > 0:
+            self.__save_wechat_confs()
+
     def __update_config(self):
         self.update_config({
             "enabled": self._enabled,
@@ -209,7 +220,7 @@ class WeChatForward(_PluginBase):
             "specify_confs": self._specify_confs,
             "history_days": self._history_days
         })
-        
+
     def __save_wechat_confs(self):
         """
         保存wechat配置
@@ -866,7 +877,8 @@ class WeChatForward(_PluginBase):
             "enable_id_trans": 0,
             "enable_duplicate_check": 0
         }
-        return self.__post_request(access_token=access_token, req_json=req_json, appid=appid, title=title, text=text, userid=userid)
+        return self.__post_request(access_token=access_token, req_json=req_json, appid=appid, title=title, text=text,
+                                   userid=userid)
 
     def __send_image_message(self, title: str, text: str, image_url: str, userid: str = None,
                              access_token: str = None, appid: int = None) -> Optional[bool]:
@@ -897,7 +909,8 @@ class WeChatForward(_PluginBase):
                 ]
             }
         }
-        return self.__post_request(access_token=access_token, req_json=req_json, appid=appid, title=title, text=text, userid=userid)
+        return self.__post_request(access_token=access_token, req_json=req_json, appid=appid, title=title, text=text,
+                                   userid=userid)
 
     def __post_request(self, access_token: str, req_json: dict, appid: int, title: str, retry: int = 0,
                        text: str = None, userid: str = None) -> bool:
@@ -918,7 +931,8 @@ class WeChatForward(_PluginBase):
                     history = self.get_data('history') or []
                     history.append({
                         "appid": appid,
-                        "remark": f"({self._wechat_token_pattern_confs.get(appid).get('remark')})" if self._wechat_token_pattern_confs.get(appid).get('remark') else "",
+                        "remark": f"({self._wechat_token_pattern_confs.get(appid).get('remark')})" if self._wechat_token_pattern_confs.get(
+                            appid).get('remark') else "",
                         "title": title,
                         "text": text,
                         "userid": userid,
