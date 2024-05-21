@@ -161,7 +161,7 @@ class WeChatForward(_PluginBase):
             # 从数据库获取token
             wechat_confs = self.get_data('wechat_confs')
 
-            if wechat_confs:
+            if not self._wechat_token_pattern_confs and wechat_confs:
                 self._wechat_token_pattern_confs = wechat_confs
                 logger.info(f"WeChat配置 从数据库获取成功：{len(self._wechat_token_pattern_confs.keys())}条配置")
             else:
