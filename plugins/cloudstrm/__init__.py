@@ -94,6 +94,9 @@ class CloudStrm(_PluginBase):
                 # 格式 源目录:目的目录:媒体库内网盘路径:监控模式
                 if not monitor_conf:
                     continue
+                # 注释
+                if str(monitor_conf).startswith("#"):
+                    continue
                 if str(monitor_conf).count("#") == 2:
                     source_dir = str(monitor_conf).split("#")[0]
                     target_dir = str(monitor_conf).split("#")[1]
