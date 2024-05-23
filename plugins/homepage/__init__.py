@@ -1,6 +1,9 @@
+from pathlib import Path
+
 from app.chain.dashboard import DashboardChain
 from app.core.config import settings
 from app.db.subscribe_oper import SubscribeOper
+from app.helper.directory import DirectoryHelper
 from app.plugins import _PluginBase
 from typing import Any, List, Dict, Tuple, Optional
 from app.schemas import NotificationType
@@ -17,7 +20,7 @@ class HomePage(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/homepage.png"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -61,7 +64,8 @@ class HomePage(_PluginBase):
                 user_count += media_statistic.user_count
 
         # 磁盘统计
-        total_storage, free_storage = SystemUtils.space_usage(settings.LIBRARY_PATHS)
+        library_dirs = DirectoryHelper().get_library_dirs()
+        total_storage, free_storage = SystemUtils.space_usage([Path(d.path) for d in library_dirs if d.path])
 
         # 订阅统计
         movie_subscribes = 0

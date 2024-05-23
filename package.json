@@ -433,11 +433,12 @@
         "name": "HomePage",
         "description": "HomePage自定义API。",
         "labels": "工具",
-        "version": "1.1",
+        "version": "1.2",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/homepage.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v1.2": "适配v1.9.1-beta（不生效就重启）",
           "v1.1": "支持更多返回值、插件展示数据",
           "v1.0": "HomePage自定义API"
         }
