@@ -1,4 +1,3 @@
-import json
 import os
 import shutil
 import urllib.parse
@@ -16,6 +15,7 @@ from apscheduler.triggers.cron import CronTrigger
 from app.log import logger
 from app.plugins import _PluginBase
 from app.core.config import settings
+from app.utils.system import SystemUtils
 
 
 class CloudStrm(_PluginBase):
@@ -26,7 +26,7 @@ class CloudStrm(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png"
     # 插件版本
-    plugin_version = "3.7"
+    plugin_version = "3.8"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -41,21 +41,21 @@ class CloudStrm(_PluginBase):
     # 私有属性
     _enabled = False
     _cron = None
-    _rebuild_cron = None
     _monitor_confs = None
     _onlyonce = False
     _copy_files = False
-    _rebuild = False
     _https = False
+    _no_del_dirs = None
+    _rmt_mediaext = ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
     _observer = []
-    __cloud_files_json = "cloud_files.json"
 
+    # 公开属性
+    _increment_dir = {}
     _dirconf = {}
     _libraryconf = {}
     _cloudtypeconf = {}
     _cloudurlconf = {}
     _cloudpathconf = {}
-    __cloud_files = []
 
     # 定时器
     _scheduler: Optional[BackgroundScheduler] = None
@@ -67,17 +67,18 @@ class CloudStrm(_PluginBase):
         self._cloudtypeconf = {}
         self._cloudurlconf = {}
         self._cloudpathconf = {}
-        self.__cloud_files_json = os.path.join(self.get_data_path(), self.__cloud_files_json)
+        self._increment_dir = {}
 
         if config:
             self._enabled = config.get("enabled")
             self._cron = config.get("cron")
-            self._rebuild_cron = config.get("rebuild_cron")
             self._onlyonce = config.get("onlyonce")
-            self._rebuild = config.get("rebuild")
             self._https = config.get("https")
             self._copy_files = config.get("copy_files")
             self._monitor_confs = config.get("monitor_confs")
+            self._no_del_dirs = config.get("no_del_dirs")
+            self._rmt_mediaext = config.get(
+                "rmt_mediaext") or ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
 
         # 停止现有任务
         self.stop_service()
@@ -97,25 +98,32 @@ class CloudStrm(_PluginBase):
                 # 注释
                 if str(monitor_conf).startswith("#"):
                     continue
-                if str(monitor_conf).count("#") == 2:
-                    source_dir = str(monitor_conf).split("#")[0]
-                    target_dir = str(monitor_conf).split("#")[1]
-                    library_dir = str(monitor_conf).split("#")[2]
+
+                if str(monitor_conf).count("#") == 3:
+                    increment_dir = str(monitor_conf).split("#")[0]
+                    source_dir = str(monitor_conf).split("#")[1]
+                    target_dir = str(monitor_conf).split("#")[2]
+                    library_dir = str(monitor_conf).split("#")[3]
                     self._libraryconf[source_dir] = library_dir
-                elif str(monitor_conf).count("#") == 4:
-                    source_dir = str(monitor_conf).split("#")[0]
-                    target_dir = str(monitor_conf).split("#")[1]
-                    cloud_type = str(monitor_conf).split("#")[2]
-                    cloud_path = str(monitor_conf).split("#")[3]
-                    cloud_url = str(monitor_conf).split("#")[4]
+                elif str(monitor_conf).count("#") == 5:
+                    increment_dir = str(monitor_conf).split("#")[0]
+                    source_dir = str(monitor_conf).split("#")[1]
+                    target_dir = str(monitor_conf).split("#")[2]
+                    cloud_type = str(monitor_conf).split("#")[3]
+                    cloud_path = str(monitor_conf).split("#")[4]
+                    cloud_url = str(monitor_conf).split("#")[5]
                     self._cloudtypeconf[source_dir] = cloud_type
                     self._cloudpathconf[source_dir] = cloud_path
                     self._cloudurlconf[source_dir] = cloud_url
                 else:
                     logger.error(f"{monitor_conf} 格式错误")
                     continue
+
                 # 存储目录监控配置
                 self._dirconf[source_dir] = target_dir
+
+                # 增量配置
+                self._increment_dir[increment_dir] = source_dir
 
                 # 检查媒体库目录是不是下载目录的子目录
                 try:
@@ -149,17 +157,6 @@ class CloudStrm(_PluginBase):
                     # 推送实时消息
                     self.systemmessage.put(f"执行周期配置错误：{err}")
 
-            # 周期运行
-            if self._rebuild_cron:
-                try:
-                    self._scheduler.add_job(func=self.__init_cloud_files_json,
-                                            trigger=CronTrigger.from_crontab(self._rebuild_cron),
-                                            name="云盘监控重建索引")
-                except Exception as err:
-                    logger.error(f"定时任务配置错误：{err}")
-                    # 推送实时消息
-                    self.systemmessage.put(f"执行周期配置错误：{err}")
-
             # 启动任务
             if self._scheduler.get_jobs():
                 self._scheduler.print_jobs()
@@ -187,68 +184,60 @@ class CloudStrm(_PluginBase):
                               userid=event.event_data.get("user"))
 
         logger.info("云盘strm生成任务开始")
-        # 首次扫描或者重建索引
-        __init_flag = False
-        if self._rebuild or not Path(self.__cloud_files_json).exists():
-            logger.info("正在重建索引或初始化运行")
-            self.__init_cloud_files_json()
-            self._rebuild = False
-            self.__update_config()
-            __init_flag = True
-        else:
-            logger.info("尝试加载本地缓存")
-            # 尝试加载本地
-            with open(self.__cloud_files_json, 'r') as file:
-                content = file.read()
-                if content:
-                    self.__cloud_files = json.loads(content)
+        for increment_dir in self._increment_dir.keys():
+            logger.info(f"正在扫描增量目录 {increment_dir}")
+            for root, dirs, files in os.walk(increment_dir):
+                # 如果遇到名为'extrafanart'的文件夹，则跳过处理该文件夹，继续处理其他文件夹
+                if "extrafanart" in dirs:
+                    dirs.remove("extrafanart")
 
-        # 本地没加载到则重建索引
-        if not self.__cloud_files:
-            logger.error("尝试加载本地缓存，开始重建索引")
-            self.__init_cloud_files_json()
-            self._rebuild = False
-            self.__update_config()
-            __init_flag = True
+                # 处理文件
+                for file in files:
+                    increment_file = os.path.join(root, file)
+                    # 回收站及隐藏的文件不处理
+                    if (increment_file.find("/@Recycle") != -1
+                            or increment_file.find("/#recycle") != -1
+                            or increment_file.find("/.") != -1
+                            or increment_file.find("/@eaDir") != -1):
+                        logger.info(f"{increment_file} 是回收站或隐藏的文件，跳过处理")
+                        continue
 
-        # 不是首次索引，则重新扫描、判断是否有新文件
-        if not __init_flag:
-            __save_flag = False
-            for source_dir in self._dirconf.keys():
-                logger.info(f"正在处理监控文件 {source_dir}")
-                for root, dirs, files in os.walk(source_dir):
-                    # 如果遇到名为'extrafanart'的文件夹，则跳过处理该文件夹，继续处理其他文件夹
-                    if "extrafanart" in dirs:
-                        dirs.remove("extrafanart")
+                    # 不复制非媒体文件时直接过滤掉非媒体文件
+                    if not self._copy_files and Path(file).suffix not in [ext.strip() for ext in
+                                                                          self._rmt_mediaext.split(",")]:
+                        continue
 
-                    # 处理文件
-                    for file in files:
-                        source_file = os.path.join(root, file)
-                        # 回收站及隐藏的文件不处理
-                        if (source_file.find("/@Recycle") != -1
-                                or source_file.find("/#recycle") != -1
-                                or source_file.find("/.") != -1
-                                or source_file.find("/@eaDir") != -1):
-                            logger.info(f"{source_file} 是回收站或隐藏的文件，跳过处理")
-                            continue
+                    logger.info(f"扫描到增量文件 {increment_file}，正在开始处理")
 
-                        # 不复制非媒体文件时直接过滤掉非媒体文件
-                        if not self._copy_files and Path(file).suffix not in settings.RMT_MEDIAEXT:
-                            continue
+                    # 移动到目标目录
+                    source_dir = self._increment_dir.get(increment_dir)
+                    # 移动后文件
+                    source_file = increment_file.replace(increment_dir, source_dir)
 
-                        if source_file not in self.__cloud_files:
-                            logger.info(f"扫描到新文件 {source_file}，正在开始处理")
-                            # 云盘文件json新增
-                            self.__cloud_files.append(source_file)
-                            # 扫描云盘文件，判断是否有对应strm
-                            self.__strm(source_file)
-                            __save_flag = True
-                        else:
-                            logger.debug(f"{source_file} 已在缓存中！跳过处理")
+                    # 判断目标文件是否存在
+                    if not Path(source_file).parent.exists():
+                        Path(source_file).parent.mkdir(parents=True, exist_ok=True)
 
-            # 重新保存json文件
-            if __save_flag:
-                self.__sava_json()
+                    shutil.move(increment_file, source_file, copy_function=shutil.copy2)
+                    logger.info(f"移动增量文件 {increment_file} 到 {source_file}")
+
+                    # 扫描云盘文件，判断是否有对应strm
+                    self.__strm(source_file)
+                    logger.info(f"增量文件 {increment_file} 处理完成")
+
+                    # 判断当前媒体父路径下是否有媒体文件，如有则无需遍历父级
+                    if not SystemUtils.exits_files(Path(increment_file).parent,
+                                                   [ext.strip() for ext in self._rmt_mediaext.split(",")]):
+                        # 判断父目录是否为空, 为空则删除
+                        for parent_path in Path(increment_file).parents:
+                            if parent_path.name in self._no_del_dirs:
+                                break
+                            if str(parent_path.parent) != str(Path(increment_file).root):
+                                # 父目录非根目录，才删除父目录
+                                if not SystemUtils.exits_files(parent_path, settings.RMT_MEDIAEXT):
+                                    # 当前路径下没有媒体文件则删除
+                                    shutil.rmtree(parent_path)
+                                    logger.warn(f"增量目录 {parent_path} 已删除")
 
         logger.info("云盘strm生成任务完成")
         if event:
@@ -256,53 +245,58 @@ class CloudStrm(_PluginBase):
                               title="云盘strm生成任务完成！",
                               userid=event.event_data.get("user"))
 
-    def __init_cloud_files_json(self):
-        """
-        初始化云盘文件json
-        """
-        # init
-        for source_dir in self._dirconf.keys():
-            logger.info(f"正在处理监控文件 {source_dir}")
-            for root, dirs, files in os.walk(source_dir):
-                # 如果遇到名为'extrafanart'的文件夹，则跳过处理该文件夹，继续处理其他文件夹
-                if "extrafanart" in dirs:
-                    dirs.remove("extrafanart")
-
-                # 处理文件
-                for file in files:
-                    source_file = os.path.join(root, file)
-                    # 回收站及隐藏的文件不处理
-                    if (source_file.find("/@Recycle") != -1
-                            or source_file.find("/#recycle") != -1
-                            or source_file.find("/.") != -1
-                            or source_file.find("/@eaDir") != -1):
-                        logger.info(f"{source_file} 是回收站或隐藏的文件，跳过处理")
-                        continue
-
-                    # 不复制非媒体文件时直接过滤掉非媒体文件
-                    if not self._copy_files and Path(file).suffix not in settings.RMT_MEDIAEXT:
-                        continue
-
-                    logger.info(f"扫描到新文件 {source_file}，正在开始处理")
-                    # 云盘文件json新增
-                    self.__cloud_files.append(source_file)
-                    # 扫描云盘文件，判断是否有对应strm
-                    self.__strm(source_file)
-
-        # 写入本地文件
-        if self.__cloud_files:
-            self.__sava_json()
-        else:
-            logger.warning(f"未获取到文件列表")
-
-    def __sava_json(self):
-        """
-        保存json文件
-        """
-        logger.info(f"开始写入本地文件 {self.__cloud_files_json}")
-        file = open(self.__cloud_files_json, 'w')
-        file.write(json.dumps(self.__cloud_files))
-        file.close()
+    # def move_file(self,
+    #               file_path: Path,
+    #               dest_path: Path,
+    #               is_check_disk_space: bool = True,
+    #               min_free_space: int = 300,
+    #               wait_time: int = 300,
+    #               check_paths: Optional[List[Path]] = None,
+    #               ) -> bool:
+    #     """
+    #     移动文件,如果父文件夹为空,则删除空父文件夹
+    #     """
+    #     # 在目标路径存在时，会尝试覆盖它
+    #     if not file_path.exists():
+    #         logger.debug(f"move文件不存在,跳过处理: {file_path}")
+    #
+    #     if is_check_disk_space:
+    #         if not check_paths:
+    #             check_paths = [dest_path.parent]
+    #         check_paths.append(data_path)
+    #
+    #         for check_path in check_paths:
+    #             while check_disk_space(check_path, min_free_space):
+    #                 logger.warning(
+    #                     f"文件 {check_path} 空间不足,等待 {wait_time}s再处理:"
+    #                     f" {file_path}"
+    #                 )
+    #                 sleep(wait_time)
+    #
+    #     logger.debug(f"移动文件: {file_path} -> {dest_path}")
+    #
+    #     # # 改用copy2,避免移动文件夹时,程序中断导致文件丢失
+    #     # is_copyed = copy(file_path, dest_path)
+    #     # # 复制成功才继续执行
+    #     # if not is_copyed:
+    #     #     logger.warning(f"移动文件失败: {file_path} -> {dest_path}")
+    #     #     return False
+    #
+    #     # # 复制后再删除文件
+    #     # logger.debug(f"已复制文件:{file_path}, 正在删除文件: {file_path}")
+    #
+    #     try:
+    #         if not dest_path.parent.exists():
+    #             dest_path.parent.mkdir(parents=True, exist_ok=True)
+    #
+    #         cloud_str = "/mnt/cloud"
+    #         if str(file_path).startswith(cloud_str) and str(dest_path).startswith(
+    #                 cloud_str
+    #         ):
+    #             # 如果是云盘路径，则使用重命名
+    #             file_path.rename(dest_path)
+    #         else:
+    #             shutil.move(file_path, dest_path, copy_function=shutil.copy2)
 
     def __strm(self, source_file):
         """
@@ -343,7 +337,7 @@ class CloudStrm(_PluginBase):
                             os.makedirs(Path(dest_file).parent)
 
                         # 视频文件创建.strm文件
-                        if Path(dest_file).suffix in settings.RMT_MEDIAEXT:
+                        if Path(dest_file).suffix in [ext.strip() for ext in self._rmt_mediaext.split(",")]:
                             # 创建.strm文件
                             self.__create_strm_file(scheme="https" if self._https else "http",
                                                     dest_file=dest_file,
@@ -429,11 +423,12 @@ class CloudStrm(_PluginBase):
         self.update_config({
             "enabled": self._enabled,
             "onlyonce": self._onlyonce,
-            "rebuild": self._rebuild,
             "copy_files": self._copy_files,
             "https": self._https,
             "cron": self._cron,
-            "monitor_confs": self._monitor_confs
+            "monitor_confs": self._monitor_confs,
+            "no_del_dirs": self._no_del_dirs,
+            "rmt_mediaext": self._rmt_mediaext
         })
 
     def get_state(self) -> bool:
@@ -521,22 +516,6 @@ class CloudStrm(_PluginBase):
                                         }
                                     }
                                 ]
-                            },
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VSwitch',
-                                        'props': {
-                                            'model': 'rebuild',
-                                            'label': '重建索引',
-                                        }
-                                    }
-                                ]
                             }
                         ]
                     },
@@ -560,19 +539,24 @@ class CloudStrm(_PluginBase):
                                     }
                                 ]
                             },
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
                             {
                                 'component': 'VCol',
                                 'props': {
-                                    'cols': 12,
-                                    'md': 6
+                                    'cols': 12
                                 },
                                 'content': [
                                     {
-                                        'component': 'VTextField',
+                                        'component': 'VTextarea',
                                         'props': {
-                                            'model': 'rebuild_cron',
-                                            'label': '重建索引周期',
-                                            'placeholder': '0 1 * * *'
+                                            'model': 'monitor_confs',
+                                            'label': '监控目录',
+                                            'rows': 5,
+                                            'placeholder': '增量目录#监控目录#目的目录#媒体服务器内源文件路径'
                                         }
                                     }
                                 ]
@@ -591,14 +575,35 @@ class CloudStrm(_PluginBase):
                                     {
                                         'component': 'VTextarea',
                                         'props': {
-                                            'model': 'monitor_confs',
-                                            'label': '监控目录',
-                                            'rows': 5,
-                                            'placeholder': '监控方式#监控目录#目的目录#媒体服务器内源文件路径'
+                                            'model': 'rmt_mediaext',
+                                            'label': '视频格式',
+                                            'rows': 2,
+                                            'placeholder': ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
                                         }
                                     }
                                 ]
                             }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'no_del_dirs',
+                                            'label': '保留路径',
+                                            'placeholder': 'series、movies、downloads、others'
+                                        }
+                                    }
+                                ]
+                            },
                         ]
                     },
                     {
@@ -653,9 +658,9 @@ class CloudStrm(_PluginBase):
                                             'type': 'info',
                                             'variant': 'tonal',
                                             'text': '目录监控格式：'
-                                                    '1.监控目录#目的目录#媒体服务器内源文件路径；'
-                                                    '2.监控目录#目的目录#cd2#cd2挂载本地跟路径#cd2服务地址；'
-                                                    '3.监控目录#目的目录#alist#alist挂载本地跟路径#alist服务地址。'
+                                                    '1.增量目录#监控目录#目的目录#媒体服务器内源文件路径；'
+                                                    '2.增量目录#监控目录#目的目录#cd2#cd2挂载本地跟路径#cd2服务地址；'
+                                                    '3.增量目录#监控目录#目的目录#alist#alist挂载本地跟路径#alist服务地址。'
                                         }
                                     }
                                 ]
@@ -732,12 +737,12 @@ class CloudStrm(_PluginBase):
         ], {
             "enabled": False,
             "cron": "",
-            "rebuild_cron": "",
             "onlyonce": False,
-            "rebuild": False,
             "copy_files": False,
             "https": False,
-            "monitor_confs": ""
+            "monitor_confs": "",
+            "no_del_dirs": "",
+            "rmt_mediaext": ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
         }
 
     def get_page(self) -> List[dict]:
