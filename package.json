@@ -3,17 +3,30 @@
         "name": "云盘Strm生成",
         "description": "监控文件创建，生成Strm文件。",
         "labels": "云盘",
-        "version": "3.8",
+        "version": "4.0",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v4.0": "回归老版本",
           "v3.8": "支持增量路径、支持自定义媒体类型（注：本次更新需修改配置使用）",
           "v3.7": "api模式支持启用https",
           "v3.6": "支持重建索引周期运行",
           "v3.4": "交互命令",
           "v3.1": "注册交互命令、注册公共服务",
           "v3.0": "实现改为定时扫描"
+        }
+      },
+      "CloudStrmIncrement": {
+        "name": "云盘Strm生成（增量版）",
+        "description": "监控文件创建，生成Strm文件（增量版）。",
+        "labels": "云盘",
+        "version": "1.0",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png",
+        "author": "thsrite",
+        "level": 1,
+        "history": {
+          "v1.0": "增量监控"
         }
       },
       "StrmConvert": {
