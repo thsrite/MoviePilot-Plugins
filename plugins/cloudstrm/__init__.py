@@ -137,10 +137,10 @@ class CloudStrm(_PluginBase):
 
             # 运行一次定时服务
             if self._onlyonce:
-                logger.info("云盘监控全量执行服务启动，立即运行一次")
+                logger.info("云盘增量监控执行服务启动，立即运行一次")
                 self._scheduler.add_job(func=self.scan, trigger='date',
                                         run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
-                                        name="云盘监控全量执行")
+                                        name="云盘增量监控")
                 # 关闭一次性开关
                 self._onlyonce = False
                 # 保存配置
@@ -151,7 +151,7 @@ class CloudStrm(_PluginBase):
                 try:
                     self._scheduler.add_job(func=self.scan,
                                             trigger=CronTrigger.from_crontab(self._cron),
-                                            name="云盘监控生成")
+                                            name="云盘增量监控")
                 except Exception as err:
                     logger.error(f"定时任务配置错误：{err}")
                     # 推送实时消息
@@ -231,6 +231,8 @@ class CloudStrm(_PluginBase):
                         # 判断父目录是否为空, 为空则删除
                         for parent_path in Path(increment_file).parents:
                             if parent_path.name in self._no_del_dirs:
+                                break
+                            if str(parent_path.name) == str(increment_dir):
                                 break
                             if str(parent_path.parent) != str(Path(increment_file).root):
                                 # 父目录非根目录，才删除父目录
@@ -489,7 +491,7 @@ class CloudStrm(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -505,7 +507,7 @@ class CloudStrm(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -516,7 +518,39 @@ class CloudStrm(_PluginBase):
                                         }
                                     }
                                 ]
-                            }
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'copy_files',
+                                            'label': '复制非媒体文件',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'https',
+                                            'label': '启用https',
+                                        }
+                                    }
+                                ]
+                            },
                         ]
                     },
                     {
@@ -535,6 +569,23 @@ class CloudStrm(_PluginBase):
                                             'model': 'cron',
                                             'label': '生成周期',
                                             'placeholder': '0 0 * * *'
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'no_del_dirs',
+                                            'label': '保留路径',
+                                            'placeholder': 'series、movies、downloads、others'
                                         }
                                     }
                                 ]
@@ -595,64 +646,6 @@ class CloudStrm(_PluginBase):
                                 },
                                 'content': [
                                     {
-                                        'component': 'VTextField',
-                                        'props': {
-                                            'model': 'no_del_dirs',
-                                            'label': '保留路径',
-                                            'placeholder': 'series、movies、downloads、others'
-                                        }
-                                    }
-                                ]
-                            },
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VSwitch',
-                                        'props': {
-                                            'model': 'copy_files',
-                                            'label': '复制非媒体文件',
-                                        }
-                                    }
-                                ]
-                            },
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VSwitch',
-                                        'props': {
-                                            'model': 'https',
-                                            'label': '启用https',
-                                        }
-                                    }
-                                ]
-                            },
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                },
-                                'content': [
-                                    {
                                         'component': 'VAlert',
                                         'props': {
                                             'type': 'info',
@@ -700,38 +693,28 @@ class CloudStrm(_PluginBase):
                                     {
                                         'component': 'VAlert',
                                         'props': {
-                                            'type': 'info',
-                                            'variant': 'tonal',
-                                            'text': '立即运行一次：'
-                                                    '全量运行一次。'
-                                        }
+                                            'type': 'success',
+                                            'variant': 'tonal'
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'span',
+                                                'text': '配置教程请参考：'
+                                            },
+                                            {
+                                                'component': 'a',
+                                                'props': {
+                                                    'href': 'https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/docs/CloudStrm.md',
+                                                    'target': '_blank'
+                                                },
+                                                'text': 'https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/docs/CloudStrm.md'
+                                            }
+                                        ]
                                     }
                                 ]
                             }
                         ]
                     },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VAlert',
-                                        'props': {
-                                            'type': 'info',
-                                            'variant': 'tonal',
-                                            'text': '配置说明：'
-                                                    'https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/docs/CloudStrm.md'
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    }
                 ]
             }
         ], {
