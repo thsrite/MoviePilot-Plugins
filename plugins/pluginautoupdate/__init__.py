@@ -30,7 +30,7 @@ class PluginAutoUpdate(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/pluginupdate.png"
     # 插件版本
-    plugin_version = "1.8"
+    plugin_version = "1.9"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -136,6 +136,15 @@ class PluginAutoUpdate(_PluginBase):
         if not online_plugins:
             logger.error("未获取到在线插件，停止运行")
             return
+
+        # 使用字典来存储每个插件的最大版本号
+        max_versions = {}
+        for plugin in online_plugins:
+            if plugin.id not in max_versions or plugin.plugin_version > max_versions[plugin.id]:
+                max_versions[plugin.id] = plugin.plugin_version
+        # 根据最大版本号来筛选数据
+        online_plugins = [plugin for plugin in online_plugins if
+                          plugin.plugin_version == max_versions[plugin.id]]
 
         # 已安装插件版本
         self.__get_install_plugin_version()
