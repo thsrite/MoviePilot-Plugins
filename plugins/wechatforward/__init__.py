@@ -5,7 +5,6 @@ from datetime import datetime
 
 from app.core.config import settings
 from app.db.subscribe_oper import SubscribeOper
-from app.modules.wechat import WeChat
 from app.plugins import _PluginBase
 from app.core.event import eventmanager
 from app.schemas.types import EventType, MessageChannel, MediaType
@@ -22,7 +21,7 @@ class WeChatForward(_PluginBase):
     # 插件图标
     plugin_icon = "Wechat_A.png"
     # 插件版本
-    plugin_version = "2.4"
+    plugin_version = "2.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -56,7 +55,9 @@ class WeChatForward(_PluginBase):
             "corpid": "",
             "appsecret": "",
             "pattern": "已入库",
-            "extra_confs": [],
+            "extra_confs": [
+
+            ],
         },
         {
             "remark": "站点签到数据统计",
@@ -201,7 +202,7 @@ class WeChatForward(_PluginBase):
                 "pattern": pattern,
                 "extra_confs": extra_confs,
             }
-            logger.info(f"WeChat配置 {remark} token请求成功")
+            logger.info(f"WeChat配置 {remark} 配置成功：{self._wechat_token_pattern_confs[appid]}")
 
         if self._rebuild:
             self._rebuild = False
@@ -637,29 +638,29 @@ class WeChatForward(_PluginBase):
             wechat_conf = self._wechat_token_pattern_confs.get(wechat_appid)
             if not wechat_conf or not wechat_conf.get("pattern"):
                 continue
+
             # 匹配正则
-            if not re.search(wechat_conf.get("pattern"), title):
-                continue
+            if re.search(wechat_conf.get("pattern"), title):
+                # 忽略userid
+                if self._ignore_userid and re.search(self._ignore_userid, title):
+                    userid = None
+                else:
+                    # 特定消息指定用户
+                    userid = self.__specify_userid(title=title, text=text, userid=userid)
 
-            # 忽略userid
-            if self._ignore_userid and re.search(self._ignore_userid, title):
-                userid = None
-            else:
-                # 特定消息指定用户
-                userid = self.__specify_userid(title=title, text=text, userid=userid)
+                access_token = self.__flush_access_token(appid=wechat_appid)
+                if not access_token:
+                    logger.error("未获取到有效token，请检查配置")
+                    continue
 
-            access_token = self.__flush_access_token(appid=wechat_appid)
-            if not access_token:
-                logger.error("未获取到有效token，请检查配置")
-                continue
-
-            # 发送消息
-            if image:
-                self.__send_image_message(title=title, text=text, image_url=image, userid=userid,
-                                          access_token=wechat_conf.get("access_token"), appid=wechat_appid)
-            else:
-                self.__send_message(title=title, text=text, userid=userid, access_token=wechat_conf.get("access_token"),
-                                    appid=wechat_appid)
+                # 发送消息
+                if image:
+                    self.__send_image_message(title=title, text=text, image_url=image, userid=userid,
+                                              access_token=wechat_conf.get("access_token"), appid=wechat_appid)
+                else:
+                    self.__send_message(title=title, text=text, userid=userid,
+                                        access_token=wechat_conf.get("access_token"),
+                                        appid=wechat_appid)
 
             # 发送额外消息
             # 开始下载 > userid > {name} 后台下载任务已提交，请耐心等候入库通知。 > appid
@@ -667,6 +668,7 @@ class WeChatForward(_PluginBase):
             if wechat_conf.get("extra_confs"):
                 self.__send_extra_msg(wechat_appid=wechat_appid,
                                       extra_confs=wechat_conf.get("extra_confs"),
+                                      access_token=wechat_conf.get("access_token"),
                                       title=title,
                                       text=text)
 
@@ -691,7 +693,7 @@ class WeChatForward(_PluginBase):
 
         return userid
 
-    def __send_extra_msg(self, wechat_appid, extra_confs, title, text):
+    def __send_extra_msg(self, wechat_appid, extra_confs, access_token, title, text):
         """
         根据自定义规则发送额外消息
         """
@@ -705,16 +707,16 @@ class WeChatForward(_PluginBase):
             extra_userid = extra_conf.get("userid")
             extra_msg = extra_conf.get("msg")
 
-            # 处理变量{name}
-            if str(extra_msg).find('{name}') != -1:
-                extra_msg = extra_msg.replace('{name}', self.__parse_tv_title(title))
-
             # 正则匹配额外消息表达式
             if re.search(extra_pattern, title):
                 logger.info(f"{title} 正则匹配到额外消息 {extra_pattern}")
+
+                # 处理变量{name}
+                if str(extra_msg).find('{name}') != -1:
+                    extra_msg = extra_msg.replace('{name}', self.__parse_tv_title(title))
+
                 # 搜索消息，获取消息text中的用户
-                userid_pattern = r"用户：(.*?)\n"
-                result = re.search(userid_pattern, text)
+                result = re.search(r"用户：(.*?)\n", text)
                 if not result:
                     # 订阅消息，获取消息text中的用户
                     pattern = r"来自用户：(.*?)$"
@@ -749,6 +751,8 @@ class WeChatForward(_PluginBase):
                             # 匹配订阅title
                             if f"{subscribe.name} ({subscribe.year})" in title:
                                 is_subscribe = True
+                                break
+
                         # 电视剧之前该用户订阅下载过，不再发送额外消息
                         if is_subscribe:
                             logger.warn(
@@ -756,44 +760,25 @@ class WeChatForward(_PluginBase):
                             continue
 
                     logger.info(f"消息用户{user_id} 匹配到目标用户 {extra_userid}")
-                    # 发送额外消息
-                    if str(settings.WECHAT_APP_ID) == str(wechat_appid):
-                        # 直接发送
-                        WeChat().send_msg(title=extra_msg, userid=user_id)
-                        logger.info(f"{settings.WECHAT_APP_ID} 发送额外消息 {extra_msg} 成功")
-                        # 保存已发送消息
-                        if "开始下载" in str(title):
-                            self._extra_msg_history[f"{user_id}-{self.__parse_tv_title(title)}"] = time.strftime(
-                                "%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
-                            is_save_history = True
-                    else:
-                        for wechat_idx in self._pattern_token.keys():
-                            wechat_conf = self._pattern_token.get(wechat_idx)
-                            if (wechat_conf and wechat_conf.get("appid")
-                                    and str(wechat_conf.get("appid")) == str(wechat_appid)):
-                                access_token, appid = self.__flush_access_token(appid=wechat_appid)
-                                if not access_token:
-                                    logger.error("未获取到有效token，请检查配置")
-                                    continue
-                                self.__send_message(title=extra_msg,
-                                                    userid=user_id,
-                                                    access_token=access_token,
-                                                    appid=appid)
-                                logger.info(f"{appid} 发送额外消息 {extra_msg} 成功")
-                                # 保存已发送消息
-                                if "开始下载" in str(title):
-                                    self._extra_msg_history[
-                                        f"{user_id}-{self.__parse_tv_title(title)}"] = time.strftime(
-                                        "%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
-                                    is_save_history = True
+
+                    self.__send_message(title=extra_msg,
+                                        userid=user_id,
+                                        access_token=access_token,
+                                        appid=wechat_appid)
+                    logger.info(f"{wechat_appid} 发送额外消息 {extra_msg} 成功")
+                    # 保存已发送消息
+                    if "开始下载" in str(title):
+                        self._extra_msg_history[
+                            f"{user_id}-{self.__parse_tv_title(title)}"] = time.strftime(
+                            "%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
+                        is_save_history = True
 
         # 保存额外消息历史
         if is_save_history:
             self.save_data(key="extra_msg",
                            value=self._extra_msg_history)
 
-    @staticmethod
-    def __parse_tv_title(title):
+    def __parse_tv_title(self, title):
         """
         解析title标题
         """
@@ -803,15 +788,38 @@ class WeChatForward(_PluginBase):
             # 电影 功夫熊猫 (2008) 开始下载
             # 电影 功夫熊猫 (2008) 已添加订阅
             # 电视剧 追风者 (2024) S01 E01-E04 开始下载
-            # 电视剧 追风者 (2024) S01 E01-E04 已添加订阅
-            if 'E' in sub_title_str:
-                continue
+            # 电视剧 追风者 (2024) S01 已添加订阅
             if '开始下载' in sub_title_str:
                 continue
             if '已添加订阅' in sub_title_str:
                 continue
             _title += f"{sub_title_str} "
-        return str(_title.rstrip())
+        return self.__convert_season_episode(str(_title.rstrip()))
+
+    @staticmethod
+    def __convert_season_episode(text):
+        season_pattern = re.compile(r'S(\d+)')
+        episode_pattern = re.compile(r'E(\d+)')
+
+        def replace_season(match):
+            return f'第{int(match.group(1)):,}季'
+
+        def replace_episode(match):
+            return f'第{int(match.group(1)):,}集'
+
+        def convert_episode_range(text):
+            pattern = re.compile(r'E(\d+)-E(\d+)')
+            result = pattern.sub(lambda x: f'第{int(x.group(1)):02d}-{int(x.group(2)):02d}集', text)
+            return result
+
+        text = re.sub(season_pattern, replace_season, text)
+
+        if text.count("-") == 1:
+            text = convert_episode_range(text)
+        else:
+            text = re.sub(episode_pattern, replace_episode, text)
+
+        return text
 
     def __flush_access_token(self, appid: int, force: bool = False):
         """
@@ -1008,3 +1016,50 @@ class WeChatForward(_PluginBase):
         退出插件
         """
         pass
+
+
+if __name__ == '__main__':
+    def __parse_tv_title(title):
+        """
+        解析title标题
+        """
+        titles = title.split(" ")
+        _title = ""
+        for sub_title_str in titles:
+            # 电影 功夫熊猫 (2008) 开始下载
+            # 电影 功夫熊猫 (2008) 已添加订阅
+            # 电视剧 追风者 (2024) S01 E01-E04 开始下载
+            # 电视剧 追风者 (2024) S01 已添加订阅
+            if '开始下载' in sub_title_str:
+                continue
+            if '已添加订阅' in sub_title_str:
+                continue
+            _title += f"{sub_title_str} "
+        return __convert_season_episode(str(_title.rstrip()))
+
+
+    def __convert_season_episode(text):
+        season_pattern = re.compile(r'S(\d+)')
+        episode_pattern = re.compile(r'E(\d+)')
+
+        def replace_season(match):
+            return f'第{int(match.group(1)):,}季'
+
+        def replace_episode(match):
+            return f'第{int(match.group(1)):,}集'
+
+        def convert_episode_range(text):
+            pattern = re.compile(r'E(\d+)-E(\d+)')
+            result = pattern.sub(lambda x: f'第{int(x.group(1)):02d}-{int(x.group(2)):02d}集', text)
+            return result
+
+        text = re.sub(season_pattern, replace_season, text)
+        if text.count("-") == 1:
+            text = convert_episode_range(text)
+        else:
+            text = re.sub(episode_pattern, replace_episode, text)
+
+        return text
+
+
+    print(__parse_tv_title("时光代理人 (2021) S02 E01-E22 开始下载"))
