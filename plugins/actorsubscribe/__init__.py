@@ -696,7 +696,6 @@ class ActorSubscribe(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 3
                                 },
                                 'content': [
                                     {
