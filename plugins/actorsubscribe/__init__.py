@@ -27,7 +27,7 @@ class ActorSubscribe(_PluginBase):
     # 插件图标
     plugin_icon = "Mdcng_A.png"
     # 插件版本
-    plugin_version = "1.7"
+    plugin_version = "1.8"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -50,6 +50,7 @@ class ActorSubscribe(_PluginBase):
     _quality = None
     _resolution = None
     _effect = None
+    _username = None
     _clear = False
     _clear_already_handle = False
     _source = ["douban_showing"]
@@ -100,6 +101,7 @@ class ActorSubscribe(_PluginBase):
             self._clear = config.get("clear")
             self._clear_already_handle = config.get("clear_already_handle")
             self._source = config.get("source")
+            self._username = config.get("username") or '演员订阅'
 
             # 清理插件订阅历史
             if self._clear:
@@ -253,7 +255,7 @@ class ActorSubscribe(_PluginBase):
                                                 quality=self._quality,
                                                 resolution=self._resolution,
                                                 effect=self._effect,
-                                                username=settings.SUPERUSER)
+                                                username=self._username)
                         # 存储历史记录
                         history.append({
                             "title": mediainfo.title,
@@ -317,7 +319,7 @@ class ActorSubscribe(_PluginBase):
                                                sort="R", tags="", page=1, count=30)
         if not movies:
             return []
-        medias = [media.to_dict() for media  in movies]
+        medias = [media.to_dict() for media in movies]
         logger.info(f"获取到豆瓣电影 {len(medias)} 部")
         return medias
 
@@ -452,6 +454,7 @@ class ActorSubscribe(_PluginBase):
             "clear": self._clear,
             "clear_already_handle": self._clear_already_handle,
             "source": self._source,
+            "username": self._username,
         })
 
     def delete_history(self, key: str, apikey: str):
@@ -701,6 +704,28 @@ class ActorSubscribe(_PluginBase):
                             },
                         ]
                     },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'username',
+                                            'label': '订阅用户',
+                                            'placeholder': '默认为`演员订阅`'
+                                        }
+                                    }
+                                ]
+                            },
+                        ]
+                    }
                 ]
             }
         ], {
@@ -711,6 +736,7 @@ class ActorSubscribe(_PluginBase):
             "quality": "",
             "resolution": "",
             "effect": "",
+            "username": "演员订阅",
             "clear": False,
             "clear_already_handle": False,
             "source": ["douban_showing"]

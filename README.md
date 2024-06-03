@@ -24,7 +24,7 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - 日程提醒 1.0
 - 订阅提醒 1.1
 - [Emby观影报告 1.5](docs%2FEmbyReporter.md)
-- 演员订阅 1.7
+- 演员订阅 1.8
 - [短剧刮削 3.2](docs%2FShortPlayMonitor.md)
 - 云盘实时监控 2.1
 - 源文件恢复 1.2
