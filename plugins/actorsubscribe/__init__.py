@@ -623,38 +623,6 @@ class ActorSubscribe(_PluginBase):
                                     {
                                         'component': 'VSelect',
                                         'props': {
-                                            'multiple': True,
-                                            'chips': True,
-                                            'model': 'source',
-                                            'label': '订阅来源',
-                                            'items': [
-                                                {'title': '豆瓣正在热映', 'value': 'douban_showing'},
-                                                {'title': '豆瓣电影', 'value': 'douban_movies'},
-                                                {'title': '豆瓣剧集', 'value': 'douban_tvs'},
-                                                {'title': '豆瓣电影TOP250', 'value': 'douban_movie_top250'},
-                                                {'title': '豆瓣国产剧集周榜', 'value': 'douban_tv_weekly_chinese'},
-                                                {'title': '豆瓣全球剧集周榜', 'value': 'douban_tv_weekly_global'},
-                                                {'title': '豆瓣动画剧集', 'value': 'douban_tv_animation'},
-                                                {'title': '豆瓣热门电影', 'value': 'douban_movie_hot'},
-                                                {'title': '豆瓣热门电视剧', 'value': 'douban_tv_hot'},
-                                                {'title': 'TMDB电影', 'value': 'tmdb_movies'},
-                                                {'title': 'TMDB剧集', 'value': 'tmdb_tvs'},
-                                                {'title': 'TMDB流行趋势', 'value': 'tmdb_trending'},
-                                            ]
-                                        }
-                                    }
-                                ]
-                            },
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 3
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VSelect',
-                                        'props': {
                                             'multiple': False,
                                             'chips': True,
                                             'model': 'quality',
@@ -698,6 +666,38 @@ class ActorSubscribe(_PluginBase):
                                             'model': 'effect',
                                             'label': '特效',
                                             'items': effectOptions
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'multiple': True,
+                                            'chips': True,
+                                            'model': 'source',
+                                            'label': '订阅来源',
+                                            'items': [
+                                                {'title': '豆瓣正在热映', 'value': 'douban_showing'},
+                                                {'title': '豆瓣电影', 'value': 'douban_movies'},
+                                                {'title': '豆瓣剧集', 'value': 'douban_tvs'},
+                                                {'title': '豆瓣电影TOP250', 'value': 'douban_movie_top250'},
+                                                {'title': '豆瓣国产剧集周榜', 'value': 'douban_tv_weekly_chinese'},
+                                                {'title': '豆瓣全球剧集周榜', 'value': 'douban_tv_weekly_global'},
+                                                {'title': '豆瓣动画剧集', 'value': 'douban_tv_animation'},
+                                                {'title': '豆瓣热门电影', 'value': 'douban_movie_hot'},
+                                                {'title': '豆瓣热门电视剧', 'value': 'douban_tv_hot'},
+                                                {'title': 'TMDB电影', 'value': 'tmdb_movies'},
+                                                {'title': 'TMDB剧集', 'value': 'tmdb_tvs'},
+                                                {'title': 'TMDB流行趋势', 'value': 'tmdb_trending'},
+                                            ]
                                         }
                                     }
                                 ]
