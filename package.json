@@ -461,5 +461,17 @@
           "v1.1": "支持更多返回值、插件展示数据",
           "v1.0": "HomePage自定义API"
         }
+      },
+      "DirMonitorEnhanced": {
+        "name": "目录监控",
+        "description": "监控目录文件发生变化时实时整理到媒体库。(统一入库消息增强版)",
+        "labels": "文件整理",
+        "version": "1.0",
+        "icon": "directory.png",
+        "author": "thsrite",
+        "level": 1,
+        "history": {
+          "v1.0": "同步merge主仓库[目录监控]插件，增加统一发送消息逻辑（Testing…）"
+        }
       }
 }
