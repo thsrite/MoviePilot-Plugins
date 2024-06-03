@@ -635,7 +635,8 @@ class DirMonitorEnhanced(_PluginBase):
                     # 更新重试次数
                     media_list['retry_cnt'] = retry_cnt + 1
                     self._medias[medis_title_year_season] = media_list
-                    logger.info(f"本次批量下载任务未完成转移，等待{int(self._interval)}秒开始重试{retry_cnt + 1}次")
+                    logger.info(
+                        f"本次批量下载任务{all_files_cnt}个文件，已转移文件{len(media_files)}个，未完全转移，等待{int(self._interval)}秒开始重试第{retry_cnt + 1}次，最大重试5次")
                     continue
 
                 # 发送通知
