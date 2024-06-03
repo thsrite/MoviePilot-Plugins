@@ -249,7 +249,7 @@ class DirMonitorEnhanced(_PluginBase):
         """
         if event:
             event_data = event.event_data
-            if not event_data or event_data.get("action") != "directory_sync":
+            if not event_data or event_data.get("action") != "enhanced_directory_sync":
                 return
             self.post_message(channel=event.event_data.get("channel"),
                               title="开始同步监控目录 ...",
@@ -685,22 +685,22 @@ class DirMonitorEnhanced(_PluginBase):
         :return: 命令关键字、事件、描述、附带数据
         """
         return [{
-            "cmd": "/directory_sync",
+            "cmd": "/enhanced_directory_sync",
             "event": EventType.PluginAction,
-            "desc": "目录监控同步",
+            "desc": "目录监控同步（统一入库消息增强版）",
             "category": "管理",
             "data": {
-                "action": "directory_sync"
+                "action": "enhanced_directory_sync"
             }
         }]
 
     def get_api(self) -> List[Dict[str, Any]]:
         return [{
-            "path": "/directory_sync",
+            "path": "/enhanced_directory_sync",
             "endpoint": self.sync,
             "methods": ["GET"],
-            "summary": "目录监控同步",
-            "description": "目录监控同步",
+            "summary": "目录监控（统一入库消息增强版）",
+            "description": "目录监控（统一入库消息增强版）",
         }]
 
     def get_service(self) -> List[Dict[str, Any]]:
@@ -716,8 +716,8 @@ class DirMonitorEnhanced(_PluginBase):
         """
         if self._enabled and self._cron:
             return [{
-                "id": "DirMonitor",
-                "name": "目录监控全量同步服务",
+                "id": "DirMonitorEnhanced",
+                "name": "目录监控（统一入库消息增强版）全量同步服务",
                 "trigger": CronTrigger.from_crontab(self._cron),
                 "func": self.sync_all,
                 "kwargs": {}

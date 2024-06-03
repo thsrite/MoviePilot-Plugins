@@ -464,7 +464,7 @@
       },
       "DirMonitorEnhanced": {
         "name": "目录监控",
-        "description": "监控目录文件发生变化时实时整理到媒体库。(统一入库消息增强版)",
+        "description": "监控目录文件发生变化时实时整理到媒体库。(统一入库消息增强版)（测试中-.-）",
         "labels": "文件整理",
         "version": "1.0",
         "icon": "directory.png",
