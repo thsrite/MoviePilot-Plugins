@@ -125,11 +125,12 @@
         "name": "插件强制重装",
         "description": "卸载当前插件，强制重装。",
         "labels": "插件管理",
-        "version": "1.6",
+        "version": "1.7",
         "icon": "refresh.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v1.7": "使用主程序GITHUB_PROXY代理",
           "v1.6": "插件API立即生效",
           "v1.5": "支持插件热重载",
           "v1.4": "支持代理地址",

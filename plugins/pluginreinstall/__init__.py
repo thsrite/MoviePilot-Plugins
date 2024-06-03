@@ -1,6 +1,4 @@
 import re
-import shutil
-from pathlib import Path
 
 from fastapi import APIRouter
 
@@ -9,13 +7,11 @@ from app.core.plugin import PluginManager
 from app.db.systemconfig_oper import SystemConfigOper
 from app.helper.plugin import PluginHelper
 from app.plugins import _PluginBase
-from typing import Any, List, Dict, Tuple, Optional
+from typing import Any, List, Dict, Tuple
 from app.log import logger
 from app.schemas.types import SystemConfigKey
-from app.utils.http import RequestUtils
 from app.utils.string import StringUtils
 from app.scheduler import Scheduler
-from app.utils.system import SystemUtils
 
 router = APIRouter()
 
@@ -28,7 +24,7 @@ class PluginReInstall(_PluginBase):
     # 插件图标
     plugin_icon = "refresh.png"
     # 插件版本
-    plugin_version = "1.6"
+    plugin_version = "1.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -44,7 +40,6 @@ class PluginReInstall(_PluginBase):
     _reload = False
     _plugin_ids = []
     _plugin_url = []
-    _proxy_url = ""
     _base_url = "https://raw.githubusercontent.com/%s/%s/main/"
 
     def init_plugin(self, config: dict = None):
@@ -54,7 +49,6 @@ class PluginReInstall(_PluginBase):
             if not self._plugin_ids:
                 return
             self._plugin_url = config.get("plugin_url")
-            self._proxy_url = config.get("proxy_url") or ""
 
             # 仅重载插件
             if self._reload:
@@ -88,8 +82,8 @@ class PluginReInstall(_PluginBase):
                             f"开始重载插件 {local_plugin.get('plugin_name')} v{local_plugin.get('plugin_version')}")
 
                         # 开始安装线上插件
-                        state, msg = self.install(pid=plugin_id,
-                                                  repo_url=plugin_url or local_plugin.get("repo_url"))
+                        state, msg = PluginHelper().install(pid=plugin_id,
+                                                            repo_url=plugin_url or local_plugin.get("repo_url"))
                         # 安装失败
                         if not state:
                             logger.error(
@@ -105,7 +99,6 @@ class PluginReInstall(_PluginBase):
         self.update_config({
             "reload": self._reload,
             "plugin_url": self._plugin_url,
-            "proxy_url": self._proxy_url
         })
 
     def __reload_plugin(self, plugin_id):
@@ -118,107 +111,6 @@ class PluginReInstall(_PluginBase):
         Scheduler().update_plugin_job(plugin_id)
         # 注册插件API
         self.register_plugin_api(plugin_id)
-
-    def install(self, pid: str, repo_url: str) -> Tuple[bool, str]:
-        """
-        安装插件
-        """
-        if SystemUtils.is_frozen():
-            return False, "可执行文件模式下，只能安装本地插件"
-
-        # 从Github的repo_url获取用户和项目名
-        user, repo = PluginHelper().get_repo_info(repo_url)
-        if not user or not repo:
-            return False, "不支持的插件仓库地址格式"
-
-        def __get_filelist(_p: str) -> Tuple[Optional[list], Optional[str]]:
-            """
-            获取插件的文件列表
-            """
-            file_api = f"https://api.github.com/repos/{user}/{repo}/contents/plugins/{_p.lower()}"
-            r = RequestUtils(proxies=settings.PROXY, headers=settings.GITHUB_HEADERS, timeout=30).get_res(file_api)
-            if r is None:
-                return None, "连接仓库失败"
-            elif r.status_code != 200:
-                return None, f"连接仓库失败：{r.status_code} - {r.reason}"
-            ret = r.json()
-            if ret and ret[0].get("message") == "Not Found":
-                return None, "插件在仓库中不存在"
-            return ret, ""
-
-        def __download_files(_p: str, _l: List[dict]) -> Tuple[bool, str]:
-            """
-            下载插件文件
-            """
-            if not _l:
-                return False, "文件列表为空"
-            for item in _l:
-                if item.get("download_url"):
-                    # 下载插件文件
-                    res = RequestUtils(proxies=settings.PROXY,
-                                       headers=settings.GITHUB_HEADERS, timeout=60).get_res(
-                        self._proxy_url + item["download_url"])
-                    if not res:
-                        return False, f"文件 {item.get('name')} 下载失败！"
-                    elif res.status_code != 200:
-                        return False, f"下载文件 {item.get('name')} 失败：{res.status_code} - {res.reason}"
-                    # 创建插件文件夹
-                    file_path = Path(settings.ROOT_PATH) / "app" / item.get("path")
-                    if not file_path.parent.exists():
-                        file_path.parent.mkdir(parents=True, exist_ok=True)
-                    with open(file_path, "w", encoding="utf-8") as f:
-                        f.write(res.text)
-                else:
-                    # 递归下载子目录
-                    p = f"{_p}/{item.get('name')}"
-                    l, m = __get_filelist(p)
-                    if not l:
-                        return False, m
-                    __download_files(p, l)
-            return True, ""
-
-        if not pid or not repo_url:
-            return False, "参数错误"
-
-        # 获取插件的文件列表
-        """
-        [
-            {
-                "name": "__init__.py",
-                "path": "plugins/autobackup/__init__.py",
-                "sha": "cd10eba3f0355d61adeb35561cb26a0a36c15a6c",
-                "size": 12385,
-                "url": "https://api.github.com/repos/jxxghp/MoviePilot-Plugins/contents/plugins/autobackup/__init__.py?ref=main",
-                "html_url": "https://github.com/jxxghp/MoviePilot-Plugins/blob/main/plugins/autobackup/__init__.py",
-                "git_url": "https://api.github.com/repos/jxxghp/MoviePilot-Plugins/git/blobs/cd10eba3f0355d61adeb35561cb26a0a36c15a6c",
-                "download_url": "https://raw.githubusercontent.com/jxxghp/MoviePilot-Plugins/main/plugins/autobackup/__init__.py",
-                "type": "file",
-                "_links": {
-                    "self": "https://api.github.com/repos/jxxghp/MoviePilot-Plugins/contents/plugins/autobackup/__init__.py?ref=main",
-                    "git": "https://api.github.com/repos/jxxghp/MoviePilot-Plugins/git/blobs/cd10eba3f0355d61adeb35561cb26a0a36c15a6c",
-                    "html": "https://github.com/jxxghp/MoviePilot-Plugins/blob/main/plugins/autobackup/__init__.py"
-                }
-            }
-        ]
-        """
-        # 获取第一级文件列表
-        file_list, msg = __get_filelist(pid.lower())
-        if not file_list:
-            return False, msg
-        # 本地存在时先删除
-        plugin_dir = Path(settings.ROOT_PATH) / "app" / "plugins" / pid.lower()
-        if plugin_dir.exists():
-            shutil.rmtree(plugin_dir, ignore_errors=True)
-        # 下载所有文件
-        __download_files(pid.lower(), file_list)
-        # 插件目录下如有requirements.txt则安装依赖
-        requirements_file = plugin_dir / "requirements.txt"
-        if requirements_file.exists():
-            SystemUtils.execute(f"pip install -r {requirements_file} > /dev/null 2>&1")
-        # 安装成功后统计
-        PluginHelper().install_reg(pid)
-
-        return True, ""
 
     @staticmethod
     def register_plugin_api(plugin_id: str = None):
@@ -308,24 +200,7 @@ class PluginReInstall(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextField',
-                                        'props': {
-                                            'model': 'proxy_url',
-                                            'label': '代理地址',
-                                            'placeholder': 'https://raw.proxy.com/'
-                                        }
-                                    }
-                                ]
-                            },
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
+                                    'md': 8
                                 },
                                 'content': [
                                     {
@@ -409,7 +284,6 @@ class PluginReInstall(_PluginBase):
             "reload": False,
             "plugin_ids": [],
             "plugin_url": "",
-            "proxy_url": ""
         }
 
     @staticmethod
