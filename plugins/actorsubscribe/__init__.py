@@ -678,6 +678,28 @@ class ActorSubscribe(_PluginBase):
                                 },
                                 'content': [
                                     {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'username',
+                                            'label': '订阅用户',
+                                            'placeholder': '默认为`演员订阅`'
+                                        }
+                                    }
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
                                         'component': 'VSelect',
                                         'props': {
                                             'multiple': True,
@@ -698,28 +720,6 @@ class ActorSubscribe(_PluginBase):
                                                 {'title': 'TMDB剧集', 'value': 'tmdb_tvs'},
                                                 {'title': 'TMDB流行趋势', 'value': 'tmdb_trending'},
                                             ]
-                                        }
-                                    }
-                                ]
-                            },
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 3
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextField',
-                                        'props': {
-                                            'model': 'username',
-                                            'label': '订阅用户',
-                                            'placeholder': '默认为`演员订阅`'
                                         }
                                     }
                                 ]
