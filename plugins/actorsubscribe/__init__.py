@@ -27,7 +27,7 @@ class ActorSubscribe(_PluginBase):
     # 插件图标
     plugin_icon = "Mdcng_A.png"
     # 插件版本
-    plugin_version = "1.6"
+    plugin_version = "1.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -305,7 +305,7 @@ class ActorSubscribe(_PluginBase):
         movies = DoubanChain().movie_showing(page=1, count=30)
         if not movies:
             return []
-        medias = [MediaInfo(douban_info=movie) for movie in movies]
+        medias = [media.to_dict() for media in movies]
         logger.info(f"获取到豆瓣正在热映 {len(medias)} 部")
         return medias
 
@@ -317,7 +317,7 @@ class ActorSubscribe(_PluginBase):
                                                sort="R", tags="", page=1, count=30)
         if not movies:
             return []
-        medias = [MediaInfo(douban_info=movie) for movie in movies]
+        medias = [media.to_dict() for media  in movies]
         logger.info(f"获取到豆瓣电影 {len(medias)} 部")
         return medias
 
@@ -329,7 +329,7 @@ class ActorSubscribe(_PluginBase):
                                             sort="R", tags="", page=1, count=30)
         if not tvs:
             return []
-        medias = [MediaInfo(douban_info=tv) for tv in tvs]
+        medias = [media.to_dict() for media in tvs]
         logger.info(f"获取到豆瓣剧集 {len(medias)} 部")
         return medias
 
@@ -337,10 +337,10 @@ class ActorSubscribe(_PluginBase):
         """
         豆瓣电影TOP250
         """
-        movies = DoubanChain().movie_top250(mtype=MediaType.MOVIE, page=1, count=30)
+        movies = DoubanChain().movie_top250(page=1, count=30)
         if not movies:
             return []
-        medias = [MediaInfo(douban_info=movie) for movie in movies]
+        medias = [media.to_dict() for media in movies]
         logger.info(f"获取到豆瓣电影TOP250 {len(medias)} 部")
         return medias
 
@@ -351,7 +351,7 @@ class ActorSubscribe(_PluginBase):
         tvs = DoubanChain().tv_weekly_chinese(page=1, count=30)
         if not tvs:
             return []
-        medias = [MediaInfo(douban_info=tv) for tv in tvs]
+        medias = [media.to_dict() for media in tvs]
         logger.info(f"获取到豆瓣国产剧集周榜 {len(medias)} 部")
         return medias
 
@@ -362,7 +362,7 @@ class ActorSubscribe(_PluginBase):
         tvs = DoubanChain().tv_weekly_global(page=1, count=30)
         if not tvs:
             return []
-        medias = [MediaInfo(douban_info=tv) for tv in tvs]
+        medias = [media.to_dict() for media in tvs]
         logger.info(f"获取到全球每周剧集口碑榜 {len(medias)} 部")
         return medias
 
@@ -373,7 +373,7 @@ class ActorSubscribe(_PluginBase):
         tvs = DoubanChain().tv_animation(page=1, count=30)
         if not tvs:
             return []
-        medias = [MediaInfo(douban_info=tv) for tv in tvs]
+        medias = [media.to_dict() for media in tvs]
         logger.info(f"获取到豆瓣动画剧集 {len(medias)} 部")
         return medias
 
@@ -384,7 +384,7 @@ class ActorSubscribe(_PluginBase):
         movies = DoubanChain().movie_hot(page=1, count=30)
         if not movies:
             return []
-        medias = [MediaInfo(douban_info=movie) for movie in movies]
+        medias = [media.to_dict() for media in movies]
         logger.info(f"获取到豆瓣热门电影 {len(medias)} 部")
         return medias
 
@@ -395,7 +395,7 @@ class ActorSubscribe(_PluginBase):
         tvs = DoubanChain().tv_hot(page=1, count=30)
         if not tvs:
             return []
-        medias = [MediaInfo(douban_info=tv) for tv in tvs]
+        medias = [media.to_dict() for media in tvs]
         logger.info(f"获取到豆瓣热门电视剧 {len(medias)} 部")
         return medias
 
@@ -410,7 +410,7 @@ class ActorSubscribe(_PluginBase):
                                            page=1)
         if not movies:
             return []
-        medias = [MediaInfo(tmdb_info=movie) for movie in movies]
+        medias = [movie.to_dict() for movie in movies]
         logger.info(f"获取到TMDB电影 {len(medias)} 部")
         return medias
 
@@ -425,7 +425,7 @@ class ActorSubscribe(_PluginBase):
                                         page=1)
         if not tvs:
             return []
-        medias = [MediaInfo(tmdb_info=tv) for tv in tvs]
+        medias = [tv.to_dict() for tv in tvs]
         logger.info(f"获取到TMDB剧集 {len(medias)} 部")
         return medias
 
@@ -436,7 +436,7 @@ class ActorSubscribe(_PluginBase):
         tvs = TmdbChain().tmdb_trending(page=1)
         if not tvs:
             return []
-        medias = [MediaInfo(tmdb_info=tv) for tv in tvs]
+        medias = [tv.to_dict() for tv in tvs]
         logger.info(f"获取到TMDB流行趋势 {len(medias)} 部")
         return medias
 
