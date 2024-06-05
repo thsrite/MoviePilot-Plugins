@@ -213,11 +213,12 @@
         "name": "演员订阅",
         "description": "自动订阅指定演员热映或最新电影或电视剧。",
         "labels": "订阅",
-        "version": "1.8",
+        "version": "2.0",
         "icon": "Mdcng_A.png",
         "author": "thsrite",
         "level": 2,
         "history": {
+          "v2.0": "修复订阅",
           "v1.8": "支持自定义订阅username，默认`演员订阅`",
           "v1.7": "修复bug",
           "v1.6": "增加历史删除按钮",
