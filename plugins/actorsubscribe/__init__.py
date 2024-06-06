@@ -27,7 +27,7 @@ class ActorSubscribe(_PluginBase):
     # 插件图标
     plugin_icon = "Mdcng_A.png"
     # 插件版本
-    plugin_version = "2.0"
+    plugin_version = "2.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -193,7 +193,7 @@ class ActorSubscribe(_PluginBase):
                 logger.warn(f"未知的订阅源：{source}")
 
         # 检查订阅
-        actors = str(self._actors).split(",")
+        subscribe_actors = str(self._actors).split(",")
         for mediainfo in medias:
             if mediainfo.title_year in already_handle:
                 logger.info(f"{mediainfo.type.value} {mediainfo.title_year} 已被处理，跳过")
@@ -202,28 +202,35 @@ class ActorSubscribe(_PluginBase):
             already_handle.append(mediainfo.title_year)
             logger.info(f"开始处理电影 {mediainfo.title_year}")
 
+            mediainfo_actors = []
+            if mediainfo.actors or mediainfo.directors:
+                mediainfo_actors = mediainfo.actors + mediainfo.directors
+
             # 元数据
             meta = MetaInfo(mediainfo.title)
-
-            # 演员中文名
-            if mediainfo.actors or mediainfo.directors:
-                mediainfo_actiors = mediainfo.actors + mediainfo.directors
-            else:
-                # 查询豆瓣中文演员名
-                mediainfo_actiors = self.__get_douban_actors(mediainfo)
-
-            if not mediainfo_actiors:
-                logger.warn(f'未识别到演员信息，标题：{mediainfo.title}，{mediainfo.tmdb_id or mediainfo.douban_id}')
-                continue
 
             # 判断有无tmdbid
             if not mediainfo.tmdb_id:
                 oldmediainfo = mediainfo
                 # 主要获取tmdbid
-                mediainfo = self.chain.recognize_media(meta=meta, doubanid=mediainfo.douban_id)
+                mediainfo = self.chain.recognize_media(meta=meta, mtype=mediainfo.type)
                 if not mediainfo:
                     logger.warn(f'未识别到媒体信息，标题：{oldmediainfo.title}，豆瓣ID：{oldmediainfo.douban_id}')
                     continue
+
+                oldmediainfo.tmdb_id = mediainfo.tmdb_id
+                mediainfo = oldmediainfo
+
+            # 演员中文名
+            if not mediainfo_actors:
+                # 查询豆瓣中文演员名
+                mediainfo_actors += self.__get_douban_actors(mediainfo)
+
+            if not mediainfo_actors:
+                logger.warn(f'未识别到演员信息，标题：{mediainfo.title}，{mediainfo.tmdb_id or mediainfo.douban_id}')
+                continue
+
+            logger.info(f'获取到 {mediainfo.title} 演员：{mediainfo_actors}')
 
             # 查询缺失的媒体信息
             exist_flag, _ = self.downloadchain.get_no_exists_info(meta=meta, mediainfo=mediainfo)
@@ -236,14 +243,14 @@ class ActorSubscribe(_PluginBase):
                 logger.info(f'{mediainfo.title_year} 订阅已存在')
                 continue
 
-            if mediainfo_actiors:
+            if mediainfo_actors:
                 is_subscribe = False
-                for actor in mediainfo_actiors:
+                for actor in mediainfo_actors:
                     # logger.info(f'正在处理 {mediainfo.title_year} 演员 {actor}')
-                    if actor and actor in actors:
+                    if actor and actor in subscribe_actors:
                         # 开始订阅
                         logger.info(
-                            f"{mediainfo.type.value} {mediainfo.title_year} {mediainfo.tmdb_id or mediainfo.douban_id} 命中订阅演员 {actor}，开始订阅")
+                            f"{mediainfo.type.value} {mediainfo.title_year} TMDBID {mediainfo.tmdb_id} DOUBANID {mediainfo.douban_id} 命中订阅演员 {actor}，开始订阅")
                         is_subscribe = True
                         # 添加订阅
                         self.subscribechain.add(title=mediainfo.title,
@@ -271,7 +278,7 @@ class ActorSubscribe(_PluginBase):
 
                 if not is_subscribe:
                     logger.info(
-                        f"{mediainfo.type.value} {mediainfo.title_year} {mediainfo.tmdb_id or mediainfo.douban_id} 未命中订阅演员，跳过")
+                        f"{mediainfo.type.value} {mediainfo.title_year} TMDBID {mediainfo.tmdb_id} DOUBANID {mediainfo.douban_id} 未命中订阅演员，跳过")
 
         # 保存历史记录
         self.save_data('history', history)
@@ -281,24 +288,31 @@ class ActorSubscribe(_PluginBase):
         """
         获取豆瓣演员信息
         """
-        # 随机休眠 3-10 秒
         sleep_time = 3 + int(time.time()) % 7
         logger.debug(f"随机休眠 {sleep_time}秒 ...")
         time.sleep(sleep_time)
-        # 匹配豆瓣信息
-        doubaninfo = DoubanChain().match_doubaninfo(name=mediainfo.title,
-                                                    imdbid=mediainfo.imdb_id,
-                                                    mtype=mediainfo.type,
-                                                    year=mediainfo.year,
-                                                    season=season)
-        # 豆瓣演员
-        if doubaninfo:
-            doubanitem = DoubanChain().douban_info(doubaninfo.get("id")) or {}
+        if mediainfo.douban_id:
+            doubanitem = DoubanChain().douban_info(mediainfo.douban_id) or {}
+        else:
+            # 匹配豆瓣信息
+            doubaninfo = DoubanChain().match_doubaninfo(name=mediainfo.title,
+                                                        imdbid=mediainfo.imdb_id,
+                                                        mtype=mediainfo.type,
+                                                        year=mediainfo.year,
+                                                        season=season)
+            # 豆瓣演员
+            if doubaninfo:
+                mediainfo.douban_id = doubaninfo.get("id")
+                doubanitem = DoubanChain().douban_info(doubaninfo.get("id")) or {}
+            else:
+                doubanitem = None
+
+        if doubanitem:
             actors = (doubanitem.get("actors") or []) + (doubanitem.get("directors") or [])
             return [actor.get("name") for actor in actors]
         else:
             logger.debug(f"未找到豆瓣信息：{mediainfo.title_year}")
-        return []
+            return []
 
     def __douban_movie_showing(self):
         """
