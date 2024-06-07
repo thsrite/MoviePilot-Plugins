@@ -21,7 +21,7 @@ class WeChatForward(_PluginBase):
     # 插件图标
     plugin_icon = "Wechat_A.png"
     # 插件版本
-    plugin_version = "2.5"
+    plugin_version = "2.5.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -759,7 +759,7 @@ class WeChatForward(_PluginBase):
                                 f"额外消息 {self.__parse_tv_title(title)} 用户 {user_id} 已订阅，不再发送额外消息。")
                             continue
 
-                    logger.info(f"消息用户{user_id} 匹配到目标用户 {extra_userid}")
+                    logger.info(f"消息用户 {user_id} 匹配到目标用户 {extra_userid}")
 
                     self.__send_message(title=extra_msg,
                                         userid=user_id,
@@ -972,7 +972,8 @@ class WeChatForward(_PluginBase):
                                                            appid=appid,
                                                            title=title,
                                                            retry=retry,
-                                                           text=text)
+                                                           text=text,
+                                                           userid=userid)
                     return False
             elif res is not None:
                 logger.error(
