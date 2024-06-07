@@ -236,7 +236,8 @@ class CloudStrmIncrement(_PluginBase):
                                 break
                             if str(parent_path.parent) != str(Path(increment_file).root):
                                 # 父目录非根目录，才删除父目录
-                                if not SystemUtils.exits_files(parent_path, settings.RMT_MEDIAEXT):
+                                if not SystemUtils.exits_files(parent_path,
+                                                               [ext.strip() for ext in self._rmt_mediaext.split(",")]):
                                     # 当前路径下没有媒体文件则删除
                                     shutil.rmtree(parent_path)
                                     logger.warn(f"增量非保留目录 {parent_path} 已删除")
