@@ -233,7 +233,7 @@ class CloudStrm(_PluginBase):
                             continue
 
                         # 不复制非媒体文件时直接过滤掉非媒体文件
-                        if not self._copy_files and Path(file).suffix not in settings.RMT_MEDIAEXT:
+                        if not self._copy_files and Path(file).suffix.lower() not in settings.RMT_MEDIAEXT:
                             continue
 
                         if source_file not in self.__cloud_files:
@@ -280,7 +280,7 @@ class CloudStrm(_PluginBase):
                         continue
 
                     # 不复制非媒体文件时直接过滤掉非媒体文件
-                    if not self._copy_files and Path(file).suffix not in settings.RMT_MEDIAEXT:
+                    if not self._copy_files and Path(file).suffix.lower() not in settings.RMT_MEDIAEXT:
                         continue
 
                     logger.info(f"扫描到新文件 {source_file}，正在开始处理")
@@ -343,7 +343,7 @@ class CloudStrm(_PluginBase):
                             os.makedirs(Path(dest_file).parent)
 
                         # 视频文件创建.strm文件
-                        if Path(dest_file).suffix in settings.RMT_MEDIAEXT:
+                        if Path(dest_file).suffix.lower() in settings.RMT_MEDIAEXT:
                             # 创建.strm文件
                             self.__create_strm_file(scheme="https" if self._https else "http",
                                                     dest_file=dest_file,
