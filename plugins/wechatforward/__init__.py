@@ -729,7 +729,8 @@ class WeChatForward(_PluginBase):
                             user_id = subscribe.username
                             logger.info(f"{title} 获取到订阅用户 {user_id}")
 
-                            self.__send_image_message(title=extra_msg,
+                            self.__send_image_message(title=title,
+                                                      text=extra_msg,
                                                       userid=user_id,
                                                       access_token=access_token,
                                                       appid=wechat_appid,
