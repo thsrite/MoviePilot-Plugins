@@ -26,7 +26,7 @@ class CloudStrm(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png"
     # 插件版本
-    plugin_version = "4.1"
+    plugin_version = "4.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -236,7 +236,7 @@ class CloudStrm(_PluginBase):
                             continue
 
                         # 不复制非媒体文件时直接过滤掉非媒体文件
-                        if not self._copy_files and Path(file).suffix not in [ext.strip() for ext in
+                        if not self._copy_files and Path(file).suffix.lower() not in [ext.strip() for ext in
                                                                               self._rmt_mediaext.split(",")]:
                             continue
 
@@ -284,7 +284,7 @@ class CloudStrm(_PluginBase):
                         continue
 
                     # 不复制非媒体文件时直接过滤掉非媒体文件
-                    if not self._copy_files and Path(file).suffix not in [ext.strip() for ext in
+                    if not self._copy_files and Path(file).suffix.lower() not in [ext.strip() for ext in
                                                                           self._rmt_mediaext.split(",")]:
                         continue
 
@@ -348,7 +348,7 @@ class CloudStrm(_PluginBase):
                             os.makedirs(Path(dest_file).parent)
 
                         # 视频文件创建.strm文件
-                        if Path(dest_file).suffix in [ext.strip() for ext in
+                        if Path(dest_file).suffix.lower() in [ext.strip() for ext in
                                                       self._rmt_mediaext.split(",")]:
                             # 创建.strm文件
                             self.__create_strm_file(scheme="https" if self._https else "http",
