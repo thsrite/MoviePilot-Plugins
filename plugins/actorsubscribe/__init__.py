@@ -283,6 +283,7 @@ class ActorSubscribe(_PluginBase):
         # 保存历史记录
         self.save_data('history', history)
         self.save_data('already_handle', already_handle)
+        logger.info(f"演员订阅任务完成")
 
     def __get_douban_actors(self, mediainfo: MediaInfo, season: int = None) -> List[dict]:
         """
