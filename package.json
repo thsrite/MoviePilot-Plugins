@@ -213,7 +213,7 @@
       },
       "ActorSubscribe": {
         "name": "演员订阅",
-        "description": "自动订阅指定演员热映或最新电影或电视剧。",
+        "description": "自动订阅指定演员热映电影、电视剧。",
         "labels": "订阅",
         "version": "2.1",
         "icon": "Mdcng_A.png",
