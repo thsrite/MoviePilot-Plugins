@@ -250,7 +250,8 @@ class ActorSubscribe(_PluginBase):
                     if actor and actor in subscribe_actors:
                         # 开始订阅
                         logger.info(
-                            f"{mediainfo.type.value} {mediainfo.title_year} TMDBID {mediainfo.tmdb_id} DOUBANID {mediainfo.douban_id} 命中订阅演员 {actor}，开始订阅")
+                            f"{mediainfo.type.value} {mediainfo.title_year} TMDBID {mediainfo.tmdb_id} DOUBANID {mediainfo.douban_id} 命中订阅演员 {actor}，"
+                            f"开始订阅。订阅规则：{self._quality} {self._resolution} {self._effect} {self._username}")
                         is_subscribe = True
                         # 添加订阅
                         self.subscribechain.add(title=mediainfo.title,
