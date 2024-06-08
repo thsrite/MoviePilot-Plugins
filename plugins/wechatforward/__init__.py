@@ -728,14 +728,15 @@ class WeChatForward(_PluginBase):
                                 or f"{subscribe.name} ({subscribe.year}) S{str(subscribe.season).rjust(2, '0')} 已完成订阅" == title:
                             user_id = subscribe.username
                             logger.info(f"{title} 获取到订阅用户 {user_id}")
-
-                            self.__send_image_message(title=title,
-                                                      text=extra_msg,
-                                                      userid=user_id,
-                                                      access_token=access_token,
-                                                      appid=wechat_appid,
-                                                      image_url=subscribe.backdrop)
-                            logger.info(f"{wechat_appid} 发送额外消息 {extra_msg} 成功")
+                            if user_id and any(user_id == user for user in extra_userid.split(",")):
+                                logger.info(f"{title} 消息用户 {user_id} 匹配到目标用户 {extra_userid}")
+                                self.__send_image_message(title=title,
+                                                          text=extra_msg,
+                                                          userid=user_id,
+                                                          access_token=access_token,
+                                                          appid=wechat_appid,
+                                                          image_url=subscribe.backdrop)
+                                logger.info(f"{wechat_appid} 发送额外消息 {extra_msg} 成功")
                             break
                 else:
                     # 搜索消息，获取消息text中的用户
