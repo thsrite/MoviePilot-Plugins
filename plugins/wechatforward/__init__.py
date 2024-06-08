@@ -22,7 +22,7 @@ class WeChatForward(_PluginBase):
     # 插件图标
     plugin_icon = "Wechat_A.png"
     # 插件版本
-    plugin_version = "2.5.1"
+    plugin_version = "2.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -811,9 +811,12 @@ class WeChatForward(_PluginBase):
             # 电影 功夫熊猫 (2008) 已添加订阅
             # 电视剧 追风者 (2024) S01 E01-E04 开始下载
             # 电视剧 追风者 (2024) S01 已添加订阅
+            # 电视剧 追风者 (2024) S01 已完成订阅
             if '开始下载' in sub_title_str:
                 continue
             if '已添加订阅' in sub_title_str:
+                continue
+            if '已完成订阅' in sub_title_str:
                 continue
             _title += f"{sub_title_str} "
         return self.__convert_season_episode(str(_title.rstrip()))

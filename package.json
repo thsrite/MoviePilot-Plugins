@@ -286,11 +286,12 @@
         "name": "微信消息转发",
         "description": "根据正则转发通知到其他WeChat应用。",
         "labels": "消息通知",
-        "version": "2.5.1",
+        "version": "2.6",
         "icon": "Wechat_A.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v2.6": "已完成订阅额外消息查询订阅历史订阅用户",
           "v2.5.1": "修复token过期重发未存储userid问题",
           "v2.5": "增强额外消息发送",
           "v2.4": "修复配置修改后不重建缓存bug",
