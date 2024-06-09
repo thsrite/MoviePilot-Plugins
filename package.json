@@ -489,7 +489,7 @@
         "author": "thsrite",
         "level": 1,
         "history": {
-          "v1.1": "支持交互命令/cmd [command]执行，需主程序1.9.4+",
+          "v1.1": "支持交互命令/sql [command]执行，需主程序1.9.4+",
           "v1.0": "自定义MoviePilot数据库Sql执行"
         }
       },
@@ -497,12 +497,13 @@
         "name": "命令执行器",
         "description": "自定义容器命令执行。",
         "labels": "工具",
-        "version": "1.1",
+        "version": "1.2",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/command.png",
         "author": "thsrite",
         "level": 1,
         "history": {
-          "v1.1": "支持交互命令/sql [sql]执行，需主程序1.9.4+",
+          "v1.2": "调整交互命令返回信息",
+          "v1.1": "支持交互命令/cmd [sql]执行，需主程序1.9.4+",
           "v1.0": "自定义容器命令执行"
         }
       }

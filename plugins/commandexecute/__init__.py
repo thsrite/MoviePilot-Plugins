@@ -15,7 +15,7 @@ class CommandExecute(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/command.png"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -41,8 +41,8 @@ class CommandExecute(_PluginBase):
                 try:
                     for command in self._command.split("\n"):
                         logger.info(f"开始执行命令 {command}")
-                        last_output, last_error = self.execute_command(command)
-                        logger.info(last_output if last_output else last_error)
+                        ouptut = self.execute_command(command)
+                        # logger.info('\n'.join(ouptut))
                 except Exception as e:
                     logger.error(f"命令执行失败 {str(e)}")
                     return
@@ -60,24 +60,23 @@ class CommandExecute(_PluginBase):
         :param command: 命令
         """
         result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        last_output = None
-        last_error = None
+        ouptut = []
         while True:
             error = result.stderr.readline().decode("utf-8")
             if error == '' and result.poll() is not None:
                 break
             if error:
                 logger.info(error.strip())
-                last_error = error.strip()
+                ouptut.append(error.strip())
         while True:
             output = result.stdout.readline().decode("utf-8")
             if output == '' and result.poll() is not None:
                 break
             if output:
                 logger.info(output.strip())
-                last_output = output.strip()
+                ouptut.append(output.strip())
 
-        return last_output, last_error
+        return ouptut
 
     @eventmanager.register(EventType.PluginAction)
     def execute(self, event: Event = None):
@@ -85,15 +84,17 @@ class CommandExecute(_PluginBase):
             event_data = event.event_data
             if not event_data or event_data.get("action") != "command_execute":
                 return
+            logger.info(f"收到命令执行事件 ...{event_data}")
             args = event_data.get("args")
             if not args:
                 return
 
             logger.info(f"收到命令，开始执行命令 ...{args}")
-            last_output, last_error = self.execute_command(args)
+            ouptut = self.execute_command(args)
+            # logger.info('\n'.join(ouptut))
             self.post_message(channel=event.event_data.get("channel"),
                               title="命令执行结果",
-                              text=last_output if last_output else last_error,
+                              text='\n'.join(ouptut),
                               userid=event.event_data.get("user"))
 
     def get_state(self) -> bool:
