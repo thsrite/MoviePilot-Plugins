@@ -1,8 +1,10 @@
 import sqlite3
 
+from app.core.event import eventmanager, Event
 from app.plugins import _PluginBase
 from typing import Any, List, Dict, Tuple
 from app.log import logger
+from app.schemas.types import EventType
 
 
 class SqlExecute(_PluginBase):
@@ -13,7 +15,7 @@ class SqlExecute(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/sqlite.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -66,12 +68,65 @@ class SqlExecute(_PluginBase):
                         "sql": self._sql
                     })
 
+    @eventmanager.register(EventType.PluginAction)
+    def execute(self, event: Event = None):
+        if event:
+            event_data = event.event_data
+            if not event_data or event_data.get("action") != "sql_execute":
+                return
+            args = event_data.get("args")
+            if not args:
+                return
+
+            logger.info(f"收到命令，开始执行SQL ...{args}")
+
+            # 读取sqlite数据
+            try:
+                gradedb = sqlite3.connect("/config/user.db")
+            except Exception as e:
+                logger.error(f"数据库链接失败 {str(e)}")
+                return
+
+            # 创建游标cursor来执行executeＳＱＬ语句
+            cursor = gradedb.cursor()
+
+            # 执行SQL语句
+            try:
+                for sql in self._sql.split("\n"):
+                    logger.info(f"开始执行SQL语句 {sql}")
+                    # 执行SQL语句
+                    cursor.execute(sql)
+
+                    logger.info(cursor.fetchall())
+                    self.post_message(channel=event.event_data.get("channel"),
+                                      title="SQL执行结果",
+                                      text='\n'.join(cursor.fetchall()),
+                                      userid=event.event_data.get("user"))
+            except Exception as e:
+                logger.error(f"SQL语句执行失败 {str(e)}")
+                return
+            finally:
+                # 关闭游标
+                cursor.close()
+
     def get_state(self) -> bool:
-        return False
+        return True
 
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
-        pass
+        """
+        定义远程控制命令
+        :return: 命令关键字、事件、描述、附带数据
+        """
+        return [{
+            "cmd": "/sql",
+            "event": EventType.PluginAction,
+            "desc": "自定义sql执行",
+            "category": "",
+            "data": {
+                "action": "sql_execute"
+            }
+        }]
 
     def get_api(self) -> List[Dict[str, Any]]:
         pass

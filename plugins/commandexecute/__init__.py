@@ -1,8 +1,10 @@
 import subprocess
 
+from app.core.event import eventmanager, Event
 from app.plugins import _PluginBase
 from typing import Any, List, Dict, Tuple
 from app.log import logger
+from app.schemas.types import EventType
 
 
 class CommandExecute(_PluginBase):
@@ -13,7 +15,7 @@ class CommandExecute(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/command.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -39,24 +41,8 @@ class CommandExecute(_PluginBase):
                 try:
                     for command in self._command.split("\n"):
                         logger.info(f"开始执行命令 {command}")
-                        result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                        last_output = None
-                        last_error = None
-                        while True:
-                            error = result.stderr.readline().decode("utf-8")
-                            if error == '' and result.poll() is not None:
-                                break
-                            if error:
-                                logger.info(error.strip())
-                                last_error = error.strip()
-                        while True:
-                            output = result.stdout.readline().decode("utf-8")
-                            if output == '' and result.poll() is not None:
-                                break
-                            if output:
-                                logger.info(output.strip())
-                                last_output = output.strip()
-                        print(last_output if last_output else last_error)
+                        last_output, last_error = self.execute_command(command)
+                        logger.info(last_output if last_output else last_error)
                 except Exception as e:
                     logger.error(f"命令执行失败 {str(e)}")
                     return
@@ -67,12 +53,67 @@ class CommandExecute(_PluginBase):
                         "command": self._command
                     })
 
+    @staticmethod
+    def execute_command(command: str):
+        """
+        执行命令
+        :param command: 命令
+        """
+        result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        last_output = None
+        last_error = None
+        while True:
+            error = result.stderr.readline().decode("utf-8")
+            if error == '' and result.poll() is not None:
+                break
+            if error:
+                logger.info(error.strip())
+                last_error = error.strip()
+        while True:
+            output = result.stdout.readline().decode("utf-8")
+            if output == '' and result.poll() is not None:
+                break
+            if output:
+                logger.info(output.strip())
+                last_output = output.strip()
+
+        return last_output, last_error
+
+    @eventmanager.register(EventType.PluginAction)
+    def execute(self, event: Event = None):
+        if event:
+            event_data = event.event_data
+            if not event_data or event_data.get("action") != "command_execute":
+                return
+            args = event_data.get("args")
+            if not args:
+                return
+
+            logger.info(f"收到命令，开始执行命令 ...{args}")
+            last_output, last_error = self.execute_command(args)
+            self.post_message(channel=event.event_data.get("channel"),
+                              title="命令执行结果",
+                              text=last_output if last_output else last_error,
+                              userid=event.event_data.get("user"))
+
     def get_state(self) -> bool:
-        return False
+        return True
 
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
-        pass
+        """
+        定义远程控制命令
+        :return: 命令关键字、事件、描述、附带数据
+        """
+        return [{
+            "cmd": "/cmd",
+            "event": EventType.PluginAction,
+            "desc": "自定义命令执行",
+            "category": "",
+            "data": {
+                "action": "command_execute"
+            }
+        }]
 
     def get_api(self) -> List[Dict[str, Any]]:
         pass

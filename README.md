@@ -40,5 +40,5 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - 热门媒体订阅 v1.7
 - [HomePage v1.2](docs%2FHomePage.md)
 - 目录监控（统一入库消息增强版） v1.0
-- Sql执行器 v1.0
-- 命令执行器 v1.0
+- Sql执行器 v1.1
+- 命令执行器 v1.1
