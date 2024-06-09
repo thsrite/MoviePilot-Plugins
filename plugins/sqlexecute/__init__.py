@@ -4,7 +4,7 @@ from app.core.event import eventmanager, Event
 from app.plugins import _PluginBase
 from typing import Any, List, Dict, Tuple
 from app.log import logger
-from app.schemas.types import EventType
+from app.schemas.types import EventType, MessageChannel
 
 
 class SqlExecute(_PluginBase):
@@ -15,7 +15,7 @@ class SqlExecute(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/sqlite.png"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -54,7 +54,21 @@ class SqlExecute(_PluginBase):
                         # 执行SQL语句
                         cursor.execute(sql)
 
-                        logger.info(cursor.fetchall())
+                        rows = cursor.fetchall()
+                        if 'select' in sql.lower():
+                            # 获取列名
+                            columns = [desc[0] for desc in cursor.description]
+                            # 将查询结果转换为key-value对的列表
+                            results = []
+                            for row in rows:
+                                result = dict(zip(columns, row))
+                                results.append(result)
+                            result = "\n".join([str(i) for i in results])
+                        else:
+                            result = "\n".join([str(i) for i in rows])
+
+                        result = str(result).replace("'", "\"")
+                        logger.info(result)
                 except Exception as e:
                     logger.error(f"SQL语句执行失败 {str(e)}")
                     return
@@ -92,16 +106,30 @@ class SqlExecute(_PluginBase):
 
             # 执行SQL语句
             try:
-                for sql in self._sql.split("\n"):
-                    logger.info(f"开始执行SQL语句 {sql}")
-                    # 执行SQL语句
-                    cursor.execute(sql)
+                # 执行SQL语句
+                cursor.execute(args)
+                rows = cursor.fetchall()
+                if 'select' in args.lower():
+                    # 获取列名
+                    columns = [desc[0] for desc in cursor.description]
+                    # 将查询结果转换为key-value对的列表
+                    results = []
+                    for row in rows:
+                        result = dict(zip(columns, row))
+                        results.append(result)
+                    result = "\n".join([str(i) for i in results])
+                else:
+                    result = "\n".join([str(i) for i in rows])
 
-                    logger.info(cursor.fetchall())
-                    self.post_message(channel=event.event_data.get("channel"),
-                                      title="SQL执行结果",
-                                      text='\n'.join(cursor.fetchall()),
-                                      userid=event.event_data.get("user"))
+                result = str(result).replace("'", "\"")
+                logger.info(result)
+
+                if event.event_data.get("channel") == MessageChannel.Telegram:
+                    result = f"```plaintext\n{result}\n```"
+                self.post_message(channel=event.event_data.get("channel"),
+                                  title="SQL执行结果",
+                                  text=result,
+                                  userid=event.event_data.get("user"))
             except Exception as e:
                 logger.error(f"SQL语句执行失败 {str(e)}")
                 return
