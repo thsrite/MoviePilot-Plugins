@@ -52,7 +52,7 @@ class SqlExecute(_PluginBase):
                         # 执行SQL语句
                         cursor.execute(sql)
 
-                        print(cursor.fetchall())
+                        logger.info(cursor.fetchall())
                 except Exception as e:
                     logger.error(f"SQL语句执行失败 {str(e)}")
                     return
