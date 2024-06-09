@@ -479,5 +479,29 @@
         "history": {
           "v1.0": "同步merge主仓库[目录监控]插件，增加统一发送消息逻辑（Testing…）"
         }
+      },
+      "SqlExecute": {
+        "name": "Sql执行器",
+        "description": "自定义MoviePilot数据库Sql执行。",
+        "labels": "工具",
+        "version": "1.0",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/sqlite.png",
+        "author": "thsrite",
+        "level": 1,
+        "history": {
+          "v1.0": "自定义MoviePilot数据库Sql执行"
+        }
+      },
+      "CommandExecute": {
+        "name": "命令执行器",
+        "description": "自定义容器命令执行。",
+        "labels": "工具",
+        "version": "1.0",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/command.png",
+        "author": "thsrite",
+        "level": 1,
+        "history": {
+          "v1.0": "自定义容器命令执行"
+        }
       }
 }
