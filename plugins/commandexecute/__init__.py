@@ -4,7 +4,7 @@ from app.core.event import eventmanager, Event
 from app.plugins import _PluginBase
 from typing import Any, List, Dict, Tuple
 from app.log import logger
-from app.schemas.types import EventType
+from app.schemas.types import EventType, MessageChannel
 
 
 class CommandExecute(_PluginBase):
@@ -91,10 +91,13 @@ class CommandExecute(_PluginBase):
 
             logger.info(f"收到命令，开始执行命令 ...{args}")
             ouptut = self.execute_command(args)
-            # logger.info('\n'.join(ouptut))
+            result = '\n'.join(ouptut)
+
+            if event.event_data.get("channel") == MessageChannel.Telegram:
+                result = f"```plaintext\n{result}\n```"
             self.post_message(channel=event.event_data.get("channel"),
                               title="命令执行结果",
-                              text='\n'.join(ouptut),
+                              text=result,
                               userid=event.event_data.get("user"))
 
     def get_state(self) -> bool:
