@@ -23,7 +23,7 @@ class ActorSubscribe(_PluginBase):
     # 插件名称
     plugin_name = "演员订阅"
     # 插件描述
-    plugin_desc = "自动订阅指定演员热映或最新电影或电视剧。"
+    plugin_desc = "自动订阅指定演员热映电影、电视剧。"
     # 插件图标
     plugin_icon = "Mdcng_A.png"
     # 插件版本
@@ -250,7 +250,8 @@ class ActorSubscribe(_PluginBase):
                     if actor and actor in subscribe_actors:
                         # 开始订阅
                         logger.info(
-                            f"{mediainfo.type.value} {mediainfo.title_year} TMDBID {mediainfo.tmdb_id} DOUBANID {mediainfo.douban_id} 命中订阅演员 {actor}，开始订阅")
+                            f"{mediainfo.type.value} {mediainfo.title_year} TMDBID {mediainfo.tmdb_id} DOUBANID {mediainfo.douban_id} 命中订阅演员 {actor}，"
+                            f"开始订阅。订阅规则：{self._quality} {self._resolution} {self._effect} {self._username}")
                         is_subscribe = True
                         # 添加订阅
                         self.subscribechain.add(title=mediainfo.title,
@@ -283,6 +284,7 @@ class ActorSubscribe(_PluginBase):
         # 保存历史记录
         self.save_data('history', history)
         self.save_data('already_handle', already_handle)
+        logger.info(f"演员订阅任务完成")
 
     def __get_douban_actors(self, mediainfo: MediaInfo, season: int = None) -> List[dict]:
         """

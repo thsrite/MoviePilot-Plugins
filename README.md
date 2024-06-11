@@ -11,7 +11,7 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 
 - 站点数据统计 v1.4 （无未读消息版本）(废弃)
 - 站点未读消息 v1.9 （依赖于[站点数据统计]插件）
-- [云盘Strm生成 v4.0](docs%2FCloudStrm.md)
+- [云盘Strm生成 v4.2](docs%2FCloudStrm.md)
 - [云盘Strm生成（增量版） v1.0](docs%2FCloudStrmIncrement.md)
 - [Strm文件模式转换 v1.0](docs%2FStrmConvert.md)
 - 清理订阅缓存 v1.0
@@ -28,7 +28,7 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - [短剧刮削 v3.2](docs%2FShortPlayMonitor.md)
 - 云盘实时监控 v2.2
 - 源文件恢复 v1.2
-- [微信消息转发 v2.5](docs%2FWeChatForward.md)
+- [微信消息转发 v2.6](docs%2FWeChatForward.md)
 - 订阅下载统计 v1.5
 - [自定义命令 v1.7](docs%2FCustomCommand.md)
 - docker自定义任务 v1.3
@@ -40,3 +40,5 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - 热门媒体订阅 v1.7
 - [HomePage v1.2](docs%2FHomePage.md)
 - 目录监控（统一入库消息增强版） v1.0
+- Sql执行器 v1.2
+- 命令执行器 v1.2

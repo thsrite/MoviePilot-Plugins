@@ -4,6 +4,7 @@ import time
 from datetime import datetime
 
 from app.core.config import settings
+from app.db.models.subscribehistory import SubscribeHistory
 from app.db.subscribe_oper import SubscribeOper
 from app.plugins import _PluginBase
 from app.core.event import eventmanager
@@ -21,7 +22,7 @@ class WeChatForward(_PluginBase):
     # 插件图标
     plugin_icon = "Wechat_A.png"
     # 插件版本
-    plugin_version = "2.5"
+    plugin_version = "2.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -715,63 +716,86 @@ class WeChatForward(_PluginBase):
                 if str(extra_msg).find('{name}') != -1:
                     extra_msg = extra_msg.replace('{name}', self.__parse_tv_title(title))
 
-                # 搜索消息，获取消息text中的用户
-                result = re.search(r"用户：(.*?)\n", text)
-                if not result:
-                    # 订阅消息，获取消息text中的用户
-                    pattern = r"来自用户：(.*?)$"
-                    result = re.search(pattern, text)
+                # 订阅完成消息单独处理
+                if "已完成订阅" in str(title):
+                    # 查订阅历史的用户
+                    subscribes = SubscribeHistory().list()
+                    # 倒叙
+                    subscribes = sorted(subscribes, key=lambda x: x.id, reverse=True)
+                    for subscribe in subscribes:
+                        # 匹配订阅title
+                        if f"{subscribe.name} ({subscribe.year}) 已完成订阅" == title \
+                                or f"{subscribe.name} ({subscribe.year}) S{str(subscribe.season).rjust(2, '0')} 已完成订阅" == title:
+                            user_id = subscribe.username
+                            logger.info(f"{title} 获取到订阅用户 {user_id}")
+                            if user_id and any(user_id == user for user in extra_userid.split(",")):
+                                logger.info(f"{title} 消息用户 {user_id} 匹配到目标用户 {extra_userid}")
+                                self.__send_image_message(title=title,
+                                                          text=extra_msg,
+                                                          userid=user_id,
+                                                          access_token=access_token,
+                                                          appid=wechat_appid,
+                                                          image_url=subscribe.backdrop)
+                                logger.info(f"{wechat_appid} 发送额外消息 {extra_msg} 成功")
+                            break
+                else:
+                    # 搜索消息，获取消息text中的用户
+                    result = re.search(r"用户：(.*?)\n", text)
                     if not result:
-                        logger.error("未获取到用户，跳过处理")
-                        continue
-
-                # 获取消息text中的用户
-                user_id = result.group(1)
-                logger.info(f"获取到消息用户 {user_id}")
-                if user_id and any(user_id == user for user in extra_userid.split(",")):
-                    if "开始下载" in str(title):
-                        # 判断是否重复发送，10分钟内重复消息title、重复userid算重复消息
-                        extra_history_time = self._extra_msg_history.get(
-                            f"{user_id}-{self.__parse_tv_title(title)}") or None
-                        # 只处理下载消息
-                        if extra_history_time:
-                            logger.info(
-                                f"获取到额外消息上次发送时间 {datetime.strptime(extra_history_time, '%Y-%m-%d %H:%M:%S')}")
-                            if (datetime.now() - datetime.strptime(extra_history_time,
-                                                                   '%Y-%m-%d %H:%M:%S')).total_seconds() < 600:
-                                logger.warn(
-                                    f"额外消息 {self.__parse_tv_title(title)} 十分钟内重复发送，跳过。")
-                                continue
-                        # 判断当前用户是否订阅，是否订阅后续消息
-                        subscribes = SubscribeOper().list_by_username(username=str(user_id),
-                                                                      state="R",
-                                                                      mtype=MediaType.TV.value)
-                        is_subscribe = False
-                        for subscribe in subscribes:
-                            # 匹配订阅title
-                            if f"{subscribe.name} ({subscribe.year})" in title:
-                                is_subscribe = True
-                                break
-
-                        # 电视剧之前该用户订阅下载过，不再发送额外消息
-                        if is_subscribe:
-                            logger.warn(
-                                f"额外消息 {self.__parse_tv_title(title)} 用户 {user_id} 已订阅，不再发送额外消息。")
+                        # 订阅消息，获取消息text中的用户
+                        pattern = r"来自用户：(.*?)$"
+                        result = re.search(pattern, text)
+                        if not result:
+                            logger.error(f"{title} 未获取到用户，跳过处理")
                             continue
 
-                    logger.info(f"消息用户{user_id} 匹配到目标用户 {extra_userid}")
+                    # 获取消息text中的用户
+                    user_id = result.group(1)
+                    logger.info(f"{title} 获取到消息用户 {user_id}")
+                    if user_id and any(user_id == user for user in extra_userid.split(",")):
+                        if "开始下载" in str(title):
+                            # 判断是否重复发送，10分钟内重复消息title、重复userid算重复消息
+                            extra_history_time = self._extra_msg_history.get(
+                                f"{user_id}-{self.__parse_tv_title(title)}") or None
+                            # 只处理下载消息
+                            if extra_history_time:
+                                logger.info(
+                                    f"{title} 获取到额外消息上次发送时间 {datetime.strptime(extra_history_time, '%Y-%m-%d %H:%M:%S')}")
+                                if (datetime.now() - datetime.strptime(extra_history_time,
+                                                                       '%Y-%m-%d %H:%M:%S')).total_seconds() < 600:
+                                    logger.warn(
+                                        f"{title} 额外消息 {self.__parse_tv_title(title)} 十分钟内重复发送，跳过。")
+                                    continue
+                            # 判断当前用户是否订阅，是否订阅后续消息
+                            subscribes = SubscribeOper().list_by_username(username=str(user_id),
+                                                                          state="R",
+                                                                          mtype=MediaType.TV.value)
+                            is_subscribe = False
+                            for subscribe in subscribes:
+                                # 匹配订阅title
+                                if f"{subscribe.name} ({subscribe.year})" in title:
+                                    is_subscribe = True
+                                    break
 
-                    self.__send_message(title=extra_msg,
-                                        userid=user_id,
-                                        access_token=access_token,
-                                        appid=wechat_appid)
-                    logger.info(f"{wechat_appid} 发送额外消息 {extra_msg} 成功")
-                    # 保存已发送消息
-                    if "开始下载" in str(title):
-                        self._extra_msg_history[
-                            f"{user_id}-{self.__parse_tv_title(title)}"] = time.strftime(
-                            "%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
-                        is_save_history = True
+                            # 电视剧之前该用户订阅下载过，不再发送额外消息
+                            if is_subscribe:
+                                logger.warn(
+                                    f"{title} 额外消息 {self.__parse_tv_title(title)} 用户 {user_id} 已订阅，不再发送额外消息。")
+                                continue
+
+                        logger.info(f"{title} 消息用户 {user_id} 匹配到目标用户 {extra_userid}")
+
+                        self.__send_message(title=extra_msg,
+                                            userid=user_id,
+                                            access_token=access_token,
+                                            appid=wechat_appid)
+                        logger.info(f"{title} {wechat_appid} 发送额外消息 {extra_msg} 成功")
+                        # 保存已发送消息
+                        if "开始下载" in str(title):
+                            self._extra_msg_history[
+                                f"{user_id}-{self.__parse_tv_title(title)}"] = time.strftime(
+                                "%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
+                            is_save_history = True
 
         # 保存额外消息历史
         if is_save_history:
@@ -789,9 +813,12 @@ class WeChatForward(_PluginBase):
             # 电影 功夫熊猫 (2008) 已添加订阅
             # 电视剧 追风者 (2024) S01 E01-E04 开始下载
             # 电视剧 追风者 (2024) S01 已添加订阅
+            # 电视剧 追风者 (2024) S01 已完成订阅
             if '开始下载' in sub_title_str:
                 continue
             if '已添加订阅' in sub_title_str:
+                continue
+            if '已完成订阅' in sub_title_str:
                 continue
             _title += f"{sub_title_str} "
         return self.__convert_season_episode(str(_title.rstrip()))
@@ -888,7 +915,7 @@ class WeChatForward(_PluginBase):
         return self.__post_request(access_token=access_token, req_json=req_json, appid=appid, title=title, text=text,
                                    userid=userid)
 
-    def __send_image_message(self, title: str, text: str, image_url: str, userid: str = None,
+    def __send_image_message(self, title: str, image_url: str, text: str = None, userid: str = None,
                              access_token: str = None, appid: int = None) -> Optional[bool]:
         """
         发送图文消息
@@ -972,7 +999,8 @@ class WeChatForward(_PluginBase):
                                                            appid=appid,
                                                            title=title,
                                                            retry=retry,
-                                                           text=text)
+                                                           text=text,
+                                                           userid=userid)
                     return False
             elif res is not None:
                 logger.error(

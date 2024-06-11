@@ -3,11 +3,13 @@
         "name": "云盘Strm生成",
         "description": "监控文件创建，生成Strm文件。",
         "labels": "云盘",
-        "version": "4.0",
+        "version": "4.2",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v4.2": "扩展名转小写",
+          "v4.1": "支持自定义媒体类型",
           "v4.0": "回归老版本",
           "v3.8": "支持增量路径、支持自定义媒体类型（注：本次更新需修改配置使用）",
           "v3.7": "api模式支持启用https",
@@ -211,7 +213,7 @@
       },
       "ActorSubscribe": {
         "name": "演员订阅",
-        "description": "自动订阅指定演员热映或最新电影或电视剧。",
+        "description": "自动订阅指定演员热映电影、电视剧。",
         "labels": "订阅",
         "version": "2.1",
         "icon": "Mdcng_A.png",
@@ -286,11 +288,13 @@
         "name": "微信消息转发",
         "description": "根据正则转发通知到其他WeChat应用。",
         "labels": "消息通知",
-        "version": "2.5",
+        "version": "2.6",
         "icon": "Wechat_A.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v2.6": "已完成订阅额外消息查询订阅历史订阅用户",
+          "v2.5.1": "修复token过期重发未存储userid问题",
           "v2.5": "增强额外消息发送",
           "v2.4": "修复配置修改后不重建缓存bug",
           "v2.3": "增加重建缓存，丰富转发历史",
@@ -475,6 +479,34 @@
         "level": 1,
         "history": {
           "v1.0": "同步merge主仓库[目录监控]插件，增加统一发送消息逻辑（Testing…）"
+        }
+      },
+      "SqlExecute": {
+        "name": "Sql执行器",
+        "description": "自定义MoviePilot数据库Sql执行。",
+        "labels": "工具",
+        "version": "1.2",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/sqlite.png",
+        "author": "thsrite",
+        "level": 1,
+        "history": {
+          "v1.2": "调整交互命令返回信息",
+          "v1.1": "支持交互命令/sql [command]执行，需主程序1.9.4+",
+          "v1.0": "自定义MoviePilot数据库Sql执行"
+        }
+      },
+      "CommandExecute": {
+        "name": "命令执行器",
+        "description": "自定义容器命令执行。",
+        "labels": "工具",
+        "version": "1.2",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/command.png",
+        "author": "thsrite",
+        "level": 1,
+        "history": {
+          "v1.2": "调整交互命令返回信息",
+          "v1.1": "支持交互命令/cmd [sql]执行，需主程序1.9.4+",
+          "v1.0": "自定义容器命令执行"
         }
       }
 }
