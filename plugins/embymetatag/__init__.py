@@ -67,6 +67,7 @@ class EmbyMetaTag(_PluginBase):
                 if not self._EMBY_HOST.startswith("http"):
                     self._EMBY_HOST = "http://" + self._EMBY_HOST
 
+            _tags = {}
             if self._tag_confs:
                 tag_confs = self._tag_confs.split("\n")
                 for tag_conf in tag_confs:
@@ -78,6 +79,8 @@ class EmbyMetaTag(_PluginBase):
                                 library_tags = self._tags.get(library) or []
                                 self._tags[library] = library_tags + tag_conf[1].split(',')
 
+            _media_tags = {}
+            _media_type = {}
             if self._name_tag_confs:
                 name_tag_confs = self._name_tag_confs.split("\n")
                 for name_tag_conf in name_tag_confs:
