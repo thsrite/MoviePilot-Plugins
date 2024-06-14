@@ -36,7 +36,7 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - 实时软连接 v1.3
 - 订阅规则自动填充 v2.7
 - Emby元数据刷新 v1.1
-- Emby媒体标签 v1.1
+- Emby媒体标签 v1.2
 - 热门媒体订阅 v1.7
 - [HomePage v1.2](docs%2FHomePage.md)
 - 目录监控（统一入库消息增强版） v1.0
