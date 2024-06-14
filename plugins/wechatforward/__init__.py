@@ -22,7 +22,7 @@ class WeChatForward(_PluginBase):
     # 插件图标
     plugin_icon = "Wechat_A.png"
     # 插件版本
-    plugin_version = "2.6"
+    plugin_version = "2.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -687,7 +687,7 @@ class WeChatForward(_PluginBase):
                 specify = specify_conf.split(" > ")
                 if len(specify) != 3:
                     continue
-                if re.search(specify[0], title) and re.search(specify[1], text):
+                if re.search(specify[0], title) and (re.search(specify[1], text) or re.search(specify[1], title)):
                     userid = specify[2]
                     logger.info(f"消息 {title} {text} 指定用户 {userid}")
                     break

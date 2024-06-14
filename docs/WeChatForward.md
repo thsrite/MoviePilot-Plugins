@@ -28,9 +28,9 @@
 
 #### 特定消息指定用户
 
-`title正则 > text正则 > userid`
+`title正则 > text|title正则 > userid`
 
-当要发送的消息的title和text均匹配正则，则强制指定该消息的userid
+当要发送的消息的`title`和`text|title`均匹配正则，则强制指定该消息的userid
 
 #### 2.0版本兼容旧版配置
 
