@@ -485,7 +485,7 @@ class CloudAssistant(_PluginBase):
                 path = os.path.join(root, name)
                 if os.path.islink(path):
                     current_target = os.readlink(path)
-                    if current_target == target_from:
+                    if str(current_target).startswith(target_from):
                         new_target = current_target.replace(target_from, target_to)
                         os.remove(path)
                         os.symlink(new_target, path)
