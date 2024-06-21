@@ -79,6 +79,7 @@ class CloudAssistant(_PluginBase):
     _enabled = False
     _notify = False
     _onlyonce = False
+    _copy_files = False
     _cron = None
     _clean = False
     _transfer = False
@@ -94,6 +95,8 @@ class CloudAssistant(_PluginBase):
     _transferconf: Dict[str, Optional[str]] = {}
     _softdirconf: Dict[str, Optional[str]] = {}
     _historyconf: Dict[str, Optional[bool]] = {}
+
+    _rmt_mediaext = ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
 
     # 退出事件
     _event = threading.Event()
@@ -115,12 +118,15 @@ class CloudAssistant(_PluginBase):
             self._notify = config.get("notify")
             self._onlyonce = config.get("onlyonce")
             self._clean = config.get("clean")
+            self._copy_files = config.get("copy_files")
             self._transfer = config.get("transfer")
             self._mode = config.get("mode")
             self._transfer_type = config.get("transfer_type")
             self._monitor_dirs = config.get("monitor_dirs") or ""
             self._exclude_keywords = config.get("exclude_keywords") or ""
             self._cron = config.get("cron")
+            self._rmt_mediaext = config.get(
+                "rmt_mediaext") or ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
 
             # 清理插件历史
             if self._clean:
@@ -254,13 +260,15 @@ class CloudAssistant(_PluginBase):
             "enabled": self._enabled,
             "notify": self._notify,
             "onlyonce": self._onlyonce,
+            "copy_files": self._copy_files,
             "clean": self._clean,
             "mode": self._mode,
             "transfer": self._transfer,
             "transfer_type": self._transfer_type,
             "monitor_dirs": self._monitor_dirs,
             "exclude_keywords": self._exclude_keywords,
-            "cron": self._cron
+            "cron": self._cron,
+            "rmt_mediaext": self._rmt_mediaext
         })
 
     @eventmanager.register(EventType.PluginAction)
@@ -371,8 +379,18 @@ class CloudAssistant(_PluginBase):
                 # 2、软连接回本地路径
                 if not self._transfer or retcode == 0:
                     target_soft_file = str(target_cloud_file).replace(str(target), str(soft_path))
-                    retcode = self.__transfer_file(file_path=target_cloud_file, target_file=target_soft_file,
-                                                   transfer_type="softlink")
+                    # 媒体文件软连接
+                    if Path(target_soft_file).suffix.lower() in [ext.strip() for ext in
+                                                                 self._rmt_mediaext.split(",")]:
+                        retcode = self.__transfer_file(file_path=target_cloud_file, target_file=target_soft_file,
+                                                       transfer_type="softlink")
+                    else:
+                        # 非媒体文件可选择复制
+                        if self._copy_files:
+                            # 其他nfo、jpg等复制文件
+                            shutil.copy2(str(file_path), target_soft_file)
+                            logger.info(f"复制其他文件 {str(file_path)} 到 {target_soft_file}")
+
                     if retcode == 0:
                         # 是否删除本地历史
                         if history_type:
@@ -644,6 +662,22 @@ class CloudAssistant(_PluginBase):
                                         }
                                     }
                                 ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'copy_files',
+                                            'label': '复制非媒体文件',
+                                        }
+                                    }
+                                ]
                             }
                         ]
                     },
@@ -767,6 +801,28 @@ class CloudAssistant(_PluginBase):
                             {
                                 'component': 'VCol',
                                 'props': {
+                                    'cols': 12
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextarea',
+                                        'props': {
+                                            'model': 'rmt_mediaext',
+                                            'label': '视频格式',
+                                            'rows': 2,
+                                            'placeholder': ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
                                     'cols': 12,
                                 },
                                 'content': [
@@ -788,13 +844,15 @@ class CloudAssistant(_PluginBase):
             "enabled": False,
             "notify": False,
             "onlyonce": False,
+            "copy_files": True,
             "clean": False,
             "transfer": False,
             "mode": "fast",
             "transfer_type": "link",
             "monitor_dirs": "",
             "exclude_keywords": "",
-            "cron": ""
+            "cron": "",
+            "rmt_mediaext": ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
         }
 
     def get_page(self) -> List[dict]:
