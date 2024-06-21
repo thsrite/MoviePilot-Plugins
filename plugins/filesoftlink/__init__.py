@@ -52,7 +52,7 @@ class FileSoftLink(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png"
     # 插件版本
-    plugin_version = "1.4"
+    plugin_version = "1.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -218,7 +218,8 @@ class FileSoftLink(_PluginBase):
             "monitor_dirs": self._monitor_dirs,
             "exclude_keywords": self._exclude_keywords,
             "cron": self._cron,
-            "size": self._size
+            "size": self._size,
+            "rmt_mediaext": self._rmt_mediaext
         })
 
     @eventmanager.register(EventType.PluginAction)
@@ -246,8 +247,11 @@ class FileSoftLink(_PluginBase):
         # 遍历所有监控目录
         for mon_path in self._dirconf.keys():
             # 遍历目录下所有文件
-            for file_path in SystemUtils.list_files(Path(mon_path), ['.*']):
-                self.__handle_file(event_path=str(file_path), mon_path=mon_path)
+            for root, dirs, files in os.walk(mon_path):
+                for name in dirs + files:
+                    path = os.path.join(root, name)
+                    if Path(path).is_file():
+                        self.__handle_file(event_path=str(path), mon_path=mon_path)
         logger.info("全量同步监控目录完成！")
 
     def event_handler(self, event, mon_path: str, text: str, event_path: str):

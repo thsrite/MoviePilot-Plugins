@@ -288,8 +288,11 @@ class CloudAssistant(_PluginBase):
         # 遍历所有监控目录
         for mon_path in self._dirconf.keys():
             # 遍历目录下所有文件
-            for file_path in SystemUtils.list_files(Path(mon_path), [".*"]):
-                self.__handle_file(event_path=str(file_path), mon_path=mon_path)
+            for root, dirs, files in os.walk(mon_path):
+                for name in dirs + files:
+                    path = os.path.join(root, name)
+                    if Path(path).is_file():
+                        self.__handle_file(event_path=str(path), mon_path=mon_path)
         logger.info("云盘助手全量同步监控目录完成！")
 
     def event_handler(self, event, mon_path: str, text: str, event_path: str):
