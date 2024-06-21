@@ -466,6 +466,31 @@ class CloudAssistant(_PluginBase):
 
         return retcode
 
+    @staticmethod
+    def is_broken_symlink(path):
+        return os.path.islink(path) and not os.path.exists(path)
+
+    def scan_and_remove_broken_symlinks(self, directory):
+        for root, dirs, files in os.walk(directory):
+            for name in dirs + files:
+                path = os.path.join(root, name)
+                if self.is_broken_symlink(path):
+                    print(f"Removing broken symlink: {path}")
+                    os.remove(path)
+
+    @staticmethod
+    def update_symlink(target_from, target_to, directory):
+        for root, dirs, files in os.walk(directory):
+            for name in dirs + files:
+                path = os.path.join(root, name)
+                if os.path.islink(path):
+                    current_target = os.readlink(path)
+                    if current_target == target_from:
+                        new_target = current_target.replace(target_from, target_to)
+                        os.remove(path)
+                        os.symlink(new_target, path)
+                        print(f"Updated symlink: {path} -> {new_target}")
+
     def get_state(self) -> bool:
         return self._enabled
 
