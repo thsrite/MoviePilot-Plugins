@@ -517,13 +517,14 @@
       },
       "CloudAssistant": {
         "name": "云盘助手",
-        "description": "定时移动到云盘，软连接回本地，定时清理无效软连接。",
+        "description": "定时移动到云盘，软连接/strm回本地，定时清理无效软连接。",
         "labels": "云盘",
-        "version": "1.0",
+        "version": "1.1",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v1.1": "支持cd2上传、支持定时清理无效软连接、支持strm生成方式",
           "v1.0": "定时移动到云盘，软连接回本地（清理无效软连接暂未开发）"
         }
       }

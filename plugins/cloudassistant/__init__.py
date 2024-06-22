@@ -1,10 +1,12 @@
 import datetime
+import json
 import os
 import re
 import shutil
 import threading
 import time
 import traceback
+import urllib
 from pathlib import Path
 from typing import List, Tuple, Dict, Any, Optional
 
@@ -26,6 +28,7 @@ from app.log import logger
 from app.plugins import _PluginBase
 from app.schemas.types import EventType, SystemConfigKey
 from app.utils.system import SystemUtils
+from clouddrive import CloudDriveClient
 
 lock = threading.Lock()
 
@@ -53,11 +56,11 @@ class CloudAssistant(_PluginBase):
     # 插件名称
     plugin_name = "云盘助手"
     # 插件描述
-    plugin_desc = "定时移动到云盘，软连接回本地，定时清理无效软连接"
+    plugin_desc = "定时移动到云盘，软连接/strm回本地，定时清理无效软连接"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -79,26 +82,40 @@ class CloudAssistant(_PluginBase):
     _enabled = False
     _notify = False
     _onlyonce = False
-    _copy_files = False
+    _invalid = False
     _cron = None
+    _invalid_cron = None
     _clean = False
-    # 模式 compatibility/fast
-    _mode = "fast"
-    # 转移方式
-    _transfer_type = "link"
-    _monitor_dirs = ""
     _exclude_keywords = ""
-    # 存储源目录与目的目录关系
-    _dirconf: Dict[str, Optional[Path]] = {}
-    # 存储源目录转移方式
-    _transferconf: Dict[str, Optional[str]] = {}
-    _softdirconf: Dict[str, Optional[str]] = {}
-    _historyconf: Dict[str, Optional[bool]] = {}
-
+    _dir_confs = {}
+    _transfer_type = None
     _rmt_mediaext = ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
 
     # 退出事件
     _event = threading.Event()
+
+    example = {
+        "cd2_url": "cd2地址：http://localhost:19798",
+        "username": "用户名",
+        "password": "密码",
+        "return_mode": "softlink",
+        "monitor_dirs": [
+            {
+                "monitor_mode": "模式 compatibility/fast",
+                "local_path": "/mnt/media/movies",
+                "mount_path": "/mnt/cloud/115/media/movies",
+                "cd2_path": "/115/media/movies",
+                "return_path": "/mnt/softlink/movies",
+                "delete_local": "false",
+                "delete_history": "false",
+                "just_media": "true",
+                "overwrite": "false"
+            }
+        ]
+    }
+    _client = None
+    _fs = None
+    _return_mode = None
 
     def init_plugin(self, config: dict = None):
         self.transferhis = TransferHistoryOper()
@@ -107,22 +124,18 @@ class CloudAssistant(_PluginBase):
         self.tmdbchain = TmdbChain()
         # 清空配置
         self._dirconf = {}
-        self._softdirconf = {}
-        self._transferconf = {}
-        self._historyconf = {}
 
         # 读取配置
         if config:
             self._enabled = config.get("enabled")
             self._notify = config.get("notify")
             self._onlyonce = config.get("onlyonce")
+            self._invalid = config.get("invalid")
             self._clean = config.get("clean")
-            self._copy_files = config.get("copy_files")
-            self._mode = config.get("mode")
-            self._transfer_type = config.get("transfer_type")
-            self._monitor_dirs = config.get("monitor_dirs") or ""
             self._exclude_keywords = config.get("exclude_keywords") or ""
             self._cron = config.get("cron")
+            self._invalid_cron = config.get("invalid_cron")
+            self._dir_confs = config.get("dir_confs") or None
             self._rmt_mediaext = config.get(
                 "rmt_mediaext") or ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
 
@@ -132,67 +145,61 @@ class CloudAssistant(_PluginBase):
                 self._clean = False
                 self.__update_config()
 
+            if not self._dir_confs:
+                return
+
             # 停止现有任务
             self.stop_service()
 
+            # 定时服务管理器
+            self._scheduler = BackgroundScheduler(timezone=settings.TZ)
+
+            if self._invalid:
+                logger.info("清理无效软连接服务启动，立即运行一次")
+                self._scheduler.add_job(func=self.handle_invalid_links, trigger='date',
+                                        run_date=datetime.datetime.now(
+                                            tz=pytz.timezone(settings.TZ)) + datetime.timedelta(seconds=3)
+                                        )
+                # 关闭无效软连接开关
+                self._invalid = False
+                # 保存配置
+                self.__update_config()
+
             if self._enabled or self._onlyonce:
-                # 定时服务管理器
-                self._scheduler = BackgroundScheduler(timezone=settings.TZ)
+                # 检查cd2配置
+                dir_confs = json.loads(self._dir_confs)
+                if not dir_confs.get("cd2_url") or not dir_confs.get("username") or not dir_confs.get("password"):
+                    if not dir_confs.get("transfer_type"):
+                        logger.error("未正确配置CloudDrive2或者transfer_type，请检查配置")
+                        return
+                    else:
+                        self._transfer_type = dir_confs.get("transfer_type")
+                        logger.warn("未配置CloudDrive2，使用transfer_type转移模式")
+                else:
+                    try:
+                        self._client = CloudDriveClient(dir_confs.get("cd2_url"),
+                                                        dir_confs.get("username"),
+                                                        dir_confs.get("password"))
+                        if self._client:
+                            self._fs = self._client.fs
+                    except Exception as e:
+                        logger.warn(f"未正确配置CloudDrive2，请检查配置：{e}")
+                        return
+
+                self._return_mode = dir_confs.get("return_mode") or "softlink"
 
                 # 读取目录配置
-                monitor_dirs = self._monitor_dirs.split("\n")
+                monitor_dirs = dir_confs.get("monitor_dirs") or []
                 if not monitor_dirs:
                     return
-                for mon_path in monitor_dirs:
-                    # 格式  本地媒体路径:云盘挂载本地路径$软连接回本地路径%True/False#转移方式
-                    # /mnt/meida:/mnt/cloud/115/emby$/mnt/softlink%True#
-                    if not mon_path:
+                for monitor_dir in monitor_dirs:
+                    if not monitor_dir:
                         continue
 
-                    # 自定义转移方式
-                    _transfer_type = self._transfer_type
-                    if mon_path.count("#") == 1:
-                        _transfer_type = mon_path.split("#")[1]
-                        mon_path = mon_path.split("#")[0]
-
-                    # 转移完是否删除历史记录
-                    _history = False
-                    if mon_path.count("%") == 1:
-                        _history = mon_path.split("%")[1]
-                        _history = True if _history == "True" else False
-                        mon_path = mon_path.split("%")[0]
-
-                    # 软连接回本地路径
-                    _soft_path = None
-                    if mon_path.count("$") == 1:
-                        _soft_path = mon_path.split("$")[1]
-                        mon_path = mon_path.split("$")[0]
-
-                    # 存储目的目录
-                    if SystemUtils.is_windows():
-                        if mon_path.count(":") > 1:
-                            paths = [mon_path.split(":")[0] + ":" + mon_path.split(":")[1],
-                                     mon_path.split(":")[2] + ":" + mon_path.split(":")[3]]
-                        else:
-                            paths = [mon_path]
-                    else:
-                        paths = mon_path.split(":")
-
-                    # 目的目录
-                    target_path = None
-                    if len(paths) > 1:
-                        mon_path = paths[0]
-                        target_path = Path(paths[1])
-                        self._dirconf[mon_path] = target_path
-                    else:
-                        self._dirconf[mon_path] = None
-
-                    # 转移方式
-                    self._transferconf[mon_path] = _transfer_type
-                    # 软连接回本地路径
-                    self._softdirconf[mon_path] = _soft_path
-                    # 是否删除历史记录
-                    self._historyconf[mon_path] = _history
+                    mon_path = monitor_dir.get("local_path")
+                    target_path = monitor_dir.get("mount_path")
+                    monitor_mode = monitor_dir.get("monitor_mode") or "compatibility"
+                    self._dirconf[mon_path] = monitor_dir
 
                     # 启用目录监控
                     if self._enabled:
@@ -208,7 +215,7 @@ class CloudAssistant(_PluginBase):
                             pass
 
                         try:
-                            if self._mode == "compatibility":
+                            if str(monitor_mode) == "compatibility":
                                 # 兼容模式，目录同步性能降低且NAS不能休眠，但可以兼容挂载的远程共享目录如SMB
                                 observer = PollingObserver(timeout=10)
                             else:
@@ -245,6 +252,12 @@ class CloudAssistant(_PluginBase):
                     # 保存配置
                     self.__update_config()
 
+                if self._invalid_cron:
+                    self._scheduler.add_job(func=self.handle_invalid_links,
+                                            trigger=CronTrigger.from_crontab(self._invalid_cron),
+                                            id="handle_invalid_links")
+                    logger.info(f"清理无效软连接服务启动，定时任务：{self._invalid_cron}")
+
                 # 启动定时服务
                 if self._scheduler.get_jobs():
                     self._scheduler.print_jobs()
@@ -258,13 +271,12 @@ class CloudAssistant(_PluginBase):
             "enabled": self._enabled,
             "notify": self._notify,
             "onlyonce": self._onlyonce,
-            "copy_files": self._copy_files,
+            "invalid": self._invalid,
             "clean": self._clean,
-            "mode": self._mode,
-            "transfer_type": self._transfer_type,
-            "monitor_dirs": self._monitor_dirs,
+            "dir_confs": self._dir_confs,
             "exclude_keywords": self._exclude_keywords,
             "cron": self._cron,
+            "invalid_cron": self._invalid_cron,
             "rmt_mediaext": self._rmt_mediaext
         })
 
@@ -292,12 +304,19 @@ class CloudAssistant(_PluginBase):
         logger.info("云盘助手全量同步监控目录 ...")
         # 遍历所有监控目录
         for mon_path in self._dirconf.keys():
+            monitor_conf = self._dirconf.get(mon_path)
+            just_media = monitor_conf.get("just_media") or True
             # 遍历目录下所有文件
             for root, dirs, files in os.walk(mon_path):
                 for name in dirs + files:
-                    path = os.path.join(root, name)
-                    if Path(path).is_file():
-                        self.__handle_file(event_path=str(path), mon_path=mon_path)
+                    file_path = os.path.join(root, name)
+                    if Path(str(file_path)).is_file():
+                        if str(just_media) == "true" and Path(str(file_path)).suffix.lower() not in [ext.strip() for ext
+                                                                                                     in
+                                                                                                     self._rmt_mediaext.split(
+                                                                                                         ",")]:
+                            continue
+                        self.__handle_file(event_path=str(file_path), mon_path=mon_path)
         logger.info("云盘助手全量同步监控目录完成！")
 
     def event_handler(self, event, mon_path: str, text: str, event_path: str):
@@ -320,6 +339,8 @@ class CloudAssistant(_PluginBase):
         :param mon_path: 监控目录
         """
         file_path = Path(event_path)
+        if Path(file_path).is_dir():
+            return
         try:
             if not file_path.exists():
                 return
@@ -357,70 +378,119 @@ class CloudAssistant(_PluginBase):
                     file_path = Path(blurray_dir)
                     logger.info(f"{event_path} 是蓝光目录，更正文件路径为：{str(file_path)}")
 
-                # 查询转移目的目录
-                target: Path = self._dirconf.get(mon_path)
-                # 查询转移方式
-                transfer_type = self._transferconf.get(mon_path)
-                # 软连接回本地路径
-                soft_path = self._softdirconf.get(mon_path)
-                # 是否删除历史记录
-                history_type = self._historyconf.get(mon_path)
+                # 查询转移配置
+                monitor_dir = self._dirconf.get(mon_path)
+                mount_path = monitor_dir.get("mount_path")
+                cd2_path = monitor_dir.get("cd2_path")
+                return_path = monitor_dir.get("return_path")
+                delete_local = monitor_dir.get("delete_local") or "false"
+                delete_history = monitor_dir.get("delete_history") or "false"
+                overwrite = monitor_dir.get("overwrite") or "false"
 
-                # 1、转移到云盘挂载路径
-                target_cloud_file = str(file_path).replace(str(mon_path), str(target))
-                retcode = self.__transfer_file(file_path=file_path, target_file=target_cloud_file,
-                                               transfer_type=transfer_type)
+                # 1、转移到云盘挂载路径 上传到cd2
+                # 挂载的路径
+                mount_file = str(file_path).replace(str(mon_path), str(mount_path))
+                logger.info(f"挂载目录文件 {mount_file}")
+
+                # cd2模式
+                if self._client:
+                    logger.info("开始上传文件到CloudDrive2")
+                    # cd2目标路径
+                    cd2_file = str(file_path).replace(str(mon_path), str(cd2_path))
+                    logger.info(f"cd2目录文件 {cd2_file}")
+
+                    # 上传前先检查文件是否存在
+                    cd2_file_exists = False
+                    if str(overwrite) == "false":
+                        if self._fs.exists(Path(cd2_file)):  # 云盘文件存在则跳过
+                            logger.info(f"云盘文件 {cd2_file} 已存在，跳过上传")
+                            cd2_file_exists = True
+
+                    if not cd2_file_exists:
+                        # cd2目录不存在则创建
+                        if not self._fs.exists(Path(cd2_file).parent):
+                            self._fs.mkdir(Path(cd2_file).parent)
+                            logger.info(f"创建cd2目录 {Path(cd2_file).parent}")
+                        # 切换cd2路径
+                        self._fs.chdir(Path(cd2_file).parent)
+
+                        # 上传文件到cd2
+                        logger.info(f"开始上传文件 {file_path} 到 {cd2_file}")
+                        self._fs.upload(file_path, overwrite_or_ignore=True)
+                        logger.info(f"上传文件 {file_path} 到 {cd2_file}完成")
+
+                    # 上传任务列表
+                    # upload_tasklist = self._client.upload_tasklist
+                    # logger.info(f"上传任务列表 {upload_tasklist}")
+                else:
+                    logger.info(f"开始 {self._transfer_type} 方式转移文件")
+                    self.__transfer_file(file_path=file_path,
+                                         target_file=mount_file,
+                                         transfer_type=self._transfer_type)
 
                 # 2、软连接回本地路径
-                if retcode == 0:
-                    if not Path(target_cloud_file).exists():
-                        logger.info(f"目标文件 {target_cloud_file} 不存在，不创建软连接")
-                        return
-                    target_soft_file = str(target_cloud_file).replace(str(target), str(soft_path))
+                if not Path(mount_file).exists():
+                    logger.info(f"挂载目录文件 {mount_file} 不存在，不创建 {self._return_mode}")
+                    return
+
+                target_return_file = str(file_path).replace(str(mon_path), str(return_path))
+                if Path(target_return_file).suffix.lower() in [ext.strip() for ext in
+                                                               self._rmt_mediaext.split(",")]:
                     # 媒体文件软连接
-                    if Path(target_soft_file).suffix.lower() in [ext.strip() for ext in
-                                                                 self._rmt_mediaext.split(",")]:
-                        retcode = self.__transfer_file(file_path=target_cloud_file, target_file=target_soft_file,
+                    if str(self._return_mode) == "softlink":
+                        retcode = self.__transfer_file(file_path=mount_file,
+                                                       target_file=target_return_file,
                                                        transfer_type="softlink")
                     else:
-                        # 非媒体文件可选择复制
-                        if self._copy_files:
-                            # 其他nfo、jpg等复制文件
-                            shutil.copy2(str(file_path), target_soft_file)
-                            logger.info(f"复制其他文件 {str(file_path)} 到 {target_soft_file}")
+                        # 生成strm文件
+                        retcode = self.__create_strm_file(mount_file=mount_file,
+                                                          mount_path=mount_path,
+                                                          file_path=str(file_path),
+                                                          library_dir=monitor_dir.get("library_dir"),
+                                                          cloud_type=monitor_dir.get("cloud_type"),
+                                                          cloud_path=monitor_dir.get("cloud_path"),
+                                                          cloud_url=monitor_dir.get("cloud_url"),
+                                                          cloud_scheme=monitor_dir.get("cloud_scheme"))
 
-                    if retcode == 0:
-                        # 是否删除本地历史
-                        if history_type:
-                            transferhis = self.transferhis.get_by_src(str(file_path))
-                            if transferhis:
-                                self.transferhis.delete(transferhis.id)
-                                logger.info(f"删除本地历史记录：{transferhis.id}")
+                else:
+                    # 其他nfo、jpg等复制文件
+                    shutil.copy2(str(file_path), target_return_file)
+                    logger.info(f"复制其他文件 {str(file_path)} 到 {target_return_file}")
+                    retcode = 0
 
-                        # 3、存操作记录
-                        history = self.get_data('history') or []
-                        history.append({
-                            "file_path": file_path,
-                            "transfer_type": transfer_type,
-                            "target_cloud_file": target_cloud_file,
-                            "target_soft_file": target_soft_file,
-                            "delete_history": history_type,
-                            "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
-                        })
-                        # 保存历史
-                        self.save_data(key="history", value=history)
+                if retcode == 0:
+                    # 是否删除本地历史
+                    if str(delete_history) == "true":
+                        transferhis = self.transferhis.get_by_src(str(file_path))
+                        if transferhis:
+                            self.transferhis.delete(transferhis.id)
+                            logger.info(f"删除本地历史记录：{transferhis.id}")
 
-                # 移动模式删除空目录
-                if transfer_type == "move":
-                    for file_dir in file_path.parents:
-                        if len(str(file_dir)) <= len(str(Path(mon_path))):
-                            # 重要，删除到监控目录为止
-                            break
-                        files = SystemUtils.list_files(file_dir, settings.RMT_MEDIAEXT + settings.DOWNLOAD_TMPEXT)
-                        if not files:
-                            logger.warn(f"移动模式，删除空目录：{file_dir}")
-                            shutil.rmtree(file_dir, ignore_errors=True)
+                    # 3、存操作记录
+                    history = self.get_data('history') or []
+                    history.append({
+                        "file_path": str(file_path),
+                        "target_cloud_file": mount_file,
+                        "target_soft_file": target_return_file,
+                        "delete_local": delete_local,
+                        "delete_history": delete_history,
+                        "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
+                    })
+                    # 保存历史
+                    self.save_data(key="history", value=history)
 
+                    # 移动模式删除空目录
+                    if str(delete_local) == "true":
+                        file_path.unlink()
+                        logger.info(f"删除本地文件：{file_path}")
+                        for file_dir in file_path.parents:
+                            if len(str(file_dir)) <= len(str(Path(mon_path))):
+                                # 重要，删除到监控目录为止
+                                break
+                            files = SystemUtils.list_files(file_dir, settings.RMT_MEDIAEXT + settings.DOWNLOAD_TMPEXT)
+                            if not files:
+                                logger.warn(f"删除空目录：{file_dir}")
+                                shutil.rmtree(file_dir, ignore_errors=True)
         except Exception as e:
             logger.error("目录监控发生错误：%s - %s" % (str(e), traceback.format_exc()))
 
@@ -452,7 +522,7 @@ class CloudAssistant(_PluginBase):
             return retcode
 
     @staticmethod
-    def __transfer_command(file_item: Path, target_file: Path, transfer_type: str) -> int:
+    def __transfer_command(file_item: Path, target_file: Path, transfer_type: str):
         """
         使用系统命令处理单个文件
         :param file_item: 文件路径
@@ -484,19 +554,91 @@ class CloudAssistant(_PluginBase):
         if retcode != 0:
             logger.error(retmsg)
 
-        return retcode
+        return retcode, retmsg
+
+    @staticmethod
+    def __create_strm_file(mount_file: str, mount_path: str, file_path: str, library_dir: str = None,
+                           cloud_type: str = None, cloud_path: str = None, cloud_url: str = None,
+                           cloud_scheme: str = None):
+        """
+        生成strm文件
+        :param library_dir:
+        :param mount_path:
+        :param mount_file:
+        """
+        try:
+            # 获取视频文件名和目录
+            video_name = Path(mount_file).name
+            # 获取视频目录
+            dest_path = Path(mount_file).parent
+
+            if not dest_path.exists():
+                logger.info(f"创建目标文件夹 {dest_path}")
+                os.makedirs(str(dest_path))
+
+            # 构造.strm文件路径
+            strm_path = os.path.join(dest_path, f"{os.path.splitext(video_name)[0]}.strm")
+            # strm已存在跳过处理
+            if Path(strm_path).exists():
+                logger.info(f"strm文件已存在 {strm_path}")
+                return
+
+            logger.info(f"替换前本地路径:::{mount_file}")
+
+            # 云盘模式
+            if cloud_type:
+                # 替换路径中的\为/
+                dest_file = file_path.replace("\\", "/")
+                dest_file = dest_file.replace(cloud_path, "")
+                # 对盘符之后的所有内容进行url转码
+                dest_file = urllib.parse.quote(dest_file, safe='')
+                if str(cloud_type) == "cd2":
+                    # 将路径的开头盘符"/mnt/user/downloads"替换为"http://localhost:19798/static/http/localhost:19798/False/"
+                    dest_file = f"{cloud_scheme}://{cloud_url}/static/{cloud_scheme}/{cloud_url}/False/{dest_file}"
+                    logger.info(f"替换后cd2路径:::{dest_file}")
+                elif str(cloud_type) == "alist":
+                    dest_file = f"{cloud_scheme}://{cloud_url}/d/{dest_file}"
+                    logger.info(f"替换后alist路径:::{dest_file}")
+                else:
+                    logger.error(f"云盘类型 {cloud_type} 错误")
+                    return
+            else:
+                # 本地挂载路径转为emby路径
+                dest_file = mount_file.replace(mount_path, library_dir)
+                logger.info(f"替换后emby容器内路径:::{dest_file}")
+
+            # 写入.strm文件
+            with open(strm_path, 'w') as f:
+                f.write(dest_file)
+
+            logger.info(f"创建strm文件 {strm_path}")
+            return 0
+        except Exception as e:
+            logger.error(f"创建strm文件失败")
+            print(str(e))
+            return 1
 
     @staticmethod
     def is_broken_symlink(path):
-        return os.path.islink(path) and not os.path.exists(path)
+        current_target = os.readlink(path)
+        if not os.path.exists(current_target):
+            return True
+        return False
 
-    def scan_and_remove_broken_symlinks(self, directory):
-        for root, dirs, files in os.walk(directory):
-            for name in dirs + files:
-                path = os.path.join(root, name)
-                if self.is_broken_symlink(path):
-                    print(f"Removing broken symlink: {path}")
-                    os.remove(path)
+    def handle_invalid_links(self):
+        """
+        立即运行一次，清理无效软连接
+        """
+        # 遍历所有监控目录
+        for mon_path in self._dirconf.keys():
+            # 遍历目录下所有文件
+            for root, dirs, files in os.walk(mon_path):
+                for name in dirs + files:
+                    file_path = os.path.join(root, name)
+                    if Path(str(file_path)).is_file() and self.is_broken_symlink(file_path):
+                        print(f"删除无效软连接: {file_path}")
+                        os.remove(file_path)
+        logger.info("云盘助手清理无效软连接完成！")
 
     @staticmethod
     def update_symlink(target_from, target_to, directory):
@@ -620,7 +762,7 @@ class CloudAssistant(_PluginBase):
                                         'component': 'VSwitch',
                                         'props': {
                                             'model': 'onlyonce',
-                                            'label': '立即运行一次',
+                                            'label': '立即同步一次',
                                         }
                                     }
                                 ]
@@ -656,8 +798,24 @@ class CloudAssistant(_PluginBase):
                                     {
                                         'component': 'VSwitch',
                                         'props': {
-                                            'model': 'copy_files',
-                                            'label': '复制非媒体文件',
+                                            'model': 'invalid',
+                                            'label': '立即清理无效软连接',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                "component": "VCol",
+                                "props": {
+                                    "cols": 12,
+                                    "md": 4
+                                },
+                                "content": [
+                                    {
+                                        "component": "VSwitch",
+                                        "props": {
+                                            "model": "dialog_closed",
+                                            "label": "监控配置径"
                                         }
                                     }
                                 ]
@@ -671,50 +829,7 @@ class CloudAssistant(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VSelect',
-                                        'props': {
-                                            'model': 'mode',
-                                            'label': '监控模式',
-                                            'items': [
-                                                {'title': '兼容模式', 'value': 'compatibility'},
-                                                {'title': '性能模式', 'value': 'fast'}
-                                            ]
-                                        }
-                                    }
-                                ]
-                            },
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VSelect',
-                                        'props': {
-                                            'model': 'transfer_type',
-                                            'label': '整理方式',
-                                            'items': [
-                                                {'title': '移动', 'value': 'move'},
-                                                {'title': '复制', 'value': 'copy'},
-                                                {'title': '软链接', 'value': 'softlink'},
-                                                {'title': 'Rclone复制', 'value': 'rclone_copy'},
-                                                {'title': 'Rclone移动', 'value': 'rclone_move'}
-                                            ]
-                                        }
-                                    }
-                                ]
-                            },
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
+                                    'md': 6
                                 },
                                 'content': [
                                     {
@@ -727,28 +842,23 @@ class CloudAssistant(_PluginBase):
                                     }
                                 ]
                             },
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
                             {
                                 'component': 'VCol',
                                 'props': {
-                                    'cols': 12
+                                    'cols': 12,
+                                    'md': 6
                                 },
                                 'content': [
                                     {
-                                        'component': 'VTextarea',
+                                        'component': 'VTextField',
                                         'props': {
-                                            'model': 'monitor_dirs',
-                                            'label': '监控目录',
-                                            'rows': 5,
-                                            'placeholder': '本地媒体路径:云盘挂载本地路径$软连接回本地路径%是否删除转移历史记录True/False#转移方式'
+                                            'model': 'invalid_cron',
+                                            'label': '定时清理无效软连接周期',
+                                            'placeholder': '5位cron表达式，留空关闭'
                                         }
                                     }
                                 ]
-                            }
+                            },
                         ]
                     },
                     {
@@ -797,6 +907,11 @@ class CloudAssistant(_PluginBase):
                     },
                     {
                         'component': 'VRow',
+                        'props': {
+                            'style': {
+                                'margin-top': '12px'
+                            },
+                        },
                         'content': [
                             {
                                 'component': 'VCol',
@@ -807,10 +922,102 @@ class CloudAssistant(_PluginBase):
                                     {
                                         'component': 'VAlert',
                                         'props': {
-                                            'type': 'info',
-                                            'variant': 'tonal',
-                                            'text': '如未开启转移，则不会从本地媒体路径转移到云盘挂载本地路径，仅会进行软连接操作。'
+                                            'type': 'success',
+                                            'variant': 'tonal'
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'span',
+                                                'text': '配置教程请参考：'
+                                            },
+                                            {
+                                                'component': 'a',
+                                                'props': {
+                                                    'href': 'https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/docs/CloudAssistant.md',
+                                                    'target': '_blank'
+                                                },
+                                                'text': 'https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/docs/CloudAssistant.md'
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "component": "VDialog",
+                        "props": {
+                            "model": "dialog_closed",
+                            "max-width": "65rem",
+                            "overlay-class": "v-dialog--scrollable v-overlay--scroll-blocked",
+                            "content-class": "v-card v-card--density-default v-card--variant-elevated rounded-t"
+                        },
+                        "content": [
+                            {
+                                "component": "VCard",
+                                "props": {
+                                    "title": "监控配置径"
+                                },
+                                "content": [
+                                    {
+                                        "component": "VDialogCloseBtn",
+                                        "props": {
+                                            "model": "dialog_closed"
                                         }
+                                    },
+                                    {
+                                        "component": "VCardText",
+                                        "props": {},
+                                        "content": [
+                                            {
+                                                'component': 'VRow',
+                                                'content': [
+                                                    {
+                                                        'component': 'VCol',
+                                                        'props': {
+                                                            'cols': 12,
+                                                        },
+                                                        'content': [
+                                                            {
+                                                                'component': 'VAceEditor',
+                                                                'props': {
+                                                                    'modelvalue': 'dir_confs',
+                                                                    'lang': 'json',
+                                                                    'theme': 'monokai',
+                                                                    'style': 'height: 30rem',
+                                                                }
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                'component': 'VRow',
+                                                'content': [
+                                                    {
+                                                        'component': 'VCol',
+                                                        'props': {
+                                                            'cols': 12,
+                                                        },
+                                                        'content': [
+                                                            {
+                                                                'component': 'VAlert',
+                                                                'props': {
+                                                                    'type': 'info',
+                                                                    'variant': 'tonal'
+                                                                },
+                                                                'content': [
+                                                                    {
+                                                                        'component': 'span',
+                                                                        'text': '注意：只有正确配置时，该助手才能正常工作。'
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
                                     }
                                 ]
                             }
@@ -822,13 +1029,12 @@ class CloudAssistant(_PluginBase):
             "enabled": False,
             "notify": False,
             "onlyonce": False,
-            "copy_files": True,
+            "invalid": False,
             "clean": False,
-            "mode": "fast",
-            "transfer_type": "link",
-            "monitor_dirs": "",
             "exclude_keywords": "",
             "cron": "",
+            "invalid_cron": "",
+            "dir_confs": json.dumps(CloudAssistant.example, indent=4, ensure_ascii=False),
             "rmt_mediaext": ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
         }
 
@@ -872,15 +1078,15 @@ class CloudAssistant(_PluginBase):
                     },
                     {
                         'component': 'td',
-                        'text': history.get("transfer_type")
-                    },
-                    {
-                        'component': 'td',
                         'text': history.get("target_cloud_file")
                     },
                     {
                         'component': 'td',
                         'text': history.get("target_soft_file")
+                    },
+                    {
+                        'component': 'td',
+                        'text': history.get("delete_local")
                     },
                     {
                         'component': 'td',
@@ -929,14 +1135,7 @@ class CloudAssistant(_PluginBase):
                                                 'props': {
                                                     'class': 'text-start ps-4'
                                                 },
-                                                'text': '转移方式'
-                                            },
-                                            {
-                                                'component': 'th',
-                                                'props': {
-                                                    'class': 'text-start ps-4'
-                                                },
-                                                'text': '云盘文件'
+                                                'text': '云盘挂载文件'
                                             },
                                             {
                                                 'component': 'th',
@@ -944,6 +1143,13 @@ class CloudAssistant(_PluginBase):
                                                     'class': 'text-start ps-4'
                                                 },
                                                 'text': '软连接文件'
+                                            },
+                                            {
+                                                'component': 'th',
+                                                'props': {
+                                                    'class': 'text-start ps-4'
+                                                },
+                                                'text': '是否删除本地文件'
                                             },
                                             {
                                                 'component': 'th',
