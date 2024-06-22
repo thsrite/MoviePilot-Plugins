@@ -21,7 +21,6 @@ cd2方式上传--softlink回本地
             "delete_local": "false",
             "delete_history": "false",
             "just_media": "true",
-            “copy_other_files”: "false",
             "overwrite": "false",
             "upload_cloud": "true"
         }
@@ -49,7 +48,6 @@ cd2方式上传--strm回本地
             "delete_local": "false",
             "delete_history": "false",
             "just_media": "true",
-            “copy_other_files”: "false",
             "overwrite": "false",
             "upload_cloud": "true"
         }
@@ -69,7 +67,6 @@ cd2方式上传--strm回本地
             "delete_local": "false",
             "delete_history": "false",
             "just_media": "true",
-            “copy_other_files”: "false",
             "overwrite": "false",
             "upload_cloud": "true"
         }
@@ -94,7 +91,6 @@ cd2方式上传--strm回本地
             "delete_local": "false",
             "delete_history": "false",
             "just_media": "true",
-            “copy_other_files”: "false",
             "overwrite": "false",
             "upload_cloud": "true"
         }
@@ -115,7 +111,6 @@ cd2方式上传--strm回本地
 - delete_local：是否删除本地文件
 - delete_history：是否删除MoviePilot中转移历史记录
 - just_media：是否只监控媒体文件
-- copy_other_files：软连接时是否复制本地非媒体文件到软连接路径
 - overwrite：是否覆盖已存在云盘文件
 - upload_cloud: 是否上传到云盘,false则直接软连接或者strm回本地
 - library_dir：strm模式下，媒体服务器内源文件路径
