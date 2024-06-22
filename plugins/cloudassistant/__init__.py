@@ -109,7 +109,8 @@ class CloudAssistant(_PluginBase):
                 "delete_local": "false",
                 "delete_history": "false",
                 "just_media": "true",
-                "overwrite": "false"
+                "overwrite": "false",
+                "upload_cloud": "true"
             }
         ]
     }
@@ -386,47 +387,49 @@ class CloudAssistant(_PluginBase):
                 delete_local = monitor_dir.get("delete_local") or "false"
                 delete_history = monitor_dir.get("delete_history") or "false"
                 overwrite = monitor_dir.get("overwrite") or "false"
+                upload_cloud = monitor_dir.get("upload_cloud") or "true"
 
                 # 1、转移到云盘挂载路径 上传到cd2
                 # 挂载的路径
                 mount_file = str(file_path).replace(str(mon_path), str(mount_path))
                 logger.info(f"挂载目录文件 {mount_file}")
 
-                # cd2模式
-                if self._client:
-                    logger.info("开始上传文件到CloudDrive2")
-                    # cd2目标路径
-                    cd2_file = str(file_path).replace(str(mon_path), str(cd2_path))
-                    logger.info(f"cd2目录文件 {cd2_file}")
+                if str(upload_cloud) == "true":
+                    # cd2模式
+                    if self._client:
+                        logger.info("开始上传文件到CloudDrive2")
+                        # cd2目标路径
+                        cd2_file = str(file_path).replace(str(mon_path), str(cd2_path))
+                        logger.info(f"cd2目录文件 {cd2_file}")
 
-                    # 上传前先检查文件是否存在
-                    cd2_file_exists = False
-                    if str(overwrite) == "false":
-                        if self._fs.exists(Path(cd2_file)):  # 云盘文件存在则跳过
-                            logger.info(f"云盘文件 {cd2_file} 已存在，跳过上传")
-                            cd2_file_exists = True
+                        # 上传前先检查文件是否存在
+                        cd2_file_exists = False
+                        if str(overwrite) == "false":
+                            if self._fs.exists(Path(cd2_file)):  # 云盘文件存在则跳过
+                                logger.info(f"云盘文件 {cd2_file} 已存在，跳过上传")
+                                cd2_file_exists = True
 
-                    if not cd2_file_exists:
-                        # cd2目录不存在则创建
-                        if not self._fs.exists(Path(cd2_file).parent):
-                            self._fs.mkdir(Path(cd2_file).parent)
-                            logger.info(f"创建cd2目录 {Path(cd2_file).parent}")
-                        # 切换cd2路径
-                        self._fs.chdir(Path(cd2_file).parent)
+                        if not cd2_file_exists:
+                            # cd2目录不存在则创建
+                            if not self._fs.exists(Path(cd2_file).parent):
+                                self._fs.mkdir(Path(cd2_file).parent)
+                                logger.info(f"创建cd2目录 {Path(cd2_file).parent}")
+                            # 切换cd2路径
+                            self._fs.chdir(Path(cd2_file).parent)
 
-                        # 上传文件到cd2
-                        logger.info(f"开始上传文件 {file_path} 到 {cd2_file}")
-                        self._fs.upload(file_path, overwrite_or_ignore=True)
-                        logger.info(f"上传文件 {file_path} 到 {cd2_file}完成")
+                            # 上传文件到cd2
+                            logger.info(f"开始上传文件 {file_path} 到 {cd2_file}")
+                            self._fs.upload(file_path, overwrite_or_ignore=True)
+                            logger.info(f"上传文件 {file_path} 到 {cd2_file}完成")
 
-                    # 上传任务列表
-                    # upload_tasklist = self._client.upload_tasklist
-                    # logger.info(f"上传任务列表 {upload_tasklist}")
-                else:
-                    logger.info(f"开始 {self._transfer_type} 方式转移文件")
-                    self.__transfer_file(file_path=file_path,
-                                         target_file=mount_file,
-                                         transfer_type=self._transfer_type)
+                        # 上传任务列表
+                        # upload_tasklist = self._client.upload_tasklist
+                        # logger.info(f"上传任务列表 {upload_tasklist}")
+                    else:
+                        logger.info(f"开始 {self._transfer_type} 方式转移文件")
+                        self.__transfer_file(file_path=file_path,
+                                             target_file=mount_file,
+                                             transfer_type=self._transfer_type)
 
                 # 2、软连接回本地路径
                 if not Path(mount_file).exists():
