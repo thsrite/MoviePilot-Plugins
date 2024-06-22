@@ -82,7 +82,6 @@ class CloudAssistant(_PluginBase):
     _copy_files = False
     _cron = None
     _clean = False
-    _transfer = False
     # 模式 compatibility/fast
     _mode = "fast"
     # 转移方式
@@ -119,7 +118,6 @@ class CloudAssistant(_PluginBase):
             self._onlyonce = config.get("onlyonce")
             self._clean = config.get("clean")
             self._copy_files = config.get("copy_files")
-            self._transfer = config.get("transfer")
             self._mode = config.get("mode")
             self._transfer_type = config.get("transfer_type")
             self._monitor_dirs = config.get("monitor_dirs") or ""
@@ -147,7 +145,7 @@ class CloudAssistant(_PluginBase):
                     return
                 for mon_path in monitor_dirs:
                     # 格式  本地媒体路径:云盘挂载本地路径$软连接回本地路径%True/False#转移方式
-                    # /mnt/meida:/mnt/cloud/115/emby$/mnt/softlink%True
+                    # /mnt/meida:/mnt/cloud/115/emby$/mnt/softlink%True#
                     if not mon_path:
                         continue
 
@@ -157,18 +155,18 @@ class CloudAssistant(_PluginBase):
                         _transfer_type = mon_path.split("#")[1]
                         mon_path = mon_path.split("#")[0]
 
-                    # 软连接回本地路径
-                    _soft_path = None
-                    if mon_path.count("$") == 1:
-                        _soft_path = mon_path.split("$")[1]
-                        mon_path = mon_path.split("$")[0]
-
                     # 转移完是否删除历史记录
                     _history = False
                     if mon_path.count("%") == 1:
                         _history = mon_path.split("%")[1]
                         _history = True if _history == "True" else False
                         mon_path = mon_path.split("%")[0]
+
+                    # 软连接回本地路径
+                    _soft_path = None
+                    if mon_path.count("$") == 1:
+                        _soft_path = mon_path.split("$")[1]
+                        mon_path = mon_path.split("$")[0]
 
                     # 存储目的目录
                     if SystemUtils.is_windows():
@@ -263,7 +261,6 @@ class CloudAssistant(_PluginBase):
             "copy_files": self._copy_files,
             "clean": self._clean,
             "mode": self._mode,
-            "transfer": self._transfer,
             "transfer_type": self._transfer_type,
             "monitor_dirs": self._monitor_dirs,
             "exclude_keywords": self._exclude_keywords,
@@ -371,13 +368,14 @@ class CloudAssistant(_PluginBase):
 
                 # 1、转移到云盘挂载路径
                 target_cloud_file = str(file_path).replace(str(mon_path), str(target))
-                retcode = 1
-                if self._transfer:
-                    retcode = self.__transfer_file(file_path=file_path, target_file=target_cloud_file,
-                                                   transfer_type=transfer_type)
+                retcode = self.__transfer_file(file_path=file_path, target_file=target_cloud_file,
+                                               transfer_type=transfer_type)
 
                 # 2、软连接回本地路径
-                if not self._transfer or retcode == 0:
+                if retcode == 0:
+                    if not Path(target_cloud_file).exists():
+                        logger.info(f"目标文件 {target_cloud_file} 不存在，不创建软连接")
+                        return
                     target_soft_file = str(target_cloud_file).replace(str(target), str(soft_path))
                     # 媒体文件软连接
                     if Path(target_soft_file).suffix.lower() in [ext.strip() for ext in
@@ -430,6 +428,7 @@ class CloudAssistant(_PluginBase):
         """
         转移文件
         """
+        logger.info(f"开始{transfer_type}文件 {str(file_path)} 到 {target_file}")
         # 如果是文件夹
         if Path(target_file).is_dir():
             if not Path(target_file).exists():
@@ -657,22 +656,6 @@ class CloudAssistant(_PluginBase):
                                     {
                                         'component': 'VSwitch',
                                         'props': {
-                                            'model': 'transfer',
-                                            'label': '是否转移',
-                                        }
-                                    }
-                                ]
-                            },
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VSwitch',
-                                        'props': {
                                             'model': 'copy_files',
                                             'label': '复制非媒体文件',
                                         }
@@ -726,12 +709,7 @@ class CloudAssistant(_PluginBase):
                                         }
                                     }
                                 ]
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
+                            },
                             {
                                 'component': 'VCol',
                                 'props': {
@@ -846,7 +824,6 @@ class CloudAssistant(_PluginBase):
             "onlyonce": False,
             "copy_files": True,
             "clean": False,
-            "transfer": False,
             "mode": "fast",
             "transfer_type": "link",
             "monitor_dirs": "",
