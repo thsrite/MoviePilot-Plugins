@@ -43,3 +43,4 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - Sql执行器 v1.2
 - 命令执行器 v1.2
 - 云盘助手 v1.4
+- CloudDrive2助手 v1.0

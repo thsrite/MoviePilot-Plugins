@@ -531,5 +531,17 @@
           "v1.1": "支持cd2上传、支持定时清理无效软连接、支持strm生成方式",
           "v1.0": "定时移动到云盘，软连接回本地（清理无效软连接暂未开发）"
         }
+      },
+      "Cd2Assistant": {
+        "name": "CloudDrive2助手",
+        "description": "监控上传任务，检测是否有异常，发送通知。",
+        "labels": "云盘",
+        "version": "1.0",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png",
+        "author": "thsrite",
+        "level": 2,
+        "history": {
+          "v1.0": "监控上传任务，检测是否有异常，发送通知"
+        }
       }
 }
