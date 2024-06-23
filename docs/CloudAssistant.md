@@ -56,7 +56,7 @@ cd2方式上传--strm回本地
 
 直接转移--softlink回本地
 {
-    "tranfer_type": "copy/move/rclone_move/rclone_copy",
+    "transfer_type": "copy/move/rclone_move/rclone_copy",
     "return_mode": "softlink",
     "monitor_dirs": [
         {
@@ -75,7 +75,7 @@ cd2方式上传--strm回本地
 
 直接转移--strm回本地
 {
-    "tranfer_type": "copy/move/rclone_move/rclone_copy",
+    "transfer_type": "copy/move/rclone_move/rclone_copy",
     "return_mode": "strm",
     "monitor_dirs": [
         {
