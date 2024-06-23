@@ -63,12 +63,21 @@ class Cd2Assistant(_PluginBase):
         self.stop_service()
 
         if self._enabled or self._onlyonce:
+            if not self._cd2_url or not self._cd2_username or not self._cd2_password:
+                logger.error("CloudDrive2助手配置错误，请检查配置")
+                return
+
+            self._client = CloudDriveClient(self._cd2_url, self._cd2_username, self._cd2_password)
+            if not self._client:
+                logger.error("CloudDrive2助手连接失败，请检查配置")
+                return
+
             # 周期运行
             self._scheduler = BackgroundScheduler(timezone=settings.TZ)
 
             if self._cron:
                 try:
-                    self._scheduler.add_job(func=self.__check,
+                    self._scheduler.add_job(func=self.check,
                                             trigger=CronTrigger.from_crontab(self._cron),
                                             name="CloudDrive2助手定时任务")
                 except Exception as err:
@@ -79,9 +88,9 @@ class Cd2Assistant(_PluginBase):
             # 立即运行一次
             if self._onlyonce:
                 logger.info(f"CloudDrive2助手定时任务，立即运行一次")
-                self._scheduler.add_job(self.__check, 'date',
+                self._scheduler.add_job(self.check, 'date',
                                         run_date=datetime.now(
-                                            tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
+                                            tz=pytz.timezone(settings.TZ)) + timedelta(seconds=5),
                                         name="CloudDrive2助手定时任务")
                 # 关闭一次性开关
                 self._onlyonce = False
@@ -107,26 +116,18 @@ class Cd2Assistant(_PluginBase):
             "cd2_password": self._cd2_password,
         })
 
-    def __check(self):
+    def check(self):
         """
         检查上传任务
         """
-        if not self._cd2_url or not self._cd2_username or not self._cd2_password:
-            logger.error("CloudDrive2助手配置错误，请检查配置")
-            return
-
-        _client = CloudDriveClient(self._cd2_url, self._cd2_username, self._cd2_password)
-        if not _client:
-            logger.error("CloudDrive2助手连接失败，请检查配置")
-            return
-
+        logger.info("开始检查上传任务")
         # 获取上传任务列表
-        tasks = _client.upload_tasklist.list(page=1, page_size=10, filter="")
-        if not tasks:
+        upload_tasklist = self._client.upload_tasklist.list(page=0, page_size=10, filter="")
+        if not upload_tasklist:
             logger.info("没有发现上传任务")
             return
 
-        for task in tasks:
+        for task in upload_tasklist:
             if task.get("status") == "FatalError" and self._keyword and re.search(self._keyword,
                                                                                   task.get("errorMessage")):
                 logger.info(f"发现异常上传任务：{task.get('errorMessage')}")
@@ -367,7 +368,7 @@ class Cd2Assistant(_PluginBase):
             "cd2_url": "",
             "cd2_username": "",
             "cd2_password": "",
-            "msgtype": "manual"
+            "msgtype": "Manual"
         }
 
     def get_page(self) -> List[dict]:
