@@ -523,7 +523,7 @@
         "version": "1.2",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png",
         "author": "thsrite",
-        "level": 1,
+        "level": 3,
         "history": {
           "v1.2": "移除cd2上传",
           "v1.1": "支持cd2上传、支持定时清理无效软连接、支持strm生成方式",
