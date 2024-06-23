@@ -55,6 +55,7 @@ class Cd2Assistant(_PluginBase):
             self._msgtype = config.get("msgtype")
             self._onlyonce = config.get("onlyonce")
             self._cron = config.get("cron")
+            self._keyword = config.get("keyword")
             self._cd2_url = config.get("cd2_url")
             self._cd2_username = config.get("cd2_username")
             self._cd2_password = config.get("cd2_password")
@@ -90,7 +91,7 @@ class Cd2Assistant(_PluginBase):
                 logger.info(f"CloudDrive2助手定时任务，立即运行一次")
                 self._scheduler.add_job(self.check, 'date',
                                         run_date=datetime.now(
-                                            tz=pytz.timezone(settings.TZ)) + timedelta(seconds=5),
+                                            tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
                                         name="CloudDrive2助手定时任务")
                 # 关闭一次性开关
                 self._onlyonce = False
@@ -120,7 +121,7 @@ class Cd2Assistant(_PluginBase):
         """
         检查上传任务
         """
-        logger.info("开始检查上传任务")
+        logger.info("开始检查CloudDrive2上传任务")
         # 获取上传任务列表
         upload_tasklist = self._client.upload_tasklist.list(page=0, page_size=10, filter="")
         if not upload_tasklist:
@@ -134,6 +135,7 @@ class Cd2Assistant(_PluginBase):
                 # 发送通知
                 if self._notify:
                     self.__send_notify(task)
+                    break
 
     def __send_notify(self, task):
         """
