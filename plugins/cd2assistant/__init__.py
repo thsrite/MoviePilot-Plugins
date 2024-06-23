@@ -2,7 +2,7 @@ import re
 from datetime import datetime, timedelta
 
 import pytz
-from clouddrive import CloudDriveClient
+from clouddrive import CloudDriveClient, Client
 
 from app.core.config import settings
 from app.plugins import _PluginBase
@@ -135,6 +135,19 @@ class Cd2Assistant(_PluginBase):
                 if self._notify:
                     self.__send_notify(task)
                     break
+
+    def restart_cd2(self):
+        """
+        重启CloudDrive2
+        """
+        client = Client(self._cd2_url, self._cd2_username, self._cd2_password)
+        if not client:
+            logger.error("CloudDrive2助手连接失败，请检查配置")
+            return
+
+        logger.info("开始重启CloudDrive2")
+        client.RestartService(async_=True)
+        logger.info("CloudDrive2重启成功")
 
     def __send_notify(self, task):
         """
