@@ -13,7 +13,7 @@ from typing import List, Tuple, Dict, Any, Optional
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from clouddrive.proto import CloudDrive_pb2
+# from clouddrive.proto import CloudDrive_pb2
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
@@ -420,7 +420,7 @@ class CloudAssistant(_PluginBase):
 
                             # 上传文件到cd2
                             logger.info(f"开始上传文件 {file_path} 到 {cd2_file}")
-                            self._client.MoveFile(CloudDrive_pb2.MoveFileRequest(str(file_path), Path(cd2_file).parent), async_=True)
+                            # self._client.MoveFile(CloudDrive_pb2.MoveFileRequest(str(file_path), Path(cd2_file).parent), async_=True)
                             logger.info(f"上传文件 {file_path} 到 {cd2_file}完成")
 
                         # 上传任务列表
