@@ -141,13 +141,12 @@ class Cd2Assistant(_PluginBase):
         """
         发送通知
         """
-        if self._enabled and self._notify:
-            mtype = NotificationType.Manual
-            if self._msgtype:
-                mtype = NotificationType.__getitem__(str(self._msgtype)) or NotificationType.Manual
-            self.post_message(title="CloudDrive2助手通知",
-                              mtype=mtype,
-                              text=task.get("errorMessage"))
+        mtype = NotificationType.Manual
+        if self._msgtype:
+            mtype = NotificationType.__getitem__(str(self._msgtype)) or NotificationType.Manual
+        self.post_message(title="CloudDrive2助手通知",
+                          mtype=mtype,
+                          text=task.get("errorMessage"))
 
     def get_state(self) -> bool:
         return self._enabled
