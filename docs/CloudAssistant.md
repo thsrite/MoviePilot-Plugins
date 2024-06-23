@@ -5,58 +5,10 @@
 提供四种方式，具体看示例
 
 ```
-cd2方式上传--softlink回本地
-{
-    "cd2_url": "cd2地址：http://localhost:19798",
-    "username": "用户名",
-    "password": "密码",
-    "return_mode": "softlink",
-    "monitor_dirs": [
-        {
-            "monitor_mode": "监控模式 compatibility/fast",
-            "local_path": "/mnt/link/movies",
-            "mount_path": "/mnt/cloud/115/media/movies",
-            "cd2_path": "/115/media/movies",
-            "return_path": "/mnt/softlink/movies",
-            "delete_local": "false",
-            "delete_history": "false",
-            "just_media": "true",
-            "overwrite": "false",
-            "upload_cloud": "true"
-        }
-    ]
-}
-
-cd2方式上传--strm回本地
-{
-    "cd2_url": "cd2地址：http://localhost:19798",
-    "username": "用户名",
-    "password": "密码",
-    "return_mode": "strm",
-    "monitor_dirs": [
-        {
-            "monitor_mode": "监控模式 compatibility/fast",
-            "local_path": "/mnt/link/movies",
-            "mount_path": "/mnt/cloud/115/media/movies",
-            "cd2_path": "/115/media/movies",
-            "return_path": "/mnt/strm/movies",
-            "library_dir": "/mnt/movies",
-            "cloud_type": "alist/cd2",
-            "cloud_path": "/CloudNas",
-            "cloud_url": "http://localhost:19798",
-            "cloud_scheme": "http/https",
-            "delete_local": "false",
-            "delete_history": "false",
-            "just_media": "true",
-            "overwrite": "false",
-            "upload_cloud": "true"
-        }
-    ]
-}
 
 直接转移--softlink回本地
 {
-    "transfer_type": "copy/move/rclone_move/rclone_copy",
+    "transfer_type": "copy/move",
     "return_mode": "softlink",
     "monitor_dirs": [
         {
@@ -75,7 +27,7 @@ cd2方式上传--strm回本地
 
 直接转移--strm回本地
 {
-    "transfer_type": "copy/move/rclone_move/rclone_copy",
+    "transfer_type": "copy/move",
     "return_mode": "strm",
     "monitor_dirs": [
         {
@@ -96,13 +48,65 @@ cd2方式上传--strm回本地
         }
     ]
 }
+
+
+cd2方式上传--softlink回本地（暂时移除）
+{
+    "cd2_url": "cd2地址：http://localhost:19798",
+    "username": "用户名",
+    "password": "密码",
+    "return_mode": "softlink",
+    "monitor_dirs": [
+        {
+            "monitor_mode": "监控模式 compatibility/fast",
+            "local_path": "/mnt/link/movies",
+            "mount_path": "/mnt/cloud/115/media/movies",
+            "cd2_path": "/115/media/movies",
+            "return_path": "/mnt/softlink/movies",
+            "delete_local": "false",
+            "delete_history": "false",
+            "just_media": "true",
+            "overwrite": "false",
+            "upload_cloud": "true"
+        }
+    ]
+}
+
+cd2方式上传--strm回本地（暂时移除）
+{
+    "cd2_url": "cd2地址：http://localhost:19798",
+    "username": "用户名",
+    "password": "密码",
+    "return_mode": "strm",
+    "monitor_dirs": [
+        {
+            "monitor_mode": "监控模式 compatibility/fast",
+            "local_path": "/mnt/link/movies",
+            "mount_path": "/mnt/cloud/115/media/movies",
+            "cd2_path": "/115/media/movies",
+            "return_path": "/mnt/strm/movies",
+            "library_dir": "/mnt/movies",
+            "cloud_type": "alist/cd2",
+            "cloud_path": "/CloudNas",
+            "cloud_url": "http://localhost:19798",
+            "cloud_scheme": "http/https",
+            "delete_local": "false",
+            "delete_history": "false",
+            "just_media": "true",
+            "overwrite": "false",
+            "upload_cloud": "true"
+        }
+    ]
+}
+
+
 ```
 
 - return_mode: 云盘文件回本地模式：softlink/strm
 - cd2_url：cd2地址
 - username：cd2用户名
 - password：cd2密码
-- tranfer_type：转移类型，可选值：copy/move/rclone_move/rclone_copy
+- tranfer_type：转移类型，可选值：copy/move
 - local_path: MoviePilot本地上传路径
 - mount_path：MoviePilot中云盘挂载路径
 - cd2_path：cd2中云盘挂载路径
