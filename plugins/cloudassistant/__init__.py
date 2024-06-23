@@ -3,7 +3,6 @@ import json
 import os
 import re
 import shutil
-import subprocess
 import threading
 import time
 import traceback
@@ -14,6 +13,7 @@ from typing import List, Tuple, Dict, Any, Optional
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from clouddrive.proto import CloudDrive_pb2
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
@@ -29,8 +29,7 @@ from app.log import logger
 from app.plugins import _PluginBase
 from app.schemas.types import EventType, SystemConfigKey
 from app.utils.system import SystemUtils
-
-# from clouddrive import CloudDriveClient
+from clouddrive import CloudDriveClient
 
 lock = threading.Lock()
 
@@ -62,7 +61,7 @@ class CloudAssistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -97,13 +96,16 @@ class CloudAssistant(_PluginBase):
     _event = threading.Event()
 
     example = {
-        "transfer_type": "copy/move",
+        "cd2_url": "cd2地址：http://localhost:19798",
+        "username": "用户名",
+        "password": "密码",
         "return_mode": "softlink",
         "monitor_dirs": [
             {
                 "monitor_mode": "模式 compatibility/fast",
                 "local_path": "/mnt/media/movies",
                 "mount_path": "/mnt/cloud/115/media/movies",
+                "cd2_path": "/115/media/movies",
                 "return_path": "/mnt/softlink/movies",
                 "delete_local": "false",
                 "delete_history": "false",
@@ -113,8 +115,8 @@ class CloudAssistant(_PluginBase):
             }
         ]
     }
-    # _client = None
-    # _fs = None
+    _client = None
+    _fs = None
     _return_mode = None
 
     def init_plugin(self, config: dict = None):
@@ -168,25 +170,24 @@ class CloudAssistant(_PluginBase):
             if self._enabled or self._onlyonce:
                 # 检查cd2配置
                 dir_confs = json.loads(self._dir_confs)
-                # if not dir_confs.get("cd2_url") or not dir_confs.get("username") or not dir_confs.get("password"):
-                #     if not dir_confs.get("transfer_type"):
-                #         logger.error("未正确配置CloudDrive2或者transfer_type，请检查配置")
-                #         return
-                #     else:
-                #         self._transfer_type = dir_confs.get("transfer_type")
-                #         logger.warn("未配置CloudDrive2，使用transfer_type转移模式")
-                # else:
-                #     try:
-                #         self._client = CloudDriveClient(dir_confs.get("cd2_url"),
-                #                                         dir_confs.get("username"),
-                #                                         dir_confs.get("password"))
-                #         if self._client:
-                #             self._fs = self._client.fs
-                #     except Exception as e:
-                #         logger.warn(f"未正确配置CloudDrive2，请检查配置：{e}")
-                #         return
+                if not dir_confs.get("cd2_url") or not dir_confs.get("username") or not dir_confs.get("password"):
+                    if not dir_confs.get("transfer_type"):
+                        logger.error("未正确配置CloudDrive2或者transfer_type，请检查配置")
+                        return
+                    else:
+                        self._transfer_type = dir_confs.get("transfer_type")
+                        logger.warn("未配置CloudDrive2，使用transfer_type转移模式")
+                else:
+                    try:
+                        self._client = CloudDriveClient(dir_confs.get("cd2_url"),
+                                                        dir_confs.get("username"),
+                                                        dir_confs.get("password"))
+                        if self._client:
+                            self._fs = self._client.fs
+                    except Exception as e:
+                        logger.warn(f"未正确配置CloudDrive2，请检查配置：{e}")
+                        return
 
-                self._transfer_type = dir_confs.get("transfer_type")
                 self._return_mode = dir_confs.get("return_mode") or "softlink"
 
                 # 读取目录配置
@@ -396,41 +397,40 @@ class CloudAssistant(_PluginBase):
 
                 if str(upload_cloud) == "true":
                     # cd2模式
-                    # if self._client:
-                    #     logger.info("开始上传文件到CloudDrive2")
-                    #     # cd2目标路径
-                    #     cd2_file = str(file_path).replace(str(mon_path), str(cd2_path))
-                    #     logger.info(f"cd2目录文件 {cd2_file}")
-                    #
-                    #     # 上传前先检查文件是否存在
-                    #     cd2_file_exists = False
-                    #     if str(overwrite) == "false":
-                    #         if self._fs.exists(Path(cd2_file)):  # 云盘文件存在则跳过
-                    #             logger.info(f"云盘文件 {cd2_file} 已存在，跳过上传")
-                    #             cd2_file_exists = True
-                    #
-                    #     if not cd2_file_exists:
-                    #         # cd2目录不存在则创建
-                    #         if not self._fs.exists(Path(cd2_file).parent):
-                    #             self._fs.mkdir(Path(cd2_file).parent)
-                    #             logger.info(f"创建cd2目录 {Path(cd2_file).parent}")
-                    #         # 切换cd2路径
-                    #         self._fs.chdir(Path(cd2_file).parent)
-                    #
-                    #         # 上传文件到cd2
-                    #         logger.info(f"开始上传文件 {file_path} 到 {cd2_file}")
-                    #         self._fs.upload(file_path, overwrite_or_ignore=True)
-                    #         self._fs.move(file_path)
-                    #         logger.info(f"上传文件 {file_path} 到 {cd2_file}完成")
-                    #
-                    #     # 上传任务列表
-                    #     # upload_tasklist = self._client.upload_tasklist
-                    #     # logger.info(f"上传任务列表 {upload_tasklist}")
-                    # else:
-                    logger.info(f"开始 {self._transfer_type} 方式转移文件")
-                    self.__transfer_file(file_path=file_path,
-                                         target_file=mount_file,
-                                         transfer_type=self._transfer_type)
+                    if self._client:
+                        logger.info("开始上传文件到CloudDrive2")
+                        # cd2目标路径
+                        cd2_file = str(file_path).replace(str(mon_path), str(cd2_path))
+                        logger.info(f"cd2目录文件 {cd2_file}")
+
+                        # 上传前先检查文件是否存在
+                        cd2_file_exists = False
+                        if str(overwrite) == "false":
+                            if self._fs.exists(Path(cd2_file)):  # 云盘文件存在则跳过
+                                logger.info(f"云盘文件 {cd2_file} 已存在，跳过上传")
+                                cd2_file_exists = True
+
+                        if not cd2_file_exists:
+                            # cd2目录不存在则创建
+                            if not self._fs.exists(Path(cd2_file).parent):
+                                self._fs.mkdir(Path(cd2_file).parent)
+                                logger.info(f"创建cd2目录 {Path(cd2_file).parent}")
+                            # 切换cd2路径
+                            self._fs.chdir(Path(cd2_file).parent)
+
+                            # 上传文件到cd2
+                            logger.info(f"开始上传文件 {file_path} 到 {cd2_file}")
+                            self._client.MoveFile(CloudDrive_pb2.MoveFileRequest(str(file_path), Path(cd2_file).parent), async_=True)
+                            logger.info(f"上传文件 {file_path} 到 {cd2_file}完成")
+
+                        # 上传任务列表
+                        # upload_tasklist = self._client.upload_tasklist
+                        # logger.info(f"上传任务列表 {upload_tasklist}")
+                    else:
+                        logger.info(f"开始 {self._transfer_type} 方式转移文件")
+                        self.__transfer_file(file_path=file_path,
+                                             target_file=mount_file,
+                                             transfer_type=self._transfer_type)
 
                 # 2、软连接回本地路径
                 if not Path(mount_file).exists():
@@ -458,8 +458,7 @@ class CloudAssistant(_PluginBase):
 
                 else:
                     # 其他nfo、jpg等复制文件
-                    self.copy_with_rsync(str(file_path), target_return_file)
-                    # shutil.copy2(str(file_path), target_return_file)
+                    shutil.copy2(str(file_path), target_return_file)
                     logger.info(f"复制其他文件 {str(file_path)} 到 {target_return_file}")
                     retcode = 0
 
@@ -499,38 +498,11 @@ class CloudAssistant(_PluginBase):
         except Exception as e:
             logger.error("目录监控发生错误：%s - %s" % (str(e), traceback.format_exc()))
 
-    @staticmethod
-    def copy_with_rsync(src, dest):
-        """
-        使用rsync命令复制文件
-        """
-        try:
-            subprocess.check_call(['rsync', '-a', src, dest])
-            print(f"Successfully copied {src} to {dest}")
-            return 0, ""
-        except subprocess.CalledProcessError as e:
-            print(f"Failed to copy {src} to {dest}: {e}")
-            return -1, str(e)
-
-    @staticmethod
-    def move_with_rsync(src, dest):
-        """
-        使用rsync命令移动文件
-        """
-        try:
-            # 使用 rsync 进行文件复制
-            subprocess.check_call(['rsync', '-a', '--remove-source-files', src, dest])
-            print(f"Successfully moved {src} to {dest}")
-            return 0, ""
-        except subprocess.CalledProcessError as e:
-            print(f"Failed to move {src} to {dest}: {e}")
-            return -1, str(e)
-
     def __transfer_file(self, file_path, target_file, transfer_type):
         """
         转移文件
         """
-        logger.info(f"开始 {transfer_type} 文件 {str(file_path)} 到 {target_file}")
+        logger.info(f"开始{transfer_type}文件 {str(file_path)} 到 {target_file}")
         # 如果是文件夹
         if Path(target_file).is_dir():
             if not Path(target_file).exists():
@@ -547,13 +519,14 @@ class CloudAssistant(_PluginBase):
                 logger.info(f"创建目标文件夹 {Path(target_file).parent}")
                 os.makedirs(Path(target_file).parent)
 
-            # 媒体文件转移
+            # 媒体文件软连接
             retcode, retmsg = self.__transfer_command(file_path, Path(target_file), transfer_type)
             logger.info(
                 f"媒体文件{str(file_path)} {transfer_type} 到 {target_file} {retcode} {retmsg}")
             return retcode
 
-    def __transfer_command(self, file_item: Path, target_file: Path, transfer_type: str):
+    @staticmethod
+    def __transfer_command(file_item: Path, target_file: Path, transfer_type: str):
         """
         使用系统命令处理单个文件
         :param file_item: 文件路径
@@ -561,6 +534,7 @@ class CloudAssistant(_PluginBase):
         :param transfer_type: RmtMode转移方式
         """
         with lock:
+
             # 转移
             if transfer_type == 'link':
                 # 硬链接
@@ -571,6 +545,12 @@ class CloudAssistant(_PluginBase):
             elif transfer_type == 'move':
                 # 移动
                 retcode, retmsg = SystemUtils.move(file_item, target_file)
+            elif transfer_type == 'rclone_move':
+                # Rclone 移动
+                retcode, retmsg = SystemUtils.rclone_move(file_item, target_file)
+            elif transfer_type == 'rclone_copy':
+                # Rclone 复制
+                retcode, retmsg = SystemUtils.rclone_copy(file_item, target_file)
             else:
                 # 复制
                 retcode, retmsg = SystemUtils.copy(file_item, target_file)
@@ -839,7 +819,7 @@ class CloudAssistant(_PluginBase):
                                         "component": "VSwitch",
                                         "props": {
                                             "model": "dialog_closed",
-                                            "label": "监控路径配置"
+                                            "label": "监控配置径"
                                         }
                                     }
                                 ]
@@ -980,7 +960,7 @@ class CloudAssistant(_PluginBase):
                             {
                                 "component": "VCard",
                                 "props": {
-                                    "title": "监控路径配置"
+                                    "title": "监控配置径"
                                 },
                                 "content": [
                                     {
