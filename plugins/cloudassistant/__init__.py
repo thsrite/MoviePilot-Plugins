@@ -839,7 +839,7 @@ class CloudAssistant(_PluginBase):
                                         "component": "VSwitch",
                                         "props": {
                                             "model": "dialog_closed",
-                                            "label": "监控配置径"
+                                            "label": "监控路径配置"
                                         }
                                     }
                                 ]
@@ -980,7 +980,7 @@ class CloudAssistant(_PluginBase):
                             {
                                 "component": "VCard",
                                 "props": {
-                                    "title": "监控配置径"
+                                    "title": "监控路径配置"
                                 },
                                 "content": [
                                     {
