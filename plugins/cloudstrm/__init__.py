@@ -15,7 +15,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from app.log import logger
 from app.plugins import _PluginBase
-from app.core.config import settings
+from app.core.config import settings, Settings
 
 
 class CloudStrm(_PluginBase):
@@ -56,7 +56,6 @@ class CloudStrm(_PluginBase):
     _cloudurlconf = {}
     _cloudpathconf = {}
     __cloud_files = []
-    _rmt_mediaext = ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
 
     # 定时器
     _scheduler: Optional[BackgroundScheduler] = None
@@ -79,8 +78,6 @@ class CloudStrm(_PluginBase):
             self._https = config.get("https")
             self._copy_files = config.get("copy_files")
             self._monitor_confs = config.get("monitor_confs")
-            self._rmt_mediaext = config.get(
-                "rmt_mediaext") or ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
 
         # 停止现有任务
         self.stop_service()
@@ -236,8 +233,7 @@ class CloudStrm(_PluginBase):
                             continue
 
                         # 不复制非媒体文件时直接过滤掉非媒体文件
-                        if not self._copy_files and Path(file).suffix not in [ext.strip() for ext in
-                                                                              self._rmt_mediaext.split(",")]:
+                        if not self._copy_files and Path(file).suffix.lower() not in Settings.RMT_MEDIAEXT:
                             continue
 
                         if source_file not in self.__cloud_files:
@@ -284,8 +280,7 @@ class CloudStrm(_PluginBase):
                         continue
 
                     # 不复制非媒体文件时直接过滤掉非媒体文件
-                    if not self._copy_files and Path(file).suffix not in [ext.strip() for ext in
-                                                                          self._rmt_mediaext.split(",")]:
+                    if not self._copy_files and Path(file).suffix.lower() not in Settings.RMT_MEDIAEXT:
                         continue
 
                     logger.info(f"扫描到新文件 {source_file}，正在开始处理")
@@ -348,8 +343,7 @@ class CloudStrm(_PluginBase):
                             os.makedirs(Path(dest_file).parent)
 
                         # 视频文件创建.strm文件
-                        if Path(dest_file).suffix in [ext.strip() for ext in
-                                                      self._rmt_mediaext.split(",")]:
+                        if Path(dest_file).suffix.lower() in Settings.RMT_MEDIAEXT:
                             # 创建.strm文件
                             self.__create_strm_file(scheme="https" if self._https else "http",
                                                     dest_file=dest_file,
@@ -440,7 +434,6 @@ class CloudStrm(_PluginBase):
             "https": self._https,
             "cron": self._cron,
             "monitor_confs": self._monitor_confs,
-            "rmt_mediaext": self._rmt_mediaext
         })
 
     def get_state(self) -> bool:
@@ -651,28 +644,6 @@ class CloudStrm(_PluginBase):
                             {
                                 'component': 'VCol',
                                 'props': {
-                                    'cols': 12
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextarea',
-                                        'props': {
-                                            'model': 'rmt_mediaext',
-                                            'label': '视频格式',
-                                            'rows': 2,
-                                            'placeholder': ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
                                     'cols': 12,
                                 },
                                 'content': [
@@ -766,7 +737,6 @@ class CloudStrm(_PluginBase):
             "copy_files": False,
             "https": False,
             "monitor_confs": "",
-            "rmt_mediaext": ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
         }
 
     def get_page(self) -> List[dict]:
