@@ -3,6 +3,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import threading
 import time
 import traceback
@@ -13,7 +14,6 @@ from typing import List, Tuple, Dict, Any, Optional
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from clouddrive.proto import CloudDrive_pb2
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
@@ -26,10 +26,13 @@ from app.core.event import eventmanager, Event
 from app.db.downloadhistory_oper import DownloadHistoryOper
 from app.db.transferhistory_oper import TransferHistoryOper
 from app.log import logger
+from app.modules.emby import Emby
 from app.plugins import _PluginBase
 from app.schemas.types import EventType, SystemConfigKey
+from app.utils.http import RequestUtils
 from app.utils.system import SystemUtils
-from clouddrive import CloudDriveClient
+
+# from clouddrive import CloudDriveClient
 
 lock = threading.Lock()
 
@@ -61,7 +64,7 @@ class CloudAssistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -84,6 +87,8 @@ class CloudAssistant(_PluginBase):
     _notify = False
     _onlyonce = False
     _invalid = False
+    _only_media = False
+    _refresh = False
     _cron = None
     _invalid_cron = None
     _clean = False
@@ -96,16 +101,13 @@ class CloudAssistant(_PluginBase):
     _event = threading.Event()
 
     example = {
-        "cd2_url": "cd2地址：http://localhost:19798",
-        "username": "用户名",
-        "password": "密码",
+        "transfer_type": "copy/move",
         "return_mode": "softlink",
         "monitor_dirs": [
             {
                 "monitor_mode": "模式 compatibility/fast",
                 "local_path": "/mnt/media/movies",
                 "mount_path": "/mnt/cloud/115/media/movies",
-                "cd2_path": "/115/media/movies",
                 "return_path": "/mnt/softlink/movies",
                 "delete_local": "false",
                 "delete_history": "false",
@@ -115,9 +117,11 @@ class CloudAssistant(_PluginBase):
             }
         ]
     }
-    _client = None
-    _fs = None
+    # _client = None
+    # _fs = None
     _return_mode = None
+    _EMBY_HOST = settings.EMBY_HOST
+    _EMBY_APIKEY = settings.EMBY_API_KEY
 
     def init_plugin(self, config: dict = None):
         self.transferhis = TransferHistoryOper()
@@ -140,6 +144,12 @@ class CloudAssistant(_PluginBase):
             self._dir_confs = config.get("dir_confs") or None
             self._rmt_mediaext = config.get(
                 "rmt_mediaext") or ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
+
+            if self._EMBY_HOST:
+                if not self._EMBY_HOST.endswith("/"):
+                    self._EMBY_HOST += "/"
+                if not self._EMBY_HOST.startswith("http"):
+                    self._EMBY_HOST = "http://" + self._EMBY_HOST
 
             # 清理插件历史
             if self._clean:
@@ -168,26 +178,27 @@ class CloudAssistant(_PluginBase):
                 self.__update_config()
 
             if self._enabled or self._onlyonce:
-                # 检查cd2配置
                 dir_confs = json.loads(self._dir_confs)
-                if not dir_confs.get("cd2_url") or not dir_confs.get("username") or not dir_confs.get("password"):
-                    if not dir_confs.get("transfer_type"):
-                        logger.error("未正确配置CloudDrive2或者transfer_type，请检查配置")
-                        return
-                    else:
-                        self._transfer_type = dir_confs.get("transfer_type")
-                        logger.warn("未配置CloudDrive2，使用transfer_type转移模式")
-                else:
-                    try:
-                        self._client = CloudDriveClient(dir_confs.get("cd2_url"),
-                                                        dir_confs.get("username"),
-                                                        dir_confs.get("password"))
-                        if self._client:
-                            self._fs = self._client.fs
-                    except Exception as e:
-                        logger.warn(f"未正确配置CloudDrive2，请检查配置：{e}")
-                        return
+                # 检查cd2配置
+                # if not dir_confs.get("cd2_url") or not dir_confs.get("username") or not dir_confs.get("password"):
+                #     if not dir_confs.get("transfer_type"):
+                #         logger.error("未正确配置CloudDrive2或者transfer_type，请检查配置")
+                #         return
+                #     else:
+                #         self._transfer_type = dir_confs.get("transfer_type")
+                #         logger.warn("未配置CloudDrive2，使用transfer_type转移模式")
+                # else:
+                #     try:
+                #         self._client = CloudDriveClient(dir_confs.get("cd2_url"),
+                #                                         dir_confs.get("username"),
+                #                                         dir_confs.get("password"))
+                #         if self._client:
+                #             self._fs = self._client.fs
+                #     except Exception as e:
+                #         logger.warn(f"未正确配置CloudDrive2，请检查配置：{e}")
+                #         return
 
+                self._transfer_type = dir_confs.get("transfer_type")
                 self._return_mode = dir_confs.get("return_mode") or "softlink"
 
                 # 读取目录配置
@@ -278,6 +289,8 @@ class CloudAssistant(_PluginBase):
             "dir_confs": self._dir_confs,
             "exclude_keywords": self._exclude_keywords,
             "cron": self._cron,
+            "only_media": self._only_media,
+            "refresh": self._refresh,
             "invalid_cron": self._invalid_cron,
             "rmt_mediaext": self._rmt_mediaext
         })
@@ -383,7 +396,7 @@ class CloudAssistant(_PluginBase):
                 # 查询转移配置
                 monitor_dir = self._dirconf.get(mon_path)
                 mount_path = monitor_dir.get("mount_path")
-                cd2_path = monitor_dir.get("cd2_path")
+                # cd2_path = monitor_dir.get("cd2_path")
                 return_path = monitor_dir.get("return_path")
                 delete_local = monitor_dir.get("delete_local") or "false"
                 delete_history = monitor_dir.get("delete_history") or "false"
@@ -397,40 +410,52 @@ class CloudAssistant(_PluginBase):
 
                 if str(upload_cloud) == "true":
                     # cd2模式
-                    if self._client:
-                        logger.info("开始上传文件到CloudDrive2")
-                        # cd2目标路径
-                        cd2_file = str(file_path).replace(str(mon_path), str(cd2_path))
-                        logger.info(f"cd2目录文件 {cd2_file}")
+                    # if self._client:
+                    #     logger.info("开始上传文件到CloudDrive2")
+                    #     # cd2目标路径
+                    #     cd2_file = str(file_path).replace(str(mon_path), str(cd2_path))
+                    #     logger.info(f"cd2目录文件 {cd2_file}")
+                    #
+                    #     # 上传前先检查文件是否存在
+                    #     cd2_file_exists = False
+                    #     if str(overwrite) == "false":
+                    #         if self._fs.exists(Path(cd2_file)):  # 云盘文件存在则跳过
+                    #             logger.info(f"云盘文件 {cd2_file} 已存在，跳过上传")
+                    #             cd2_file_exists = True
+                    #
+                    #     if not cd2_file_exists:
+                    #         # cd2目录不存在则创建
+                    #         if not self._fs.exists(Path(cd2_file).parent):
+                    #             self._fs.mkdir(Path(cd2_file).parent)
+                    #             logger.info(f"创建cd2目录 {Path(cd2_file).parent}")
+                    #         # 切换cd2路径
+                    #         self._fs.chdir(Path(cd2_file).parent)
+                    #
+                    #         # 上传文件到cd2
+                    #         logger.info(f"开始上传文件 {file_path} 到 {cd2_file}")
+                    #         self._fs.upload(file_path, overwrite_or_ignore=True)
+                    #         self._fs.move(file_path)
+                    #         logger.info(f"上传文件 {file_path} 到 {cd2_file}完成")
+                    #
+                    #     # 上传任务列表
+                    #     # upload_tasklist = self._client.upload_tasklist
+                    #     # logger.info(f"上传任务列表 {upload_tasklist}")
+                    # else:
+                    upload = True
+                    if str(overwrite) == "false":
+                        if Path(mount_file).exists():
+                            logger.info(f"云盘文件 {mount_file} 已存在且未开启覆盖，跳过上传")
+                            upload = False
 
-                        # 上传前先检查文件是否存在
-                        cd2_file_exists = False
-                        if str(overwrite) == "false":
-                            if self._fs.exists(Path(cd2_file)):  # 云盘文件存在则跳过
-                                logger.info(f"云盘文件 {cd2_file} 已存在，跳过上传")
-                                cd2_file_exists = True
-
-                        if not cd2_file_exists:
-                            # cd2目录不存在则创建
-                            if not self._fs.exists(Path(cd2_file).parent):
-                                self._fs.mkdir(Path(cd2_file).parent)
-                                logger.info(f"创建cd2目录 {Path(cd2_file).parent}")
-                            # 切换cd2路径
-                            self._fs.chdir(Path(cd2_file).parent)
-
-                            # 上传文件到cd2
-                            logger.info(f"开始上传文件 {file_path} 到 {cd2_file}")
-                            self._client.MoveFile(CloudDrive_pb2.MoveFileRequest(str(file_path), Path(cd2_file).parent), async_=True)
-                            logger.info(f"上传文件 {file_path} 到 {cd2_file}完成")
-
-                        # 上传任务列表
-                        # upload_tasklist = self._client.upload_tasklist
-                        # logger.info(f"上传任务列表 {upload_tasklist}")
-                    else:
-                        logger.info(f"开始 {self._transfer_type} 方式转移文件")
-                        self.__transfer_file(file_path=file_path,
-                                             target_file=mount_file,
-                                             transfer_type=self._transfer_type)
+                    if upload:
+                        if Path(file_path).suffix.lower() in [ext.strip() for ext in
+                                                              self._rmt_mediaext.split(",")]:
+                            self.__transfer_file(file_path=file_path,
+                                                 target_file=mount_file,
+                                                 transfer_type=self._transfer_type)
+                        else:
+                            # 其他文件复制
+                            SystemUtils.copy(file_path, Path(mount_file))
 
                 # 2、软连接回本地路径
                 if not Path(mount_file).exists():
@@ -458,35 +483,43 @@ class CloudAssistant(_PluginBase):
 
                 else:
                     # 其他nfo、jpg等复制文件
-                    shutil.copy2(str(file_path), target_return_file)
+                    SystemUtils.copy(file_path, Path(target_return_file))
+                    # shutil.copy2(str(file_path), target_return_file)
                     logger.info(f"复制其他文件 {str(file_path)} 到 {target_return_file}")
                     retcode = 0
 
                 if retcode == 0:
+                    transferhis = self.transferhis.get_by_dest(str(file_path))
+                    if transferhis and self._refresh:
+                        self.__refresh_emby(transferhis)
+
                     # 是否删除本地历史
                     if str(delete_history) == "true":
-                        transferhis = self.transferhis.get_by_src(str(file_path))
                         if transferhis:
                             self.transferhis.delete(transferhis.id)
                             logger.info(f"删除本地历史记录：{transferhis.id}")
 
                     # 3、存操作记录
-                    history = self.get_data('history') or []
-                    history.append({
-                        "file_path": str(file_path),
-                        "target_cloud_file": mount_file,
-                        "target_soft_file": target_return_file,
-                        "delete_local": delete_local,
-                        "delete_history": delete_history,
-                        "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
-                    })
-                    # 保存历史
-                    self.save_data(key="history", value=history)
+                    if (self._only_media and Path(file_path).suffix.lower() in [ext.strip() for ext in
+                                                                                self._rmt_mediaext.split(",")]) \
+                        or not self._only_media:
+                        history = self.get_data('history') or []
+                        history.append({
+                            "file_path": str(file_path),
+                            "target_cloud_file": mount_file,
+                            "target_soft_file": target_return_file,
+                            "delete_local": delete_local,
+                            "delete_history": delete_history,
+                            "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
+                        })
+                        # 保存历史
+                        self.save_data(key="history", value=history)
 
                     # 移动模式删除空目录
                     if str(delete_local) == "true":
-                        file_path.unlink()
-                        logger.info(f"删除本地文件：{file_path}")
+                        if file_path.exists():
+                            file_path.unlink()
+                            logger.info(f"删除本地文件：{file_path}")
                         for file_dir in file_path.parents:
                             if len(str(file_dir)) <= len(str(Path(mon_path))):
                                 # 重要，删除到监控目录为止
@@ -502,7 +535,7 @@ class CloudAssistant(_PluginBase):
         """
         转移文件
         """
-        logger.info(f"开始{transfer_type}文件 {str(file_path)} 到 {target_file}")
+        logger.info(f"开始 {transfer_type} 文件 {str(file_path)} 到 {target_file}")
         # 如果是文件夹
         if Path(target_file).is_dir():
             if not Path(target_file).exists():
@@ -519,41 +552,38 @@ class CloudAssistant(_PluginBase):
                 logger.info(f"创建目标文件夹 {Path(target_file).parent}")
                 os.makedirs(Path(target_file).parent)
 
-            # 媒体文件软连接
+            # 媒体文件转移
             retcode, retmsg = self.__transfer_command(file_path, Path(target_file), transfer_type)
             logger.info(
                 f"媒体文件{str(file_path)} {transfer_type} 到 {target_file} {retcode} {retmsg}")
             return retcode
 
-    @staticmethod
-    def __transfer_command(file_item: Path, target_file: Path, transfer_type: str):
+    def __transfer_command(self, file_item: Path, target_file: Path, transfer_type: str):
         """
         使用系统命令处理单个文件
         :param file_item: 文件路径
         :param target_file: 目标文件路径
         :param transfer_type: RmtMode转移方式
         """
-        with lock:
-
-            # 转移
-            if transfer_type == 'link':
-                # 硬链接
-                retcode, retmsg = SystemUtils.link(file_item, target_file)
-            elif transfer_type == 'softlink':
-                # 软链接
-                retcode, retmsg = SystemUtils.softlink(file_item, target_file)
-            elif transfer_type == 'move':
-                # 移动
-                retcode, retmsg = SystemUtils.move(file_item, target_file)
-            elif transfer_type == 'rclone_move':
-                # Rclone 移动
-                retcode, retmsg = SystemUtils.rclone_move(file_item, target_file)
-            elif transfer_type == 'rclone_copy':
-                # Rclone 复制
-                retcode, retmsg = SystemUtils.rclone_copy(file_item, target_file)
+        # 转移
+        if transfer_type == 'link':
+            # 硬链接
+            retcode, retmsg = SystemUtils.link(file_item, target_file)
+        elif transfer_type == 'softlink':
+            # 软链接
+            retcode, retmsg = SystemUtils.softlink(file_item, target_file)
+        elif transfer_type == 'move':
+            # 复制
+            retcode, retmsg = SystemUtils.copy(file_item, target_file)
+            if retcode == 0:
+                file_item.unlink()
             else:
-                # 复制
-                retcode, retmsg = SystemUtils.copy(file_item, target_file)
+                logger.error(f"移动文件失败 {file_item} {target_file} {retcode} {retmsg}")
+            # 移动
+            # retcode, retmsg = SystemUtils.move(file_item, target_file)
+        else:
+            # 复制
+            retcode, retmsg = SystemUtils.copy(file_item, target_file)
 
         if retcode != 0:
             logger.error(retmsg)
@@ -657,6 +687,129 @@ class CloudAssistant(_PluginBase):
                         os.symlink(new_target, path)
                         print(f"Updated symlink: {path} -> {new_target}")
 
+    def __refresh_emby(self, transferinfo):
+        """
+        刷新emby
+        """
+        if transferinfo.type == "电影":
+            movies = Emby().get_movies(title=transferinfo.title, year=transferinfo.year)
+            if not movies:
+                logger.error(f"Emby中没有找到{transferinfo.title} ({transferinfo.year})")
+                return
+            for movie in movies:
+                self.__refresh_emby_library_by_id(item_id=movie.item_id)
+                logger.info(f"已通知刷新Emby电影：{movie.title} ({movie.year}) item_id:{movie.item_id}")
+        else:
+            item_id = self.__get_emby_series_id_by_name(name=transferinfo.title, year=transferinfo.year)
+            if not item_id or item_id is None:
+                logger.error(f"Emby中没有找到{transferinfo.title} ({transferinfo.year})")
+                return
+
+            # 验证tmdbid是否相同
+            item_info = Emby().get_iteminfo(item_id)
+            if item_info:
+                if transferinfo.tmdbid and item_info.tmdbid:
+                    if str(transferinfo.tmdbid) != str(item_info.tmdbid):
+                        logger.error(f"Emby中{transferinfo.title} ({transferinfo.year})的tmdbId与入库记录不一致")
+                        return
+
+            # 查询集的item_id
+            season = int(transferinfo.seasons.replace("S", ""))
+            episode = int(transferinfo.episodes.replace("E", ""))
+            episode_item_id = self.__get_emby_episode_item_id(item_id=item_id, season=season, episode=episode)
+            if not episode_item_id or episode_item_id is None:
+                logger.error(
+                    f"Emby中没有找到{transferinfo.title} ({transferinfo.year}) {transferinfo.seasons}{transferinfo.episodes}")
+                return
+
+            self.__refresh_emby_library_by_id(item_id=episode_item_id)
+            logger.info(
+                f"已通知刷新Emby电视剧：{transferinfo.title} ({transferinfo.year}) {transferinfo.seasons}{transferinfo.episodes} item_id:{episode_item_id}")
+
+    def __get_emby_episode_item_id(self, item_id: str, season: int, episode: int) -> Optional[str]:
+        """
+        根据剧集信息查询Emby中集的item_id
+        """
+        if not self._EMBY_HOST or not self._EMBY_APIKEY:
+            return None
+        req_url = "%semby/Shows/%s/Episodes?Season=%s&IsMissing=false&api_key=%s" % (
+            self._EMBY_HOST, item_id, season, self._EMBY_APIKEY)
+        try:
+            with RequestUtils().get_res(req_url) as res_json:
+                if res_json:
+                    tv_item = res_json.json()
+                    res_items = tv_item.get("Items")
+                    for res_item in res_items:
+                        season_index = res_item.get("ParentIndexNumber")
+                        if not season_index:
+                            continue
+                        if season and season != season_index:
+                            continue
+                        episode_index = res_item.get("IndexNumber")
+                        if not episode_index:
+                            continue
+                        if episode and episode != episode_index:
+                            continue
+                        episode_item_id = res_item.get("Id")
+                        return episode_item_id
+        except Exception as e:
+            logger.error(f"连接Shows/Id/Episodes出错：" + str(e))
+            return None
+        return None
+
+    def __refresh_emby_library_by_id(self, item_id: str) -> bool:
+        """
+        通知Emby刷新一个项目的媒体库
+        """
+        if not self._EMBY_HOST or not self._EMBY_APIKEY:
+            return False
+        req_url = "%semby/Items/%s/Refresh?MetadataRefreshMode=FullRefresh" \
+                  "&ImageRefreshMode=FullRefresh&ReplaceAllMetadata=true&ReplaceAllImages=true&api_key=%s" % (
+                      self._EMBY_HOST, item_id, self._EMBY_APIKEY)
+        try:
+            with RequestUtils().post_res(req_url) as res:
+                if res:
+                    return True
+                else:
+                    logger.info(f"刷新媒体库对象 {item_id} 失败，无法连接Emby！")
+        except Exception as e:
+            logger.error(f"连接Items/Id/Refresh出错：" + str(e))
+            return False
+        return False
+
+    def __get_emby_series_id_by_name(self, name: str, year: str) -> Optional[str]:
+        """
+        根据名称查询Emby中剧集的SeriesId
+        :param name: 标题
+        :param year: 年份
+        :return: None 表示连不通，""表示未找到，找到返回ID
+        """
+        if not self._EMBY_HOST or not self._EMBY_APIKEY:
+            return None
+        req_url = ("%semby/Items?"
+                   "IncludeItemTypes=Series"
+                   "&Fields=ProductionYear"
+                   "&StartIndex=0"
+                   "&Recursive=true"
+                   "&SearchTerm=%s"
+                   "&Limit=10"
+                   "&IncludeSearchTypes=false"
+                   "&api_key=%s") % (
+                      self._EMBY_HOST, name, self._EMBY_APIKEY)
+        try:
+            with RequestUtils().get_res(req_url) as res:
+                if res:
+                    res_items = res.json().get("Items")
+                    if res_items:
+                        for res_item in res_items:
+                            if res_item.get('Name') == name and (
+                                    not year or str(res_item.get('ProductionYear')) == str(year)):
+                                return res_item.get('Id')
+        except Exception as e:
+            logger.error(f"连接Items出错：" + str(e))
+            return None
+        return ""
+
     def get_state(self) -> bool:
         return self._enabled
 
@@ -727,7 +880,7 @@ class CloudAssistant(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -743,7 +896,7 @@ class CloudAssistant(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -759,7 +912,7 @@ class CloudAssistant(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -770,17 +923,12 @@ class CloudAssistant(_PluginBase):
                                         }
                                     }
                                 ]
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
+                            },
                             {
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -792,11 +940,48 @@ class CloudAssistant(_PluginBase):
                                     }
                                 ]
                             },
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
                             {
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'refresh',
+                                            'label': '刷新媒体库（emby）',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'only_media',
+                                            'label': '插件历史仅媒体文件',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -812,14 +997,14 @@ class CloudAssistant(_PluginBase):
                                 "component": "VCol",
                                 "props": {
                                     "cols": 12,
-                                    "md": 4
+                                    "md": 3
                                 },
                                 "content": [
                                     {
                                         "component": "VSwitch",
                                         "props": {
                                             "model": "dialog_closed",
-                                            "label": "监控配置径"
+                                            "label": "监控路径配置"
                                         }
                                     }
                                 ]
@@ -960,7 +1145,7 @@ class CloudAssistant(_PluginBase):
                             {
                                 "component": "VCard",
                                 "props": {
-                                    "title": "监控配置径"
+                                    "title": "监控路径配置"
                                 },
                                 "content": [
                                     {
@@ -1034,6 +1219,8 @@ class CloudAssistant(_PluginBase):
             "notify": False,
             "onlyonce": False,
             "invalid": False,
+            "refresh": False,
+            "only_media": False,
             "clean": False,
             "exclude_keywords": "",
             "cron": "",
