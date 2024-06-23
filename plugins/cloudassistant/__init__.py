@@ -70,7 +70,7 @@ class CloudAssistant(_PluginBase):
     # 加载顺序
     plugin_order = 4
     # 可使用的用户级别
-    auth_level = 2
+    auth_level = 3
 
     # 私有属性
     _scheduler = None
