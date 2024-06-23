@@ -78,7 +78,7 @@ class Cd2Assistant(_PluginBase):
 
             # 立即运行一次
             if self._onlyonce:
-                logger.info(f"__check，立即运行一次")
+                logger.info(f"CloudDrive2助手定时任务，立即运行一次")
                 self._scheduler.add_job(self.__check, 'date',
                                         run_date=datetime.now(
                                             tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
