@@ -44,7 +44,6 @@ class Cd2Assistant(_PluginBase):
     _cd2_url = None
     _cd2_username = None
     _cd2_password = None
-    _client = None
 
     _scheduler: Optional[BackgroundScheduler] = None
 
@@ -64,15 +63,6 @@ class Cd2Assistant(_PluginBase):
         self.stop_service()
 
         if self._enabled or self._onlyonce:
-            if not self._cd2_url or not self._cd2_username or not self._cd2_password:
-                logger.error("CloudDrive2助手配置错误，请检查配置")
-                return
-
-            self._client = CloudDriveClient(self._cd2_url, self._cd2_username, self._cd2_password)
-            if not self._client:
-                logger.error("CloudDrive2助手连接失败，请检查配置")
-                return
-
             # 周期运行
             self._scheduler = BackgroundScheduler(timezone=settings.TZ)
 
@@ -121,9 +111,18 @@ class Cd2Assistant(_PluginBase):
         """
         检查上传任务
         """
+        if not self._cd2_url or not self._cd2_username or not self._cd2_password:
+            logger.error("CloudDrive2助手配置错误，请检查配置")
+            return
+
+        _client = CloudDriveClient(self._cd2_url, self._cd2_username, self._cd2_password)
+        if not _client:
+            logger.error("CloudDrive2助手连接失败，请检查配置")
+            return
+
         logger.info("开始检查CloudDrive2上传任务")
         # 获取上传任务列表
-        upload_tasklist = self._client.upload_tasklist.list(page=0, page_size=10, filter="")
+        upload_tasklist = _client.upload_tasklist.list(page=0, page_size=10, filter="")
         if not upload_tasklist:
             logger.info("没有发现上传任务")
             return
