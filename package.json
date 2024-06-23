@@ -3,11 +3,12 @@
         "name": "云盘Strm生成",
         "description": "监控文件创建，生成Strm文件。",
         "labels": "云盘",
-        "version": "4.3",
+        "version": "4.4",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v4.4": "修复bug",
           "v4.3": "回滚自定义媒体类型",
           "v4.2": "扩展名转小写",
           "v4.1": "支持自定义媒体类型",
