@@ -17,6 +17,7 @@
             "mount_path": "/mnt/cloud/115/media/movies",
             "return_path": "/mnt/softlink/movies",
             "delete_local": "false",
+            "preserve_hierarchy": 0,
             "delete_history": "false",
             "just_media": "true",
             "overwrite": "false",
@@ -41,6 +42,7 @@
             "cloud_url": "http://localhost:19798",
             "cloud_scheme": "http/https",
             "delete_local": "false",
+            "preserve_hierarchy": 0,
             "delete_history": "false",
             "just_media": "true",
             "overwrite": "false",
@@ -64,6 +66,7 @@ cd2方式上传--softlink回本地（暂时移除）
             "cd2_path": "/115/media/movies",
             "return_path": "/mnt/softlink/movies",
             "delete_local": "false",
+            "preserve_hierarchy": 0,
             "delete_history": "false",
             "just_media": "true",
             "overwrite": "false",
@@ -91,6 +94,7 @@ cd2方式上传--strm回本地（暂时移除）
             "cloud_url": "http://localhost:19798",
             "cloud_scheme": "http/https",
             "delete_local": "false",
+            "preserve_hierarchy": 0,
             "delete_history": "false",
             "just_media": "true",
             "overwrite": "false",
@@ -113,6 +117,7 @@ cd2方式上传--strm回本地（暂时移除）
 - return_path：MoviePilot中软链接/strm生成路径
 - monitor_mode：监控模式 compatibility/fast
 - delete_local：是否删除本地文件
+- preserve_hierarchy：保留监控目录后结构层级，例如 1：表示保留监控目录后一层目录结构，0：表示仅保留到监控目录
 - delete_history：是否删除MoviePilot中转移历史记录
 - just_media：是否只监控媒体文件
 - overwrite：是否覆盖已存在云盘文件

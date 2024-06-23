@@ -64,7 +64,7 @@ class CloudAssistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png"
     # 插件版本
-    plugin_version = "1.3"
+    plugin_version = "1.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -110,6 +110,7 @@ class CloudAssistant(_PluginBase):
                 "mount_path": "/mnt/cloud/115/media/movies",
                 "return_path": "/mnt/softlink/movies",
                 "delete_local": "false",
+                "preserve_hierarchy": 0,
                 "delete_history": "false",
                 "just_media": "true",
                 "overwrite": "false",
@@ -402,6 +403,7 @@ class CloudAssistant(_PluginBase):
                 delete_history = monitor_dir.get("delete_history") or "false"
                 overwrite = monitor_dir.get("overwrite") or "false"
                 upload_cloud = monitor_dir.get("upload_cloud") or "true"
+                preserve_hierarchy = monitor_dir.get("preserve_hierarchy") or 0
 
                 # 1、转移到云盘挂载路径 上传到cd2
                 # 挂载的路径
@@ -502,7 +504,7 @@ class CloudAssistant(_PluginBase):
                     # 3、存操作记录
                     if (self._only_media and Path(file_path).suffix.lower() in [ext.strip() for ext in
                                                                                 self._rmt_mediaext.split(",")]) \
-                        or not self._only_media:
+                            or not self._only_media:
                         history = self.get_data('history') or []
                         history.append({
                             "file_path": str(file_path),
@@ -520,9 +522,14 @@ class CloudAssistant(_PluginBase):
                         if file_path.exists():
                             file_path.unlink()
                             logger.info(f"删除本地文件：{file_path}")
+
+                        # 保留层级
+                        mon_path_depth = len(Path(mon_path).parts)
+                        retain_depth = mon_path_depth + 2
+
                         for file_dir in file_path.parents:
-                            if len(str(file_dir)) <= len(str(Path(mon_path))):
-                                # 重要，删除到监控目录为止
+                            if len(file_dir.parts) <= retain_depth:
+                                # 重要，删除到保留层级目录为止
                                 break
                             files = SystemUtils.list_files(file_dir, settings.RMT_MEDIAEXT + settings.DOWNLOAD_TMPEXT)
                             if not files:
