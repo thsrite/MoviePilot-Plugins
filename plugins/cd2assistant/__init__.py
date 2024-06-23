@@ -367,7 +367,7 @@ class Cd2Assistant(_PluginBase):
             "cd2_url": "",
             "cd2_username": "",
             "cd2_password": "",
-            "msgtype": ""
+            "msgtype": "manual"
         }
 
     def get_page(self) -> List[dict]:
