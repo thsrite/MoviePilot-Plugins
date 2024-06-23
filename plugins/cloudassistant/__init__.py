@@ -63,7 +63,7 @@ class CloudAssistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png"
     # 插件版本
-    plugin_version = "1.4"
+    plugin_version = "1.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -109,8 +109,11 @@ class CloudAssistant(_PluginBase):
                 "mount_path": "/mnt/cloud/115/media/movies",
                 "return_path": "/mnt/softlink/movies",
                 "delete_local": "false",
-                "preserve_hierarchy": 0,
+                "local_preserve_hierarchy": 0,
                 "delete_history": "false",
+                "delete_source": "false",
+                "source_dirs": "/mnt/media/movies, /mnt/media/series",
+                "source_preserve_hierarchy": 0,
                 "just_media": "true",
                 "overwrite": "false",
                 "upload_cloud": "true"
@@ -399,10 +402,13 @@ class CloudAssistant(_PluginBase):
                 # cd2_path = monitor_dir.get("cd2_path")
                 return_path = monitor_dir.get("return_path")
                 delete_local = monitor_dir.get("delete_local") or "false"
+                delete_source = monitor_dir.get("delete_source") or "false"
                 delete_history = monitor_dir.get("delete_history") or "false"
                 overwrite = monitor_dir.get("overwrite") or "false"
                 upload_cloud = monitor_dir.get("upload_cloud") or "true"
-                preserve_hierarchy = monitor_dir.get("preserve_hierarchy") or 0
+                local_preserve_hierarchy = monitor_dir.get("local_preserve_hierarchy") or 0
+                source_dirs = monitor_dir.get("source_dirs") or ""
+                source_preserve_hierarchy = monitor_dir.get("source_preserve_hierarchy") or 0
 
                 # 1、转移到云盘挂载路径 上传到cd2
                 # 挂载的路径
@@ -520,11 +526,11 @@ class CloudAssistant(_PluginBase):
                     if str(delete_local) == "true":
                         if file_path.exists():
                             file_path.unlink()
-                            logger.info(f"删除本地文件：{file_path}")
+                            logger.info(f"删除监控文件：{file_path}")
 
                         # 保留层级
                         mon_path_depth = len(Path(mon_path).parts)
-                        retain_depth = mon_path_depth + 2
+                        retain_depth = mon_path_depth + int(local_preserve_hierarchy)
 
                         for file_dir in file_path.parents:
                             if len(file_dir.parts) <= retain_depth:
@@ -532,8 +538,52 @@ class CloudAssistant(_PluginBase):
                                 break
                             files = SystemUtils.list_files(file_dir, settings.RMT_MEDIAEXT + settings.DOWNLOAD_TMPEXT)
                             if not files:
-                                logger.warn(f"删除空目录：{file_dir}")
+                                logger.warn(f"删除监控空目录：{file_dir}")
                                 shutil.rmtree(file_dir, ignore_errors=True)
+
+                    # 是否删除源文件
+                    if str(delete_source) == "true" and transferhis:
+                        if Path(transferhis.src).exists():
+                            Path(transferhis.src).unlink()
+                            logger.info(f"删除源文件：{transferhis.src}")
+
+                        # 删除下载文件记录
+                        self.downloadhis.delete_file_by_fullpath(transferhis.src)
+
+                        # 发送事件 删种
+                        eventmanager.send_event(
+                            EventType.DownloadFileDeleted,
+                            {
+                                "src": transferhis.src,
+                                "hash": transferhis.download_hash
+                            }
+                        )
+
+                        # 源文件保留层级
+                        source_path = None
+                        for source_dir in source_dirs.split(","):
+                            source_dir = source_dir.strip()
+                            if not source_dir:
+                                continue
+                            if transferhis.src.startswith(source_dir):
+                                source_path = source_dir
+                                break
+
+                        # 删除源文件空目录
+                        if source_path:
+                            # 保留层级
+                            source_path_depth = len(Path(source_path).parts)
+                            retain_depth = source_path_depth + int(source_preserve_hierarchy)
+
+                            for file_dir in Path(transferhis.src).parents:
+                                if len(file_dir.parts) <= retain_depth:
+                                    # 重要，删除到保留层级目录为止
+                                    break
+                                files = SystemUtils.list_files(file_dir,
+                                                               settings.RMT_MEDIAEXT + settings.DOWNLOAD_TMPEXT)
+                                if not files:
+                                    logger.warn(f"删除源文件空目录：{file_dir}")
+                                    shutil.rmtree(file_dir, ignore_errors=True)
         except Exception as e:
             logger.error("目录监控发生错误：%s - %s" % (str(e), traceback.format_exc()))
 
