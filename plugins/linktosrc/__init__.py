@@ -96,6 +96,8 @@ class LinkToSrc(_PluginBase):
             if not Path(dest).exists():
                 logger.warn(f"源文件{src}不存在且硬链文件{dest}不存在，跳过处理")
                 continue
+            # 创建源文件目录，防止目录不存在无法执行
+            Path(src).parent.mkdir(parents=True, exist_ok=True)
             # 目标文件硬链回源文件
             Path(src).hardlink_to(dest)
             logger.info(f"硬链文件{dest}重新链接回源文件{src}")
