@@ -26,7 +26,7 @@ class CloudStrm(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png"
     # 插件版本
-    plugin_version = "4.1"
+    plugin_version = "4.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -524,7 +524,7 @@ class CloudStrm(_PluginBase):
                                         'component': 'VSwitch',
                                         'props': {
                                             'model': 'onlyonce',
-                                            'label': '立即运行一次',
+                                            'label': '全量运行一次',
                                         }
                                     }
                                 ]
@@ -726,8 +726,7 @@ class CloudStrm(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '立即运行一次：'
-                                                    '全量运行一次。'
+                                            'text': '如有视频文件扩展名是大写，自行添加媒体扩展名。'
                                         }
                                     }
                                 ]
