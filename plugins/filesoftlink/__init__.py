@@ -52,7 +52,7 @@ class FileSoftLink(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png"
     # 插件版本
-    plugin_version = "1.7"
+    plugin_version = "1.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -318,14 +318,7 @@ class FileSoftLink(_PluginBase):
 
                 # 查询转移目的目录
                 target: Path = self._dirconf.get(mon_path)
-
-                # 去除文件名中的特殊字符
-                sanitized_file_name = self.remove_special_chars(file_path.name)
-                sanitized_file = file_path.with_name(sanitized_file_name)
-                target_file = str(sanitized_file).replace(str(mon_path), str(target))
-
-                # 转义原路径
-                file_path = self.escape_path(str(file_path))
+                target_file = str(file_path).replace(str(mon_path), str(target))
 
                 # 如果是文件夹
                 if Path(target_file).is_dir():
@@ -334,11 +327,7 @@ class FileSoftLink(_PluginBase):
                         os.makedirs(target_file)
                         return
                 else:
-                    # 未开启复制非媒体文件且文件类型不在媒体类型列表中，跳过处理
-                    if not self._copy_files and Path(target_file).suffix.lower() not in [ext.strip() for ext in
-                                                                                         self._rmt_mediaext.split(",")]:
-                        return
-                        # 文件
+                    # 文件
                     if Path(target_file).exists():
                         logger.info(f"目标文件 {target_file} 已存在")
                         return
@@ -359,17 +348,6 @@ class FileSoftLink(_PluginBase):
                             logger.info(f"复制其他文件 {str(file_path)} 到 {target_file}")
         except Exception as e:
             logger.error("软连接发生错误：%s - %s" % (str(e), traceback.format_exc()))
-
-    @staticmethod
-    def remove_special_chars(filename):
-        """去除字符串中的特殊字符，只保留字母、数字、点、下划线和横线。"""
-        return re.sub(r'[^a-zA-Z0-9._-]', '', filename)
-
-    @staticmethod
-    def escape_path(path):
-        """转义路径中的空格和特殊字符。"""
-        return path.replace(' ', '\\ ').replace('(', '\\(').replace(')', '\\)').replace('\'', '\\\'').replace('"',
-                                                                                                              '\\"')
 
     def get_state(self) -> bool:
         return self._enabled
