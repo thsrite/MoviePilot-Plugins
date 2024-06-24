@@ -539,11 +539,12 @@
         "name": "CloudDrive2助手",
         "description": "监控上传任务，检测是否有异常，发送通知。",
         "labels": "云盘",
-        "version": "1.0",
+        "version": "1.1",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png",
         "author": "thsrite",
         "level": 2,
         "history": {
+          "v1.1": "交互命令重启cd2、获取cd2系统信息，支持仪表盘",
           "v1.0": "监控上传任务，检测是否有异常，发送通知"
         }
       }
