@@ -857,19 +857,6 @@ class CloudAssistant(_PluginBase):
                         os.remove(file_path)
         logger.info("云盘助手清理无效软连接完成！")
 
-    @staticmethod
-    def update_symlink(target_from, target_to, directory):
-        for root, dirs, files in os.walk(directory):
-            for name in dirs + files:
-                path = os.path.join(root, name)
-                if os.path.islink(path):
-                    current_target = os.readlink(path)
-                    if str(current_target).startswith(target_from):
-                        new_target = current_target.replace(target_from, target_to)
-                        os.remove(path)
-                        os.symlink(new_target, path)
-                        print(f"Updated symlink: {path} -> {new_target}")
-
     def __refresh_emby(self, transferinfo):
         """
         刷新emby
