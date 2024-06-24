@@ -61,7 +61,7 @@ class CloudAssistant(_PluginBase):
     # 插件名称
     plugin_name = "云盘助手"
     # 插件描述
-    plugin_desc = "定时移动到云盘，软连接/strm回本地，定时清理无效软连接"
+    plugin_desc = "本地文件定时转移到云盘，软连接/strm回本地，定时清理无效软连接。"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png"
     # 插件版本
