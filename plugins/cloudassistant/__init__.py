@@ -232,7 +232,7 @@ class CloudAssistant(_PluginBase):
                     if self._enabled:
                         # 检查媒体库目录是不是下载目录的子目录
                         try:
-                            if target_path and target_path.is_relative_to(Path(mon_path)):
+                            if target_path and Path(target_path).is_relative_to(Path(mon_path)):
                                 logger.warn(f"{target_path} 是监控目录 {mon_path} 的子目录，无法监控")
                                 self.systemmessage.put(f"{target_path} 是下载目录 {mon_path} 的子目录，无法监控",
                                                        title="目录监控")
