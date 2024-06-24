@@ -23,12 +23,14 @@ from app.chain.transfer import TransferChain
 from app.core.config import settings
 from app.core.event import eventmanager, Event
 from app.db.downloadhistory_oper import DownloadHistoryOper
+from app.db.models import DownloadHistory, DownloadFiles
 from app.db.transferhistory_oper import TransferHistoryOper
 from app.log import logger
 from app.modules.emby import Emby
 from app.plugins import _PluginBase
-from app.schemas.types import EventType, SystemConfigKey
+from app.schemas.types import EventType, SystemConfigKey, MediaType, NotificationType
 from app.utils.http import RequestUtils
+from app.utils.string import StringUtils
 from app.utils.system import SystemUtils
 
 # from clouddrive import CloudDriveClient
@@ -63,7 +65,7 @@ class CloudAssistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png"
     # 插件版本
-    plugin_version = "1.6"
+    plugin_version = "1.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -92,7 +94,9 @@ class CloudAssistant(_PluginBase):
     _invalid_cron = None
     _clean = False
     _exclude_keywords = ""
+    _interval: int = 30
     _dir_confs = {}
+    _medias = {}
     _transfer_type = None
     _rmt_mediaext = ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
 
@@ -142,6 +146,7 @@ class CloudAssistant(_PluginBase):
             self._invalid = config.get("invalid")
             self._clean = config.get("clean")
             self._exclude_keywords = config.get("exclude_keywords") or ""
+            self._interval = config.get("interval") or 30
             self._refresh = config.get("refresh")
             self._only_media = config.get("only_media")
             self._cron = config.get("cron")
@@ -183,6 +188,10 @@ class CloudAssistant(_PluginBase):
                 self.__update_config()
 
             if self._enabled or self._onlyonce:
+                if self._notify:
+                    # 追加入库消息统一发送服务
+                    self._scheduler.add_job(self.send_msg, trigger='interval', seconds=15)
+
                 dir_confs = json.loads(self._dir_confs)
                 # 检查cd2配置
                 # if not dir_confs.get("cd2_url") or not dir_confs.get("username") or not dir_confs.get("password"):
@@ -293,6 +302,7 @@ class CloudAssistant(_PluginBase):
             "clean": self._clean,
             "dir_confs": self._dir_confs,
             "exclude_keywords": self._exclude_keywords,
+            "interval": self._interval,
             "cron": self._cron,
             "only_media": self._only_media,
             "refresh": self._refresh,
@@ -418,38 +428,6 @@ class CloudAssistant(_PluginBase):
                 logger.info(f"挂载目录文件 {mount_file}")
 
                 if str(upload_cloud) == "true":
-                    # cd2模式
-                    # if self._client:
-                    #     logger.info("开始上传文件到CloudDrive2")
-                    #     # cd2目标路径
-                    #     cd2_file = str(file_path).replace(str(mon_path), str(cd2_path))
-                    #     logger.info(f"cd2目录文件 {cd2_file}")
-                    #
-                    #     # 上传前先检查文件是否存在
-                    #     cd2_file_exists = False
-                    #     if str(overwrite) == "false":
-                    #         if self._fs.exists(Path(cd2_file)):  # 云盘文件存在则跳过
-                    #             logger.info(f"云盘文件 {cd2_file} 已存在，跳过上传")
-                    #             cd2_file_exists = True
-                    #
-                    #     if not cd2_file_exists:
-                    #         # cd2目录不存在则创建
-                    #         if not self._fs.exists(Path(cd2_file).parent):
-                    #             self._fs.mkdir(Path(cd2_file).parent)
-                    #             logger.info(f"创建cd2目录 {Path(cd2_file).parent}")
-                    #         # 切换cd2路径
-                    #         self._fs.chdir(Path(cd2_file).parent)
-                    #
-                    #         # 上传文件到cd2
-                    #         logger.info(f"开始上传文件 {file_path} 到 {cd2_file}")
-                    #         self._fs.upload(file_path, overwrite_or_ignore=True)
-                    #         self._fs.move(file_path)
-                    #         logger.info(f"上传文件 {file_path} 到 {cd2_file}完成")
-                    #
-                    #     # 上传任务列表
-                    #     # upload_tasklist = self._client.upload_tasklist
-                    #     # logger.info(f"上传任务列表 {upload_tasklist}")
-                    # else:
                     upload = True
                     if str(overwrite) == "false":
                         if Path(mount_file).exists():
@@ -457,6 +435,7 @@ class CloudAssistant(_PluginBase):
                             upload = False
 
                     if upload:
+                        # 媒体文件转移
                         if Path(file_path).suffix.lower() in [ext.strip() for ext in
                                                               self._rmt_mediaext.split(",")]:
                             self.__transfer_file(file_path=file_path,
@@ -464,7 +443,9 @@ class CloudAssistant(_PluginBase):
                                                  transfer_type=self._transfer_type)
                         else:
                             # 其他文件复制
-                            SystemUtils.copy(file_path, Path(mount_file))
+                            self.__transfer_file(file_path=file_path,
+                                                 target_file=mon_path,
+                                                 transfer_type="copy")
 
                 # 2、软连接回本地路径
                 if not Path(mount_file).exists():
@@ -505,8 +486,7 @@ class CloudAssistant(_PluginBase):
                     # 是否删除本地历史
                     if str(delete_history) == "true":
                         if transferhis:
-                            self.transferhis.delete(transferhis.id)
-                            logger.info(f"删除本地历史记录：{transferhis.id}")
+                            self.__delete_history(transferhis)
 
                     # 3、存操作记录
                     if (self._only_media and Path(file_path).suffix.lower() in [ext.strip() for ext in
@@ -526,68 +506,213 @@ class CloudAssistant(_PluginBase):
 
                     # 移动模式删除空目录
                     if str(delete_local) == "true":
-                        if file_path.exists():
-                            file_path.unlink()
-                            logger.info(f"删除监控文件：{file_path}")
-
-                        # 保留层级
-                        mon_path_depth = len(Path(mon_path).parts)
-                        retain_depth = mon_path_depth + int(local_preserve_hierarchy)
-
-                        for file_dir in file_path.parents:
-                            if len(file_dir.parts) <= retain_depth:
-                                # 重要，删除到保留层级目录为止
-                                break
-                            files = SystemUtils.list_files(file_dir, settings.RMT_MEDIAEXT + settings.DOWNLOAD_TMPEXT)
-                            if not files:
-                                logger.warn(f"删除监控空目录：{file_dir}")
-                                shutil.rmtree(file_dir, ignore_errors=True)
-
+                        self.__delete_local_file(file_path, mon_path, local_preserve_hierarchy)
                     # 是否删除源文件
                     if str(delete_source) == "true" and transferhis:
-                        if Path(transferhis.src).exists():
-                            Path(transferhis.src).unlink()
-                            logger.info(f"删除源文件：{transferhis.src}")
+                        self.__delete_source_file(transferhis, source_dirs, source_preserve_hierarchy)
+                    # 发送消息汇总
+                    if self._notify and transferhis:
+                        self.__msg_handler(transferhis)
 
-                        # 删除下载文件记录
-                        self.downloadhis.delete_file_by_fullpath(transferhis.src)
-
-                        # 发送事件 删种
-                        eventmanager.send_event(
-                            EventType.DownloadFileDeleted,
-                            {
-                                "src": transferhis.src,
-                                "hash": transferhis.download_hash
-                            }
-                        )
-
-                        # 源文件保留层级
-                        source_path = None
-                        for source_dir in source_dirs.split(","):
-                            source_dir = source_dir.strip()
-                            if not source_dir:
-                                continue
-                            if transferhis.src.startswith(source_dir):
-                                source_path = source_dir
-                                break
-
-                        # 删除源文件空目录
-                        if source_path:
-                            # 保留层级
-                            source_path_depth = len(Path(source_path).parts)
-                            retain_depth = source_path_depth + int(source_preserve_hierarchy)
-
-                            for file_dir in Path(transferhis.src).parents:
-                                if len(file_dir.parts) <= retain_depth:
-                                    # 重要，删除到保留层级目录为止
-                                    break
-                                files = SystemUtils.list_files(file_dir,
-                                                               settings.RMT_MEDIAEXT + settings.DOWNLOAD_TMPEXT)
-                                if not files:
-                                    logger.warn(f"删除源文件空目录：{file_dir}")
-                                    shutil.rmtree(file_dir, ignore_errors=True)
         except Exception as e:
             logger.error("目录监控发生错误：%s - %s" % (str(e), traceback.format_exc()))
+
+    def __delete_history(self, transferhis):
+        """
+        删除历史记录
+        """
+        self.transferhis.delete(transferhis.id)
+        logger.info(f"删除转移历史记录：{transferhis.id} {transferhis.download_hash}")
+
+        downloadhis = self.downloadhis.get_by_hash(transferhis.download_hash)
+        if downloadhis:
+            DownloadHistory.delete(downloadhis.id)
+            logger.info(f"删除下载历史记录：{downloadhis.id} {transferhis.download_hash}")
+            downloadfiles = self.downloadhis.get_files_by_hash(
+                download_hash=transferhis.download_hash)
+            if downloadfiles:
+                for downloadfile in downloadfiles:
+                    DownloadFiles.delete(downloadfile.id)
+                    logger.info(f"删除下载文件记录：{downloadfile.id} {transferhis.download_hash}")
+
+    def __delete_local_file(self, file_path: Path, mon_path: str, local_preserve_hierarchy: int):
+        """
+        删除监控文件
+        """
+        if file_path.exists():
+            file_path.unlink()
+            logger.info(f"删除监控文件：{file_path}")
+
+        # 保留层级
+        mon_path_depth = len(Path(mon_path).parts)
+        retain_depth = mon_path_depth + int(local_preserve_hierarchy)
+
+        for file_dir in file_path.parents:
+            if len(file_dir.parts) <= retain_depth:
+                # 重要，删除到保留层级目录为止
+                break
+            files = SystemUtils.list_files(file_dir, settings.RMT_MEDIAEXT + settings.DOWNLOAD_TMPEXT)
+            if not files:
+                logger.warn(f"删除监控空目录：{file_dir}")
+                shutil.rmtree(file_dir, ignore_errors=True)
+
+    def __delete_source_file(self, transferhis, source_dirs, source_preserve_hierarchy):
+        """
+        删除源文件
+        """
+        if Path(transferhis.src).exists():
+            Path(transferhis.src).unlink()
+            logger.info(f"删除源文件：{transferhis.src}")
+
+        # 删除下载文件记录
+        self.downloadhis.delete_file_by_fullpath(transferhis.src)
+
+        # 发送事件 删种
+        eventmanager.send_event(
+            EventType.DownloadFileDeleted,
+            {
+                "src": transferhis.src,
+                "hash": transferhis.download_hash
+            }
+        )
+
+        # 源文件保留层级
+        source_path = None
+        for source_dir in source_dirs.split(","):
+            source_dir = source_dir.strip()
+            if not source_dir:
+                continue
+            if transferhis.src.startswith(source_dir):
+                source_path = source_dir
+                break
+
+        # 删除源文件空目录
+        if source_path:
+            # 保留层级
+            source_path_depth = len(Path(source_path).parts)
+            retain_depth = source_path_depth + int(source_preserve_hierarchy)
+
+            for file_dir in Path(transferhis.src).parents:
+                if len(file_dir.parts) <= retain_depth:
+                    # 重要，删除到保留层级目录为止
+                    break
+                files = SystemUtils.list_files(file_dir,
+                                               settings.RMT_MEDIAEXT + settings.DOWNLOAD_TMPEXT)
+                if not files:
+                    logger.warn(f"删除源文件空目录：{file_dir}")
+                    shutil.rmtree(file_dir, ignore_errors=True)
+
+    def __msg_handler(self, transferhis):
+        """
+        组织消息发送数据
+        """
+        """
+          {
+              "title_year season": {
+                  "key": "title_year",
+                  "mtype": "mtype",
+                  "season": "season",
+                  "category": "category",
+                  "image": "image",
+                  "episodes": [],
+                  "time": "2023-08-24 23:23:23.332"
+              }
+          }
+        """
+        key = f"{transferhis.title} ({transferhis.year})"
+        # 发送消息汇总
+        media_list = self._medias.get(
+            key + " " + transferhis.seasons) or {}
+        if media_list:
+            episodes = media_list.get("episodes") or []
+            if episodes:
+                if transferhis.episodes.replace("E", "") not in episodes:
+                    episodes.append(transferhis.episodes.replace("E", ""))
+            else:
+                episodes.append(transferhis.episodes.replace("E", ""))
+            media_list = {
+                "key": key,
+                "mtype": transferhis.type,
+                "category": transferhis.category,
+                "image": transferhis.image,
+                "season": transferhis.seasons,
+                "episodes": episodes,
+                "time": datetime.datetime.now()
+            }
+        else:
+            media_list = {
+                "key": key,
+                "mtype": transferhis.type,
+                "category": transferhis.category,
+                "image": transferhis.image,
+                "season": transferhis.seasons,
+                "episodes": [transferhis.episodes.replace("E", "")],
+                "time": datetime.datetime.now()
+            }
+        self._medias[key + " " + transferhis.seasons] = media_list
+
+    def send_msg(self):
+        """
+        定时检查是否有媒体处理完，发送统一消息
+        """
+        if not self._medias or not self._medias.keys():
+            return
+
+        # 遍历检查是否已刮削完，发送消息
+        for medis_title_year_season in list(self._medias.keys()):
+            media_list = self._medias.get(medis_title_year_season)
+            logger.info(f"开始处理媒体 {medis_title_year_season} 消息")
+
+            if not media_list:
+                continue
+
+            # 获取最后更新时间
+            last_update_time = media_list.get("time")
+            key = media_list.get("key")
+            mtype = media_list.get("mtype")
+            category = media_list.get("category")
+            image = media_list.get("image")
+            season = media_list.get("season")
+            episodes = media_list.get("episodes")
+            if not last_update_time or not episodes:
+                continue
+
+            # 判断剧集最后更新时间距现在是已超过10秒或者电影，发送消息
+            if (datetime.datetime.now() - last_update_time).total_seconds() > int(self._interval) \
+                    or mtype == MediaType.MOVIE.name:
+                # 发送通知
+                if self._notify:
+                    # 剧集季集信息 S01 E01-E04 || S01 E01、E02、E04
+                    season_episode = None
+                    # 处理文件多，说明是剧集，显示季入库消息
+                    if mtype == MediaType.TV.name:
+                        # 季集文本
+                        season_episode = f"{season} {StringUtils.format_ep(episodes)}"
+                    # 发送消息
+                    self.__send_transfer_message(title_year=key,
+                                                 season_episodes=season_episode,
+                                                 mtype=mtype,
+                                                 category=category,
+                                                 image=image,
+                                                 count=len(episodes))
+                # 发送完消息，移出key
+                del self._medias[medis_title_year_season]
+                continue
+
+    def __send_transfer_message(self, title_year, season_episodes, mtype, category, image, count):
+        """
+        发送入库成功的消息
+        """
+        msg_title = f"{title_year} {season_episodes if season_episodes else ''} 已转移完成"
+        msg_str = f"类型：{mtype}，类别：{category}，共{count}个文件"
+        # 发送
+        self.post_message(
+            mtype=NotificationType.Plugin,
+            title=msg_title,
+            text=msg_str,
+            image=image,
+            link=settings.MP_DOMAIN('#/history')
+        )
 
     def __transfer_file(self, file_path, target_file, transfer_type):
         """
@@ -613,7 +738,7 @@ class CloudAssistant(_PluginBase):
             # 媒体文件转移
             retcode, retmsg = self.__transfer_command(file_path, Path(target_file), transfer_type)
             logger.info(
-                f"媒体文件{str(file_path)} {transfer_type} 到 {target_file} {retcode} {retmsg}")
+                f"媒体文件{str(file_path)} {transfer_type} 到 {target_file} {'成功' if retcode == 0 else '失败'} {retmsg}")
             return retcode
 
     def __transfer_command(self, file_item: Path, target_file: Path, transfer_type: str):
@@ -1076,7 +1201,7 @@ class CloudAssistant(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 6
+                                    'md': 4
                                 },
                                 'content': [
                                     {
@@ -1093,7 +1218,7 @@ class CloudAssistant(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 6
+                                    'md': 4
                                 },
                                 'content': [
                                     {
@@ -1106,6 +1231,23 @@ class CloudAssistant(_PluginBase):
                                     }
                                 ]
                             },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'interval',
+                                            'label': '入库消息延迟',
+                                            'placeholder': '10'
+                                        }
+                                    }
+                                ]
+                            }
                         ]
                     },
                     {
@@ -1281,6 +1423,7 @@ class CloudAssistant(_PluginBase):
             "only_media": False,
             "clean": False,
             "exclude_keywords": "",
+            "interval": 30,
             "cron": "",
             "invalid_cron": "",
             "dir_confs": json.dumps(CloudAssistant.example, indent=4, ensure_ascii=False),
