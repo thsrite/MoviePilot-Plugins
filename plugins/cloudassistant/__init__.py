@@ -307,7 +307,7 @@ class CloudAssistant(_PluginBase):
         """
         if event:
             event_data = event.event_data
-            if not event_data or event_data.get("action") != "cloudassistant":
+            if not event_data or event_data.get("action") != "cloud_assistant":
                 return
             self.post_message(channel=event.event_data.get("channel"),
                               title="云盘助手开始同步监控目录 ...",
