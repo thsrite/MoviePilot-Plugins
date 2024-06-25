@@ -64,7 +64,7 @@ class CloudAssistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png"
     # 插件版本
-    plugin_version = "1.7"
+    plugin_version = "1.8"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -86,6 +86,7 @@ class CloudAssistant(_PluginBase):
     _enabled = False
     _notify = False
     _onlyonce = False
+    _monitor = False
     _invalid = False
     _only_media = False
     _refresh = False
@@ -142,6 +143,7 @@ class CloudAssistant(_PluginBase):
             self._enabled = config.get("enabled")
             self._notify = config.get("notify")
             self._onlyonce = config.get("onlyonce")
+            self._monitor = config.get("monitor")
             self._invalid = config.get("invalid")
             self._clean = config.get("clean")
             self._exclude_keywords = config.get("exclude_keywords") or ""
@@ -228,7 +230,7 @@ class CloudAssistant(_PluginBase):
                     self._dirconf[mon_path] = monitor_dir
 
                     # 启用目录监控
-                    if self._enabled:
+                    if self._enabled and self._monitor:
                         # 检查媒体库目录是不是下载目录的子目录
                         try:
                             if target_path and Path(target_path).is_relative_to(Path(mon_path)):
@@ -297,6 +299,7 @@ class CloudAssistant(_PluginBase):
             "enabled": self._enabled,
             "notify": self._notify,
             "onlyonce": self._onlyonce,
+            "monitor": self._monitor,
             "invalid": self._invalid,
             "clean": self._clean,
             "dir_confs": self._dir_confs,
@@ -1049,7 +1052,7 @@ class CloudAssistant(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 3
+                                    'md': 4
                                 },
                                 'content': [
                                     {
@@ -1065,7 +1068,7 @@ class CloudAssistant(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 3
+                                    'md': 4
                                 },
                                 'content': [
                                     {
@@ -1081,7 +1084,7 @@ class CloudAssistant(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 3
+                                    'md': 4
                                 },
                                 'content': [
                                     {
@@ -1089,22 +1092,6 @@ class CloudAssistant(_PluginBase):
                                         'props': {
                                             'model': 'onlyonce',
                                             'label': '立即同步一次',
-                                        }
-                                    }
-                                ]
-                            },
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 3
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VSwitch',
-                                        'props': {
-                                            'model': 'clean',
-                                            'label': '清空插件历史',
                                         }
                                     }
                                 ]
@@ -1118,14 +1105,14 @@ class CloudAssistant(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 3
+                                    'md': 4
                                 },
                                 'content': [
                                     {
                                         'component': 'VSwitch',
                                         'props': {
-                                            'model': 'refresh',
-                                            'label': '刷新媒体库（emby）',
+                                            'model': 'clean',
+                                            'label': '清空插件历史',
                                         }
                                     }
                                 ]
@@ -1134,7 +1121,7 @@ class CloudAssistant(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 3
+                                    'md': 4
                                 },
                                 'content': [
                                     {
@@ -1150,7 +1137,7 @@ class CloudAssistant(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 3
+                                    'md': 4
                                 },
                                 'content': [
                                     {
@@ -1162,18 +1149,55 @@ class CloudAssistant(_PluginBase):
                                     }
                                 ]
                             },
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'monitor',
+                                            'label': '实时监控',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'refresh',
+                                            'label': '刷新媒体库（emby）',
+                                        }
+                                    }
+                                ]
+                            },
                             {
                                 "component": "VCol",
                                 "props": {
                                     "cols": 12,
-                                    "md": 3
+                                    "md": 4
                                 },
                                 "content": [
                                     {
                                         "component": "VSwitch",
                                         "props": {
                                             "model": "dialog_closed",
-                                            "label": "监控路径配置"
+                                            "label": "插件配置"
                                         }
                                     }
                                 ]
@@ -1282,6 +1306,27 @@ class CloudAssistant(_PluginBase):
                     },
                     {
                         'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '插件开启后，开启监控才会实时处理。与定时任务执行不冲突。'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
                         'props': {
                             'style': {
                                 'margin-top': '12px'
@@ -1331,7 +1376,7 @@ class CloudAssistant(_PluginBase):
                             {
                                 "component": "VCard",
                                 "props": {
-                                    "title": "监控路径配置"
+                                    "title": "插件配置"
                                 },
                                 "content": [
                                     {
@@ -1403,6 +1448,7 @@ class CloudAssistant(_PluginBase):
         ], {
             "enabled": False,
             "notify": False,
+            "monitor": False,
             "onlyonce": False,
             "invalid": False,
             "refresh": False,
