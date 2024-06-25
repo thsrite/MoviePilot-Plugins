@@ -94,8 +94,9 @@ class CloudAssistant(_PluginBase):
     _invalid_cron = None
     _clean = False
     _exclude_keywords = ""
-    _interval: int = 30
+    _interval: int = 60
     _dir_confs = {}
+    _dirconf = {}
     _medias = {}
     _transfer_type = None
     _rmt_mediaext = ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
@@ -143,11 +144,11 @@ class CloudAssistant(_PluginBase):
             self._enabled = config.get("enabled")
             self._notify = config.get("notify")
             self._onlyonce = config.get("onlyonce")
-            self._monitor = config.get("monitor")
+            self._monitor = config.get("monitor") or False
             self._invalid = config.get("invalid")
             self._clean = config.get("clean")
             self._exclude_keywords = config.get("exclude_keywords") or ""
-            self._interval = config.get("interval") or 30
+            self._interval = config.get("interval") or 60
             self._refresh = config.get("refresh")
             self._only_media = config.get("only_media")
             self._cron = config.get("cron")
@@ -189,7 +190,7 @@ class CloudAssistant(_PluginBase):
                 self.__update_config()
 
             if self._enabled or self._onlyonce:
-                if self._notify:
+                if self._notify and (self._cron or self._monitor):
                     # 追加入库消息统一发送服务
                     self._scheduler.add_job(self.send_msg, trigger='interval', seconds=15)
 
@@ -1091,7 +1092,7 @@ class CloudAssistant(_PluginBase):
                                         'component': 'VSwitch',
                                         'props': {
                                             'model': 'onlyonce',
-                                            'label': '立即同步一次',
+                                            'label': '立即全量同步一次',
                                         }
                                     }
                                 ]
@@ -1111,8 +1112,8 @@ class CloudAssistant(_PluginBase):
                                     {
                                         'component': 'VSwitch',
                                         'props': {
-                                            'model': 'clean',
-                                            'label': '清空插件历史',
+                                            'model': 'monitor',
+                                            'label': '实时监控',
                                         }
                                     }
                                 ]
@@ -1155,17 +1156,17 @@ class CloudAssistant(_PluginBase):
                         'component': 'VRow',
                         'content': [
                             {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
+                                "component": "VCol",
+                                "props": {
+                                    "cols": 12,
+                                    "md": 4
                                 },
-                                'content': [
+                                "content": [
                                     {
-                                        'component': 'VSwitch',
-                                        'props': {
-                                            'model': 'monitor',
-                                            'label': '实时监控',
+                                        "component": "VSwitch",
+                                        "props": {
+                                            "model": "dialog_closed",
+                                            "label": "插件配置"
                                         }
                                     }
                                 ]
@@ -1187,21 +1188,21 @@ class CloudAssistant(_PluginBase):
                                 ]
                             },
                             {
-                                "component": "VCol",
-                                "props": {
-                                    "cols": 12,
-                                    "md": 4
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
                                 },
-                                "content": [
+                                'content': [
                                     {
-                                        "component": "VSwitch",
-                                        "props": {
-                                            "model": "dialog_closed",
-                                            "label": "插件配置"
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'clean',
+                                            'label': '立即清空插件历史',
                                         }
                                     }
                                 ]
-                            }
+                            },
                         ]
                     },
                     {
@@ -1318,7 +1319,7 @@ class CloudAssistant(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '插件开启后，开启监控才会实时处理。与定时任务执行不冲突。'
+                                            'text': '插件开启后，开启监控才会实时处理。与定时任务执行不冲突。入库消息延迟建议调大，读写需要时间。'
                                         }
                                     }
                                 ]
@@ -1455,7 +1456,7 @@ class CloudAssistant(_PluginBase):
             "only_media": False,
             "clean": False,
             "exclude_keywords": "",
-            "interval": 30,
+            "interval": 60,
             "cron": "",
             "invalid_cron": "",
             "dir_confs": json.dumps(CloudAssistant.example, indent=4, ensure_ascii=False),
