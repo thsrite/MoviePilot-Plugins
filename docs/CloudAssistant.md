@@ -31,25 +31,38 @@
 
 直接转移--softlink回本地
 {
-    "transfer_type": "copy/move",
-    "return_mode": "softlink",
-    "monitor_dirs": [
-        {
-            "monitor_mode": "监控模式 compatibility/fast",
-            `"dest_path": "/mnt/link/movies",`
-            "mount_path": "/mnt/cloud/115/media/movies",
-            "return_path": "/mnt/softlink/movies",
-            `"delete_dest": "false",`
-            `"dest_preserve_hierarchy": 0,`
-            "delete_history": "false",
-            `"delete_src": "false",`
-            `"src_paths": "/mnt/media/movies, /mnt/media/series",`
-            `"src_preserve_hierarchy": 0,`
-            "only_media": "true",
-            "overwrite": "false",
-            "upload_cloud": "true"
-        }
-    ]
+  "transfer_type": "move",
+  "return_mode": "softlink",
+  "monitor_dirs": [
+      {
+          "monitor_mode": "fast",
+          /* 监控模式 compatibility/ */
+          "dest_path": "/series/link",
+          /* MP媒体库文件夹 */
+          "mount_path": "/115/CloudDrive/115/video",
+          /* MP网盘挂载文件夹 */
+          "return_path": "/115link/link",
+          /* 软连接生成文件夹 */
+          "delete_dest": "false",
+          /* 是否删除种子下载文件夹 */
+          "dest_preserve_hierarchy": 0,
+          /* 保留监控路径目录层级，例如 1：表示保留监控目录后一层目录结构，0：表示仅保留到监控目录 */
+          "delete_history": "false",
+          /* 是否删除MoviePilot中转移历史记录 */
+          "delete_src": "false",
+          /* 是否删除做种文件 */
+          "src_paths": "/series/download",
+          /* 做种文件夹 */
+          "src_preserve_hierarchy": 0,
+          /* 保留做种文件夹目录层级，0：表示仅监控到源文件目录，1：表示监控源文件目录及其一级子目录 */
+          "only_media": "true",
+          /* 是否只监控媒体文件 */
+          "overwrite": "false",
+          /* 是否覆盖已存在云盘文件 */
+          "upload_cloud": "true"
+          /* 是否上传到云盘, false则直接软连接或者strm回本地 */
+      }
+  ]
 }
 
 直接转移--strm回本地
