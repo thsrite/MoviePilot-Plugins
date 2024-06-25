@@ -64,7 +64,7 @@ class CloudAssistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png"
     # 插件版本
-    plugin_version = "2.0"
+    plugin_version = "2.0.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -110,14 +110,14 @@ class CloudAssistant(_PluginBase):
         "monitor_dirs": [
             {
                 "monitor_mode": "模式 compatibility/fast",
-                "local_path": "/mnt/media/movies",
+                "link_path": "/mnt/media/movies",
                 "mount_path": "/mnt/cloud/115/media/movies",
                 "return_path": "/mnt/softlink/movies",
                 "delete_local": "false",
                 "local_preserve_hierarchy": 0,
                 "delete_history": "false",
                 "delete_source": "false",
-                "source_dirs": "/mnt/media/movies, /mnt/media/series",
+                "source_paths": "/mnt/media/movies, /mnt/media/series",
                 "source_preserve_hierarchy": 0,
                 "just_media": "true",
                 "overwrite": "false",
@@ -225,8 +225,11 @@ class CloudAssistant(_PluginBase):
                     if not monitor_dir:
                         continue
 
-                    mon_path = monitor_dir.get("local_path")
+                    # 读取监控目录配置
+                    mon_path = monitor_dir.get("link_path")
+                    # 云盘挂载路径
                     target_path = monitor_dir.get("mount_path")
+                    # 监控模式
                     monitor_mode = monitor_dir.get("monitor_mode") or "compatibility"
                     self._dirconf[mon_path] = monitor_dir
 
@@ -422,7 +425,7 @@ class CloudAssistant(_PluginBase):
                 overwrite = monitor_dir.get("overwrite") or "false"
                 upload_cloud = monitor_dir.get("upload_cloud") or "true"
                 local_preserve_hierarchy = monitor_dir.get("local_preserve_hierarchy") or 0
-                source_dirs = monitor_dir.get("source_dirs") or ""
+                source_paths = monitor_dir.get("source_paths") or ""
                 source_preserve_hierarchy = monitor_dir.get("source_preserve_hierarchy") or 0
 
                 # 1、转移到云盘挂载路径 上传到cd2
@@ -512,7 +515,7 @@ class CloudAssistant(_PluginBase):
                         self.__delete_local_file(file_path, mon_path, local_preserve_hierarchy)
                     # 是否删除源文件
                     if str(delete_source) == "true" and transferhis:
-                        self.__delete_source_file(transferhis, source_dirs, source_preserve_hierarchy)
+                        self.__delete_source_file(transferhis, source_paths, source_preserve_hierarchy)
                     # 发送消息汇总
                     if self._notify and transferhis:
                         self.__msg_handler(transferhis)
@@ -559,7 +562,7 @@ class CloudAssistant(_PluginBase):
                 logger.warn(f"删除监控空目录：{file_dir}")
                 shutil.rmtree(file_dir, ignore_errors=True)
 
-    def __delete_source_file(self, transferhis, source_dirs, source_preserve_hierarchy):
+    def __delete_source_file(self, transferhis, source_paths, source_preserve_hierarchy):
         """
         删除源文件
         """
@@ -581,7 +584,7 @@ class CloudAssistant(_PluginBase):
 
         # 源文件保留层级
         source_path = None
-        for source_dir in source_dirs.split(","):
+        for source_dir in source_paths.split(","):
             source_dir = source_dir.strip()
             if not source_dir:
                 continue

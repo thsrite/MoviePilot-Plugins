@@ -13,14 +13,14 @@
     "monitor_dirs": [
         {
             "monitor_mode": "监控模式 compatibility/fast",
-            "local_path": "/mnt/link/movies",
+            "link_path": "/mnt/link/movies",
             "mount_path": "/mnt/cloud/115/media/movies",
             "return_path": "/mnt/softlink/movies",
             "delete_local": "false",
             "local_preserve_hierarchy": 0,
             "delete_history": "false",
             "delete_source": "false",
-            "source_dirs": "/mnt/media/movies, /mnt/media/series",
+            "source_paths": "/mnt/media/movies, /mnt/media/series",
             "source_preserve_hierarchy": 0,
             "just_media": "true",
             "overwrite": "false",
@@ -36,7 +36,7 @@
     "monitor_dirs": [
         {
             "monitor_mode": "监控模式 compatibility/fast",
-            "local_path": "/mnt/link/movies",
+            "link_path": "/mnt/link/movies",
             "mount_path": "/mnt/cloud/115/media/movies",
             "return_path": "/mnt/strm/movies",
             "library_dir": "/mnt/movies",
@@ -48,7 +48,7 @@
             "local_preserve_hierarchy": 0,
             "delete_history": "false",
             "delete_source": "false",
-            "source_dirs": "/mnt/media/movies, /mnt/media/series",
+            "source_paths": "/mnt/media/movies, /mnt/media/series",
             "source_preserve_hierarchy": 0,
             "just_media": "true",
             "overwrite": "false",
@@ -67,7 +67,7 @@ cd2方式上传--softlink回本地（暂时移除）
     "monitor_dirs": [
         {
             "monitor_mode": "监控模式 compatibility/fast",
-            "local_path": "/mnt/link/movies",
+            "link_path": "/mnt/link/movies",
             "mount_path": "/mnt/cloud/115/media/movies",
             "cd2_path": "/115/media/movies",
             "return_path": "/mnt/softlink/movies",
@@ -75,7 +75,7 @@ cd2方式上传--softlink回本地（暂时移除）
             "local_preserve_hierarchy": 0,
             "delete_history": "false",
             "delete_source": "false",
-            "source_dirs": "/mnt/media/movies, /mnt/media/series",
+            "source_paths": "/mnt/media/movies, /mnt/media/series",
             "source_preserve_hierarchy": 0,
             "just_media": "true",
             "overwrite": "false",
@@ -93,7 +93,7 @@ cd2方式上传--strm回本地（暂时移除）
     "monitor_dirs": [
         {
             "monitor_mode": "监控模式 compatibility/fast",
-            "local_path": "/mnt/link/movies",
+            "link_path": "/mnt/link/movies",
             "mount_path": "/mnt/cloud/115/media/movies",
             "cd2_path": "/115/media/movies",
             "return_path": "/mnt/strm/movies",
@@ -106,7 +106,7 @@ cd2方式上传--strm回本地（暂时移除）
             "local_preserve_hierarchy": 0,
             "delete_history": "false",
             "delete_source": "false",
-            "source_dirs": "/mnt/media/movies, /mnt/media/series",
+            "source_paths": "/mnt/media/movies, /mnt/media/series",
             "source_preserve_hierarchy": 0,
             "just_media": "true",
             "overwrite": "false",
@@ -123,7 +123,7 @@ cd2方式上传--strm回本地（暂时移除）
 - username：cd2用户名
 - password：cd2密码
 - tranfer_type：转移类型，可选值：copy/move
-- local_path: MoviePilot本地上传路径
+- link_path: MoviePilot本地刮削好的文件路径（MoviePilot媒体库目录）
 - mount_path：MoviePilot中云盘挂载路径
 - cd2_path：cd2中云盘挂载路径
 - return_path：MoviePilot中软链接/strm生成路径
@@ -132,7 +132,7 @@ cd2方式上传--strm回本地（暂时移除）
 - local_preserve_hierarchy：保留监控路径目录层级，例如 1：表示保留监控目录后一层目录结构，0：表示仅保留到监控目录
 - delete_history：是否删除MoviePilot中转移历史记录
 - delete_source：是否删除源文件，仅上述监控路径查询到转移记录时才生效，删除转移记录的源文件路径
-- source_dirs：源文件的目录，多个目录用逗号分隔
+- source_paths：转移前的源文件路径，多个目录用逗号分隔（MoviePilot下载目录）
 - source_preserve_hierarchy：保留源文件路径目录层级，0：表示仅监控到源文件目录，1：表示监控源文件目录及其一级子目录
 - just_media：是否只监控媒体文件
 - overwrite：是否覆盖已存在云盘文件
