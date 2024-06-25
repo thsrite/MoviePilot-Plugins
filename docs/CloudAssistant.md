@@ -4,6 +4,7 @@
 
 提供四种方式，具体看示例
 
+2.0.1版本修改以下标注的字段名称，字段顺序没变，按序修改即可。
 {
     "transfer_type": "copy/move",
     "return_mode": "softlink",
@@ -19,7 +20,7 @@
             `"delete_src": "false",`
             `"src_paths": "/mnt/media/movies, /mnt/media/series",`
             `"src_preserve_hierarchy": 0,`
-            "only_media": "true",
+            `"only_media": "true",`
             "overwrite": "false",
             "upload_cloud": "true"
         }
