@@ -26,7 +26,7 @@ class CloudStrmIncrement(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -194,6 +194,8 @@ class CloudStrmIncrement(_PluginBase):
                 # 处理文件
                 for file in files:
                     increment_file = os.path.join(root, file)
+                    if not Path(increment_file).exists():
+                        continue
                     # 回收站及隐藏的文件不处理
                     if (increment_file.find("/@Recycle") != -1
                             or increment_file.find("/#recycle") != -1
@@ -226,8 +228,7 @@ class CloudStrmIncrement(_PluginBase):
                     logger.info(f"增量文件 {increment_file} 处理完成")
 
                     # 判断当前媒体父路径下是否有媒体文件，如有则无需遍历父级
-                    if not SystemUtils.exits_files(Path(increment_file).parent,
-                                                   [ext.strip() for ext in self._rmt_mediaext.split(",")]):
+                    if not SystemUtils.exits_files(Path(increment_file).parent, []):
                         # 判断父目录是否为空, 为空则删除
                         for parent_path in Path(increment_file).parents:
                             if parent_path.name in self._no_del_dirs:
@@ -236,8 +237,7 @@ class CloudStrmIncrement(_PluginBase):
                                 break
                             if str(parent_path.parent) != str(Path(increment_file).root):
                                 # 父目录非根目录，才删除父目录
-                                if not SystemUtils.exits_files(parent_path,
-                                                               [ext.strip() for ext in self._rmt_mediaext.split(",")]):
+                                if not SystemUtils.exits_files(parent_path, []):
                                     # 当前路径下没有媒体文件则删除
                                     shutil.rmtree(parent_path)
                                     logger.warn(f"增量非保留目录 {parent_path} 已删除")

@@ -25,11 +25,12 @@
         "name": "云盘Strm生成（增量版）",
         "description": "监控文件创建，生成Strm文件（增量版）。",
         "labels": "云盘",
-        "version": "1.0",
+        "version": "1.1",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v1.1": "某种场景下可能出现卡死，修复bug",
           "v1.0": "增量监控"
         }
       },
