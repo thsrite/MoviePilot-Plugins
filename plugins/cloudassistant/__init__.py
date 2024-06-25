@@ -113,12 +113,12 @@ class CloudAssistant(_PluginBase):
                 "dest_path": "/mnt/media/movies",
                 "mount_path": "/mnt/cloud/115/media/movies",
                 "return_path": "/mnt/softlink/movies",
-                "delete_local": "false",
-                "local_preserve_hierarchy": 0,
+                "delete_dest": "false",
+                "dest_preserve_hierarchy": 0,
                 "delete_history": "false",
-                "delete_source": "false",
+                "delete_src": "false",
                 "src_paths": "/mnt/media/movies, /mnt/media/series",
-                "source_preserve_hierarchy": 0,
+                "src_preserve_hierarchy": 0,
                 "just_media": "true",
                 "overwrite": "false",
                 "upload_cloud": "true"
@@ -419,14 +419,14 @@ class CloudAssistant(_PluginBase):
                 mount_path = monitor_dir.get("mount_path")
                 # cd2_path = monitor_dir.get("cd2_path")
                 return_path = monitor_dir.get("return_path")
-                delete_local = monitor_dir.get("delete_local") or "false"
-                delete_source = monitor_dir.get("delete_source") or "false"
+                delete_dest = monitor_dir.get("delete_dest") or "false"
+                delete_src = monitor_dir.get("delete_src") or "false"
                 delete_history = monitor_dir.get("delete_history") or "false"
                 overwrite = monitor_dir.get("overwrite") or "false"
                 upload_cloud = monitor_dir.get("upload_cloud") or "true"
-                local_preserve_hierarchy = monitor_dir.get("local_preserve_hierarchy") or 0
+                dest_preserve_hierarchy = monitor_dir.get("dest_preserve_hierarchy") or 0
                 src_paths = monitor_dir.get("src_paths") or ""
-                source_preserve_hierarchy = monitor_dir.get("source_preserve_hierarchy") or 0
+                src_preserve_hierarchy = monitor_dir.get("src_preserve_hierarchy") or 0
 
                 # 1、转移到云盘挂载路径 上传到cd2
                 # 挂载的路径
@@ -503,7 +503,7 @@ class CloudAssistant(_PluginBase):
                             "file_path": str(file_path),
                             "target_cloud_file": mount_file,
                             "target_soft_file": target_return_file,
-                            "delete_local": delete_local,
+                            "delete_dest": delete_dest,
                             "delete_history": delete_history,
                             "time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
                         })
@@ -511,11 +511,11 @@ class CloudAssistant(_PluginBase):
                         self.save_data(key="history", value=history)
 
                     # 移动模式删除空目录
-                    if str(delete_local) == "true":
-                        self.__delete_local_file(file_path, mon_path, local_preserve_hierarchy)
+                    if str(delete_dest) == "true":
+                        self.__delete_dest_file(file_path, mon_path, dest_preserve_hierarchy)
                     # 是否删除源文件
-                    if str(delete_source) == "true" and transferhis:
-                        self.__delete_source_file(transferhis, src_paths, source_preserve_hierarchy)
+                    if str(delete_src) == "true" and transferhis:
+                        self.__delete_src_file(transferhis, src_paths, src_preserve_hierarchy)
                     # 发送消息汇总
                     if self._notify and transferhis:
                         self.__msg_handler(transferhis)
@@ -541,7 +541,7 @@ class CloudAssistant(_PluginBase):
                     self.downloadhis.delete_downloadfile(downloadfile.id)
                     logger.info(f"删除下载文件记录：{downloadfile.id} {transferhis.download_hash}")
 
-    def __delete_local_file(self, file_path: Path, mon_path: str, local_preserve_hierarchy: int):
+    def __delete_dest_file(self, file_path: Path, mon_path: str, dest_preserve_hierarchy: int):
         """
         删除监控文件
         """
@@ -551,7 +551,7 @@ class CloudAssistant(_PluginBase):
 
         # 保留层级
         mon_path_depth = len(Path(mon_path).parts)
-        retain_depth = mon_path_depth + int(local_preserve_hierarchy)
+        retain_depth = mon_path_depth + int(dest_preserve_hierarchy)
 
         for file_dir in file_path.parents:
             if len(file_dir.parts) <= retain_depth:
@@ -562,7 +562,7 @@ class CloudAssistant(_PluginBase):
                 logger.warn(f"删除监控空目录：{file_dir}")
                 shutil.rmtree(file_dir, ignore_errors=True)
 
-    def __delete_source_file(self, transferhis, src_paths, source_preserve_hierarchy):
+    def __delete_src_file(self, transferhis, src_paths, src_preserve_hierarchy):
         """
         删除源文件
         """
@@ -596,7 +596,7 @@ class CloudAssistant(_PluginBase):
         if source_path:
             # 保留层级
             source_path_depth = len(Path(source_path).parts)
-            retain_depth = source_path_depth + int(source_preserve_hierarchy)
+            retain_depth = source_path_depth + int(src_preserve_hierarchy)
 
             for file_dir in Path(transferhis.src).parents:
                 if len(file_dir.parts) <= retain_depth:
@@ -1528,7 +1528,7 @@ class CloudAssistant(_PluginBase):
                     },
                     {
                         'component': 'td',
-                        'text': history.get("delete_local")
+                        'text': history.get("delete_dest")
                     },
                     {
                         'component': 'td',
