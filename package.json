@@ -522,11 +522,12 @@
         "name": "云盘助手",
         "description": "本地文件定时转移到云盘，软连接/strm回本地，定时清理无效软连接。",
         "labels": "云盘",
-        "version": "2.0.1",
+        "version": "2.0.2",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png",
         "author": "thsrite",
         "level": 3,
         "history": {
+          "v2.0.2": "插件自定义数据库操作，避免依赖主程序更新",
           "v2.0.1": "修改若看参数名，具体看教程",
           "v2.0": "调整通知图片",
           "v1.9": "修复非媒体文件转移bug（需要主程序1.9.9+）",

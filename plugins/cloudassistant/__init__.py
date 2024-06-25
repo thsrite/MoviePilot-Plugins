@@ -16,14 +16,15 @@ from apscheduler.triggers.cron import CronTrigger
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
+from sqlalchemy.orm import Session
 
 from app import schemas
 from app.chain.tmdb import TmdbChain
 from app.chain.transfer import TransferChain
 from app.core.config import settings
 from app.core.event import eventmanager, Event
-from app.db.downloadhistory_oper import DownloadHistoryOper
-from app.db.transferhistory_oper import TransferHistoryOper
+from app.db import db_query, db_update
+from app.db.models import TransferHistory, DownloadHistory, DownloadFiles
 from app.log import logger
 from app.modules.emby import Emby
 from app.plugins import _PluginBase
@@ -64,7 +65,7 @@ class CloudAssistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png"
     # 插件版本
-    plugin_version = "2.0.1"
+    plugin_version = "2.0.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -132,8 +133,6 @@ class CloudAssistant(_PluginBase):
     _EMBY_APIKEY = settings.EMBY_API_KEY
 
     def init_plugin(self, config: dict = None):
-        self.transferhis = TransferHistoryOper()
-        self.downloadhis = DownloadHistoryOper()
         self.transferchian = TransferChain()
         self.tmdbchain = TmdbChain()
         # 清空配置
@@ -485,7 +484,7 @@ class CloudAssistant(_PluginBase):
                     retcode = 0
 
                 if retcode == 0:
-                    transferhis = self.transferhis.get_by_dest(str(file_path))
+                    transferhis = self.__get_transferhis_by_dest(db=None, dest_path=str(file_path))
                     if transferhis and self._refresh:
                         self.__refresh_emby(transferhis)
 
@@ -527,18 +526,17 @@ class CloudAssistant(_PluginBase):
         """
         删除历史记录
         """
-        self.transferhis.delete(transferhis.id)
+        self.__delete_transferhis_by_id(db=None, transferhisid=transferhis.id)
         logger.info(f"删除转移历史记录：{transferhis.id} {transferhis.download_hash}")
 
-        downloadhis = self.downloadhis.get_by_hash(transferhis.download_hash)
+        downloadhis = self.__get_downloadhis_by_hash(db=None, download_hash=transferhis.download_hash)
         if downloadhis:
-            self.downloadhis.delete_history(downloadhis.id)
+            self.__delete_downloadhis_by_id(db=None, downloadhisid=downloadhis.id)
             logger.info(f"删除下载历史记录：{downloadhis.id} {transferhis.download_hash}")
-            downloadfiles = self.downloadhis.get_files_by_hash(
-                download_hash=transferhis.download_hash)
+            downloadfiles = self.__get_downloadfiles_by_hash(db=None, download_hash=transferhis.download_hash)
             if downloadfiles:
                 for downloadfile in downloadfiles:
-                    self.downloadhis.delete_downloadfile(downloadfile.id)
+                    self.__delete_downloadfile_by_id(db=None, downloadfileid=downloadfile.id)
                     logger.info(f"删除下载文件记录：{downloadfile.id} {transferhis.download_hash}")
 
     def __delete_dest_file(self, file_path: Path, mon_path: str, dest_preserve_hierarchy: int):
@@ -571,7 +569,7 @@ class CloudAssistant(_PluginBase):
             logger.info(f"删除源文件：{transferhis.src}")
 
         # 删除下载文件记录
-        self.downloadhis.delete_file_by_fullpath(transferhis.src)
+        self.__delete_downloadfile_by_fullpath(db=None, fullpath=transferhis.src)
 
         # 发送事件 删种
         eventmanager.send_event(
@@ -1633,3 +1631,63 @@ class CloudAssistant(_PluginBase):
                 self._scheduler.shutdown()
                 self._event.clear()
             self._scheduler = None
+
+    @staticmethod
+    @db_query
+    def __get_transferhis_by_dest(db: Optional[Session], dest_path: str) -> TransferHistory:
+        """
+        根据目标路径查询转移记录
+        """
+        return db.query(TransferHistory).filter(TransferHistory.dest == dest_path).first()
+
+    @staticmethod
+    @db_update
+    def __delete_transferhis_by_id(db: Optional[Session], transferhisid: int):
+        """
+        根据转移记录ID删除转移记录
+        """
+        TransferHistory.delete(db, transferhisid)
+        db.commit()
+
+    @staticmethod
+    @db_query
+    def __get_downloadhis_by_hash(db: Optional[Session], download_hash: str) -> DownloadHistory:
+        """
+        根据下载记录hash查询下载记录
+        """
+        return DownloadHistory.get_by_hash(db, download_hash)
+
+    @staticmethod
+    @db_update
+    def __delete_downloadhis_by_id(db: Optional[Session], downloadhisid: int):
+        """
+        根据下载记录ID删除下载记录
+        """
+        DownloadHistory.delete(db, downloadhisid)
+        db.commit()
+
+    @staticmethod
+    @db_query
+    def __get_downloadfiles_by_hash(db: Optional[Session], download_hash: str) -> List[DownloadFiles]:
+        """
+        根据下载记录hash查询下载文件记录
+        """
+        return DownloadFiles.get_by_hash(db, download_hash, None)
+
+    @staticmethod
+    @db_update
+    def __delete_downloadfile_by_id(db: Optional[Session], downloadfileid: int):
+        """
+        根据下载文件记录ID删除下载文件记录
+        """
+        DownloadFiles.delete(db, downloadfileid)
+        db.commit()
+
+    @staticmethod
+    @db_update
+    def __delete_downloadfile_by_fullpath(db: Optional[Session], fullpath: str):
+        """
+        根据下载文件路径删除下载文件记录
+        """
+        DownloadFiles.delete_by_fullpath(db, fullpath)
+        db.commit()
