@@ -23,7 +23,6 @@ from app.chain.transfer import TransferChain
 from app.core.config import settings
 from app.core.event import eventmanager, Event
 from app.db.downloadhistory_oper import DownloadHistoryOper
-from app.db.models import DownloadHistory, DownloadFiles
 from app.db.transferhistory_oper import TransferHistoryOper
 from app.log import logger
 from app.modules.emby import Emby
@@ -526,13 +525,13 @@ class CloudAssistant(_PluginBase):
 
         downloadhis = self.downloadhis.get_by_hash(transferhis.download_hash)
         if downloadhis:
-            DownloadHistory.delete(downloadhis.id)
+            self.downloadhis.delete_history(downloadhis.id)
             logger.info(f"删除下载历史记录：{downloadhis.id} {transferhis.download_hash}")
             downloadfiles = self.downloadhis.get_files_by_hash(
                 download_hash=transferhis.download_hash)
             if downloadfiles:
                 for downloadfile in downloadfiles:
-                    DownloadFiles.delete(downloadfile.id)
+                    self.downloadhis.delete_downloadfile(downloadfile.id)
                     logger.info(f"删除下载文件记录：{downloadfile.id} {transferhis.download_hash}")
 
     def __delete_local_file(self, file_path: Path, mon_path: str, local_preserve_hierarchy: int):
