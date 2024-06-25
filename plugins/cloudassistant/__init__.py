@@ -27,7 +27,7 @@ from app.db.transferhistory_oper import TransferHistoryOper
 from app.log import logger
 from app.modules.emby import Emby
 from app.plugins import _PluginBase
-from app.schemas.types import EventType, SystemConfigKey, MediaType, NotificationType
+from app.schemas.types import EventType, SystemConfigKey, MediaType, NotificationType, MediaImageType
 from app.utils.http import RequestUtils
 from app.utils.string import StringUtils
 from app.utils.system import SystemUtils
@@ -64,7 +64,7 @@ class CloudAssistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png"
     # 插件版本
-    plugin_version = "1.9"
+    plugin_version = "2.0"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -623,6 +623,20 @@ class CloudAssistant(_PluginBase):
           }
         """
         key = f"{transferhis.title} ({transferhis.year})"
+
+        # 获取图片
+        try:
+            backrop_image = self.chain.obtain_specific_image(
+                mediaid=transferhis.tmdbid,
+                mtype=MediaType(transferhis.type),
+                image_type=MediaImageType.Backdrop,
+                season=int(transferhis.seasons.replace("S", "")) if transferhis.seasons else None,
+                episode=int(transferhis.episodes.replace("E", "")) if transferhis.episodes else None,
+            ) or transferhis.image
+        except Exception as e:
+            logger.error(f"获取图片失败 {str(e)} 使用转移记录图片")
+            backrop_image = transferhis.image
+
         # 发送消息汇总
         media_list = self._medias.get(
             key + " " + transferhis.seasons) or {}
@@ -637,7 +651,7 @@ class CloudAssistant(_PluginBase):
                 "key": key,
                 "mtype": transferhis.type,
                 "category": transferhis.category,
-                "image": transferhis.image,
+                "image": backrop_image,
                 "season": transferhis.seasons,
                 "episodes": episodes,
                 "time": datetime.datetime.now()
@@ -647,7 +661,7 @@ class CloudAssistant(_PluginBase):
                 "key": key,
                 "mtype": transferhis.type,
                 "category": transferhis.category,
-                "image": transferhis.image,
+                "image": backrop_image,
                 "season": transferhis.seasons,
                 "episodes": [transferhis.episodes.replace("E", "")],
                 "time": datetime.datetime.now()
