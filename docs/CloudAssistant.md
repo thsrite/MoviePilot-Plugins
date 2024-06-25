@@ -4,6 +4,28 @@
 
 提供四种方式，具体看示例
 
+{
+    "transfer_type": "copy/move",
+    "return_mode": "softlink",
+    "monitor_dirs": [
+        {
+            "monitor_mode": "监控模式 compatibility/fast",
+            `"dest_path": "/mnt/link/movies",`
+            "mount_path": "/mnt/cloud/115/media/movies",
+            "return_path": "/mnt/softlink/movies",
+            `"delete_dest": "false",`
+            `"dest_preserve_hierarchy": 0,`
+            "delete_history": "false",
+            `"delete_src": "false",`
+            `"src_paths": "/mnt/media/movies, /mnt/media/series",`
+            `"src_preserve_hierarchy": 0,`
+            "only_media": "true",
+            "overwrite": "false",
+            "upload_cloud": "true"
+        }
+    ]
+}
+
 ```
 
 直接转移--softlink回本地
@@ -13,16 +35,16 @@
     "monitor_dirs": [
         {
             "monitor_mode": "监控模式 compatibility/fast",
-            "dest_path": "/mnt/link/movies",
+            `"dest_path": "/mnt/link/movies",`
             "mount_path": "/mnt/cloud/115/media/movies",
             "return_path": "/mnt/softlink/movies",
-            "delete_dest": "false",
-            "dest_preserve_hierarchy": 0,
+            `"delete_dest": "false",`
+            `"dest_preserve_hierarchy": 0,`
             "delete_history": "false",
-            "delete_src": "false",
-            "src_paths": "/mnt/media/movies, /mnt/media/series",
-            "src_preserve_hierarchy": 0,
-            "just_media": "true",
+            `"delete_src": "false",`
+            `"src_paths": "/mnt/media/movies, /mnt/media/series",`
+            `"src_preserve_hierarchy": 0,`
+            "only_media": "true",
             "overwrite": "false",
             "upload_cloud": "true"
         }
@@ -50,7 +72,7 @@
             "delete_src": "false",
             "src_paths": "/mnt/media/movies, /mnt/media/series",
             "src_preserve_hierarchy": 0,
-            "just_media": "true",
+            "only_media": "true",
             "overwrite": "false",
             "upload_cloud": "true"
         }
@@ -77,7 +99,7 @@ cd2方式上传--softlink回本地（暂时移除）
             "delete_src": "false",
             "src_paths": "/mnt/media/movies, /mnt/media/series",
             "src_preserve_hierarchy": 0,
-            "just_media": "true",
+            "only_media": "true",
             "overwrite": "false",
             "upload_cloud": "true"
         }
@@ -108,7 +130,7 @@ cd2方式上传--strm回本地（暂时移除）
             "delete_src": "false",
             "src_paths": "/mnt/media/movies, /mnt/media/series",
             "src_preserve_hierarchy": 0,
-            "just_media": "true",
+            "only_media": "true",
             "overwrite": "false",
             "upload_cloud": "true"
         }
@@ -134,7 +156,7 @@ cd2方式上传--strm回本地（暂时移除）
 - src_paths：转移前的源文件路径，多个目录用逗号分隔（MoviePilot下载目录）
 - src_preserve_hierarchy：保留源文件路径目录层级，0：表示仅监控到源文件目录，1：表示监控源文件目录及其一级子目录
 - 
-- just_media：是否只监控媒体文件
+- only_media：是否只监控媒体文件
 - overwrite：是否覆盖已存在云盘文件
 - upload_cloud: 是否上传到云盘, false则直接软连接或者strm回本地
 

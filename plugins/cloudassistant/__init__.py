@@ -119,7 +119,7 @@ class CloudAssistant(_PluginBase):
                 "delete_src": "false",
                 "src_paths": "/mnt/media/movies, /mnt/media/series",
                 "src_preserve_hierarchy": 0,
-                "just_media": "true",
+                "only_media": "true",
                 "overwrite": "false",
                 "upload_cloud": "true"
             }
@@ -341,13 +341,13 @@ class CloudAssistant(_PluginBase):
         # 遍历所有监控目录
         for mon_path in self._dirconf.keys():
             monitor_conf = self._dirconf.get(mon_path)
-            just_media = monitor_conf.get("just_media") or True
+            only_media = monitor_conf.get("only_media") or True
             # 遍历目录下所有文件
             for root, dirs, files in os.walk(mon_path):
                 for name in dirs + files:
                     file_path = os.path.join(root, name)
                     if Path(str(file_path)).is_file():
-                        if str(just_media) == "true" and Path(str(file_path)).suffix.lower() not in [ext.strip() for ext
+                        if str(only_media) == "true" and Path(str(file_path)).suffix.lower() not in [ext.strip() for ext
                                                                                                      in
                                                                                                      self._rmt_mediaext.split(
                                                                                                          ",")]:
