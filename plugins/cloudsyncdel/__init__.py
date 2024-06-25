@@ -38,6 +38,7 @@ class CloudSyncDel(_PluginBase):
     _enabled = False
     # 任务执行间隔
     _paths = {}
+    _cloud_paths = {}
     _notify = False
     _del_history = False
 
@@ -48,9 +49,12 @@ class CloudSyncDel(_PluginBase):
             self._enabled = config.get("enabled")
             self._notify = config.get("notify")
             self._del_history = config.get("del_history")
-            for path in str(config.get("path")).split("\n"):
-                paths = path.split(":")
-                self._paths[paths[0]] = paths[1]
+            if config.get("path"):
+                for path in str(config.get("path")).split("\n"):
+                    paths = path.split("#")[0]
+                    cloud_path = path.split("#")[1]
+                    self._paths[paths.split(":")[0]] = paths.split(":")[1]
+                    self._cloud_paths[paths.split(":")[0]] = cloud_path
 
             # 清理插件历史
             if self._del_history:
@@ -70,7 +74,8 @@ class CloudSyncDel(_PluginBase):
             return
 
         event_data = event.event_data
-        if not event_data or event_data.get("action") != "cloudsyncdel":
+        if not event_data or (
+                event_data.get("action") != "networkdisk_del" and event_data.get("action") != "cloudsyncdel"):
             return
 
         logger.info(f"接收到云盘删除请求 {event_data}")
@@ -86,139 +91,104 @@ class CloudSyncDel(_PluginBase):
         season_num = event_data.get("season_num")
         episode_num = event_data.get("episode_num")
 
-        media_path = self.__get_path(media_path)
+        media_path = self.__get_path(self._paths, media_path)
         logger.info(f"获取到本地软连接路径 {media_path}")
 
         # 判断文件是否存在
-        softlink_file_flag = False
-        cloud_file_path = None
+        cloud_file_flag = False
         media_path = Path(media_path)
-        if media_path.exists():
-            if os.path.islink(media_path):
-                softlink_file_flag = True
+        if media_path.suffix:
+            # 删除云盘文件
+            cloud_file = self.__get_path(self._cloud_paths, str(media_path))
+            logger.info(f"获取到云盘文件 {cloud_file}")
 
+            if Path(cloud_file).exists():
+                cloud_file_path = Path(cloud_file)
                 # 删除文件、nfo、jpg等同名文件
-                pattern = media_path.stem.replace('[', '?').replace(']', '?')
-                logger.info(f"开始筛选 {media_path.parent} 下同名文件 {pattern}")
-                files = media_path.parent.glob(f"{pattern}.*")
-
+                pattern = cloud_file_path.stem.replace('[', '?').replace(']', '?')
+                logger.info(f"开始筛选 {cloud_file_path.parent} 下同名文件 {pattern}")
+                files = cloud_file_path.parent.glob(f"{pattern}.*")
                 for file in files:
-                    # Path(file).unlink()
-                    logger.info(f"本地文件 {file} 已删除")
+                    Path(file).unlink()
+                    logger.info(f"云盘文件 {file} 已删除")
+                    cloud_file_flag = True
+        else:
+            # 删除云盘文件
+            cloud_path = self.__get_path(self._cloud_paths, str(media_path))
+            if Path(cloud_path).exists():
+                shutil.rmtree(cloud_path)
+                logger.warn(f"云盘目录 {cloud_path} 已删除")
+                cloud_file_flag = True
 
-                # 删除云盘文件
-                cloud_file = os.readlink(media_path)
-                cloud_file = self.__get_path(cloud_file)
-                logger.info(f"获取到云盘文件 {cloud_file}")
+        # 发送消息
+        image = 'https://emby.media/notificationicon.png'
+        media_type = MediaType.MOVIE if media_type in ["Movie", "MOV"] else MediaType.TV
 
-                if Path(cloud_file).exists():
-                    cloud_file_path = Path(cloud_file)
-                    # 删除文件、nfo、jpg等同名文件
-                    pattern = cloud_file_path.stem.replace('[', '?').replace(']', '?')
-                    logger.info(f"开始筛选 {cloud_file_path.parent} 下同名文件 {pattern}")
-                    files = cloud_file_path.parent.glob(f"{pattern}.*")
-                    for file in files:
-                        # Path(file).unlink()
-                        logger.info(f"云盘文件 {file} 已删除")
-            else:
-                # 非根目录，才删除目录
-                # shutil.rmtree(media_path)
-                # 删除目录
-                logger.warn(f"本地软连接目录 {media_path} 已删除")
-
-        if softlink_file_flag:
-            # 删除软连接空父级目录
-            self.__tree_del(media_path, "软连接")
-
-            if cloud_file_path:
-                # 删除云盘空父级目录
-                self.__tree_del(cloud_file_path, "云盘")
-
-        if softlink_file_flag:
-            # 发送消息
-            image = 'https://emby.media/notificationicon.png'
-            media_type = MediaType.MOVIE if media_type in ["Movie", "MOV"] else MediaType.TV
-            if self._notify:
-                backrop_image = self.chain.obtain_specific_image(
-                    mediaid=tmdb_id,
-                    mtype=media_type,
-                    image_type=MediaImageType.Backdrop,
-                    season=season_num,
-                    episode=episode_num
-                ) or image
-
-                # 类型
-                if media_type == MediaType.MOVIE:
-                    msg = f'电影 {media_name} {tmdb_id}'
-                # 删除电视剧
-                elif media_type == MediaType.TV and not season_num and not episode_num:
-                    msg = f'剧集 {media_name} {tmdb_id}'
-                # 删除季 S02
-                elif media_type == MediaType.TV and season_num and not episode_num:
-                    msg = f'剧集 {media_name} S{season_num} {tmdb_id}'
-                # 删除剧集S02E02
-                elif media_type == MediaType.TV and season_num and episode_num:
-                    msg = f'剧集 {media_name} S{season_num}E{episode_num} {tmdb_id}'
-                else:
-                    msg = media_name
-
-                msg = f"{msg}\n软连接已删除\n{'云盘文件已删除' if cloud_file_path else '云盘文件不存在'}"
-                # 发送通知
-                self.post_message(
-                    mtype=NotificationType.MediaServer,
-                    title="云盘同步删除任务完成",
-                    image=backrop_image,
-                    text=f"{msg}\n"
-                         f"时间 {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}"
-                )
-
-            # 读取历史记录
-            history = self.get_data('history') or []
-
-            # 获取poster
-            poster_image = self.chain.obtain_specific_image(
+        if cloud_file_flag and self._notify:
+            backrop_image = self.chain.obtain_specific_image(
                 mediaid=tmdb_id,
                 mtype=media_type,
-                image_type=MediaImageType.Poster,
+                image_type=MediaImageType.Backdrop,
+                season=season_num,
+                episode=episode_num
             ) or image
-            history.append({
-                "type": media_type.value,
-                "title": media_name,
-                "path": media_path,
-                "season": season_num if season_num and str(season_num).isdigit() else None,
-                "episode": episode_num if episode_num and str(episode_num).isdigit() else None,
-                "image": poster_image,
-                "del_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
-                "unique": f"{media_name} {tmdb_id}"
-            })
 
-            # 保存历史
-            self.save_data("history", history)
+            # 类型
+            if media_type == MediaType.MOVIE:
+                msg = f'电影 {media_name} {tmdb_id}'
+            # 删除电视剧
+            elif media_type == MediaType.TV and not season_num and not episode_num:
+                msg = f'剧集 {media_name} {tmdb_id}'
+            # 删除季 S02
+            elif media_type == MediaType.TV and season_num and not episode_num:
+                msg = f'剧集 {media_name} S{season_num} {tmdb_id}'
+            # 删除剧集S02E02
+            elif media_type == MediaType.TV and season_num and episode_num:
+                msg = f'剧集 {media_name} S{season_num}E{episode_num} {tmdb_id}'
+            else:
+                msg = media_name
 
-    def __tree_del(self, path: Path, type: str):
-        """
-        递归删除目录
-        """
-        # 判断当前媒体父路径下是否有媒体文件，如有则无需遍历父级
-        if not SystemUtils.exits_files(path.parent, settings.RMT_MEDIAEXT):
-            # 判断父目录是否为空, 为空则删除
-            for parent_path in path.parents:
-                if str(parent_path.parent) != str(path.root):
-                    # 父目录非根目录，才删除父目录
-                    if not SystemUtils.exits_files(parent_path, settings.RMT_MEDIAEXT):
-                        # 当前路径下没有媒体文件则删除
-                        # shutil.rmtree(parent_path)
-                        logger.warn(f"本地{type}目录 {parent_path} 已删除")
+            # 发送通知
+            self.post_message(
+                mtype=NotificationType.MediaServer,
+                title="云盘同步删除任务完成",
+                image=backrop_image,
+                text=f"{msg}\n"
+                     f"时间 {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}"
+            )
 
-    def __get_path(self, file_path: str):
+        # 读取历史记录
+        history = self.get_data('history') or []
+
+        # 获取poster
+        poster_image = self.chain.obtain_specific_image(
+            mediaid=tmdb_id,
+            mtype=media_type,
+            image_type=MediaImageType.Poster,
+        ) or image
+        history.append({
+            "type": media_type.value,
+            "title": media_name,
+            "path": media_path,
+            "season": season_num if season_num and str(season_num).isdigit() else None,
+            "episode": episode_num if episode_num and str(episode_num).isdigit() else None,
+            "image": poster_image,
+            "del_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
+            "unique": f"{media_name} {tmdb_id}"
+        })
+
+        # 保存历史
+        self.save_data("history", history)
+
+    def __get_path(self, paths, file_path: str):
         """
         路径转换
         """
-        if self._paths and self._paths.keys():
-            for library_path in list(self._paths.keys()):
+        if paths and paths.keys():
+            for library_path in list(paths.keys()):
                 if str(file_path).startswith(library_path):
                     # 替换网盘路径
-                    file_path = str(file_path).replace(library_path, self._paths.get(library_path))
+                    file_path = str(file_path).replace(library_path, paths.get(library_path))
                     break
 
         return file_path
@@ -343,7 +313,7 @@ class CloudSyncDel(_PluginBase):
                                             'model': 'path',
                                             'rows': '2',
                                             'label': '媒体库路径映射',
-                                            'placeholder': '媒体服务器路径:MoviePilot内挂载路径（一行一个）'
+                                            'placeholder': '媒体服务器软连接路径:MoviePilot软连接路径#MoviePilot云盘路径（一行一个）'
                                         }
                                     }
                                 ]
@@ -386,9 +356,10 @@ class CloudSyncDel(_PluginBase):
                                             'type': 'info',
                                             'variant': 'tonal',
                                             'text': '关于路径映射：'
-                                                    'emby:/data/series/A.mp4,'
-                                                    'MoviePilot:/mnt/link/series/A.mp4。'
-                                                    '路径映射填/data:/mnt/link'
+                                                    'emby软连接路径:/data/series/A.mp4,'
+                                                    'MoviePilot软连接路径:/mnt/link/series/A.mp4。'
+                                                    'MoviePilot云盘路径:/mnt/cloud/series/A.mp4。'
+                                                    '路径映射填/data:/mnt/link#/mnt/cloud'
                                         }
                                     }
                                 ]
