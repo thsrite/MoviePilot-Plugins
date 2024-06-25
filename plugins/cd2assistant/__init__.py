@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 
 import pytz
 from clouddrive import CloudDriveClient, Client
+from clouddrive.proto import CloudDrive_pb2
 
 from app.core.config import settings
 from app.core.event import eventmanager, Event
@@ -15,6 +16,7 @@ from apscheduler.triggers.cron import CronTrigger
 from app.schemas import NotificationType
 from app.schemas.types import EventType
 
+
 class Cd2Assistant(_PluginBase):
     # 插件名称
     plugin_name = "CloudDrive2助手"
@@ -23,7 +25,7 @@ class Cd2Assistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -177,7 +179,6 @@ class Cd2Assistant(_PluginBase):
 
         self._client.RestartService()
 
-
     @eventmanager.register(EventType.PluginAction)
     def cd2_info(self, event: Event = None):
         """
@@ -190,16 +191,17 @@ class Cd2Assistant(_PluginBase):
 
         # 运行信息
         system_info = self._client.GetRunningInfo()
-        if system_info:
-            pattern = re.compile(r'(\w+): ([\d.]+)')
-            matches = pattern.findall(str(system_info))
-            # 将匹配到的结果转换为字典
-            system_info = {key: float(value) for key, value in matches}
+        system_info = self.__str_to_dict(system_info) if system_info else {}
 
-        # 上传任务数量
-        upload_count = self._client.GetUploadFileCount()
-        # 下载任务数量
-        download_count = self._client.GetDownloadFileCount()
+        # 任务数量
+        task_count = self._client.GetAllTasksCount()
+        task_count = self.__str_to_dict(task_count) if task_count else {}
+
+        # 速度
+        downloadFileList = self._client.GetDownloadFileList()
+        downloadFileList = self.__str_to_dict(downloadFileList) if downloadFileList else {}
+        uploadFileList = self._client.GetUploadFileList(CloudDrive_pb2.GetUploadFileListRequest(getAll=True))
+        uploadFileList = self.__str_to_dict(uploadFileList) if uploadFileList else {}
 
         system_info_dict = {
             "cpuUsage": f"{system_info.get('cpuUsage'):.2f}%" if system_info.get(
@@ -214,11 +216,12 @@ class Cd2Assistant(_PluginBase):
                 "dirCacheCount") else 0 if system_info else None,
             "tempFileCount": system_info.get('tempFileCount') if system_info.get(
                 "tempFileCount") else 0 if system_info else None,
-            "upload_count": str(upload_count).replace("fileCount: ", "") or 0 if upload_count and "fileCount" in str(
-                upload_count) else 0,
-            "download_count": str(download_count).replace("fileCount: ",
-                                                          "") or 0 if download_count and "fileCount" in str(
-                download_count) else 0,
+            "upload_count": task_count.get("uploadCount") if task_count.get("uploadCount") else 0,
+            "download_count": task_count.get("downloadCount") if task_count.get("downloadCount") else 0,
+            "download_speed": f"{downloadFileList.get('globalBytesPerSecond') / 1024 / 1024:.2f}MB/s" if downloadFileList.get(
+                "globalBytesPerSecond") else "0KB/s" if downloadFileList else "0KB/s",
+            "upload_speed": f"{uploadFileList.get('globalBytesPerSecond') / 1024 / 1024:.2f}MB/s" if uploadFileList.get(
+                "globalBytesPerSecond") else "0KB/s" if uploadFileList else "0KB/s",
         }
 
         logger.info(f"获取CloudDrive2系统信息：\n{system_info_dict}")
@@ -234,9 +237,21 @@ class Cd2Assistant(_PluginBase):
                                    f"目录缓存数量：{system_info_dict.get('dirCacheCount')}\n"
                                    f"临时文件数量：{system_info_dict.get('tempFileCount')}\n"
                                    f"上传任务数量：{system_info_dict.get('upload_count')}\n"
-                                   f"下载任务数量：{system_info_dict.get('download_count')}\n")
+                                   f"下载任务数量：{system_info_dict.get('download_count')}\n"
+                                   f"下载速度：{system_info_dict.get('download_speed')}\n"
+                                   f"上传速度：{system_info_dict.get('upload_speed')}\n")
 
         return system_info_dict
+
+    @staticmethod
+    def __str_to_dict(str_data):
+        """
+        字符串转字典
+        """
+        pattern = re.compile(r'(\w+): ([\d.]+)')
+        matches = pattern.findall(str(str_data))
+        # 将匹配到的结果转换为字典
+        return {key: float(value) for key, value in matches}
 
     def __send_notify(self, task):
         """
@@ -537,7 +552,7 @@ class Cd2Assistant(_PluginBase):
                         'component': 'VCol',
                         'props': {
                             'cols': 12,
-                            'md': 3,
+                            'md': 4,
                             'sm': 6
                         },
                         'content': [
@@ -590,7 +605,7 @@ class Cd2Assistant(_PluginBase):
                         'component': 'VCol',
                         'props': {
                             'cols': 12,
-                            'md': 3,
+                            'md': 4,
                             'sm': 6
                         },
                         'content': [
@@ -643,7 +658,7 @@ class Cd2Assistant(_PluginBase):
                         'component': 'VCol',
                         'props': {
                             'cols': 12,
-                            'md': 3,
+                            'md': 4,
                             'sm': 6
                         },
                         'content': [
@@ -696,7 +711,7 @@ class Cd2Assistant(_PluginBase):
                         'component': 'VCol',
                         'props': {
                             'cols': 12,
-                            'md': 3,
+                            'md': 4,
                             'sm': 6
                         },
                         'content': [
@@ -749,7 +764,7 @@ class Cd2Assistant(_PluginBase):
                         'component': 'VCol',
                         'props': {
                             'cols': 12,
-                            'md': 3,
+                            'md': 4,
                             'sm': 6
                         },
                         'content': [
@@ -802,7 +817,7 @@ class Cd2Assistant(_PluginBase):
                         'component': 'VCol',
                         'props': {
                             'cols': 12,
-                            'md': 3,
+                            'md': 4,
                             'sm': 6
                         },
                         'content': [
@@ -855,7 +870,7 @@ class Cd2Assistant(_PluginBase):
                         'component': 'VCol',
                         'props': {
                             'cols': 12,
-                            'md': 3,
+                            'md': 4,
                             'sm': 6
                         },
                         'content': [
@@ -908,7 +923,7 @@ class Cd2Assistant(_PluginBase):
                         'component': 'VCol',
                         'props': {
                             'cols': 12,
-                            'md': 3,
+                            'md': 4,
                             'sm': 6
                         },
                         'content': [
@@ -956,6 +971,59 @@ class Cd2Assistant(_PluginBase):
                                 ]
                             }
                         ]
+                    },
+                    {
+                        'component': 'VCol',
+                        'props': {
+                            'cols': 12,
+                            'md': 4,
+                            'sm': 6
+                        },
+                        'content': [
+                            {
+                                'component': 'VCard',
+                                'props': {
+                                    'variant': 'tonal',
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VCardText',
+                                        'props': {
+                                            'class': 'd-flex align-center',
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'div',
+                                                'content': [
+                                                    {
+                                                        'component': 'span',
+                                                        'props': {
+                                                            'class': 'text-caption'
+                                                        },
+                                                        'text': '实时速率'
+                                                    },
+                                                    {
+                                                        'component': 'div',
+                                                        'props': {
+                                                            'class': 'd-flex align-center flex-wrap'
+                                                        },
+                                                        'content': [
+                                                            {
+                                                                'component': 'span',
+                                                                'props': {
+                                                                    'class': 'text-h6'
+                                                                },
+                                                                'text': f"↑ {cd2_info.get('download_speed')}  ↓ {cd2_info.get('upload_speed')}"
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
                     }
                 ]
             }]
@@ -976,7 +1044,7 @@ class Cd2Assistant(_PluginBase):
         # 列配置
         cols = {
             "cols": 12,
-            "md": 8
+            "md": 12
         }
         # 全局配置
         attrs = {
@@ -994,12 +1062,6 @@ class Cd2Assistant(_PluginBase):
                 }
             ]
         else:
-            """
-            Active connections: 62 
-            server accepts handled requests
-             468843 468843 1368256 
-            Reading: 0 Writing: 1 Waiting: 61 
-            """
             cd2_info = self.cd2_info()
             elements = [
                 {
@@ -1410,6 +1472,110 @@ class Cd2Assistant(_PluginBase):
                                                                         'class': 'text-h6'
                                                                     },
                                                                     'text': cd2_info.get('upload_count')
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                },
+                            ]
+                        },
+                        {
+                            'component': 'VCol',
+                            'props': {
+                                'cols': 6,
+                                'md': 3
+                            },
+                            'content': [
+                                {
+                                    'component': 'VCard',
+                                    'props': {
+                                        'variant': 'tonal',
+                                    },
+                                    'content': [
+                                        {
+                                            'component': 'VCardText',
+                                            'props': {
+                                                'class': 'd-flex align-center',
+                                            },
+                                            'content': [
+                                                {
+                                                    'component': 'div',
+                                                    'content': [
+                                                        {
+                                                            'component': 'span',
+                                                            'props': {
+                                                                'class': 'text-caption'
+                                                            },
+                                                            'text': '下载速率'
+                                                        },
+                                                        {
+                                                            'component': 'div',
+                                                            'props': {
+                                                                'class': 'd-flex align-center flex-wrap'
+                                                            },
+                                                            'content': [
+                                                                {
+                                                                    'component': 'span',
+                                                                    'props': {
+                                                                        'class': 'text-h6'
+                                                                    },
+                                                                    'text': cd2_info.get('download_speed')
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                },
+                            ]
+                        },
+                        {
+                            'component': 'VCol',
+                            'props': {
+                                'cols': 6,
+                                'md': 3
+                            },
+                            'content': [
+                                {
+                                    'component': 'VCard',
+                                    'props': {
+                                        'variant': 'tonal',
+                                    },
+                                    'content': [
+                                        {
+                                            'component': 'VCardText',
+                                            'props': {
+                                                'class': 'd-flex align-center',
+                                            },
+                                            'content': [
+                                                {
+                                                    'component': 'div',
+                                                    'content': [
+                                                        {
+                                                            'component': 'span',
+                                                            'props': {
+                                                                'class': 'text-caption'
+                                                            },
+                                                            'text': '上传速率'
+                                                        },
+                                                        {
+                                                            'component': 'div',
+                                                            'props': {
+                                                                'class': 'd-flex align-center flex-wrap'
+                                                            },
+                                                            'content': [
+                                                                {
+                                                                    'component': 'span',
+                                                                    'props': {
+                                                                        'class': 'text-h6'
+                                                                    },
+                                                                    'text': cd2_info.get('upload_speed')
                                                                 }
                                                             ]
                                                         }
