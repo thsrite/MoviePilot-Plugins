@@ -137,8 +137,10 @@ cd2方式上传--strm回本地（暂时移除）
 - just_media：是否只监控媒体文件
 - overwrite：是否覆盖已存在云盘文件
 - upload_cloud: 是否上传到云盘,false则直接软连接或者strm回本地
+
+- strm配置具体看[CloudStrm.md](CloudStrm.md)
 - library_dir：strm模式下，媒体服务器内源文件路径
-- cloud_type：strm模式下，云盘类型，可选值：alist/cd2
+- cloud_type：strm模式下，云盘类型，可选值：alist/cd2  （`不填就是本地模式`）
 - cloud_path：strm模式下，cd2/alist挂载本地跟路径
 - cloud_url：strm模式下，cd2/alist地址
 - cloud_scheme：strm模式下，cd2/alist地址 http/https（strm模式可参考云盘Strm生成插件）
