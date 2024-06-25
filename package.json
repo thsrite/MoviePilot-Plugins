@@ -526,7 +526,7 @@
         "author": "thsrite",
         "level": 3,
         "history": {
-          "v2.0.1": "修改参数名local_path->link_path、source_dirs->source_paths",
+          "v2.0.1": "修改参数名local_path->dest_path、source_dirs->src_paths",
           "v2.0": "调整通知图片",
           "v1.9": "修复非媒体文件转移bug（需要主程序1.9.9+）",
           "v1.8": "支持可选开启实时监控",
