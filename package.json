@@ -563,5 +563,17 @@
         "history": {
           "v1.0": "重定向软连接指向"
         }
+      },
+      "CloudSyncDel": {
+        "name": "云盘同步删除",
+        "description": "媒体库删除软连接文件后，同步删除云盘文件。",
+        "labels": "云盘",
+        "version": "1.0",
+        "icon": "clouddisk.png",
+        "author": "thsrite",
+        "level": 2,
+        "history": {
+          "v1.0": "媒体库删除软连接文件后，同步删除云盘文件"
+        }
       }
 }
