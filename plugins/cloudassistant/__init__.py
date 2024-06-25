@@ -447,7 +447,7 @@ class CloudAssistant(_PluginBase):
                         else:
                             # 其他文件复制
                             self.__transfer_file(file_path=file_path,
-                                                 target_file=mon_path,
+                                                 target_file=mount_file,
                                                  transfer_type="copy")
 
                 # 2、软连接回本地路径
