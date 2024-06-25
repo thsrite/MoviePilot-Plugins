@@ -1,4 +1,3 @@
-import os
 import shutil
 import time
 from pathlib import Path
@@ -11,7 +10,6 @@ from app.plugins import _PluginBase
 from typing import Any, List, Dict, Tuple
 
 from app.schemas.types import EventType, MediaImageType, NotificationType, MediaType
-from app.utils.system import SystemUtils
 
 
 class CloudSyncDel(_PluginBase):
@@ -22,7 +20,7 @@ class CloudSyncDel(_PluginBase):
     # 插件图标
     plugin_icon = "clouddisk.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -40,6 +38,7 @@ class CloudSyncDel(_PluginBase):
     _paths = {}
     _cloud_paths = {}
     _notify = False
+    _test = False
     _del_history = False
 
     _video_formats = ('.mp4', '.avi', '.rmvb', '.wmv', '.mov', '.mkv', '.flv', '.ts', '.webm', '.iso', '.mpg')
@@ -48,6 +47,7 @@ class CloudSyncDel(_PluginBase):
         if config:
             self._enabled = config.get("enabled")
             self._notify = config.get("notify")
+            self._test = config.get("test") or True
             self._del_history = config.get("del_history")
             if config.get("path"):
                 for path in str(config.get("path")).split("\n"):
@@ -109,14 +109,16 @@ class CloudSyncDel(_PluginBase):
                 logger.info(f"开始筛选 {cloud_file_path.parent} 下同名文件 {pattern}")
                 files = cloud_file_path.parent.glob(f"{pattern}.*")
                 for file in files:
-                    Path(file).unlink()
+                    if not self._test:
+                        Path(file).unlink()
                     logger.info(f"云盘文件 {file} 已删除")
                     cloud_file_flag = True
         else:
             # 删除云盘文件
             cloud_path = self.__get_path(self._cloud_paths, str(media_path))
             if Path(cloud_path).exists():
-                shutil.rmtree(cloud_path)
+                if not self._test:
+                    shutil.rmtree(cloud_path)
                 logger.warn(f"云盘目录 {cloud_path} 已删除")
                 cloud_file_flag = True
 
@@ -252,7 +254,7 @@ class CloudSyncDel(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -268,7 +270,7 @@ class CloudSyncDel(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -284,14 +286,31 @@ class CloudSyncDel(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'test',
+                                            'label': '测试模式',
+                                            'placeholder': '测试模式下不会真正删除文件，仅仅模拟删除操作'
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
                                 },
                                 'content': [
                                     {
                                         'component': 'VSwitch',
                                         'props': {
                                             'model': 'del_history',
-                                            'label': '删除历史',
+                                            'label': '清空历史',
                                         }
                                     }
                                 ]
@@ -372,6 +391,7 @@ class CloudSyncDel(_PluginBase):
             "enabled": False,
             "path": "",
             "notify": False,
+            "test": True,
             "del_history": False
         }
 
