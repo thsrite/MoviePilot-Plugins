@@ -89,7 +89,7 @@ class CloudAssistant(_PluginBase):
     _onlyonce = False
     _monitor = False
     _invalid = False
-    _only_media = False
+    _only_media_history = False
     _refresh = False
     _cron = None
     _invalid_cron = None
@@ -149,7 +149,7 @@ class CloudAssistant(_PluginBase):
             self._exclude_keywords = config.get("exclude_keywords") or ""
             self._interval = config.get("interval") or 60
             self._refresh = config.get("refresh")
-            self._only_media = config.get("only_media")
+            self._only_media_history = config.get("only_media_history")
             self._cron = config.get("cron")
             self._invalid_cron = config.get("invalid_cron")
             self._dir_confs = config.get("dir_confs") or None
@@ -309,7 +309,7 @@ class CloudAssistant(_PluginBase):
             "exclude_keywords": self._exclude_keywords,
             "interval": self._interval,
             "cron": self._cron,
-            "only_media": self._only_media,
+            "only_media_history": self._only_media_history,
             "refresh": self._refresh,
             "invalid_cron": self._invalid_cron,
             "rmt_mediaext": self._rmt_mediaext
@@ -494,9 +494,9 @@ class CloudAssistant(_PluginBase):
                             self.__delete_history(transferhis)
 
                     # 3、存操作记录
-                    if (self._only_media and Path(file_path).suffix.lower() in [ext.strip() for ext in
+                    if (self._only_media_history and Path(file_path).suffix.lower() in [ext.strip() for ext in
                                                                                 self._rmt_mediaext.split(",")]) \
-                            or not self._only_media:
+                            or not self._only_media_history:
                         history = self.get_data('history') or []
                         history.append({
                             "file_path": str(file_path),
@@ -1143,7 +1143,7 @@ class CloudAssistant(_PluginBase):
                                     {
                                         'component': 'VSwitch',
                                         'props': {
-                                            'model': 'only_media',
+                                            'model': 'only_media_history',
                                             'label': '插件历史仅媒体文件',
                                         }
                                     }
@@ -1468,7 +1468,7 @@ class CloudAssistant(_PluginBase):
             "onlyonce": False,
             "invalid": False,
             "refresh": False,
-            "only_media": False,
+            "only_media_history": False,
             "clean": False,
             "exclude_keywords": "",
             "interval": 60,
