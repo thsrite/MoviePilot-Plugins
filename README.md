@@ -45,4 +45,4 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - 云盘助手(docs%2FCloudAssistant.md) v2.0.3
 - CloudDrive2助手 v1.2
 - 软连接重定向 v1.0
-- 云盘同步删除 v1.1
+- 云盘同步删除 v1.2

@@ -573,11 +573,12 @@
         "name": "云盘同步删除",
         "description": "媒体库删除软连接文件后，同步删除云盘文件。",
         "labels": "云盘",
-        "version": "1.0",
+        "version": "1.2",
         "icon": "clouddisk.png",
         "author": "thsrite",
         "level": 2,
         "history": {
+          "v1.2": "修复删除bug",
           "v1.1": "增加测试模式按钮（不删除文件）",
           "v1.0": "媒体库删除软连接文件后，同步删除云盘文件"
         }
