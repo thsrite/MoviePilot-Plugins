@@ -10,6 +10,7 @@ from app.plugins import _PluginBase
 from typing import Any, List, Dict, Tuple
 
 from app.schemas.types import EventType, MediaImageType, NotificationType, MediaType
+from app.utils.system import SystemUtils
 
 
 class CloudSyncDel(_PluginBase):
@@ -113,6 +114,19 @@ class CloudSyncDel(_PluginBase):
                         Path(file).unlink()
                     logger.info(f"云盘文件 {file} 已删除")
                     cloud_file_flag = True
+
+                # 删除空目录
+                # 判断当前媒体父路径下是否有媒体文件，如有则无需遍历父级
+                if not SystemUtils.exits_files(cloud_file_path.parent, settings.RMT_MEDIAEXT):
+                    # 判断父目录是否为空, 为空则删除
+                    for parent_path in cloud_file_path.parents:
+                        if str(parent_path.parent) != str(cloud_file_path.root):
+                            # 父目录非根目录，才删除父目录
+                            if not SystemUtils.exits_files(parent_path, settings.RMT_MEDIAEXT):
+                                # 当前路径下没有媒体文件则删除
+                                if not self._test:
+                                    shutil.rmtree(parent_path)
+                                logger.warn(f"云盘{type}目录 {parent_path} 已删除")
         else:
             # 删除云盘文件
             cloud_path = self.__get_path(self._cloud_paths, str(media_path))
