@@ -340,7 +340,7 @@ class CloudAssistant(_PluginBase):
         # 遍历所有监控目录
         for mon_path in self._dirconf.keys():
             monitor_conf = self._dirconf.get(mon_path)
-            only_media = monitor_conf.get("only_media") or True
+            only_media = monitor_conf.get("only_media") or "true"
             # 遍历目录下所有文件
             for root, dirs, files in os.walk(mon_path):
                 for name in dirs + files:
