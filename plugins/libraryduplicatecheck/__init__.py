@@ -238,9 +238,16 @@ class LibraryDuplicateCheck(_PluginBase):
 
                             # 同步删除软连接源目录
                             if cloud_file and Path(cloud_file).exists() and self._delete_softlink:
-                                Path(cloud_file).unlink()
                                 delete_cloud_files += 1
-                                logger.info(f"云盘文件 {cloud_file} 已删除")
+                                cloud_file_path = Path(cloud_file)
+                                # 删除文件、nfo、jpg等同名文件
+                                pattern = cloud_file_path.stem.replace('[', '?').replace(']', '?')
+                                logger.info(f"开始筛选 {cloud_file_path.parent} 下同名文件 {pattern}")
+                                files = cloud_file_path.parent.glob(f"{pattern}.*")
+                                for file in files:
+                                    Path(file).unlink()
+                                    logger.info(f"云盘文件 {file} 已删除")
+
                                 self.__rmtree(Path(cloud_file), "云盘")
             else:
                 logger.info(f"'{name}' No Duplicate video files.")
