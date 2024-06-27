@@ -26,7 +26,7 @@ class LibraryDuplicateCheck(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/libraryduplicate.png"
     # 插件版本
-    plugin_version = "1.4"
+    plugin_version = "1.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -148,13 +148,14 @@ class LibraryDuplicateCheck(_PluginBase):
                     logger.error("获取媒体库失败")
                     return
 
-                for library in librarys:
-                    if not library:
-                        continue
-                    if library.name == library_name:
-                        logger.info(f"媒体库：{library_name} 刷新完成")
-                        self.__refresh_emby_library_by_id(library.id)
-                        break
+                if delete_duplicate_files > 0 or delete_cloud_files > 0:
+                    for library in librarys:
+                        if not library:
+                            continue
+                        if library.name == library_name:
+                            logger.info(f"媒体库：{library_name} 刷新完成")
+                            self.__refresh_emby_library_by_id(library.id)
+                            break
             msg += (f"{path}{'#' + library_name if library_name else ''} 检查完成\n"
                     f"文件保留规则: {_retain_type}\n"
                     f"本地重复文件: {duplicate_files}\n"
