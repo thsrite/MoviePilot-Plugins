@@ -518,6 +518,27 @@ class LibraryDuplicateCheck(_PluginBase):
                                 ]
                             }
                         ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '检查路径配置#媒体库名称时会通知Emby刷新媒体库。'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
                     }
                 ]
             }
