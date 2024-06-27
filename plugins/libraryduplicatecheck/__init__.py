@@ -30,7 +30,7 @@ class LibraryDuplicateCheck(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/libraryduplicate.png"
     # 插件版本
-    plugin_version = "1.8"
+    plugin_version = "1.9"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -254,25 +254,27 @@ class LibraryDuplicateCheck(_PluginBase):
                     logger.info(f"文件保留规则：{str(retain_type)}")
                     keep_file = self.__choose_file_to_keep(paths, retain_type)
                     logger.info(f"本地保留文件: {keep_file}")
-                    keep_cloud_file = os.readlink(str(keep_file))
-                    logger.info(f"云盘保留文件: {keep_cloud_file}")
+                    if self._delete_softlink:
+                        keep_cloud_file = os.readlink(str(keep_file))
+                        logger.info(f"云盘保留文件: {keep_cloud_file}")
 
                     # Delete the other duplicate files (if needed)
                     for path in paths:
                         if (Path(path).exists() or os.path.islink(path)) and str(path) != str(keep_file):
-                            cloud_file = os.readlink(path)
                             delete_duplicate_files += 1
                             self.__delete_duplicate_file(duplicate_file=path,
                                                          paths=paths,
                                                          keep_file=str(keep_file),
                                                          file_type="监控")
-                            # 同步删除软连接源目录
-                            if cloud_file and Path(cloud_file).exists() and self._delete_softlink:
-                                delete_cloud_files += 1
-                                self.__delete_duplicate_file(duplicate_file=cloud_file,
-                                                             paths=paths,
-                                                             keep_file=keep_cloud_file,
-                                                             file_type="云盘")
+                            if self._delete_softlink:
+                                # 同步删除软连接源目录
+                                cloud_file = os.readlink(path)
+                                if cloud_file and Path(cloud_file).exists():
+                                    delete_cloud_files += 1
+                                    self.__delete_duplicate_file(duplicate_file=cloud_file,
+                                                                 paths=paths,
+                                                                 keep_file=keep_cloud_file,
+                                                                 file_type="云盘")
                 else:
                     logger.info(f"'{name}' No Duplicate video files.")
 
@@ -544,7 +546,7 @@ class LibraryDuplicateCheck(_PluginBase):
                                         'component': 'VTextarea',
                                         'props': {
                                             'model': 'path',
-                                            'label': '检查路径（非云盘路径）',
+                                            'label': '检查路径',
                                             'rows': 2,
                                             'placeholder': "检查的媒体路径\n"
                                                            "检查的媒体路径$保留规则\n"
