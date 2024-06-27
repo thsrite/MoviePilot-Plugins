@@ -130,6 +130,8 @@ class CloudSyncDel(_PluginBase):
                                 # 当前路径下没有媒体文件则删除
                                 shutil.rmtree(parent_path)
                                 logger.warn(f"云盘目录 {parent_path} 已删除")
+            else:
+                logger.warn(f"云盘文件 {cloud_file} 文件已被删除")
         else:
             # 删除云盘文件
             cloud_path = self.__get_path(self._cloud_paths, str(media_path))
