@@ -70,8 +70,8 @@ class LibraryDuplicateCheck(_PluginBase):
                 if not self._EMBY_HOST.startswith("http"):
                     self._EMBY_HOST = "http://" + self._EMBY_HOST
 
-            if config.get("paths"):
-                for path in str(config.get("paths")).split("\n"):
+            if config.get("path"):
+                for path in str(config.get("path")).split("\n"):
                     if path.count("#") == 1:
                         path = path.split("#")[0]
                         library_name = path.split("#")[1]
@@ -452,7 +452,7 @@ class LibraryDuplicateCheck(_PluginBase):
                                     {
                                         'component': 'VTextarea',
                                         'props': {
-                                            'model': 'paths',
+                                            'model': 'path',
                                             'label': '检查路径',
                                             'rows': 2,
                                             'placeholder': "检查的媒体路径#媒体库名称\n"
@@ -492,7 +492,7 @@ class LibraryDuplicateCheck(_PluginBase):
             "onlyonce": False,
             "delete_softlink": False,
             "cron": "5 1 * * *",
-            "paths": "",
+            "path": "",
             "notify": False,
             "retain_type": "仅检查",
             "rmt_mediaext": ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
