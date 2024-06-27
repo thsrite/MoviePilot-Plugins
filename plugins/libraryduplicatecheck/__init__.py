@@ -512,7 +512,7 @@ class LibraryDuplicateCheck(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '检测指定路径下同一媒体文件是否有重复（不同扩展名视为同一媒体）。'
+                                            'text': '检测指定路径下同一媒体文件是否有重复（不同扩展名视为同一媒体）。建议只处理电影。'
                                         }
                                     }
                                 ]
