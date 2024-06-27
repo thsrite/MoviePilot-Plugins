@@ -61,6 +61,7 @@ class LibraryDuplicateCheck(_PluginBase):
             self._delete_softlink = config.get("delete_softlink")
             self._onlyonce = config.get("onlyonce")
             self._retain_type = config.get("retain_type")
+            self._path = config.get("path")
             self._rmt_mediaext = config.get(
                 "rmt_mediaext") or ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
 
@@ -72,9 +73,10 @@ class LibraryDuplicateCheck(_PluginBase):
 
             if config.get("path"):
                 for path in str(config.get("path")).split("\n"):
+                    logger.info(f"添加媒体库路径：{path}")
                     if path.count("#") == 1:
-                        path = path.split("#")[0]
                         library_name = path.split("#")[1]
+                        path = path.split("#")[0]
                         self._paths[path] = library_name
                     else:
                         self._paths[path] = None
@@ -143,11 +145,7 @@ class LibraryDuplicateCheck(_PluginBase):
                         continue
                     if library.name == library_name:
                         logger.info(f"媒体库：{library_name} 刷新完成")
-                        result = self.__refresh_emby_library_by_id(library.id)
-                        if result:
-                            logger.info(f"媒体库：{library_name} 刷新成功")
-                        else:
-                            logger.error(f"媒体库：{library_name} 刷新失败")
+                        self.__refresh_emby_library_by_id(library.id)
                         break
 
         if self._notify:
@@ -256,31 +254,32 @@ class LibraryDuplicateCheck(_PluginBase):
 
     @staticmethod
     def __choose_file_to_keep(paths, retain_type):
-        # Example: Choose based on file size (keeping the smallest)
-        checked = float('inf')
-        smallest_path = None
+        checked = None
+        checked_path = None
+
         for path in paths:
             if str(retain_type) == "保留体积最小":
                 selected = os.path.getsize(path)
-                if selected < checked:
+                if checked is None or selected < checked:
                     checked = selected
-                    smallest_path = path
-            if str(retain_type) == "保留体积最大":
+                    checked_path = path
+            elif str(retain_type) == "保留体积最大":
                 selected = os.path.getsize(path)
-                if selected > checked:
+                if checked is None or selected > checked:
                     checked = selected
-                    smallest_path = path
-            if str(retain_type) == "保留创建最早":
+                    checked_path = path
+            elif str(retain_type) == "保留创建最早":
                 selected = os.path.getmtime(path)
-                if selected < checked:
+                if checked is None or selected < checked:
                     checked = selected
-                    smallest_path = path
-            if str(retain_type) == "保留创建最晚":
+                    checked_path = path
+            elif str(retain_type) == "保留创建最晚":
                 selected = os.path.getmtime(path)
-                if selected > checked:
+                if checked is None or selected > checked:
                     checked = selected
-                    smallest_path = path
-        return smallest_path
+                    checked_path = path
+
+        return checked_path
 
     def __update_config(self):
         self.update_config({
@@ -289,7 +288,7 @@ class LibraryDuplicateCheck(_PluginBase):
             "cron": self._cron,
             "delete_softlink": self._delete_softlink,
             "notify": self._notify,
-            "paths": self._paths,
+            "path": self._path,
             "retain_type": self._retain_type,
             "rmt_mediaext": self._rmt_mediaext
         })
