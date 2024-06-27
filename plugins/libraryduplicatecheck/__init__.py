@@ -74,6 +74,9 @@ class LibraryDuplicateCheck(_PluginBase):
                 if not self._EMBY_HOST.startswith("http"):
                     self._EMBY_HOST = "http://" + self._EMBY_HOST
 
+            _paths = {}
+            _path_type = {}
+
             if config.get("path"):
                 for path in str(config.get("path")).split("\n"):
                     retain_type = self._retain_type
