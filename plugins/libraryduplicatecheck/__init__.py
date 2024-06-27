@@ -201,15 +201,15 @@ class LibraryDuplicateCheck(_PluginBase):
         # Traverse the directory and subdirectories
         for root, _, files in os.walk(directory):
             for file in files:
+                file_path = os.path.join(root, file)
                 # Check the file extension
-                if Path(file).exists() and Path(file).suffix.lower() in [ext.strip() for ext in
-                                                                         self._rmt_mediaext.split(",")]:
+                if (Path(str(file_path)).exists() or os.path.islink(file_path)) and Path(file).suffix.lower() in [
+                    ext.strip() for ext in self._rmt_mediaext.split(",")]:
                     video_name = Path(file).stem.split('-')[0].rstrip()
                     logger.info(f'Scan file -> {file} -> {video_name}')
-                    video_files[video_name].append(os.path.join(root, file))
+                    video_files[video_name].append(file_path)
 
-        logger.info("")
-        logger.info("================== RESULT ==================")
+        logger.info("\n================== RESULT ==================\n")
 
         # Find and handle duplicate video files
         for name, paths in video_files.items():
@@ -217,7 +217,7 @@ class LibraryDuplicateCheck(_PluginBase):
                 duplicate_files += len(paths)
                 logger.info(f"Duplicate video files for '{name}':")
                 for path in paths:
-                    if Path(path).exists():
+                    if Path(path).exists() or os.path.islink(path):
                         logger.info(f"  {path} 文件大小：{os.path.getsize(path)}，创建时间：{os.path.getmtime(path)}")
                     else:
                         logger.info(f"  {path} 文件已被删除")
@@ -228,7 +228,7 @@ class LibraryDuplicateCheck(_PluginBase):
                     logger.info(f"文件保留规则：{str(retain_type)} Keeping: {keep_path}")
                     # Delete the other duplicate files (if needed)
                     for path in paths:
-                        if Path(path).exists() and path != keep_path:
+                        if (Path(path).exists() or os.path.islink(path)) and path != keep_path:
                             cloud_file = os.readlink(path)
                             Path(path).unlink()
                             delete_duplicate_files += 1
