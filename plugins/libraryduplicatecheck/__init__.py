@@ -22,7 +22,7 @@ class LibraryDuplicateCheck(_PluginBase):
     # 插件名称
     plugin_name = "媒体库重复媒体检测"
     # 插件描述
-    plugin_desc = "媒体库重复媒体检查，可选择保留规则保留其一。"
+    plugin_desc = "媒体库重复媒体检查，可选保留规则保留其一。"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/libraryduplicate.png"
     # 插件版本
