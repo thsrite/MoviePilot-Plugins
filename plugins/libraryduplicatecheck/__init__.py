@@ -5,6 +5,7 @@ from pathlib import Path
 import pytz
 
 from app.core.config import settings
+from app.modules.emby import Emby
 from app.plugins import _PluginBase
 from typing import Any, List, Dict, Tuple, Optional
 from app.log import logger
@@ -12,6 +13,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from app.schemas.types import EventType
+from app.utils.http import RequestUtils
 from app.utils.system import SystemUtils
 
 
@@ -23,7 +25,7 @@ class LibraryDuplicateCheck(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/libraryduplicate.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -46,6 +48,9 @@ class LibraryDuplicateCheck(_PluginBase):
     _retain_type = None
     _rmt_mediaext = ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
 
+    _EMBY_HOST = settings.EMBY_HOST
+    _EMBY_APIKEY = settings.EMBY_API_KEY
+
     _scheduler: Optional[BackgroundScheduler] = None
 
     def init_plugin(self, config: dict = None):
@@ -56,9 +61,23 @@ class LibraryDuplicateCheck(_PluginBase):
             self._delete_softlink = config.get("delete_softlink")
             self._onlyonce = config.get("onlyonce")
             self._retain_type = config.get("retain_type")
-            self._paths = config.get("paths")
             self._rmt_mediaext = config.get(
                 "rmt_mediaext") or ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
+
+            if self._EMBY_HOST:
+                if not self._EMBY_HOST.endswith("/"):
+                    self._EMBY_HOST += "/"
+                if not self._EMBY_HOST.startswith("http"):
+                    self._EMBY_HOST = "http://" + self._EMBY_HOST
+
+            if config.get("paths"):
+                for path in str(config.get("paths")).split("\n"):
+                    if path.count("#") == 1:
+                        path = path.split("#")[0]
+                        library_name = path.split("#")[1]
+                        self._paths[path] = library_name
+                    else:
+                        self._paths[path] = None
 
             if self._enabled or self._onlyonce:
                 # 定时服务
@@ -97,13 +116,53 @@ class LibraryDuplicateCheck(_PluginBase):
         """
         检查媒体库重复媒体
         """
-        if not self._paths:
+        if not self._paths and not self._paths.keys():
             logger.warning("媒体库重复媒体检测服务未配置路径")
             return
 
-        for path in self._paths.split("\n"):
+        for path in self._paths.keys():
             logger.info(f"开始检查路径：{path}")
             self.__find_duplicate_videos(path)
+            logger.info(f"路径 {path} 检查完毕")
+
+            library_name = self._paths.get(path)
+            if library_name:
+                logger.info(f"开始刷新媒体库：{library_name}")
+                # 获取emby 媒体库
+                librarys = Emby().get_librarys()
+                if not librarys:
+                    logger.error("获取媒体库失败")
+                    return
+
+                for library in librarys:
+                    if not library:
+                        continue
+                    if library.name == library_name:
+                        logger.info(f"媒体库：{library_name} 刷新完成")
+                        result = self.__refresh_emby_library_by_id(library.id)
+                        if result:
+                            logger.info(f"媒体库：{library_name} 刷新成功")
+                        else:
+                            logger.error(f"媒体库：{library_name} 刷新失败")
+                        break
+
+    def __refresh_emby_library_by_id(self, item_id: str) -> bool:
+        """
+        通知Emby刷新一个项目的媒体库
+        """
+        if not self._EMBY_HOST or not self._EMBY_APIKEY:
+            return False
+        req_url = "%semby/Items/%s/Refresh?Recursive=true&api_key=%s" % (self._EMBY_HOST, item_id, self._EMBY_APIKEY)
+        try:
+            res = RequestUtils().post_res(req_url)
+            if res:
+                return True
+            else:
+                logger.info(f"刷新媒体库对象 {item_id} 失败，无法连接Emby！")
+        except Exception as e:
+            logger.error(f"连接Items/Id/Refresh出错：" + str(e))
+            return False
+        return False
 
     def __find_duplicate_videos(self, directory):
         """
@@ -362,7 +421,8 @@ class LibraryDuplicateCheck(_PluginBase):
                                             'model': 'paths',
                                             'label': '检查路径',
                                             'rows': 2,
-                                            'placeholder': "一行一个"
+                                            'placeholder': "检查的媒体路径#媒体库名称\n"
+                                                           "检查的媒体路径"
                                         }
                                     }
                                 ]
