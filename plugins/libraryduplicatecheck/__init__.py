@@ -248,7 +248,7 @@ class LibraryDuplicateCheck(_PluginBase):
                     logger.info(f"文件保留规则：{str(retain_type)} Keeping: {keep_path}")
                     # Delete the other duplicate files (if needed)
                     for path in paths:
-                        if (Path(path).exists() or os.path.islink(path)) and path != keep_path:
+                        if (Path(path).exists() or os.path.islink(path)) and str(path) != str(keep_path):
                             cloud_file = os.readlink(path)
                             delete_duplicate_files += 1
                             # 删除文件、nfo、jpg等同名文件
