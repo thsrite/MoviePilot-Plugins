@@ -12,7 +12,7 @@ from app.log import logger
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from app.schemas.types import EventType
+from app.schemas.types import EventType, NotificationType
 from app.utils.http import RequestUtils
 from app.utils.system import SystemUtils
 
@@ -25,7 +25,7 @@ class LibraryDuplicateCheck(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/libraryduplicate.png"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -120,9 +120,13 @@ class LibraryDuplicateCheck(_PluginBase):
             logger.warning("媒体库重复媒体检测服务未配置路径")
             return
 
+        duplicate_files = 0
+        delete_duplicate_files = 0
+        delete_cloud_files = 0
+
         for path in self._paths.keys():
             logger.info(f"开始检查路径：{path}")
-            self.__find_duplicate_videos(path)
+            self.__find_duplicate_videos(path, duplicate_files, delete_duplicate_files, delete_cloud_files)
             logger.info(f"路径 {path} 检查完毕")
 
             library_name = self._paths.get(path)
@@ -146,6 +150,16 @@ class LibraryDuplicateCheck(_PluginBase):
                             logger.error(f"媒体库：{library_name} 刷新失败")
                         break
 
+        if self._notify:
+            self.post_message(
+                mtype=NotificationType.Plugin,
+                title="媒体库重复媒体检测",
+                text=f"本地重复文件: {duplicate_files}\n"
+                     f"删除本地文件: {delete_duplicate_files}\n"
+                     f"删除云盘文件: {delete_cloud_files}",
+                link=settings.MP_DOMAIN('#/history')
+            )
+
     def __refresh_emby_library_by_id(self, item_id: str) -> bool:
         """
         通知Emby刷新一个项目的媒体库
@@ -164,7 +178,7 @@ class LibraryDuplicateCheck(_PluginBase):
             return False
         return False
 
-    def __find_duplicate_videos(self, directory):
+    def __find_duplicate_videos(self, directory, duplicate_files, delete_duplicate_files, delete_cloud_files):
         """
         检查目录下视频文件是否有重复
         """
@@ -181,11 +195,13 @@ class LibraryDuplicateCheck(_PluginBase):
                     logger.info(f'Scan file -> {file} -> {video_name}')
                     video_files[video_name].append(os.path.join(root, file))
 
-        logger.info()
+        logger.info("")
         logger.info("================== RESULT ==================")
+
         # Find and handle duplicate video files
         for name, paths in video_files.items():
             if len(paths) > 1:
+                duplicate_files += len(paths)
                 logger.info(f"Duplicate video files for '{name}':")
                 for path in paths:
                     logger.info(f"  {path} 文件大小：{os.path.getsize(path)}，创建时间：{os.path.getmtime(path)}")
@@ -199,6 +215,7 @@ class LibraryDuplicateCheck(_PluginBase):
                         if path != keep_path:
                             cloud_file = os.readlink(path)
                             # Path(path).unlink()
+                            delete_duplicate_files += 1
                             logger.info(f"Deleted Local file: {path}")
                             self.__rmtree(Path(path), "监控")
 
@@ -213,6 +230,7 @@ class LibraryDuplicateCheck(_PluginBase):
                                     files = cloud_file_path.parent.glob(f"{pattern}.*")
                                     for file in files:
                                         # Path(file).unlink()
+                                        delete_cloud_files += 1
                                         logger.info(f"云盘文件 {file} 已删除")
                                     self.__rmtree(cloud_file_path, "云盘")
 

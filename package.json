@@ -587,11 +587,12 @@
         "name": "媒体库重复媒体检测",
         "description": "媒体库重复媒体检查，可选择保留规则保留其一。",
         "labels": "媒体库",
-        "version": "1.1",
+        "version": "1.2",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/libraryduplicate.png",
         "author": "thsrite",
         "level": 2,
         "history": {
+          "v1.2": "支持通知推送",
           "v1.1": "支持自动刷新媒体库",
           "v1.0": "媒体库重复媒体检查，可选择保留规则保留其一"
         }
