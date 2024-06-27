@@ -165,7 +165,7 @@ class LibraryDuplicateCheck(_PluginBase):
                     logger.error("获取媒体库失败")
                     return
 
-                if delete_duplicate_files > 0 or delete_cloud_files > 0:
+                if str(self._retain_type) != '仅检查' and delete_duplicate_files > 0 or delete_cloud_files > 0:
                     for library in librarys:
                         if not library:
                             continue
@@ -236,8 +236,11 @@ class LibraryDuplicateCheck(_PluginBase):
 
         # 全程加锁
         with lock:
+            # 按照 paths 的长度对 video_files 进行排序
+            sorted_video_files = sorted(video_files.items(), key=lambda item: len(item[1]))
+
             # Find and handle duplicate video files
-            for name, paths in video_files.items():
+            for name, paths in sorted_video_files:
                 if len(paths) > 1:
                     duplicate_files += len(paths)
                     logger.info(f"Duplicate video files for '{name}':")
