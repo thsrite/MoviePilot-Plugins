@@ -22,7 +22,7 @@ class CloudSyncDel(_PluginBase):
     # 插件图标
     plugin_icon = "clouddisk.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -112,6 +112,12 @@ class CloudSyncDel(_PluginBase):
                     Path(file).unlink()
                     logger.info(f"云盘文件 {file} 已删除")
                     cloud_file_flag = True
+
+                # 删除thumb图片
+                thumb_file = cloud_file_path.parent / (cloud_file_path.stem + "-thumb.jpg")
+                if thumb_file.exists():
+                    thumb_file.unlink()
+                    logger.info(f"云盘文件 {thumb_file} 已删除")
 
                 # 删除空目录
                 # 判断当前媒体父路径下是否有媒体文件，如有则无需遍历父级
