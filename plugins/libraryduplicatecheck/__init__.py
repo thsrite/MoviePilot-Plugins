@@ -544,7 +544,7 @@ class LibraryDuplicateCheck(_PluginBase):
                                         'component': 'VTextarea',
                                         'props': {
                                             'model': 'path',
-                                            'label': '检查路径',
+                                            'label': '检查路径（非云盘路径）',
                                             'rows': 2,
                                             'placeholder': "检查的媒体路径\n"
                                                            "检查的媒体路径$保留规则\n"
