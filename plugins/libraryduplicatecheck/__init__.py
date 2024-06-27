@@ -26,7 +26,7 @@ class LibraryDuplicateCheck(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/libraryduplicate.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -42,6 +42,7 @@ class LibraryDuplicateCheck(_PluginBase):
     _enabled = False
     # 任务执行间隔
     _paths = {}
+    _path_type = {}
     _notify = False
     _delete_softlink = False
     _cron = None
@@ -75,12 +76,20 @@ class LibraryDuplicateCheck(_PluginBase):
             if config.get("path"):
                 for path in str(config.get("path")).split("\n"):
                     logger.info(f"添加媒体库路径：{path}")
+
+                    retain_type = self._retain_type
+                    if path.count("$") == 1:
+                        retain_type = path.split("$")[1]
+                        path = path.split("$")[0]
+
                     if path.count("#") == 1:
                         library_name = path.split("#")[1]
                         path = path.split("#")[0]
                         self._paths[path] = library_name
                     else:
                         self._paths[path] = None
+
+                    self._path_type[path] = retain_type
 
             if self._enabled or self._onlyonce:
                 # 定时服务
@@ -125,8 +134,10 @@ class LibraryDuplicateCheck(_PluginBase):
 
         msg = ""
         for path in self._paths.keys():
-            logger.info(f"开始检查路径：{path}")
-            duplicate_files, delete_duplicate_files, delete_cloud_files = self.__find_duplicate_videos(path)
+            _retain_type = self._path_type.get(path)
+            logger.info(f"开始检查路径：{path} {_retain_type}")
+            duplicate_files, delete_duplicate_files, delete_cloud_files = self.__find_duplicate_videos(path,
+                                                                                                       _retain_type)
             logger.info(f"路径 {path} 检查完毕")
 
             library_name = self._paths.get(path)
@@ -146,7 +157,7 @@ class LibraryDuplicateCheck(_PluginBase):
                         self.__refresh_emby_library_by_id(library.id)
                         break
             msg += (f"{path}{'#' + library_name if library_name else ''} 检查完成\n"
-                    f"文件保留规则: {self._retain_type}\n"
+                    f"文件保留规则: {_retain_type}\n"
                     f"本地重复文件: {duplicate_files}\n"
                     f"删除本地文件: {delete_duplicate_files}\n"
                     f"删除云盘文件: {delete_cloud_files}\n")
@@ -177,7 +188,7 @@ class LibraryDuplicateCheck(_PluginBase):
             return False
         return False
 
-    def __find_duplicate_videos(self, directory):
+    def __find_duplicate_videos(self, directory, retain_type):
         """
         检查目录下视频文件是否有重复
         """
@@ -209,10 +220,10 @@ class LibraryDuplicateCheck(_PluginBase):
                 for path in paths:
                     logger.info(f"  {path} 文件大小：{os.path.getsize(path)}，创建时间：{os.path.getmtime(path)}")
 
-                if str(self._retain_type) != "仅检查":
+                if str(retain_type) != "仅检查":
                     # Decide which file to keep based on criteria (e.g., file size or creation date)
-                    keep_path = self.__choose_file_to_keep(paths, self._retain_type)
-                    logger.info(f"文件保留规则：{str(self._retain_type)} Keeping: {keep_path}")
+                    keep_path = self.__choose_file_to_keep(paths, retain_type)
+                    logger.info(f"文件保留规则：{str(retain_type)} Keeping: {keep_path}")
                     # Delete the other duplicate files (if needed)
                     for path in paths:
                         if path != keep_path:
@@ -454,7 +465,9 @@ class LibraryDuplicateCheck(_PluginBase):
                                             'label': '检查路径',
                                             'rows': 2,
                                             'placeholder': "检查的媒体路径\n"
-                                                           "检查的媒体路径#媒体库名称"
+                                                           "检查的媒体路径$保留规则\n"
+                                                           "检查的媒体路径#媒体库名称\n"
+                                                           "检查的媒体路径#媒体库名称$保留规则\n"
 
                                         }
                                     }
