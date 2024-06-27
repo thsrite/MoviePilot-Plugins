@@ -586,7 +586,7 @@
       "LibraryDuplicateCheck": {
         "name": "媒体库重复媒体检测",
         "description": "媒体库重复媒体检查，可选择保留规则保留其一。",
-        "labels": "媒体库",
+        "labels": "云盘,媒体库",
         "version": "1.2",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/libraryduplicate.png",
         "author": "thsrite",
