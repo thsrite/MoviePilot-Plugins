@@ -76,8 +76,6 @@ class LibraryDuplicateCheck(_PluginBase):
 
             if config.get("path"):
                 for path in str(config.get("path")).split("\n"):
-                    logger.info(f"添加媒体库路径：{path}")
-
                     retain_type = self._retain_type
                     if path.count("$") == 1:
                         retain_type = path.split("$")[1]
