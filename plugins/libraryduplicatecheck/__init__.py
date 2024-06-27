@@ -559,7 +559,7 @@ class LibraryDuplicateCheck(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '检测指定路径下同一媒体文件是否有重复（不同扩展名视为同一媒体）。建议只处理电影。'
+                                            'text': '检测指定路径下同一媒体文件是否有重复（不同扩展名视为同一媒体）。'
                                         }
                                     }
                                 ]
@@ -580,7 +580,7 @@ class LibraryDuplicateCheck(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '检查路径配置#媒体库名称时会通知Emby刷新媒体库。'
+                                            'text': '检查路径配置`#媒体库`名称时会通知Emby刷新媒体库。检查路径配置`%电视剧`可指定处理媒体的格式。'
                                         }
                                     }
                                 ]
