@@ -1,5 +1,6 @@
 import re
 import shutil
+import threading
 from datetime import datetime, timedelta
 import os
 from collections import defaultdict
@@ -18,6 +19,8 @@ from app.schemas.types import EventType, NotificationType
 from app.utils.http import RequestUtils
 from app.utils.system import SystemUtils
 
+lock = threading.Lock()
+
 
 class LibraryDuplicateCheck(_PluginBase):
     # 插件名称
@@ -27,7 +30,7 @@ class LibraryDuplicateCheck(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/libraryduplicate.png"
     # 插件版本
-    plugin_version = "1.6"
+    plugin_version = "1.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -231,65 +234,80 @@ class LibraryDuplicateCheck(_PluginBase):
 
         logger.info("\n================== RESULT ==================\n")
 
-        # Find and handle duplicate video files
-        for name, paths in video_files.items():
-            if len(paths) > 1:
-                duplicate_files += len(paths)
-                logger.info(f"Duplicate video files for '{name}':")
-                for path in paths:
-                    if Path(path).exists() or os.path.islink(path):
-                        logger.info(f"  {path} 文件大小：{os.path.getsize(path)}，创建时间：{os.path.getmtime(path)}")
-                    else:
-                        logger.info(f"  {path} 文件已被删除")
-
-                if str(retain_type) != "仅检查":
-                    # Decide which file to keep based on criteria (e.g., file size or creation date)
-                    keep_path = self.__choose_file_to_keep(paths, retain_type)
-                    logger.info(f"文件保留规则：{str(retain_type)} Keeping: {keep_path}")
-                    # Delete the other duplicate files (if needed)
+        # 全程加锁
+        with lock:
+            # Find and handle duplicate video files
+            for name, paths in video_files.items():
+                if len(paths) > 1:
+                    duplicate_files += len(paths)
+                    logger.info(f"Duplicate video files for '{name}':")
                     for path in paths:
-                        if (Path(path).exists() or os.path.islink(path)) and str(path) != str(keep_path):
-                            cloud_file = os.readlink(path)
-                            delete_duplicate_files += 1
-                            # 删除文件、nfo、jpg等同名文件
-                            pattern = Path(path).stem.replace('[', '?').replace(']', '?')
-                            logger.info(f"开始筛选 {Path(path).parent} 下同名文件 {pattern}")
-                            files = Path(path).parent.glob(f"{pattern}.*")
-                            for file in files:
-                                Path(file).unlink()
-                                logger.info(f"本地文件 {file} 已删除")
+                        if Path(path).exists() or os.path.islink(path):
+                            logger.info(f"  {path} 文件大小：{os.path.getsize(path)}，创建时间：{os.path.getmtime(path)}")
+                        else:
+                            logger.info(f"  {path} 文件已被删除")
 
-                            # 删除thumb图片
-                            thumb_file = Path(path).parent / (Path(path).stem + "-thumb.jpg")
-                            if thumb_file.exists():
-                                thumb_file.unlink()
-                                logger.info(f"本地文件 {thumb_file} 已删除")
+                    if str(retain_type) != "仅检查":
+                        # Decide which file to keep based on criteria (e.g., file size or creation date)
+                        keep_file = self.__choose_file_to_keep(paths, retain_type)
+                        keep_cloud_file = os.readlink(keep_file)
 
-                            self.__rmtree(Path(path), "监控")
+                        logger.info(f"文件保留规则：{str(retain_type)} Keeping: {keep_file}")
+                        # Delete the other duplicate files (if needed)
+                        for path in paths:
+                            if (Path(path).exists() or os.path.islink(path)) and str(path) != str(keep_file):
+                                cloud_file = os.readlink(path)
+                                delete_duplicate_files += 1
+                                self.__delete_duplicate_file(duplicate_file=path,
+                                                             paths=paths,
+                                                             keep_file=keep_file,
+                                                             file_type="监控")
+                                # 同步删除软连接源目录
+                                if cloud_file and Path(cloud_file).exists() and self._delete_softlink:
+                                    delete_cloud_files += 1
+                                    self.__delete_duplicate_file(duplicate_file=cloud_file,
+                                                                 paths=paths,
+                                                                 keep_file=keep_cloud_file,
+                                                                 file_type="云盘")
+                else:
+                    logger.info(f"'{name}' No Duplicate video files.")
 
-                            # 同步删除软连接源目录
-                            if cloud_file and Path(cloud_file).exists() and self._delete_softlink:
-                                delete_cloud_files += 1
-                                cloud_file_path = Path(cloud_file)
-                                # 删除文件、nfo、jpg等同名文件
-                                pattern = cloud_file_path.stem.replace('[', '?').replace(']', '?')
-                                logger.info(f"开始筛选 {cloud_file_path.parent} 下同名文件 {pattern}")
-                                files = cloud_file_path.parent.glob(f"{pattern}.*")
-                                for file in files:
-                                    Path(file).unlink()
-                                    logger.info(f"云盘文件 {file} 已删除")
+            return duplicate_files, delete_duplicate_files, delete_cloud_files
 
-                                # 删除thumb图片
-                                thumb_file = cloud_file_path.parent / (cloud_file_path.stem + "-thumb.jpg")
-                                if thumb_file.exists():
-                                    thumb_file.unlink()
-                                    logger.info(f"云盘文件 {thumb_file} 已删除")
+    def __delete_duplicate_file(self, duplicate_file, paths, keep_file, file_type):
+        """
+        删除重复文件
+        """
+        cloud_file_path = Path(duplicate_file)
+        # 删除文件、nfo、jpg等同名文件
+        pattern = cloud_file_path.stem.replace('[', '?').replace(']', '?')
+        logger.info(f"开始筛选 {cloud_file_path.parent} 下同名文件 {pattern}")
+        files = cloud_file_path.parent.glob(f"{pattern}.*")
+        media_files = []
+        for file in files:
+            if Path(file).suffix.lower() in [ext.strip() for ext in
+                                             self._rmt_mediaext.split(",")]:
+                media_files.append(file)
 
-                                self.__rmtree(Path(cloud_file), "云盘")
-            else:
-                logger.info(f"'{name}' No Duplicate video files.")
+        if len(media_files) == len(paths):
+            # 说明两个重名的同名，删除非keep媒体文件，保留刮削文件
+            for file in media_files:
+                if str(file) != str(keep_file):
+                    Path(file).unlink()
+                    logger.info(f"{file_type}文件 {file} 已删除")
+        else:
+            for file in files:
+                if str(file) != str(keep_file):
+                    Path(file).unlink()
+                    logger.info(f"{file_type}文件 {file} 已删除")
 
-        return duplicate_files, delete_duplicate_files, delete_cloud_files
+            # 删除thumb图片
+            thumb_file = cloud_file_path.parent / (cloud_file_path.stem + "-thumb.jpg")
+            if thumb_file.exists():
+                thumb_file.unlink()
+                logger.info(f"{file_type}文件 {thumb_file} 已删除")
+
+            self.__rmtree(Path(duplicate_file), file_type)
 
     def __rmtree(self, path: Path, file_type: str):
         """

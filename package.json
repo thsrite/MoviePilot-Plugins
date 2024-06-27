@@ -588,11 +588,12 @@
         "name": "媒体库重复媒体检测",
         "description": "媒体库重复媒体检查，可选保留规则保留其一。",
         "labels": "云盘,媒体库",
-        "version": "1.6",
+        "version": "1.7",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/libraryduplicate.png",
         "author": "thsrite",
         "level": 2,
         "history": {
+          "v1.7": "修复特殊场景下删除问题",
           "v1.6": "同步删除thumb图片等刮削文件",
           "v1.5": "删除重复文件时再刷新媒体库逻辑",
           "v1.4": "修复删除时文件不存在bug",

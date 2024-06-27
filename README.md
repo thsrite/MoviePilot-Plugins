@@ -46,4 +46,4 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - CloudDrive2助手 v1.2
 - 软连接重定向 v1.0
 - 云盘同步删除 v1.3
-- 媒体库重复媒体检测 v1.6
+- 媒体库重复媒体检测 v1.7
