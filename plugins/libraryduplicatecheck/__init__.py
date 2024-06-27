@@ -26,7 +26,7 @@ class LibraryDuplicateCheck(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/libraryduplicate.png"
     # 插件版本
-    plugin_version = "1.3"
+    plugin_version = "1.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -202,8 +202,8 @@ class LibraryDuplicateCheck(_PluginBase):
         for root, _, files in os.walk(directory):
             for file in files:
                 # Check the file extension
-                if Path(file).suffix.lower() in [ext.strip() for ext in
-                                                 self._rmt_mediaext.split(",")]:
+                if Path(file).exists() and Path(file).suffix.lower() in [ext.strip() for ext in
+                                                                         self._rmt_mediaext.split(",")]:
                     video_name = Path(file).stem.split('-')[0].rstrip()
                     logger.info(f'Scan file -> {file} -> {video_name}')
                     video_files[video_name].append(os.path.join(root, file))
@@ -217,7 +217,10 @@ class LibraryDuplicateCheck(_PluginBase):
                 duplicate_files += len(paths)
                 logger.info(f"Duplicate video files for '{name}':")
                 for path in paths:
-                    logger.info(f"  {path} 文件大小：{os.path.getsize(path)}，创建时间：{os.path.getmtime(path)}")
+                    if Path(path).exists():
+                        logger.info(f"  {path} 文件大小：{os.path.getsize(path)}，创建时间：{os.path.getmtime(path)}")
+                    else:
+                        logger.info(f"  {path} 文件已被删除")
 
                 if str(retain_type) != "仅检查":
                     # Decide which file to keep based on criteria (e.g., file size or creation date)
@@ -225,7 +228,7 @@ class LibraryDuplicateCheck(_PluginBase):
                     logger.info(f"文件保留规则：{str(retain_type)} Keeping: {keep_path}")
                     # Delete the other duplicate files (if needed)
                     for path in paths:
-                        if path != keep_path:
+                        if Path(path).exists() and path != keep_path:
                             cloud_file = os.readlink(path)
                             Path(path).unlink()
                             delete_duplicate_files += 1
@@ -233,12 +236,11 @@ class LibraryDuplicateCheck(_PluginBase):
                             self.__rmtree(Path(path), "监控")
 
                             # 同步删除软连接源目录
-                            if cloud_file and self._delete_softlink:
-                                if Path(cloud_file).exists():
-                                    Path(cloud_file).unlink()
-                                    delete_cloud_files += 1
-                                    logger.info(f"云盘文件 {cloud_file} 已删除")
-                                    self.__rmtree(Path(cloud_file), "云盘")
+                            if cloud_file and Path(cloud_file).exists() and self._delete_softlink:
+                                Path(cloud_file).unlink()
+                                delete_cloud_files += 1
+                                logger.info(f"云盘文件 {cloud_file} 已删除")
+                                self.__rmtree(Path(cloud_file), "云盘")
             else:
                 logger.info(f"'{name}' No Duplicate video files.")
 
@@ -257,9 +259,10 @@ class LibraryDuplicateCheck(_PluginBase):
                     # 父目录非根目录，才删除父目录
                     if not SystemUtils.exits_files(parent_path, [ext.strip() for ext in
                                                                  self._rmt_mediaext.split(",")]):
-                        # 当前路径下没有媒体文件则删除
-                        shutil.rmtree(parent_path)
-                        logger.warn(f"{file_type}目录 {parent_path} 已删除")
+                        if parent_path.exists():
+                            # 当前路径下没有媒体文件则删除
+                            shutil.rmtree(parent_path)
+                            logger.warn(f"{file_type}目录 {parent_path} 已删除")
 
     @staticmethod
     def __choose_file_to_keep(paths, retain_type):
