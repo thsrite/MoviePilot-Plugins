@@ -159,7 +159,8 @@ class LibraryDuplicateCheck(_PluginBase):
             self.post_message(
                 mtype=NotificationType.Plugin,
                 title="媒体库重复媒体检测",
-                text=f"本地重复文件: {duplicate_files}\n"
+                text=f"文件保留规则: {self._retain_type}\n"
+                     f"本地重复文件: {duplicate_files}\n"
                      f"删除本地文件: {delete_duplicate_files}\n"
                      f"删除云盘文件: {delete_cloud_files}",
                 link=settings.MP_DOMAIN('#/history')
