@@ -247,30 +247,29 @@ class LibraryDuplicateCheck(_PluginBase):
                         else:
                             logger.info(f"  {path} 文件已被删除")
 
-                    if str(retain_type) != "仅检查":
-                        # Decide which file to keep based on criteria (e.g., file size or creation date)
-                        keep_file = self.__choose_file_to_keep(paths, retain_type)
-                        keep_cloud_file = os.readlink(keep_file)
+                    # Decide which file to keep based on criteria (e.g., file size or creation date)
+                    keep_file = self.__choose_file_to_keep(paths, retain_type)
+                    keep_cloud_file = os.readlink(keep_file)
 
-                        logger.info(f"文件保留规则：{str(retain_type)} Keeping: {keep_file}")
-                        # Delete the other duplicate files (if needed)
-                        for path in paths:
-                            if (Path(path).exists() or os.path.islink(path)) and str(path) != str(keep_file):
-                                cloud_file = os.readlink(path)
-                                delete_duplicate_files += 1
-                                self.__delete_duplicate_file(duplicate_file=path,
+                    logger.info(f"文件保留规则：{str(retain_type)} Keeping: {keep_file}")
+                    # Delete the other duplicate files (if needed)
+                    for path in paths:
+                        if (Path(path).exists() or os.path.islink(path)) and str(path) != str(keep_file):
+                            cloud_file = os.readlink(path)
+                            delete_duplicate_files += 1
+                            self.__delete_duplicate_file(duplicate_file=path,
+                                                         paths=paths,
+                                                         keep_file=keep_file,
+                                                         file_type="监控",
+                                                         retain_type=retain_type)
+                            # 同步删除软连接源目录
+                            if cloud_file and Path(cloud_file).exists() and self._delete_softlink:
+                                delete_cloud_files += 1
+                                self.__delete_duplicate_file(duplicate_file=cloud_file,
                                                              paths=paths,
-                                                             keep_file=keep_file,
-                                                             file_type="监控",
+                                                             keep_file=keep_cloud_file,
+                                                             file_type="云盘",
                                                              retain_type=retain_type)
-                                # 同步删除软连接源目录
-                                if cloud_file and Path(cloud_file).exists() and self._delete_softlink:
-                                    delete_cloud_files += 1
-                                    self.__delete_duplicate_file(duplicate_file=cloud_file,
-                                                                 paths=paths,
-                                                                 keep_file=keep_cloud_file,
-                                                                 file_type="云盘",
-                                                                 retain_type=retain_type)
                 else:
                     logger.info(f"'{name}' No Duplicate video files.")
 
