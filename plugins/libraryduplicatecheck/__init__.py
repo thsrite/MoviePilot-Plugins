@@ -261,20 +261,22 @@ class LibraryDuplicateCheck(_PluginBase):
                                 self.__delete_duplicate_file(duplicate_file=path,
                                                              paths=paths,
                                                              keep_file=keep_file,
-                                                             file_type="监控")
+                                                             file_type="监控",
+                                                             retain_type=retain_type)
                                 # 同步删除软连接源目录
                                 if cloud_file and Path(cloud_file).exists() and self._delete_softlink:
                                     delete_cloud_files += 1
                                     self.__delete_duplicate_file(duplicate_file=cloud_file,
                                                                  paths=paths,
                                                                  keep_file=keep_cloud_file,
-                                                                 file_type="云盘")
+                                                                 file_type="云盘",
+                                                                 retain_type=retain_type)
                 else:
                     logger.info(f"'{name}' No Duplicate video files.")
 
             return duplicate_files, delete_duplicate_files, delete_cloud_files
 
-    def __delete_duplicate_file(self, duplicate_file, paths, keep_file, file_type):
+    def __delete_duplicate_file(self, duplicate_file, paths, keep_file, file_type, retain_type):
         """
         删除重复文件
         """
@@ -287,29 +289,39 @@ class LibraryDuplicateCheck(_PluginBase):
         for file in files:
             if Path(file).suffix.lower() in [ext.strip() for ext in
                                              self._rmt_mediaext.split(",")]:
-                media_files.append(file)
+                media_files.append(Path(file).stem)
 
+        media_files = list(set(media_files))
         if len(media_files) == len(paths):
             # 说明两个重名的同名，删除非keep媒体文件，保留刮削文件
             for file in media_files:
                 if str(file) != str(keep_file):
-                    Path(file).unlink()
-                    logger.info(f"{file_type}文件 {file} 已删除")
+                    if str(retain_type) != "仅检查":
+                        Path(file).unlink()
+                        logger.info(f"{file_type}文件 {file} 已删除")
+                    else:
+                        logger.warning(f"{file_type}文件 {file} 将被删除")
         else:
             for file in files:
                 if str(file) != str(keep_file):
-                    Path(file).unlink()
-                    logger.info(f"{file_type}文件 {file} 已删除")
+                    if str(retain_type) != "仅检查":
+                        Path(file).unlink()
+                        logger.info(f"{file_type}文件 {file} 已删除")
+                    else:
+                        logger.warning(f"{file_type}文件 {file} 将被删除")
 
             # 删除thumb图片
             thumb_file = cloud_file_path.parent / (cloud_file_path.stem + "-thumb.jpg")
             if thumb_file.exists():
-                thumb_file.unlink()
-                logger.info(f"{file_type}文件 {thumb_file} 已删除")
+                if str(retain_type) != "仅检查":
+                    thumb_file.unlink()
+                    logger.info(f"{file_type}文件 {thumb_file} 已删除")
+                else:
+                    logger.warning(f"{file_type}文件 {thumb_file} 将被删除")
 
-            self.__rmtree(Path(duplicate_file), file_type)
+            self.__rmtree(Path(duplicate_file), file_type, retain_type)
 
-    def __rmtree(self, path: Path, file_type: str):
+    def __rmtree(self, path: Path, file_type: str, retain_type: str):
         """
         删除目录及其子目录
         """
@@ -324,8 +336,11 @@ class LibraryDuplicateCheck(_PluginBase):
                                                                  self._rmt_mediaext.split(",")]):
                         if parent_path.exists():
                             # 当前路径下没有媒体文件则删除
-                            shutil.rmtree(parent_path)
-                            logger.warn(f"{file_type}目录 {parent_path} 已删除")
+                            if str(retain_type) != "仅检查":
+                                shutil.rmtree(parent_path)
+                                logger.warn(f"{file_type}目录 {parent_path} 已删除")
+                            else:
+                                logger.warning(f"{file_type}目录 {parent_path} 将被删除")
 
     @staticmethod
     def __choose_file_to_keep(paths, retain_type):
