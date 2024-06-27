@@ -47,6 +47,7 @@ class LibraryDuplicateCheck(_PluginBase):
     _delete_softlink = False
     _cron = None
     _onlyonce = False
+    _path = None
     _retain_type = None
     _rmt_mediaext = ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
 
