@@ -415,7 +415,7 @@ class LibraryDuplicateCheck(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 9
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -453,8 +453,9 @@ class LibraryDuplicateCheck(_PluginBase):
                                             'model': 'path',
                                             'label': '检查路径',
                                             'rows': 2,
-                                            'placeholder': "检查的媒体路径#媒体库名称\n"
-                                                           "检查的媒体路径"
+                                            'placeholder': "检查的媒体路径\n"
+                                                           "检查的媒体路径#媒体库名称"
+
                                         }
                                     }
                                 ]
