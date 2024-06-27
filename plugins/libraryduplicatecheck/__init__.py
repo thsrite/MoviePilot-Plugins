@@ -123,19 +123,10 @@ class LibraryDuplicateCheck(_PluginBase):
             logger.warning("媒体库重复媒体检测服务未配置路径")
             return
 
-        duplicate_files = 0
-        delete_duplicate_files = 0
-        delete_cloud_files = 0
-
+        msg = ""
         for path in self._paths.keys():
             logger.info(f"开始检查路径：{path}")
-            cn1, cn2, cn3 = self.__find_duplicate_videos(path,
-                                                         duplicate_files,
-                                                         delete_duplicate_files,
-                                                         delete_cloud_files)
-            duplicate_files += cn1
-            delete_duplicate_files += cn2
-            delete_cloud_files += cn3
+            duplicate_files, delete_duplicate_files, delete_cloud_files = self.__find_duplicate_videos(path)
             logger.info(f"路径 {path} 检查完毕")
 
             library_name = self._paths.get(path)
@@ -154,15 +145,17 @@ class LibraryDuplicateCheck(_PluginBase):
                         logger.info(f"媒体库：{library_name} 刷新完成")
                         self.__refresh_emby_library_by_id(library.id)
                         break
+            msg += (f"{path}{'#' + library_name if library_name else ''} 检查完成\n"
+                    f"文件保留规则: {self._retain_type}\n"
+                    f"本地重复文件: {duplicate_files}\n"
+                    f"删除本地文件: {delete_duplicate_files}\n"
+                    f"删除云盘文件: {delete_cloud_files}\n")
 
         if self._notify:
             self.post_message(
                 mtype=NotificationType.Plugin,
                 title="媒体库重复媒体检测",
-                text=f"文件保留规则: {self._retain_type}\n"
-                     f"本地重复文件: {duplicate_files}\n"
-                     f"删除本地文件: {delete_duplicate_files}\n"
-                     f"删除云盘文件: {delete_cloud_files}",
+                text=msg,
                 link=settings.MP_DOMAIN('#/history')
             )
 
@@ -184,12 +177,16 @@ class LibraryDuplicateCheck(_PluginBase):
             return False
         return False
 
-    def __find_duplicate_videos(self, directory, duplicate_files, delete_duplicate_files, delete_cloud_files):
+    def __find_duplicate_videos(self, directory):
         """
         检查目录下视频文件是否有重复
         """
         # Dictionary to hold the list of files for each video name
         video_files = defaultdict(list)
+
+        duplicate_files = 0
+        delete_duplicate_files = 0
+        delete_cloud_files = 0
 
         # Traverse the directory and subdirectories
         for root, _, files in os.walk(directory):
