@@ -208,7 +208,7 @@ class LibraryDuplicateCheck(_PluginBase):
 
                 if str(self._retain_type) != "仅检查":
                     # Decide which file to keep based on criteria (e.g., file size or creation date)
-                    keep_path = self.__choose_file_to_keep(paths)
+                    keep_path = self.__choose_file_to_keep(paths, self._retain_type)
                     logger.info(f"文件保留规则：{str(self._retain_type)} Keeping: {keep_path}")
                     # Delete the other duplicate files (if needed)
                     for path in paths:
@@ -255,15 +255,31 @@ class LibraryDuplicateCheck(_PluginBase):
                         logger.warn(f"{file_type}目录 {parent_path} 已删除")
 
     @staticmethod
-    def __choose_file_to_keep(paths):
+    def __choose_file_to_keep(paths, retain_type):
         # Example: Choose based on file size (keeping the smallest)
-        smallest_size = float('inf')
+        checked = float('inf')
         smallest_path = None
         for path in paths:
-            file_size = os.path.getmtime(path)
-            if file_size < smallest_size:
-                smallest_size = file_size
-                smallest_path = path
+            if str(retain_type) == "保留体积最小":
+                selected = os.path.getsize(path)
+                if selected < checked:
+                    checked = selected
+                    smallest_path = path
+            if str(retain_type) == "保留体积最大":
+                selected = os.path.getsize(path)
+                if selected > checked:
+                    checked = selected
+                    smallest_path = path
+            if str(retain_type) == "保留创建最早":
+                selected = os.path.getmtime(path)
+                if selected < checked:
+                    checked = selected
+                    smallest_path = path
+            if str(retain_type) == "保留创建最晚":
+                selected = os.path.getmtime(path)
+                if selected > checked:
+                    checked = selected
+                    smallest_path = path
         return smallest_path
 
     def __update_config(self):
