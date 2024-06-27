@@ -161,7 +161,7 @@ class LibraryDuplicateCheck(_PluginBase):
                     f"文件保留规则: {_retain_type}\n"
                     f"本地重复文件: {duplicate_files}\n"
                     f"删除本地文件: {delete_duplicate_files}\n"
-                    f"删除云盘文件: {delete_cloud_files}\n")
+                    f"删除云盘文件: {delete_cloud_files}\n\n")
 
         if self._notify:
             self.post_message(
