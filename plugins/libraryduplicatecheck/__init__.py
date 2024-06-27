@@ -249,9 +249,9 @@ class LibraryDuplicateCheck(_PluginBase):
 
                     # Decide which file to keep based on criteria (e.g., file size or creation date)
                     keep_file = self.__choose_file_to_keep(paths, retain_type)
-                    keep_cloud_file = os.readlink(keep_file)
-
                     logger.info(f"文件保留规则：{str(retain_type)} Keeping: {keep_file}")
+                    keep_cloud_file = os.readlink(str(keep_file))
+
                     # Delete the other duplicate files (if needed)
                     for path in paths:
                         if (Path(path).exists() or os.path.islink(path)) and str(path) != str(keep_file):
@@ -259,23 +259,21 @@ class LibraryDuplicateCheck(_PluginBase):
                             delete_duplicate_files += 1
                             self.__delete_duplicate_file(duplicate_file=path,
                                                          paths=paths,
-                                                         keep_file=keep_file,
-                                                         file_type="监控",
-                                                         retain_type=retain_type)
+                                                         keep_file=str(keep_file),
+                                                         file_type="监控")
                             # 同步删除软连接源目录
                             if cloud_file and Path(cloud_file).exists() and self._delete_softlink:
                                 delete_cloud_files += 1
                                 self.__delete_duplicate_file(duplicate_file=cloud_file,
                                                              paths=paths,
                                                              keep_file=keep_cloud_file,
-                                                             file_type="云盘",
-                                                             retain_type=retain_type)
+                                                             file_type="云盘")
                 else:
                     logger.info(f"'{name}' No Duplicate video files.")
 
             return duplicate_files, delete_duplicate_files, delete_cloud_files
 
-    def __delete_duplicate_file(self, duplicate_file, paths, keep_file, file_type, retain_type):
+    def __delete_duplicate_file(self, duplicate_file, paths, keep_file, file_type):
         """
         删除重复文件
         """
@@ -295,7 +293,7 @@ class LibraryDuplicateCheck(_PluginBase):
             # 说明两个重名的同名，删除非keep媒体文件，保留刮削文件
             for file in media_files:
                 if str(file) != str(keep_file):
-                    if str(retain_type) != "仅检查":
+                    if str(self._retain_type) != "仅检查":
                         Path(file).unlink()
                         logger.info(f"{file_type}文件 {file} 已删除")
                     else:
@@ -303,7 +301,7 @@ class LibraryDuplicateCheck(_PluginBase):
         else:
             for file in files:
                 if str(file) != str(keep_file):
-                    if str(retain_type) != "仅检查":
+                    if str(self._retain_type) != "仅检查":
                         Path(file).unlink()
                         logger.info(f"{file_type}文件 {file} 已删除")
                     else:
@@ -312,15 +310,15 @@ class LibraryDuplicateCheck(_PluginBase):
             # 删除thumb图片
             thumb_file = cloud_file_path.parent / (cloud_file_path.stem + "-thumb.jpg")
             if thumb_file.exists():
-                if str(retain_type) != "仅检查":
+                if str(self._retain_type) != "仅检查":
                     thumb_file.unlink()
                     logger.info(f"{file_type}文件 {thumb_file} 已删除")
                 else:
                     logger.warning(f"{file_type}文件 {thumb_file} 将被删除")
 
-            self.__rmtree(Path(duplicate_file), file_type, retain_type)
+            self.__rmtree(Path(duplicate_file), file_type)
 
-    def __rmtree(self, path: Path, file_type: str, retain_type: str):
+    def __rmtree(self, path: Path, file_type: str):
         """
         删除目录及其子目录
         """
@@ -335,7 +333,7 @@ class LibraryDuplicateCheck(_PluginBase):
                                                                  self._rmt_mediaext.split(",")]):
                         if parent_path.exists():
                             # 当前路径下没有媒体文件则删除
-                            if str(retain_type) != "仅检查":
+                            if str(self._retain_type) != "仅检查":
                                 shutil.rmtree(parent_path)
                                 logger.warn(f"{file_type}目录 {parent_path} 已删除")
                             else:
@@ -514,7 +512,7 @@ class LibraryDuplicateCheck(_PluginBase):
                                             'multiple': False,
                                             'chips': True,
                                             'model': 'retain_type',
-                                            'label': '质量',
+                                            'label': '保留规则',
                                             'items': [
                                                 {'title': '仅检查', 'value': '仅检查'},
                                                 {'title': '保留体积最小', 'value': '保留体积最小'},
@@ -613,6 +611,27 @@ class LibraryDuplicateCheck(_PluginBase):
                                             'type': 'info',
                                             'variant': 'tonal',
                                             'text': '检查路径配置`#媒体库`名称时会通知Emby刷新媒体库。检查路径配置`%电视剧`可指定处理媒体的格式。'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '检查路径自定义配置`$保留规则`且插件保留规则为`仅检查`时，将会预览操作而不删除重复文件。'
                                         }
                                     }
                                 ]
