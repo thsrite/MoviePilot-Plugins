@@ -30,7 +30,7 @@ class LibraryDuplicateCheck(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/libraryduplicate.png"
     # 插件版本
-    plugin_version = "1.7"
+    plugin_version = "1.8"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -248,9 +248,11 @@ class LibraryDuplicateCheck(_PluginBase):
                             logger.info(f"  {path} 文件已被删除")
 
                     # Decide which file to keep based on criteria (e.g., file size or creation date)
+                    logger.info(f"文件保留规则：{str(retain_type)}")
                     keep_file = self.__choose_file_to_keep(paths, retain_type)
-                    logger.info(f"文件保留规则：{str(retain_type)} Keeping: {keep_file}")
+                    logger.info(f"本地保留文件: {keep_file}")
                     keep_cloud_file = os.readlink(str(keep_file))
+                    logger.info(f"云盘保留文件: {keep_cloud_file}")
 
                     # Delete the other duplicate files (if needed)
                     for path in paths:
@@ -280,8 +282,8 @@ class LibraryDuplicateCheck(_PluginBase):
         cloud_file_path = Path(duplicate_file)
         # 删除文件、nfo、jpg等同名文件
         pattern = cloud_file_path.stem.replace('[', '?').replace(']', '?')
-        logger.info(f"开始筛选 {cloud_file_path.parent} 下同名文件 {pattern}")
-        files = cloud_file_path.parent.glob(f"{pattern}.*")
+        files = list(cloud_file_path.parent.glob(f"{pattern}.*"))
+        logger.info(f"筛选 {cloud_file_path.parent} 下同名文件 {pattern}.* {len(files)}个")
         media_files = []
         for file in files:
             if Path(file).suffix.lower() in [ext.strip() for ext in
