@@ -1,3 +1,4 @@
+import re
 import shutil
 from datetime import datetime, timedelta
 import os
@@ -43,6 +44,7 @@ class LibraryDuplicateCheck(_PluginBase):
     # 任务执行间隔
     _paths = {}
     _path_type = {}
+    _path_mediatpye = {}
     _notify = False
     _delete_softlink = False
     _cron = None
@@ -76,9 +78,15 @@ class LibraryDuplicateCheck(_PluginBase):
 
             self._paths = {}
             self._path_type = {}
+            self._path_mediatpye = {}
 
             if config.get("path"):
                 for path in str(config.get("path")).split("\n"):
+                    path_mediatpye = '电影'
+                    if path.count("%") == 1:
+                        path_mediatpye = path.split("%")[1]
+                        path = path.split("%")[0]
+
                     retain_type = self._retain_type
                     if path.count("$") == 1:
                         retain_type = path.split("$")[1]
@@ -92,6 +100,7 @@ class LibraryDuplicateCheck(_PluginBase):
                         self._paths[path] = None
 
                     self._path_type[path] = retain_type
+                    self._path_mediatpye[path] = path_mediatpye
 
             if self._enabled or self._onlyonce:
                 # 定时服务
@@ -137,9 +146,11 @@ class LibraryDuplicateCheck(_PluginBase):
         msg = ""
         for path in self._paths.keys():
             _retain_type = self._path_type.get(path)
+            _path_mediatpye = self._path_mediatpye.get(path)
             logger.info(f"开始检查路径：{path} {_retain_type}")
             duplicate_files, delete_duplicate_files, delete_cloud_files = self.__find_duplicate_videos(path,
-                                                                                                       _retain_type)
+                                                                                                       _retain_type,
+                                                                                                       _path_mediatpye)
             logger.info(f"路径 {path} 检查完毕")
 
             library_name = self._paths.get(path)
@@ -191,7 +202,7 @@ class LibraryDuplicateCheck(_PluginBase):
             return False
         return False
 
-    def __find_duplicate_videos(self, directory, retain_type):
+    def __find_duplicate_videos(self, directory, retain_type, path_mediatpye):
         """
         检查目录下视频文件是否有重复
         """
@@ -210,6 +221,11 @@ class LibraryDuplicateCheck(_PluginBase):
                 if (Path(str(file_path)).exists() or os.path.islink(file_path)) and Path(file).suffix.lower() in [
                     ext.strip() for ext in self._rmt_mediaext.split(",")]:
                     video_name = Path(file).stem.split('-')[0].rstrip()
+                    if str(path_mediatpye) == '电视剧':
+                        # 使用正则表达式匹配
+                        match = re.search(r"S\d+E\d+", Path(file).stem)
+                        if match:
+                            video_name += f" {match.group(0)}"
                     logger.info(f'Scan file -> {file} -> {video_name}')
                     video_files[video_name].append(file_path)
 
@@ -234,9 +250,21 @@ class LibraryDuplicateCheck(_PluginBase):
                     for path in paths:
                         if (Path(path).exists() or os.path.islink(path)) and path != keep_path:
                             cloud_file = os.readlink(path)
-                            Path(path).unlink()
                             delete_duplicate_files += 1
-                            logger.info(f"Deleted Local file: {path}")
+                            # 删除文件、nfo、jpg等同名文件
+                            pattern = Path(path).stem.replace('[', '?').replace(']', '?')
+                            logger.info(f"开始筛选 {Path(path).parent} 下同名文件 {pattern}")
+                            files = Path(path).parent.glob(f"{pattern}.*")
+                            for file in files:
+                                Path(file).unlink()
+                                logger.info(f"本地文件 {file} 已删除")
+
+                            # 删除thumb图片
+                            thumb_file = Path(path).parent / (Path(path).stem + "-thumb.jpg")
+                            if thumb_file.exists():
+                                thumb_file.unlink()
+                                logger.info(f"本地文件 {thumb_file} 已删除")
+
                             self.__rmtree(Path(path), "监控")
 
                             # 同步删除软连接源目录
@@ -250,6 +278,12 @@ class LibraryDuplicateCheck(_PluginBase):
                                 for file in files:
                                     Path(file).unlink()
                                     logger.info(f"云盘文件 {file} 已删除")
+
+                                # 删除thumb图片
+                                thumb_file = cloud_file_path.parent / (cloud_file_path.stem + "-thumb.jpg")
+                                if thumb_file.exists():
+                                    thumb_file.unlink()
+                                    logger.info(f"云盘文件 {thumb_file} 已删除")
 
                                 self.__rmtree(Path(cloud_file), "云盘")
             else:
@@ -481,6 +515,7 @@ class LibraryDuplicateCheck(_PluginBase):
                                                            "检查的媒体路径$保留规则\n"
                                                            "检查的媒体路径#媒体库名称\n"
                                                            "检查的媒体路径#媒体库名称$保留规则\n"
+                                                           "检查的媒体路径#媒体库名称$保留规则%电视剧\n"
 
                                         }
                                     }
