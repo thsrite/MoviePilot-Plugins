@@ -100,9 +100,9 @@ class CloudSyncDel(_PluginBase):
         if media_path.suffix:
             # 删除云盘文件
             cloud_file = self.__get_path(self._cloud_paths, str(media_path))
-            logger.info(f"获取到云盘文件 {cloud_file}")
 
             if Path(cloud_file).exists():
+                logger.info(f"获取到云盘文件 {cloud_file}")
                 cloud_file_path = Path(cloud_file)
                 # 删除文件、nfo、jpg等同名文件
                 pattern = cloud_file_path.stem.replace('[', '?').replace(']', '?')
