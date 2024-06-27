@@ -582,5 +582,17 @@
           "v1.1": "增加测试模式按钮（不删除文件）",
           "v1.0": "媒体库删除软连接文件后，同步删除云盘文件"
         }
+      },
+      "LibraryDuplicateCheck": {
+        "name": "媒体库重复媒体检测",
+        "description": "媒体库重复媒体检查，可选择保留规则保留其一。",
+        "labels": "媒体库",
+        "version": "1.0",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/libraryduplicate.png",
+        "author": "thsrite",
+        "level": 2,
+        "history": {
+          "v1.0": "媒体库重复媒体检查，可选择保留规则保留其一"
+        }
       }
 }
