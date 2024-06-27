@@ -1,3 +1,4 @@
+import shutil
 from datetime import datetime, timedelta
 import os
 from collections import defaultdict
@@ -19,7 +20,7 @@ from app.utils.system import SystemUtils
 
 class LibraryDuplicateCheck(_PluginBase):
     # 插件名称
-    plugin_name = "媒体库重复媒体检测。"
+    plugin_name = "媒体库重复媒体检测"
     # 插件描述
     plugin_desc = "媒体库重复媒体检查，可选择保留规则保留其一。"
     # 插件图标
@@ -128,7 +129,13 @@ class LibraryDuplicateCheck(_PluginBase):
 
         for path in self._paths.keys():
             logger.info(f"开始检查路径：{path}")
-            self.__find_duplicate_videos(path, duplicate_files, delete_duplicate_files, delete_cloud_files)
+            cn1, cn2, cn3 = self.__find_duplicate_videos(path,
+                                                         duplicate_files,
+                                                         delete_duplicate_files,
+                                                         delete_cloud_files)
+            duplicate_files += cn1
+            delete_duplicate_files += cn2
+            delete_cloud_files += cn3
             logger.info(f"路径 {path} 检查完毕")
 
             library_name = self._paths.get(path)
@@ -212,28 +219,22 @@ class LibraryDuplicateCheck(_PluginBase):
                     for path in paths:
                         if path != keep_path:
                             cloud_file = os.readlink(path)
-                            # Path(path).unlink()
+                            Path(path).unlink()
                             delete_duplicate_files += 1
                             logger.info(f"Deleted Local file: {path}")
                             self.__rmtree(Path(path), "监控")
 
                             # 同步删除软连接源目录
                             if cloud_file and self._delete_softlink:
-                                logger.info(f"开始删除云盘文件 {cloud_file}")
                                 if Path(cloud_file).exists():
-                                    cloud_file_path = Path(cloud_file)
-                                    # 删除文件、nfo、jpg等同名文件
-                                    pattern = cloud_file_path.stem.replace('[', '?').replace(']', '?')
-                                    logger.info(f"开始筛选 {cloud_file_path.parent} 下同名文件 {pattern}")
-                                    files = cloud_file_path.parent.glob(f"{pattern}.*")
-                                    for file in files:
-                                        # Path(file).unlink()
-                                        delete_cloud_files += 1
-                                        logger.info(f"云盘文件 {file} 已删除")
-                                    self.__rmtree(cloud_file_path, "云盘")
-
+                                    Path(cloud_file).unlink()
+                                    delete_cloud_files += 1
+                                    logger.info(f"云盘文件 {cloud_file} 已删除")
+                                    self.__rmtree(Path(cloud_file), "云盘")
             else:
                 logger.info(f"'{name}' No Duplicate video files.")
+
+        return duplicate_files, delete_duplicate_files, delete_cloud_files
 
     def __rmtree(self, path: Path, file_type: str):
         """
@@ -249,7 +250,7 @@ class LibraryDuplicateCheck(_PluginBase):
                     if not SystemUtils.exits_files(parent_path, [ext.strip() for ext in
                                                                  self._rmt_mediaext.split(",")]):
                         # 当前路径下没有媒体文件则删除
-                        # shutil.rmtree(parent_path)
+                        shutil.rmtree(parent_path)
                         logger.warn(f"{file_type}目录 {parent_path} 已删除")
 
     @staticmethod
