@@ -65,7 +65,7 @@ class CloudAssistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png"
     # 插件版本
-    plugin_version = "2.0.3"
+    plugin_version = "2.0.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -429,8 +429,8 @@ class CloudAssistant(_PluginBase):
 
                 # 1、转移到云盘挂载路径 上传到cd2
                 # 挂载的路径
+                logger.info(f"挂载目录文件 {file_path}")
                 mount_file = str(file_path).replace(str(mon_path), str(mount_path))
-                logger.info(f"挂载目录文件 {mount_file}")
 
                 if str(upload_cloud) == "true":
                     upload = True
