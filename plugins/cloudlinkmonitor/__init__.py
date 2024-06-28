@@ -60,7 +60,7 @@ class CloudLinkMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
-    plugin_version = "2.2"
+    plugin_version = "2.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -491,10 +491,9 @@ class CloudLinkMonitor(_PluginBase):
                     self.chain.obtain_images(mediainfo=mediainfo)
 
                     # 刮削单个文件
-                    if settings.SCRAP_METADATA:
-                        self.chain.scrape_metadata(path=transferinfo.target_path,
-                                                   mediainfo=mediainfo,
-                                                   transfer_type=transfer_type)
+                    self.chain.scrape_metadata(path=transferinfo.target_path,
+                                               mediainfo=mediainfo,
+                                               transfer_type=transfer_type)
                 """
                 {
                     "title_year season": {
