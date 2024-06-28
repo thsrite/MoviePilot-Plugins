@@ -65,7 +65,7 @@ class CloudAssistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png"
     # 插件版本
-    plugin_version = "2.0.4"
+    plugin_version = "2.0.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -423,6 +423,7 @@ class CloudAssistant(_PluginBase):
                 delete_history = monitor_dir.get("delete_history") or "false"
                 overwrite = monitor_dir.get("overwrite") or "false"
                 upload_cloud = monitor_dir.get("upload_cloud") or "true"
+                only_media = monitor_dir.get("only_media") or "true"
                 dest_preserve_hierarchy = monitor_dir.get("dest_preserve_hierarchy") or 0
                 src_paths = monitor_dir.get("src_paths") or ""
                 src_preserve_hierarchy = monitor_dir.get("src_preserve_hierarchy") or 0
@@ -495,7 +496,7 @@ class CloudAssistant(_PluginBase):
 
                     # 3、存操作记录
                     if (self._only_media_history and Path(file_path).suffix.lower() in [ext.strip() for ext in
-                                                                                self._rmt_mediaext.split(",")]) \
+                                                                                        self._rmt_mediaext.split(",")]) \
                             or not self._only_media_history:
                         history = self.get_data('history') or []
                         history.append({
@@ -511,10 +512,10 @@ class CloudAssistant(_PluginBase):
 
                     # 移动模式删除空目录
                     if str(delete_dest) == "true":
-                        self.__delete_dest_file(file_path, mon_path, dest_preserve_hierarchy)
+                        self.__delete_dest_file(file_path, mon_path, dest_preserve_hierarchy, only_media)
                     # 是否删除源文件
                     if str(delete_src) == "true" and transferhis:
-                        self.__delete_src_file(transferhis, src_paths, src_preserve_hierarchy)
+                        self.__delete_src_file(transferhis, src_paths, src_preserve_hierarchy, only_media)
                     # 发送消息汇总
                     if self._notify and transferhis:
                         self.__msg_handler(transferhis)
@@ -539,7 +540,7 @@ class CloudAssistant(_PluginBase):
                     self.__delete_downloadfile_by_id(db=None, downloadfileid=downloadfile.id)
                     logger.info(f"删除下载文件记录：{downloadfile.id} {transferhis.download_hash}")
 
-    def __delete_dest_file(self, file_path: Path, mon_path: str, dest_preserve_hierarchy: int):
+    def __delete_dest_file(self, file_path: Path, mon_path: str, dest_preserve_hierarchy: int, only_media: str):
         """
         删除监控文件
         """
@@ -555,12 +556,15 @@ class CloudAssistant(_PluginBase):
             if len(file_dir.parts) <= retain_depth:
                 # 重要，删除到保留层级目录为止
                 break
-            files = SystemUtils.list_files(file_dir, settings.RMT_MEDIAEXT + settings.DOWNLOAD_TMPEXT)
+            if str(only_media) == "true":
+                files = SystemUtils.list_files(file_dir, settings.RMT_MEDIAEXT + settings.DOWNLOAD_TMPEXT)
+            else:
+                files = SystemUtils.list_files(file_dir, [])
             if not files:
                 logger.warn(f"删除监控空目录：{file_dir}")
                 shutil.rmtree(file_dir, ignore_errors=True)
 
-    def __delete_src_file(self, transferhis, src_paths, src_preserve_hierarchy):
+    def __delete_src_file(self, transferhis, src_paths, src_preserve_hierarchy, only_media: str):
         """
         删除源文件
         """
@@ -600,8 +604,10 @@ class CloudAssistant(_PluginBase):
                 if len(file_dir.parts) <= retain_depth:
                     # 重要，删除到保留层级目录为止
                     break
-                files = SystemUtils.list_files(file_dir,
-                                               settings.RMT_MEDIAEXT + settings.DOWNLOAD_TMPEXT)
+                if str(only_media) == "true":
+                    files = SystemUtils.list_files(file_dir, settings.RMT_MEDIAEXT + settings.DOWNLOAD_TMPEXT)
+                else:
+                    files = SystemUtils.list_files(file_dir, [])
                 if not files:
                     logger.warn(f"删除源文件空目录：{file_dir}")
                     shutil.rmtree(file_dir, ignore_errors=True)
