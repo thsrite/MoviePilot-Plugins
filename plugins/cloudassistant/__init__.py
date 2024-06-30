@@ -239,7 +239,7 @@ class CloudAssistant(_PluginBase):
                             if target_path and Path(target_path).is_relative_to(Path(mon_path)):
                                 logger.warn(f"{target_path} 是监控目录 {mon_path} 的子目录，无法监控")
                                 self.systemmessage.put(f"{target_path} 是下载目录 {mon_path} 的子目录，无法监控",
-                                                       title="目录监控")
+                                                       title="云盘助手媒体库监控")
                                 continue
                         except Exception as e:
                             logger.debug(str(e))
@@ -256,24 +256,25 @@ class CloudAssistant(_PluginBase):
                             observer.schedule(CloudFileMonitorHandler(mon_path, self), path=mon_path, recursive=True)
                             observer.daemon = True
                             observer.start()
-                            logger.info(f"{mon_path} 的目录监控服务启动")
+                            logger.info(f"{mon_path} 的云盘助手媒体库监控服务启动")
                         except Exception as e:
                             err_msg = str(e)
                             if "inotify" in err_msg and "reached" in err_msg:
                                 logger.warn(
-                                    f"目录监控服务启动出现异常：{err_msg}，请在宿主机上（不是docker容器内）执行以下命令并重启："
+                                    f"云盘助手媒体库监控服务启动出现异常：{err_msg}，请在宿主机上（不是docker容器内）执行以下命令并重启："
                                     + """
                                          echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
                                          echo fs.inotify.max_user_instances=524288 | sudo tee -a /etc/sysctl.conf
                                          sudo sysctl -p
                                          """)
                             else:
-                                logger.error(f"{mon_path} 启动目录监控失败：{err_msg}")
-                            self.systemmessage.put(f"{mon_path} 启动目录监控失败：{err_msg}", title="目录监控")
+                                logger.error(f"{mon_path} 启动云盘助手媒体库监控失败：{err_msg}")
+                            self.systemmessage.put(f"{mon_path} 启动云盘助手媒体库监控失败：{err_msg}",
+                                                   title="云盘助手媒体库监控")
 
                 # 运行一次定时服务
                 if self._onlyonce:
-                    logger.info("目录监控服务启动，立即运行一次")
+                    logger.info("云盘助手媒体库监控服务启动，立即运行一次")
                     self._scheduler.add_job(func=self.sync_all, trigger='date',
                                             run_date=datetime.datetime.now(
                                                 tz=pytz.timezone(settings.TZ)) + datetime.timedelta(seconds=3)
