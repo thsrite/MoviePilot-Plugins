@@ -920,27 +920,6 @@ class CloudLinkMonitor(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '插件自定义转移后电影、电视剧、动漫根目录，不走设定--目录设置。'
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VAlert',
-                                        'props': {
-                                            'type': 'info',
-                                            'variant': 'tonal',
                                             'text': '监控文件大小：单位GB，0为不开启，低于监控文件大小的文件不会被监控转移。'
                                         }
                                     }
