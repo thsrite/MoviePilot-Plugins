@@ -524,11 +524,12 @@
         "name": "云盘助手",
         "description": "本地文件定时转移到云盘，软连接/strm回本地，定时清理无效软连接。",
         "labels": "云盘",
-        "version": "2.0.5",
+        "version": "2.0.6",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png",
         "author": "thsrite",
         "level": 3,
         "history": {
+          "v2.0.6": "修复覆盖模式操作",
           "v2.0.5": "修复媒体文件转移完但刮削文件未转移删除目录的问题",
           "v2.0.4": "修复挂载目录log",
           "v2.0.3": "修复默认值bug",

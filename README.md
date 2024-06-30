@@ -42,7 +42,7 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - 目录监控（统一入库消息增强版） v1.0
 - Sql执行器 v1.2
 - 命令执行器 v1.2
-- 云盘助手(docs%2FCloudAssistant.md) v2.0.5
+- 云盘助手(docs%2FCloudAssistant.md) v2.0.6
 - CloudDrive2助手 v1.2
 - 软连接重定向 v1.0
 - 云盘同步删除 v1.3

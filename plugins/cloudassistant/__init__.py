@@ -65,7 +65,7 @@ class CloudAssistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png"
     # 插件版本
-    plugin_version = "2.0.5"
+    plugin_version = "2.0.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -440,7 +440,10 @@ class CloudAssistant(_PluginBase):
                         if Path(mount_file).exists():
                             logger.info(f"云盘文件 {mount_file} 已存在且未开启覆盖，跳过上传")
                             upload = False
-
+                    else:
+                        if Path(mount_file).exists():
+                            logger.info(f"云盘文件 {mount_file} 已存在且开启覆盖，删除原云盘文件")
+                            Path(mount_file).unlink()
                     if upload:
                         # 媒体文件转移
                         if Path(file_path).suffix.lower() in [ext.strip() for ext in
@@ -593,6 +596,7 @@ class CloudAssistant(_PluginBase):
                 continue
             if transferhis.src.startswith(source_dir):
                 source_path = source_dir
+                logger.info(f"获取到源文件 {transferhis.src} 根目录 {source_path}")
                 break
 
         # 删除源文件空目录
@@ -751,11 +755,6 @@ class CloudAssistant(_PluginBase):
                 os.makedirs(target_file)
                 return 1
         else:
-            # 文件
-            if Path(target_file).exists():
-                logger.info(f"目标文件 {target_file} 已存在")
-                return 1
-
             if not Path(target_file).parent.exists():
                 logger.info(f"创建目标文件夹 {Path(target_file).parent}")
                 os.makedirs(Path(target_file).parent)
