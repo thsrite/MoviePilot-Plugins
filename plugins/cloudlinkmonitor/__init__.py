@@ -25,7 +25,7 @@ from app.db.transferhistory_oper import TransferHistoryOper
 from app.log import logger
 from app.modules.filetransfer import FileTransferModule
 from app.plugins import _PluginBase
-from app.schemas import Notification, NotificationType, TransferInfo
+from app.schemas import NotificationType, TransferInfo
 from app.schemas.types import EventType, MediaType, SystemConfigKey
 from app.utils.string import StringUtils
 from app.utils.system import SystemUtils
@@ -60,7 +60,7 @@ class CloudLinkMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
-    plugin_version = "2.3"
+    plugin_version = "2.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -82,6 +82,9 @@ class CloudLinkMonitor(_PluginBase):
     _enabled = False
     _notify = False
     _onlyonce = False
+    _history = False
+    _scrape = False
+    _category = False
     _cron = None
     filetransfer = None
     _size = 0
@@ -96,9 +99,6 @@ class CloudLinkMonitor(_PluginBase):
     _dirconf: Dict[str, Optional[Path]] = {}
     # 存储源目录转移方式
     _transferconf: Dict[str, Optional[str]] = {}
-    _scraperconf: Dict[str, Optional[bool]] = {}
-    _historyconf: Dict[str, Optional[bool]] = {}
-    _categoryconf: Dict[str, Optional[bool]] = {}
     _medias = {}
     # 退出事件
     _event = threading.Event()
@@ -112,15 +112,15 @@ class CloudLinkMonitor(_PluginBase):
         # 清空配置
         self._dirconf = {}
         self._transferconf = {}
-        self._scraperconf = {}
-        self._historyconf = {}
-        self._categoryconf = {}
 
         # 读取配置
         if config:
             self._enabled = config.get("enabled")
             self._notify = config.get("notify")
             self._onlyonce = config.get("onlyonce")
+            self._history = config.get("history")
+            self._scrape = config.get("scrape")
+            self._category = config.get("category")
             self._mode = config.get("mode")
             self._transfer_type = config.get("transfer_type")
             self._monitor_dirs = config.get("monitor_dirs") or ""
@@ -135,8 +135,9 @@ class CloudLinkMonitor(_PluginBase):
         if self._enabled or self._onlyonce:
             # 定时服务管理器
             self._scheduler = BackgroundScheduler(timezone=settings.TZ)
-            # 追加入库消息统一发送服务
-            self._scheduler.add_job(self.send_msg, trigger='interval', seconds=15)
+            if self._notify:
+                # 追加入库消息统一发送服务
+                self._scheduler.add_job(self.send_msg, trigger='interval', seconds=15)
 
             # 读取目录配置
             monitor_dirs = self._monitor_dirs.split("\n")
@@ -146,27 +147,6 @@ class CloudLinkMonitor(_PluginBase):
                 # 格式源目录:目的目录
                 if not mon_path:
                     continue
-
-                # 是否添加一级二级分类
-                _category = True
-                if mon_path.count("@") == 1:
-                    _category = mon_path.split("@")[1]
-                    _category = True if _category == "True" else False
-                    mon_path = mon_path.split("@")[0]
-
-                # 是否存储历史记录
-                _history = True
-                if mon_path.count("%") == 1:
-                    _history = mon_path.split("%")[1]
-                    _history = True if _history == "True" else False
-                    mon_path = mon_path.split("%")[0]
-
-                # 是否刮削
-                _scraper_type = False
-                if mon_path.count("$") == 1:
-                    _scraper_type = mon_path.split("$")[1]
-                    _scraper_type = True if _scraper_type == "True" else False
-                    mon_path = mon_path.split("$")[0]
 
                 # 自定义转移方式
                 _transfer_type = self._transfer_type
@@ -192,15 +172,6 @@ class CloudLinkMonitor(_PluginBase):
                     self._dirconf[mon_path] = target_path
                 else:
                     self._dirconf[mon_path] = None
-
-                # 是否二级分类
-                self._categoryconf[mon_path] = _category
-
-                # 是否存历史
-                self._historyconf[mon_path] = _history
-
-                # 是否刮削
-                self._scraperconf[mon_path] = _scraper_type
 
                 # 转移方式
                 self._transferconf[mon_path] = _transfer_type
@@ -228,20 +199,20 @@ class CloudLinkMonitor(_PluginBase):
                         observer.schedule(FileMonitorHandler(mon_path, self), path=mon_path, recursive=True)
                         observer.daemon = True
                         observer.start()
-                        logger.info(f"{mon_path} 的目录监控服务启动")
+                        logger.info(f"{mon_path} 的云盘实时监控服务启动")
                     except Exception as e:
                         err_msg = str(e)
                         if "inotify" in err_msg and "reached" in err_msg:
                             logger.warn(
-                                f"目录监控服务启动出现异常：{err_msg}，请在宿主机上（不是docker容器内）执行以下命令并重启："
+                                f"云盘实时监控服务启动出现异常：{err_msg}，请在宿主机上（不是docker容器内）执行以下命令并重启："
                                 + """
                                      echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
                                      echo fs.inotify.max_user_instances=524288 | sudo tee -a /etc/sysctl.conf
                                      sudo sysctl -p
                                      """)
                         else:
-                            logger.error(f"{mon_path} 启动目录监控失败：{err_msg}")
-                        self.systemmessage.put(f"{mon_path} 启动目录监控失败：{err_msg}")
+                            logger.error(f"{mon_path} 启动目云盘实时监控失败：{err_msg}")
+                        self.systemmessage.put(f"{mon_path} 启动云盘实时监控失败：{err_msg}")
 
             # 运行一次定时服务
             if self._onlyonce:
@@ -274,7 +245,9 @@ class CloudLinkMonitor(_PluginBase):
             "monitor_dirs": self._monitor_dirs,
             "exclude_keywords": self._exclude_keywords,
             "interval": self._interval,
-            "cron": self._cron,
+            "history": self._history,
+            "category": self._category,
+            "scrape": self._scrape,
             "size": self._size
         })
 
@@ -288,24 +261,24 @@ class CloudLinkMonitor(_PluginBase):
             if not event_data or event_data.get("action") != "cloud_link_sync":
                 return
             self.post_message(channel=event.event_data.get("channel"),
-                              title="开始同步监控目录 ...",
+                              title="开始同步云盘实时监控目录 ...",
                               userid=event.event_data.get("user"))
         self.sync_all()
         if event:
             self.post_message(channel=event.event_data.get("channel"),
-                              title="监控目录同步完成！", userid=event.event_data.get("user"))
+                              title="云盘实时监控目录同步完成！", userid=event.event_data.get("user"))
 
     def sync_all(self):
         """
         立即运行一次，全量同步目录中所有文件
         """
-        logger.info("开始全量同步监控目录 ...")
+        logger.info("开始全量同步云盘实时监控目录 ...")
         # 遍历所有监控目录
         for mon_path in self._dirconf.keys():
             # 遍历目录下所有文件
             for file_path in SystemUtils.list_files(Path(mon_path), settings.RMT_MEDIAEXT):
                 self.__handle_file(event_path=str(file_path), mon_path=mon_path)
-        logger.info("全量同步监控目录完成！")
+        logger.info("全量同步云盘实时监控目录完成！")
 
     def event_handler(self, event, mon_path: str, text: str, event_path: str):
         """
@@ -393,12 +366,6 @@ class CloudLinkMonitor(_PluginBase):
                 target: Path = self._dirconf.get(mon_path)
                 # 查询转移方式
                 transfer_type = self._transferconf.get(mon_path)
-                # 是否刮削
-                scraper_type = self._scraperconf.get(mon_path)
-                # 是否存历史
-                history_type = self._historyconf.get(mon_path)
-                # 是否添加二级分类
-                category_type = self._categoryconf.get(mon_path)
 
                 # 识别媒体信息
                 mediainfo: MediaInfo = self.chain.recognize_media(meta=file_meta)
@@ -433,22 +400,17 @@ class CloudLinkMonitor(_PluginBase):
                 else:
                     episodes_info = None
 
-                if category_type:
-                    # 转移
-                    transferinfo: TransferInfo = self.chain.transfer(mediainfo=mediainfo,
-                                                                     path=file_path,
-                                                                     transfer_type=transfer_type,
-                                                                     target=target,
-                                                                     meta=file_meta,
-                                                                     episodes_info=episodes_info)
-                else:
-                    # 转移
-                    transferinfo: TransferInfo = self.filetransfer.transfer_media(in_path=file_path,
-                                                                                  in_meta=file_meta,
-                                                                                  mediainfo=mediainfo,
-                                                                                  transfer_type=transfer_type,
-                                                                                  target_dir=target,
-                                                                                  episodes_info=episodes_info)
+                if self._category and mediainfo.category:
+                    target = target / mediainfo.category
+
+                # 转移文件
+                transferinfo: TransferInfo = self.filetransfer.transfer_media(in_path=file_path,
+                                                                              in_meta=file_meta,
+                                                                              mediainfo=mediainfo,
+                                                                              transfer_type=transfer_type,
+                                                                              target_dir=target,
+                                                                              episodes_info=episodes_info,
+                                                                              need_scrape=self._scrape)
                 if not transferinfo:
                     logger.error("文件转移模块运行失败")
                     return
@@ -457,7 +419,7 @@ class CloudLinkMonitor(_PluginBase):
                     # 转移失败
                     logger.warn(f"{file_path.name} 入库失败：{transferinfo.message}")
 
-                    if history_type:
+                    if self._history:
                         # 新增转移失败历史记录
                         self.transferhis.add_fail(
                             src_path=file_path,
@@ -475,7 +437,7 @@ class CloudLinkMonitor(_PluginBase):
                         )
                     return
 
-                if history_type:
+                if self._history:
                     # 新增转移成功历史记录
                     self.transferhis.add_success(
                         src_path=file_path,
@@ -486,7 +448,7 @@ class CloudLinkMonitor(_PluginBase):
                     )
 
                 # 刮削
-                if scraper_type:
+                if self._scrape:
                     # 更新媒体图片
                     self.chain.obtain_images(mediainfo=mediainfo)
 
@@ -509,49 +471,50 @@ class CloudLinkMonitor(_PluginBase):
                     }
                 }
                 """
-                # 发送消息汇总
-                media_list = self._medias.get(mediainfo.title_year + " " + file_meta.season) or {}
-                if media_list:
-                    media_files = media_list.get("files") or []
-                    if media_files:
-                        file_exists = False
-                        for file in media_files:
-                            if str(file_path) == file.get("path"):
-                                file_exists = True
-                                break
-                        if not file_exists:
-                            media_files.append({
-                                "path": str(file_path),
-                                "mediainfo": mediainfo,
-                                "file_meta": file_meta,
-                                "transferinfo": transferinfo
-                            })
+                if self._notify:
+                    # 发送消息汇总
+                    media_list = self._medias.get(mediainfo.title_year + " " + file_meta.season) or {}
+                    if media_list:
+                        media_files = media_list.get("files") or []
+                        if media_files:
+                            file_exists = False
+                            for file in media_files:
+                                if str(file_path) == file.get("path"):
+                                    file_exists = True
+                                    break
+                            if not file_exists:
+                                media_files.append({
+                                    "path": str(file_path),
+                                    "mediainfo": mediainfo,
+                                    "file_meta": file_meta,
+                                    "transferinfo": transferinfo
+                                })
+                        else:
+                            media_files = [
+                                {
+                                    "path": str(file_path),
+                                    "mediainfo": mediainfo,
+                                    "file_meta": file_meta,
+                                    "transferinfo": transferinfo
+                                }
+                            ]
+                        media_list = {
+                            "files": media_files,
+                            "time": datetime.datetime.now()
+                        }
                     else:
-                        media_files = [
-                            {
-                                "path": str(file_path),
-                                "mediainfo": mediainfo,
-                                "file_meta": file_meta,
-                                "transferinfo": transferinfo
-                            }
-                        ]
-                    media_list = {
-                        "files": media_files,
-                        "time": datetime.datetime.now()
-                    }
-                else:
-                    media_list = {
-                        "files": [
-                            {
-                                "path": str(file_path),
-                                "mediainfo": mediainfo,
-                                "file_meta": file_meta,
-                                "transferinfo": transferinfo
-                            }
-                        ],
-                        "time": datetime.datetime.now()
-                    }
-                self._medias[mediainfo.title_year + " " + file_meta.season] = media_list
+                        media_list = {
+                            "files": [
+                                {
+                                    "path": str(file_path),
+                                    "mediainfo": mediainfo,
+                                    "file_meta": file_meta,
+                                    "transferinfo": transferinfo
+                                }
+                            ],
+                            "time": datetime.datetime.now()
+                        }
+                    self._medias[mediainfo.title_year + " " + file_meta.season] = media_list
 
                 # 广播事件
                 self.eventmanager.send_event(EventType.TransferComplete, {
@@ -753,6 +716,64 @@ class CloudLinkMonitor(_PluginBase):
                         ]
                     },
                     {
+                        'component': 'VForm',
+                        'content': [
+                            {
+                                'component': 'VRow',
+                                'content': [
+                                    {
+                                        'component': 'VCol',
+                                        'props': {
+                                            'cols': 12,
+                                            'md': 4
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'VSwitch',
+                                                'props': {
+                                                    'model': 'history',
+                                                    'label': '存储历史记录',
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        'component': 'VCol',
+                                        'props': {
+                                            'cols': 12,
+                                            'md': 4
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'VSwitch',
+                                                'props': {
+                                                    'model': 'scrape',
+                                                    'label': '是否刮削',
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        'component': 'VCol',
+                                        'props': {
+                                            'cols': 12,
+                                            'md': 4
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'VSwitch',
+                                                'props': {
+                                                    'model': 'category',
+                                                    'label': '二级目录',
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
                         'component': 'VRow',
                         'content': [
                             {
@@ -829,11 +850,38 @@ class CloudLinkMonitor(_PluginBase):
                                 },
                                 'content': [
                                     {
-                                        'component': 'VTextField',
+                                        'component': 'VSelect',
                                         'props': {
-                                            'model': 'cron',
-                                            'label': '定时全量同步周期',
-                                            'placeholder': '5位cron表达式，留空关闭'
+                                            'model': 'mode',
+                                            'label': '监控模式',
+                                            'items': [
+                                                {'title': '兼容模式', 'value': 'compatibility'},
+                                                {'title': '性能模式', 'value': 'fast'}
+                                            ]
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'model': 'transfer_type',
+                                            'label': '转移方式',
+                                            'items': [
+                                                {'title': '移动', 'value': 'move'},
+                                                {'title': '复制', 'value': 'copy'},
+                                                {'title': '硬链接', 'value': 'link'},
+                                                {'title': '软链接', 'value': 'filesoftlink'},
+                                                {'title': 'Rclone复制', 'value': 'rclone_copy'},
+                                                {'title': 'Rclone移动', 'value': 'rclone_move'}
+                                            ]
                                         }
                                     }
                                 ]
@@ -848,9 +896,9 @@ class CloudLinkMonitor(_PluginBase):
                                     {
                                         'component': 'VTextField',
                                         'props': {
-                                            'model': 'size',
-                                            'label': '监控文件大小（GB）',
-                                            'placeholder': '0'
+                                            'model': 'interval',
+                                            'label': '入库消息延迟',
+                                            'placeholder': '10'
                                         }
                                     }
                                 ]
@@ -874,9 +922,7 @@ class CloudLinkMonitor(_PluginBase):
                                             'rows': 5,
                                             'placeholder': '每一行一个目录，支持以下几种配置方式，转移方式支持 move、copy、link、softlink、rclone_copy、rclone_move：\n'
                                                            '监控目录:转移目的目录\n'
-                                                           '监控目录:转移目的目录$是否刮削（True/False）\n'
                                                            '监控目录:转移目的目录#转移方式\n'
-                                                           '监控目录:转移目的目录#转移方式$是否刮削（True/False）\n'
                                         }
                                     }
                                 ]
@@ -919,7 +965,7 @@ class CloudLinkMonitor(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '监控目录增加`@False/True`，默认True，拼接一级二级目录，False则不拼接一级二级目录。'
+                                            'text': '入库消息延迟默认10s，如网络较慢可酌情调大，有助于发送统一入库消息。'
                                         }
                                     }
                                 ]
@@ -940,7 +986,7 @@ class CloudLinkMonitor(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '入库消息延迟默认10s，如网络较慢可酌情调大，有助于发送统一入库消息。'
+                                            'text': '插件自定义转移后电影、电视剧、动漫根目录，不走设定--目录设置。'
                                         }
                                     }
                                 ]
@@ -974,6 +1020,9 @@ class CloudLinkMonitor(_PluginBase):
             "enabled": False,
             "notify": False,
             "onlyonce": False,
+            "history": False,
+            "scrape": False,
+            "category": False,
             "mode": "fast",
             "transfer_type": settings.TRANSFER_TYPE,
             "monitor_dirs": "",

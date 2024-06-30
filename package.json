@@ -254,11 +254,12 @@
         "name": "云盘实时监控",
         "description": "监控云盘目录文件变化，自动转移链接。",
         "labels": "云盘",
-        "version": "2.3",
+        "version": "2.4",
         "icon": "Linkease_A.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v2.4": "修复二级目录",
           "v2.3": "去除无效变量",
           "v2.2": "优化配置一二级分类流程",
           "v2.1": "可配置是否存储转移记录",
