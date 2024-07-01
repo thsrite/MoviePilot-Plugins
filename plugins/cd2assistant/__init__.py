@@ -25,7 +25,7 @@ class Cd2Assistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -144,6 +144,39 @@ class Cd2Assistant(_PluginBase):
 
     def check(self):
         """
+        检查
+        """
+        self.__check_cookie()
+        self.__check_task()
+
+    def __check_cookie(self):
+        """
+        检查cookie是否过期
+        """
+        logger.info("开始检查CloudDrive2 cookie")
+        fs = self._cd2_client.fs
+        if not fs:
+            logger.error("CloudDrive2连接失败，请检查配置")
+            return
+
+        for f in fs.listdir():
+            error_msg = None
+            if f:
+                try:
+                    cloud_file = fs.listdir(f)
+                    if not cloud_file or len(cloud_file) == 0:
+                        logger.warning(f"云盘 {f} 为空")
+                        error_msg = f"云盘 {f} cookie过期"
+                except Exception as err:
+                    logger.error(f"云盘 {f} cookie过期：{err}")
+                    error_msg = f"云盘 {f} cookie过期"
+
+            # 发送通知
+            if self._notify and error_msg:
+                self.__send_notify(error_msg)
+
+    def __check_task(self):
+        """
         检查上传任务
         """
         logger.info("开始检查CloudDrive2上传任务")
@@ -159,7 +192,7 @@ class Cd2Assistant(_PluginBase):
                 logger.info(f"发现异常上传任务：{task.get('errorMessage')}")
                 # 发送通知
                 if self._notify:
-                    self.__send_notify(task)
+                    self.__send_notify(task.get("errorMessage"))
                     break
 
     @eventmanager.register(EventType.PluginAction)
@@ -253,7 +286,7 @@ class Cd2Assistant(_PluginBase):
         # 将匹配到的结果转换为字典
         return {key: float(value) for key, value in matches}
 
-    def __send_notify(self, task):
+    def __send_notify(self, msg):
         """
         发送通知
         """
@@ -262,7 +295,7 @@ class Cd2Assistant(_PluginBase):
             mtype = NotificationType.__getitem__(str(self._msgtype)) or NotificationType.Manual
         self.post_message(title="CloudDrive2助手通知",
                           mtype=mtype,
-                          text=task.get("errorMessage"))
+                          text=msg)
 
     @staticmethod
     def convert_seconds(seconds):
