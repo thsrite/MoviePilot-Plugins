@@ -65,7 +65,7 @@ class CloudAssistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png"
     # 插件版本
-    plugin_version = "2.0.5"
+    plugin_version = "2.0.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -239,7 +239,7 @@ class CloudAssistant(_PluginBase):
                             if target_path and Path(target_path).is_relative_to(Path(mon_path)):
                                 logger.warn(f"{target_path} 是监控目录 {mon_path} 的子目录，无法监控")
                                 self.systemmessage.put(f"{target_path} 是下载目录 {mon_path} 的子目录，无法监控",
-                                                       title="目录监控")
+                                                       title="云盘助手媒体库监控")
                                 continue
                         except Exception as e:
                             logger.debug(str(e))
@@ -256,24 +256,25 @@ class CloudAssistant(_PluginBase):
                             observer.schedule(CloudFileMonitorHandler(mon_path, self), path=mon_path, recursive=True)
                             observer.daemon = True
                             observer.start()
-                            logger.info(f"{mon_path} 的目录监控服务启动")
+                            logger.info(f"{mon_path} 的云盘助手媒体库监控服务启动")
                         except Exception as e:
                             err_msg = str(e)
                             if "inotify" in err_msg and "reached" in err_msg:
                                 logger.warn(
-                                    f"目录监控服务启动出现异常：{err_msg}，请在宿主机上（不是docker容器内）执行以下命令并重启："
+                                    f"云盘助手媒体库监控服务启动出现异常：{err_msg}，请在宿主机上（不是docker容器内）执行以下命令并重启："
                                     + """
                                          echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
                                          echo fs.inotify.max_user_instances=524288 | sudo tee -a /etc/sysctl.conf
                                          sudo sysctl -p
                                          """)
                             else:
-                                logger.error(f"{mon_path} 启动目录监控失败：{err_msg}")
-                            self.systemmessage.put(f"{mon_path} 启动目录监控失败：{err_msg}", title="目录监控")
+                                logger.error(f"{mon_path} 启动云盘助手媒体库监控失败：{err_msg}")
+                            self.systemmessage.put(f"{mon_path} 启动云盘助手媒体库监控失败：{err_msg}",
+                                                   title="云盘助手媒体库监控")
 
                 # 运行一次定时服务
                 if self._onlyonce:
-                    logger.info("目录监控服务启动，立即运行一次")
+                    logger.info("云盘助手媒体库监控服务启动，立即运行一次")
                     self._scheduler.add_job(func=self.sync_all, trigger='date',
                                             run_date=datetime.datetime.now(
                                                 tz=pytz.timezone(settings.TZ)) + datetime.timedelta(seconds=3)
@@ -439,7 +440,10 @@ class CloudAssistant(_PluginBase):
                         if Path(mount_file).exists():
                             logger.info(f"云盘文件 {mount_file} 已存在且未开启覆盖，跳过上传")
                             upload = False
-
+                    else:
+                        if Path(mount_file).exists():
+                            logger.info(f"云盘文件 {mount_file} 已存在且开启覆盖，删除原云盘文件")
+                            Path(mount_file).unlink()
                     if upload:
                         # 媒体文件转移
                         if Path(file_path).suffix.lower() in [ext.strip() for ext in
@@ -592,6 +596,7 @@ class CloudAssistant(_PluginBase):
                 continue
             if transferhis.src.startswith(source_dir):
                 source_path = source_dir
+                logger.info(f"获取到源文件 {transferhis.src} 根目录 {source_path}")
                 break
 
         # 删除源文件空目录
@@ -750,11 +755,6 @@ class CloudAssistant(_PluginBase):
                 os.makedirs(target_file)
                 return 1
         else:
-            # 文件
-            if Path(target_file).exists():
-                logger.info(f"目标文件 {target_file} 已存在")
-                return 1
-
             if not Path(target_file).parent.exists():
                 logger.info(f"创建目标文件夹 {Path(target_file).parent}")
                 os.makedirs(Path(target_file).parent)
