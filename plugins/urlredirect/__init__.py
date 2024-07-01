@@ -65,14 +65,14 @@ class UrlRedirect(_PluginBase):
                 logger.info(f"Last link: {response.url}")
                 return schemas.Response(
                     success=True,
-                    data=response.url
+                    data={'url': response.url}
                 )
             except requests.RequestException as e:
                 logger.error(f"Request failed: {e}")
 
                 return schemas.Response(
                     success=False,
-                    data=str(e)
+                    message=str(e)
                 )
 
     def get_state(self) -> bool:
