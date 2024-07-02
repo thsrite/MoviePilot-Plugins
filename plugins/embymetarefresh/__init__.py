@@ -23,7 +23,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -39,7 +39,8 @@ class EmbyMetaRefresh(_PluginBase):
     _enabled = False
     _onlyonce = False
     _cron = None
-    _days = None
+    _num = None
+    _refresh_type = None
     _EMBY_HOST = settings.EMBY_HOST
     _EMBY_APIKEY = settings.EMBY_API_KEY
     _scheduler: Optional[BackgroundScheduler] = None
@@ -52,7 +53,8 @@ class EmbyMetaRefresh(_PluginBase):
             self._enabled = config.get("enabled")
             self._onlyonce = config.get("onlyonce")
             self._cron = config.get("cron")
-            self._days = config.get("days") or 5
+            self._num = config.get("num") or 5
+            self._refresh_type = config.get("refresh_type") or "历史记录"
 
             if self._EMBY_HOST:
                 if not self._EMBY_HOST.endswith("/"):
@@ -104,7 +106,8 @@ class EmbyMetaRefresh(_PluginBase):
                 "onlyonce": self._onlyonce,
                 "cron": self._cron,
                 "enabled": self._enabled,
-                "days": self._days
+                "num": self._num,
+                "refresh_type": self._refresh_type
             }
         )
 
@@ -116,19 +119,31 @@ class EmbyMetaRefresh(_PluginBase):
             logger.error("未配置Emby媒体服务器")
             return
 
-        # 获取days内入库的媒体
-        current_date = datetime.now()
-        # 计算几天前的日期
-        target_date = current_date - timedelta(days=int(self._days))
-        transferhistorys = TransferHistoryOper().list_by_date(target_date.strftime('%Y-%m-%d'))
-        if not transferhistorys:
-            logger.error(f"{self._days}天内没有媒体库入库记录")
-            return
+        if str(self._refresh_type) == "历史记录":
+            # 获取days内入库的媒体
+            current_date = datetime.now()
+            # 计算几天前的日期
+            target_date = current_date - timedelta(days=int(self._num))
+            transferhistorys = TransferHistoryOper().list_by_date(target_date.strftime('%Y-%m-%d'))
+            if not transferhistorys:
+                logger.error(f"{self._num}天内没有媒体库入库记录")
+                return
 
-        logger.info(f"开始刷新媒体库元数据，最近{self._days}天内入库媒体：{len(transferhistorys)}个")
-        # 刷新媒体库
-        for transferinfo in transferhistorys:
-            self.__refresh_emby(transferinfo)
+            logger.info(f"开始刷新媒体库元数据，最近{self._num}天内入库媒体：{len(transferhistorys)}个")
+            # 刷新媒体库
+            for transferinfo in transferhistorys:
+                self.__refresh_emby(transferinfo)
+        else:
+            latest = Emby().get_latest(num=int(self._num))
+            if not latest:
+                logger.error(f"Emby中没有最新媒体")
+                return
+
+            logger.info(f"开始刷新媒体库元数据，最新媒体：{len(latest)}个")
+            # 刷新媒体库
+            for item in latest:
+                logger.info(f"开始刷新媒体库元数据，最新媒体：{item.type} {item.title} ({item.subtitle})")
+                self.__refresh_emby_library_by_id(item.id)
         logger.info(f"刷新媒体库元数据完成")
 
     @eventmanager.register(EventType.PluginAction)
@@ -301,7 +316,7 @@ class EmbyMetaRefresh(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 6
+                                    'md': 4
                                 },
                                 'content': [
                                     {
@@ -317,7 +332,7 @@ class EmbyMetaRefresh(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 6
+                                    'md': 4
                                 },
                                 'content': [
                                     {
@@ -338,7 +353,7 @@ class EmbyMetaRefresh(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 6
+                                    'md': 4
                                 },
                                 'content': [
                                     {
@@ -355,14 +370,34 @@ class EmbyMetaRefresh(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 6
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'model': 'refresh_type',
+                                            'label': '刷新方式',
+                                            'items': [
+                                                {'title': '历史记录', 'value': '历史记录'},
+                                                {'title': '最新入库', 'value': '最新入库'},
+                                            ]
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
                                 },
                                 'content': [
                                     {
                                         'component': 'VTextField',
                                         'props': {
-                                            'model': 'days',
-                                            'label': '最新入库天数'
+                                            'model': 'num',
+                                            'label': '最新入库数量/历史记录天数'
                                         }
                                     }
                                 ]
@@ -383,7 +418,7 @@ class EmbyMetaRefresh(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '查询入库记录，周期请求媒体服务器元数据刷新接口。注：只支持Emby。'
+                                            'text': '周期请求媒体服务器元数据刷新接口。注：只支持Emby。'
                                         }
                                     }
                                 ]
@@ -396,7 +431,8 @@ class EmbyMetaRefresh(_PluginBase):
             "enabled": False,
             "onlyonce": False,
             "cron": "5 1 * * *",
-            "days": 5
+            "refresh_type": "历史记录",
+            "num": 5
         }
 
     def get_page(self) -> List[dict]:
