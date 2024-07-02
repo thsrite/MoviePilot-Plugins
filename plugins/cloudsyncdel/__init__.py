@@ -22,7 +22,7 @@ class CloudSyncDel(_PluginBase):
     # 插件图标
     plugin_icon = "clouddisk.png"
     # 插件版本
-    plugin_version = "1.3"
+    plugin_version = "1.3.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -130,6 +130,7 @@ class CloudSyncDel(_PluginBase):
                                 # 当前路径下没有媒体文件则删除
                                 shutil.rmtree(parent_path)
                                 logger.warn(f"云盘目录 {parent_path} 已删除")
+                                cloud_file_flag = True
             else:
                 logger.warn(f"云盘文件 {cloud_file} 文件已被删除")
         else:
@@ -160,10 +161,10 @@ class CloudSyncDel(_PluginBase):
             elif media_type == MediaType.TV and not season_num and not episode_num:
                 msg = f'剧集 {media_name} {tmdb_id}'
             # 删除季 S02
-            elif media_type == MediaType.TV and season_num and not episode_num:
+            elif media_type == MediaType.TV and season_num and (not episode_num or not str(episode_num).isdigit()):
                 msg = f'剧集 {media_name} S{season_num} {tmdb_id}'
             # 删除剧集S02E02
-            elif media_type == MediaType.TV and season_num and episode_num:
+            elif media_type == MediaType.TV and season_num and episode_num and str(episode_num).isdigit():
                 msg = f'剧集 {media_name} S{season_num}E{episode_num} {tmdb_id}'
             else:
                 msg = media_name
@@ -196,6 +197,7 @@ class CloudSyncDel(_PluginBase):
             "del_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
             "unique": f"{media_name} {tmdb_id}"
         })
+        logger.info(f"添加同步历史记录 {history[-1]}")
 
         # 保存历史
         self.save_data("history", history)
