@@ -60,7 +60,7 @@ class CloudLinkMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
-    plugin_version = "2.4"
+    plugin_version = "2.4.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -275,8 +275,12 @@ class CloudLinkMonitor(_PluginBase):
         logger.info("开始全量同步云盘实时监控目录 ...")
         # 遍历所有监控目录
         for mon_path in self._dirconf.keys():
+            logger.info(f"开始处理监控目录 {mon_path} ...")
+            list_files = SystemUtils.list_files(Path(mon_path), settings.RMT_MEDIAEXT)
+            logger.info(f"监控目录 {mon_path} 共发现 {len(list_files)} 个文件")
             # 遍历目录下所有文件
-            for file_path in SystemUtils.list_files(Path(mon_path), settings.RMT_MEDIAEXT):
+            for file_path in list_files:
+                logger.info(f"开始处理文件 {file_path} ...")
                 self.__handle_file(event_path=str(file_path), mon_path=mon_path)
         logger.info("全量同步云盘实时监控目录完成！")
 
@@ -307,7 +311,7 @@ class CloudLinkMonitor(_PluginBase):
             with lock:
                 transfer_history = self.transferhis.get_by_src(event_path)
                 if transfer_history:
-                    logger.debug("文件已处理过：%s" % event_path)
+                    logger.info("文件已处理过：%s" % event_path)
                     return
 
                 # 回收站及隐藏的文件不处理
