@@ -239,7 +239,7 @@ class EmbyMetaRefresh(_PluginBase):
         """
         if not self._EMBY_HOST or not self._EMBY_APIKEY:
             return False
-        req_url = "%semby/Items/%s/Refresh?MetadataRefreshMode=FullRefresh" \
+        req_url = "%semby/Items/%s/Refresh?Recursive=true&MetadataRefreshMode=FullRefresh" \
                   "&ImageRefreshMode=FullRefresh&ReplaceAllMetadata=true&ReplaceAllImages=true&api_key=%s" % (
                       self._EMBY_HOST, item_id, self._EMBY_APIKEY)
         try:
