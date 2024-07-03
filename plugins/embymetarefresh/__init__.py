@@ -23,7 +23,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -41,6 +41,8 @@ class EmbyMetaRefresh(_PluginBase):
     _cron = None
     _num = None
     _refresh_type = None
+    _ReplaceAllMetadata = "true"
+    _ReplaceAllImages = "true"
     _EMBY_HOST = settings.EMBY_HOST
     _EMBY_APIKEY = settings.EMBY_API_KEY
     _scheduler: Optional[BackgroundScheduler] = None
@@ -55,6 +57,8 @@ class EmbyMetaRefresh(_PluginBase):
             self._cron = config.get("cron")
             self._num = config.get("num") or 5
             self._refresh_type = config.get("refresh_type") or "历史记录"
+            self._ReplaceAllMetadata = config.get("ReplaceAllMetadata") or "true"
+            self._ReplaceAllImages = config.get("ReplaceAllImages") or "true"
 
             if self._EMBY_HOST:
                 if not self._EMBY_HOST.endswith("/"):
@@ -107,7 +111,9 @@ class EmbyMetaRefresh(_PluginBase):
                 "cron": self._cron,
                 "enabled": self._enabled,
                 "num": self._num,
-                "refresh_type": self._refresh_type
+                "refresh_type": self._refresh_type,
+                "ReplaceAllMetadata": self._ReplaceAllMetadata,
+                "ReplaceAllImages": self._ReplaceAllImages,
             }
         )
 
@@ -240,8 +246,8 @@ class EmbyMetaRefresh(_PluginBase):
         if not self._EMBY_HOST or not self._EMBY_APIKEY:
             return False
         req_url = "%semby/Items/%s/Refresh?Recursive=true&MetadataRefreshMode=FullRefresh" \
-                  "&ImageRefreshMode=FullRefresh&ReplaceAllMetadata=true&ReplaceAllImages=true&api_key=%s" % (
-                      self._EMBY_HOST, item_id, self._EMBY_APIKEY)
+                  "&ImageRefreshMode=FullRefresh&ReplaceAllMetadata=%s&ReplaceAllImages=%s&api_key=%s" % (
+                      self._EMBY_HOST, item_id, self._ReplaceAllMetadata, self._ReplaceAllImages, self._EMBY_APIKEY)
         try:
             with RequestUtils().post_res(req_url) as res:
                 if res:
@@ -405,6 +411,51 @@ class EmbyMetaRefresh(_PluginBase):
                         ],
                     },
                     {
+                        "component": "VRow",
+                        "content": [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'model': 'ReplaceAllImages',
+                                            'label': '覆盖图片',
+                                            'items': [
+                                                {'title': 'true', 'value': "true"},
+                                                {'title': 'false', 'value': "false"},
+                                            ]
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'model': 'ReplaceAllMetadata',
+                                            'label': '覆盖元数据',
+                                            'items': [
+                                                {'title': 'true', 'value': "true"},
+                                                {'title': 'false', 'value': "false"},
+                                            ]
+                                        }
+                                    }
+                                ]
+                            },
+                        ],
+                    },
+                    {
                         'component': 'VRow',
                         'content': [
                             {
@@ -430,6 +481,8 @@ class EmbyMetaRefresh(_PluginBase):
         ], {
             "enabled": False,
             "onlyonce": False,
+            "ReplaceAllMetadata": "true",
+            "ReplaceAllImages": "true",
             "cron": "5 1 * * *",
             "refresh_type": "历史记录",
             "num": 5
