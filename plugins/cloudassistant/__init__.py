@@ -65,7 +65,7 @@ class CloudAssistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png"
     # 插件版本
-    plugin_version = "2.0.6"
+    plugin_version = "2.0.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -714,7 +714,7 @@ class CloudAssistant(_PluginBase):
                     # 剧集季集信息 S01 E01-E04 || S01 E01、E02、E04
                     season_episode = None
                     # 处理文件多，说明是剧集，显示季入库消息
-                    if mtype == MediaType.TV.name:
+                    if str(mtype) == str(MediaType.TV.name):
                         # 季集文本
                         season_episode = f"{season} {StringUtils.format_ep(episodes)}"
                     # 发送消息
@@ -1341,6 +1341,27 @@ class CloudAssistant(_PluginBase):
                                             'type': 'info',
                                             'variant': 'tonal',
                                             'text': '插件开启后，开启监控才会实时处理。与定时任务执行不冲突。入库消息延迟建议调大，读写需要时间。'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'error',
+                                            'variant': 'tonal',
+                                            'text': '插件没想公开，传的快，死的快。'
                                         }
                                     }
                                 ]
