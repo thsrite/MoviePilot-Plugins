@@ -561,9 +561,10 @@ class CloudAssistant(_PluginBase):
                 # 重要，删除到保留层级目录为止
                 break
             if str(only_media) == "true":
-                files = SystemUtils.list_files(file_dir, settings.RMT_MEDIAEXT + settings.DOWNLOAD_TMPEXT)
+                files = SystemUtils.list_files(file_dir, [ext.strip() for ext in
+                                                          self._rmt_mediaext.split(",")] + settings.DOWNLOAD_TMPEXT)
             else:
-                files = SystemUtils.list_files(file_dir, [])
+                files = SystemUtils.list_files(file_dir, [".*"])
             if not files:
                 logger.warn(f"删除监控空目录：{file_dir}")
                 shutil.rmtree(file_dir, ignore_errors=True)
@@ -610,9 +611,10 @@ class CloudAssistant(_PluginBase):
                     # 重要，删除到保留层级目录为止
                     break
                 if str(only_media) == "true":
-                    files = SystemUtils.list_files(file_dir, settings.RMT_MEDIAEXT + settings.DOWNLOAD_TMPEXT)
+                    files = SystemUtils.list_files(file_dir, [ext.strip() for ext in
+                                                              self._rmt_mediaext.split(",")] + settings.DOWNLOAD_TMPEXT)
                 else:
-                    files = SystemUtils.list_files(file_dir, [])
+                    files = SystemUtils.list_files(file_dir, [".*"])
                 if not files:
                     logger.warn(f"删除源文件空目录：{file_dir}")
                     shutil.rmtree(file_dir, ignore_errors=True)
