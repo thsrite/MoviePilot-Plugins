@@ -22,7 +22,7 @@ class CloudSyncDel(_PluginBase):
     # 插件图标
     plugin_icon = "clouddisk.png"
     # 插件版本
-    plugin_version = "1.3.1"
+    plugin_version = "1.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -190,14 +190,13 @@ class CloudSyncDel(_PluginBase):
         history.append({
             "type": media_type.value,
             "title": media_name,
-            "path": media_path,
+            "path": str(media_path),
             "season": season_num if season_num and str(season_num).isdigit() else None,
             "episode": episode_num if episode_num and str(episode_num).isdigit() else None,
             "image": poster_image,
             "del_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time())),
             "unique": f"{media_name} {tmdb_id}"
         })
-        logger.info(f"添加同步历史记录 {history[-1]}")
 
         # 保存历史
         self.save_data("history", history)
