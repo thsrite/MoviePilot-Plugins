@@ -33,8 +33,6 @@ from app.utils.http import RequestUtils
 from app.utils.string import StringUtils
 from app.utils.system import SystemUtils
 
-# from clouddrive import CloudDriveClient
-
 lock = threading.Lock()
 
 
@@ -65,7 +63,7 @@ class CloudAssistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png"
     # 插件版本
-    plugin_version = "2.0.7"
+    plugin_version = "2.0.8"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -716,7 +714,7 @@ class CloudAssistant(_PluginBase):
                     # 剧集季集信息 S01 E01-E04 || S01 E01、E02、E04
                     season_episode = None
                     # 处理文件多，说明是剧集，显示季入库消息
-                    if str(mtype) == str(MediaType.TV.name):
+                    if season:
                         # 季集文本
                         season_episode = f"{season} {StringUtils.format_ep(episodes)}"
                     # 发送消息
