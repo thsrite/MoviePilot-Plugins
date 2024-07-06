@@ -359,6 +359,10 @@ class FileSoftLink(_PluginBase):
 
                 # 查询转移目的目录
                 target: Path = self._dirconf.get(mon_path)
+                if not target:
+                    logger.info(f"{mon_path} 没有配置转移目的目录，不处理")
+                    return
+
                 target_file = str(file_path).replace(str(mon_path), str(target))
 
                 # 如果是文件夹
