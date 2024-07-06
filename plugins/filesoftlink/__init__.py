@@ -258,7 +258,6 @@ class FileSoftLink(_PluginBase):
                     for dir_name in dirs:
                         src_path = os.path.join(root, dir_name)
                         src_name = Path(src_path).name
-                        logger.info(f"扫描到文件夹 {src_path} {src_name}")
                         if str(src_name) == str(args):
                             logger.info(f"开始定向处理文件夹 ...{src_path}")
                             for sroot, sdirs, sfiles in os.walk(src_path):
@@ -266,11 +265,10 @@ class FileSoftLink(_PluginBase):
                                     src_file = os.path.join(sroot, file_name)
                                     if Path(src_file).is_file():
                                         self.__handle_file(event_path=str(src_file), mon_path=mon_path)
-                            break
-
-            if event:
-                self.post_message(channel=event.event_data.get("channel"),
-                                  title=f"{args} 软连接完成！", userid=event.event_data.get("user"))
+                            if event:
+                                self.post_message(channel=event.event_data.get("channel"),
+                                                  title=f"{args} 软连接完成！", userid=event.event_data.get("user"))
+                            return
 
     def sync_all(self):
         """
