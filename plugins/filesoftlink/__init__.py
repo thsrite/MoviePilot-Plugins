@@ -52,7 +52,7 @@ class FileSoftLink(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png"
     # 插件版本
-    plugin_version = "1.8"
+    plugin_version = "1.9"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -150,15 +150,17 @@ class FileSoftLink(_PluginBase):
                         pass
 
                     # 异步开启云盘监控
-                    logger.info(f"异步开启实时硬链接 {mon_path} {self._mode}，延迟5s启动")
-                    self._scheduler.add_job(func=self.start_monitor, trigger='date',
-                                            run_date=datetime.datetime.now(
-                                                tz=pytz.timezone(settings.TZ)) + datetime.timedelta(seconds=5),
-                                            name=f"实时硬链接 {mon_path}",
-                                            kwargs={
-                                                "source_dir": mon_path
-                                            })
-
+                    if str(self._mode) != "nomonitor":
+                        logger.info(f"异步开启实时软连接链接 {mon_path} {self._mode}，延迟5s启动")
+                        self._scheduler.add_job(func=self.start_monitor, trigger='date',
+                                                run_date=datetime.datetime.now(
+                                                    tz=pytz.timezone(settings.TZ)) + datetime.timedelta(seconds=5),
+                                                name=f"实时硬链接 {mon_path}",
+                                                kwargs={
+                                                    "source_dir": mon_path
+                                                })
+                    else:
+                        logger.info("实时软链接服务已关闭")
             # 运行一次定时服务
             if self._onlyonce:
                 logger.info("实时软连接服务启动，立即运行一次")
@@ -238,6 +240,37 @@ class FileSoftLink(_PluginBase):
         if event:
             self.post_message(channel=event.event_data.get("channel"),
                               title="监控目录同步完成！", userid=event.event_data.get("user"))
+
+    @eventmanager.register(EventType.PluginAction)
+    def remote_sync_one(self, event: Event = None):
+        if event:
+            event_data = event.event_data
+            if not event_data or event_data.get("action") != "softlink_one":
+                return
+            args = event_data.get("args")
+            if not args:
+                return
+
+            # 定向处理文件夹
+            # 遍历所有监控目录
+            for mon_path in self._dirconf.keys():
+                for root, dirs, files in os.walk(mon_path):
+                    for dir_name in dirs:
+                        src_path = os.path.join(root, dir_name)
+                        src_name = Path(src_path).name
+                        logger.info(f"扫描到文件夹 {src_path} {src_name}")
+                        if str(src_name) == str(args):
+                            logger.info(f"开始定向处理文件夹 ...{src_path}")
+                            for sroot, sdirs, sfiles in os.walk(src_path):
+                                for file_name in sdirs + sfiles:
+                                    src_file = os.path.join(sroot, file_name)
+                                    if Path(src_file).is_file():
+                                        self.__handle_file(event_path=str(src_file), mon_path=mon_path)
+                            break
+
+            if event:
+                self.post_message(channel=event.event_data.get("channel"),
+                                  title=f"{args} 软连接完成！", userid=event.event_data.get("user"))
 
     def sync_all(self):
         """
@@ -358,15 +391,26 @@ class FileSoftLink(_PluginBase):
         定义远程控制命令
         :return: 命令关键字、事件、描述、附带数据
         """
-        return [{
-            "cmd": "/softlink_sync",
-            "event": EventType.PluginAction,
-            "desc": "文件软连接同步",
-            "category": "",
-            "data": {
-                "action": "softlink_sync"
+        return [
+            {
+                "cmd": "/softlink_sync",
+                "event": EventType.PluginAction,
+                "desc": "文件软连接同步",
+                "category": "",
+                "data": {
+                    "action": "softlink_sync"
+                }
+            },
+            {
+                "cmd": "/soft",
+                "event": EventType.PluginAction,
+                "desc": "定向软连接处理",
+                "category": "",
+                "data": {
+                    "action": "softlink_one"
+                }
             }
-        }]
+        ]
 
     def get_api(self) -> List[Dict[str, Any]]:
         return [{
@@ -480,7 +524,8 @@ class FileSoftLink(_PluginBase):
                                             'label': '监控模式',
                                             'items': [
                                                 {'title': '兼容模式', 'value': 'compatibility'},
-                                                {'title': '性能模式', 'value': 'fast'}
+                                                {'title': '性能模式', 'value': 'fast'},
+                                                {'title': '不监控', 'value': 'nomonitor'},
                                             ]
                                         }
                                     }
