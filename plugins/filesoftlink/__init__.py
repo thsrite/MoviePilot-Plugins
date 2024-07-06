@@ -52,7 +52,7 @@ class FileSoftLink(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png"
     # 插件版本
-    plugin_version = "1.9"
+    plugin_version = "1.9.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -251,24 +251,34 @@ class FileSoftLink(_PluginBase):
             if not args:
                 return
 
+            # 使用正则表达式匹配
+            match = re.match(r'(.*?)\s+(.*)', args)
+            if match:
+                parent_dir = match.group(1)  # 国漫
+                args = match.group(2)  # 凡人修仙传 (2020)
+            else:
+                parent_dir = args
+
             # 定向处理文件夹
             # 遍历所有监控目录
             for mon_path in self._dirconf.keys():
                 for root, dirs, files in os.walk(mon_path):
                     for dir_name in dirs:
                         src_path = os.path.join(root, dir_name)
-                        src_name = Path(src_path).name
-                        if str(src_name) == str(args):
-                            logger.info(f"开始定向处理文件夹 ...{src_path}")
-                            for sroot, sdirs, sfiles in os.walk(src_path):
-                                for file_name in sdirs + sfiles:
-                                    src_file = os.path.join(sroot, file_name)
-                                    if Path(src_file).is_file():
-                                        self.__handle_file(event_path=str(src_file), mon_path=mon_path)
-                            if event:
-                                self.post_message(channel=event.event_data.get("channel"),
-                                                  title=f"{args} 软连接完成！", userid=event.event_data.get("user"))
-                            return
+                        # 定向上级文件夹
+                        if str(parent_dir) in str(src_path):
+                            src_name = Path(src_path).name
+                            if str(src_name) == str(args):
+                                logger.info(f"开始定向处理文件夹 ...{src_path}")
+                                for sroot, sdirs, sfiles in os.walk(src_path):
+                                    for file_name in sdirs + sfiles:
+                                        src_file = os.path.join(sroot, file_name)
+                                        if Path(src_file).is_file():
+                                            self.__handle_file(event_path=str(src_file), mon_path=mon_path)
+                                if event:
+                                    self.post_message(channel=event.event_data.get("channel"),
+                                                      title=f"{args} 软连接完成！", userid=event.event_data.get("user"))
+                                return
 
     def sync_all(self):
         """

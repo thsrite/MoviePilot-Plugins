@@ -384,11 +384,12 @@
         "name": "实时软连接",
         "description": "监控目录文件变化，媒体文件软连接，其他文件可选复制。",
         "labels": "文件管理",
-        "version": "1.9",
+        "version": "1.9.1",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v1.9.1": "增强交互命令",
           "v1.9": "交互命令定向软连接",
           "v1.8": "修复bug",
           "v1.6": "bug修复",
