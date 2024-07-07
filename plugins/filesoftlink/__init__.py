@@ -52,7 +52,7 @@ class FileSoftLink(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png"
     # 插件版本
-    plugin_version = "1.9.2"
+    plugin_version = "1.9.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -88,6 +88,7 @@ class FileSoftLink(_PluginBase):
     def init_plugin(self, config: dict = None):
         # 清空配置
         self._dirconf = {}
+        self._categoryconf = {}
 
         # 读取配置
         if config:
@@ -118,6 +119,11 @@ class FileSoftLink(_PluginBase):
                 if not mon_path:
                     continue
 
+                category = None
+                if mon_path.count("#") == 1:
+                    category = str(mon_path.split("#")[1]).split(",")
+                    mon_path = mon_path.split("#")[0]
+
                 # 存储目的目录
                 if SystemUtils.is_windows():
                     if mon_path.count(":") > 1:
@@ -136,6 +142,8 @@ class FileSoftLink(_PluginBase):
                     self._dirconf[mon_path] = target_path
                 else:
                     self._dirconf[mon_path] = None
+
+                self._categoryconf[mon_path] = category
 
                 # 启用目录监控
                 if self._enabled:
@@ -251,29 +259,61 @@ class FileSoftLink(_PluginBase):
             if not args:
                 return
 
-            # 遍历所有监控目录
-            mon_path = None
-            for mon in self._dirconf.keys():
-                if str(args).startswith(mon):
-                    mon_path = mon
-                    break
+            # 使用正则表达式匹配
+            category = None
+            args_arr = args.split(maxsplit=1)
+            if len(args_arr) == 2:
+                category = args_arr[0]
+                args = args_arr[1]
 
-            if not mon_path:
-                logger.error(f"未获取到 {args} 对应的监控目录")
-                return
+            if category:
+                for mon_path in self._categoryconf.keys():
+                    mon_category = self._categoryconf.get(mon_path)
+                    if mon_category and str(category) in mon_category:
+                        parent_path = os.path.join(mon_path, category)
+                        logger.info(f"获取到 {args} 对应的监控目录 {parent_path}")
+                        for root, dirs, files in os.walk(parent_path):
+                            for dir_name in dirs:
+                                src_path = os.path.join(root, dir_name)
+                                # 定向上级文件夹
+                                src_name = Path(src_path).name
+                                if str(args) in str(src_name):
+                                    logger.info(f"开始定向处理文件夹 ...{src_path}")
+                                    for sroot, sdirs, sfiles in os.walk(src_path):
+                                        for file_name in sdirs + sfiles:
+                                            src_file = os.path.join(sroot, file_name)
+                                            if Path(src_file).is_file():
+                                                self.__handle_file(event_path=str(src_file), mon_path=mon_path)
+                                    if event:
+                                        self.post_message(channel=event.event_data.get("channel"),
+                                                          title=f"{args} 软连接完成！",
+                                                          userid=event.event_data.get("user"))
+                                    return
+                        return
+            else:
+                # 遍历所有监控目录
+                mon_path = None
+                for mon in self._dirconf.keys():
+                    if str(args).startswith(mon):
+                        mon_path = mon
+                        break
 
-            logger.info(f"获取到 {args} 对应的监控目录 {mon_path}")
+                if mon_path:
+                    if not Path(args).exists():
+                        logger.info(f"同步路径 {args} 不存在")
+                        return
+                    logger.info(f"获取到 {args} 对应的监控目录 {mon_path}")
 
-            logger.info(f"开始定向处理文件夹 ...{args}")
-            for sroot, sdirs, sfiles in os.walk(args):
-                for file_name in sdirs + sfiles:
-                    src_file = os.path.join(sroot, file_name)
-                    if Path(str(src_file)).is_file():
-                        self.__handle_file(event_path=str(src_file), mon_path=mon_path)
-            if event:
-                self.post_message(channel=event.event_data.get("channel"),
-                                  title=f"{args} 软连接完成！", userid=event.event_data.get("user"))
-            return
+                    logger.info(f"开始定向处理文件夹 ...{args}")
+                    for sroot, sdirs, sfiles in os.walk(args):
+                        for file_name in sdirs + sfiles:
+                            src_file = os.path.join(sroot, file_name)
+                            if Path(str(src_file)).is_file():
+                                self.__handle_file(event_path=str(src_file), mon_path=mon_path)
+                    if event:
+                        self.post_message(channel=event.event_data.get("channel"),
+                                          title=f"{args} 软连接完成！", userid=event.event_data.get("user"))
+                    return
 
     def sync_all(self):
         """
