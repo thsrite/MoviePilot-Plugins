@@ -268,7 +268,7 @@ class FileSoftLink(_PluginBase):
                         # 定向上级文件夹
                         if str(parent_dir) in str(src_path):
                             src_name = Path(src_path).name
-                            if str(src_name) == str(args):
+                            if str(src_name) in str(args):
                                 logger.info(f"开始定向处理文件夹 ...{src_path}")
                                 for sroot, sdirs, sfiles in os.walk(src_path):
                                     for file_name in sdirs + sfiles:
