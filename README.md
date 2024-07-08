@@ -33,7 +33,7 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - [自定义命令 v1.7](docs%2FCustomCommand.md)
 - docker自定义任务 v1.3
 - 插件彻底卸载 v1.0
-- 实时软连接 v1.9.3
+- 实时软连接 v1.9.4
 - 订阅规则自动填充 v2.7
 - Emby元数据刷新 v1.3
 - Emby媒体标签 v1.2
@@ -43,6 +43,6 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - Sql执行器 v1.2
 - 命令执行器 v1.2
 - CloudDrive2助手 v1.3
-- 软连接重定向 v1.0
+- 软连接重定向 v1.1
 - 云盘同步删除 v1.4
 - 媒体库重复媒体检测 v1.9

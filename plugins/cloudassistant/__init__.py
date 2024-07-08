@@ -3,6 +3,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import threading
 import time
 import traceback
@@ -438,6 +439,7 @@ class CloudAssistant(_PluginBase):
                     if str(overwrite) == "false":
                         if Path(mount_file).exists():
                             logger.info(f"云盘文件 {mount_file} 已存在且未开启覆盖，跳过上传")
+                            Path(mount_file).unlink()
                             upload = False
                     else:
                         if Path(mount_file).exists():
@@ -466,9 +468,16 @@ class CloudAssistant(_PluginBase):
                                                                self._rmt_mediaext.split(",")]:
                     # 媒体文件软连接
                     if str(self._return_mode) == "softlink":
-                        retcode = self.__transfer_file(file_path=mount_file,
-                                                       target_file=target_return_file,
-                                                       transfer_type="softlink")
+                        if os.path.islink(target_return_file):
+                            current_target = os.readlink(target_return_file)
+                            if str(current_target) != str(target_return_file):
+                                subprocess.run(['ln', '-sf', mount_file, target_return_file])
+                                logger.info(f"修正软连接 {target_return_file} -> {mount_file}")
+                            retcode = 0
+                        else:
+                            retcode = self.__transfer_file(file_path=mount_file,
+                                                           target_file=target_return_file,
+                                                           transfer_type="softlink")
                     else:
                         # 生成strm文件
                         retcode = self.__create_strm_file(mount_file=mount_file,

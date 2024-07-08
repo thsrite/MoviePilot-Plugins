@@ -52,7 +52,7 @@ class FileSoftLink(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png"
     # 插件版本
-    plugin_version = "1.9.3"
+    plugin_version = "1.9.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -119,6 +119,11 @@ class FileSoftLink(_PluginBase):
                 if not mon_path:
                     continue
 
+                monitor = None
+                if mon_path.count("$") == 1:
+                    monitor = str(mon_path.split("$")[1])
+                    mon_path = mon_path.split("$")[0]
+
                 category = None
                 if mon_path.count("#") == 1:
                     category = str(mon_path.split("#")[1]).split(",")
@@ -158,17 +163,18 @@ class FileSoftLink(_PluginBase):
                         pass
 
                     # 异步开启云盘监控
+                    self._mode = monitor or self._mode
                     if str(self._mode) != "nomonitor":
-                        logger.info(f"异步开启实时软连接链接 {mon_path} {self._mode}，延迟5s启动")
+                        logger.info(f"异步开启实时软连接链接 {mon_path} {self._mode}，延迟3s启动")
                         self._scheduler.add_job(func=self.start_monitor, trigger='date',
                                                 run_date=datetime.datetime.now(
-                                                    tz=pytz.timezone(settings.TZ)) + datetime.timedelta(seconds=5),
-                                                name=f"实时硬链接 {mon_path}",
+                                                    tz=pytz.timezone(settings.TZ)) + datetime.timedelta(seconds=3),
+                                                name=f"实时软连接 {mon_path}",
                                                 kwargs={
                                                     "source_dir": mon_path
                                                 })
                     else:
-                        logger.info("实时软链接服务已关闭")
+                        logger.info(f"{mon_path} 实时软链接服务已关闭")
             # 运行一次定时服务
             if self._onlyonce:
                 logger.info("实时软连接服务启动，立即运行一次")
