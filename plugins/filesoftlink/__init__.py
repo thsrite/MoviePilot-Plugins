@@ -52,7 +52,7 @@ class FileSoftLink(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png"
     # 插件版本
-    plugin_version = "1.8"
+    plugin_version = "1.9.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -88,6 +88,7 @@ class FileSoftLink(_PluginBase):
     def init_plugin(self, config: dict = None):
         # 清空配置
         self._dirconf = {}
+        self._categoryconf = {}
 
         # 读取配置
         if config:
@@ -118,6 +119,11 @@ class FileSoftLink(_PluginBase):
                 if not mon_path:
                     continue
 
+                category = None
+                if mon_path.count("#") == 1:
+                    category = str(mon_path.split("#")[1]).split(",")
+                    mon_path = mon_path.split("#")[0]
+
                 # 存储目的目录
                 if SystemUtils.is_windows():
                     if mon_path.count(":") > 1:
@@ -137,6 +143,8 @@ class FileSoftLink(_PluginBase):
                 else:
                     self._dirconf[mon_path] = None
 
+                self._categoryconf[mon_path] = category
+
                 # 启用目录监控
                 if self._enabled:
                     # 检查媒体库目录是不是下载目录的子目录
@@ -150,15 +158,17 @@ class FileSoftLink(_PluginBase):
                         pass
 
                     # 异步开启云盘监控
-                    logger.info(f"异步开启实时硬链接 {mon_path} {self._mode}，延迟5s启动")
-                    self._scheduler.add_job(func=self.start_monitor, trigger='date',
-                                            run_date=datetime.datetime.now(
-                                                tz=pytz.timezone(settings.TZ)) + datetime.timedelta(seconds=5),
-                                            name=f"实时硬链接 {mon_path}",
-                                            kwargs={
-                                                "source_dir": mon_path
-                                            })
-
+                    if str(self._mode) != "nomonitor":
+                        logger.info(f"异步开启实时软连接链接 {mon_path} {self._mode}，延迟5s启动")
+                        self._scheduler.add_job(func=self.start_monitor, trigger='date',
+                                                run_date=datetime.datetime.now(
+                                                    tz=pytz.timezone(settings.TZ)) + datetime.timedelta(seconds=5),
+                                                name=f"实时硬链接 {mon_path}",
+                                                kwargs={
+                                                    "source_dir": mon_path
+                                                })
+                    else:
+                        logger.info("实时软链接服务已关闭")
             # 运行一次定时服务
             if self._onlyonce:
                 logger.info("实时软连接服务启动，立即运行一次")
@@ -239,6 +249,72 @@ class FileSoftLink(_PluginBase):
             self.post_message(channel=event.event_data.get("channel"),
                               title="监控目录同步完成！", userid=event.event_data.get("user"))
 
+    @eventmanager.register(EventType.PluginAction)
+    def remote_sync_one(self, event: Event = None):
+        if event:
+            event_data = event.event_data
+            if not event_data or event_data.get("action") != "softlink_one":
+                return
+            args = event_data.get("args")
+            if not args:
+                return
+
+            # 使用正则表达式匹配
+            category = None
+            args_arr = args.split(maxsplit=1)
+            if len(args_arr) == 2:
+                category = args_arr[0]
+                args = args_arr[1]
+
+            if category:
+                for mon_path in self._categoryconf.keys():
+                    mon_category = self._categoryconf.get(mon_path)
+                    if mon_category and str(category) in mon_category:
+                        parent_path = os.path.join(mon_path, category)
+                        logger.info(f"获取到 {args} 对应的监控目录 {parent_path}")
+                        for root, dirs, files in os.walk(parent_path):
+                            for dir_name in dirs:
+                                src_path = os.path.join(root, dir_name)
+                                # 定向上级文件夹
+                                src_name = Path(src_path).name
+                                if str(args) in str(src_name):
+                                    logger.info(f"开始定向处理文件夹 ...{src_path}")
+                                    for sroot, sdirs, sfiles in os.walk(src_path):
+                                        for file_name in sdirs + sfiles:
+                                            src_file = os.path.join(sroot, file_name)
+                                            if Path(src_file).is_file():
+                                                self.__handle_file(event_path=str(src_file), mon_path=mon_path)
+                                    if event:
+                                        self.post_message(channel=event.event_data.get("channel"),
+                                                          title=f"{args} 软连接完成！",
+                                                          userid=event.event_data.get("user"))
+                                    return
+                        return
+            else:
+                # 遍历所有监控目录
+                mon_path = None
+                for mon in self._dirconf.keys():
+                    if str(args).startswith(mon):
+                        mon_path = mon
+                        break
+
+                if mon_path:
+                    if not Path(args).exists():
+                        logger.info(f"同步路径 {args} 不存在")
+                        return
+                    logger.info(f"获取到 {args} 对应的监控目录 {mon_path}")
+
+                    logger.info(f"开始定向处理文件夹 ...{args}")
+                    for sroot, sdirs, sfiles in os.walk(args):
+                        for file_name in sdirs + sfiles:
+                            src_file = os.path.join(sroot, file_name)
+                            if Path(str(src_file)).is_file():
+                                self.__handle_file(event_path=str(src_file), mon_path=mon_path)
+                    if event:
+                        self.post_message(channel=event.event_data.get("channel"),
+                                          title=f"{args} 软连接完成！", userid=event.event_data.get("user"))
+                    return
+
     def sync_all(self):
         """
         立即运行一次，全量同步目录中所有文件
@@ -318,6 +394,10 @@ class FileSoftLink(_PluginBase):
 
                 # 查询转移目的目录
                 target: Path = self._dirconf.get(mon_path)
+                if not target:
+                    logger.info(f"{mon_path} 没有配置转移目的目录，不处理")
+                    return
+
                 target_file = str(file_path).replace(str(mon_path), str(target))
 
                 # 如果是文件夹
@@ -358,15 +438,26 @@ class FileSoftLink(_PluginBase):
         定义远程控制命令
         :return: 命令关键字、事件、描述、附带数据
         """
-        return [{
-            "cmd": "/softlink_sync",
-            "event": EventType.PluginAction,
-            "desc": "文件软连接同步",
-            "category": "",
-            "data": {
-                "action": "softlink_sync"
+        return [
+            {
+                "cmd": "/softlink_sync",
+                "event": EventType.PluginAction,
+                "desc": "文件软连接同步",
+                "category": "",
+                "data": {
+                    "action": "softlink_sync"
+                }
+            },
+            {
+                "cmd": "/soft",
+                "event": EventType.PluginAction,
+                "desc": "定向软连接处理",
+                "category": "",
+                "data": {
+                    "action": "softlink_one"
+                }
             }
-        }]
+        ]
 
     def get_api(self) -> List[Dict[str, Any]]:
         return [{
@@ -480,7 +571,8 @@ class FileSoftLink(_PluginBase):
                                             'label': '监控模式',
                                             'items': [
                                                 {'title': '兼容模式', 'value': 'compatibility'},
-                                                {'title': '性能模式', 'value': 'fast'}
+                                                {'title': '性能模式', 'value': 'fast'},
+                                                {'title': '不监控', 'value': 'nomonitor'},
                                             ]
                                         }
                                     }
