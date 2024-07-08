@@ -530,7 +530,8 @@
         "version": "2.0.8",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png",
         "author": "thsrite",
-        "level": 3,
+        "level": 99,
+        "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlgN7RtXlPNXoFE9B67ye\ny2mog/hDDrhBAIJogdvfAgBMZ1qVzIPcBfdjENPJ9kV/F+zOoh0CzEaDufM54ERT\nykK1pQw7yj7quRZDbv5byxVNqI8bJg8zQo8Q66SQ8SP+aftmpFrADKClQ8VcVYzZ\nJ+YDu9H9q+TcvBqVtLyKfAH5T9WAxn0bXEh4OgkJn7oO5eI5+Fsi6Aq9suVN/HyK\nz2bDr237GmXJT4YPn9s7kj4Rypzg2ldiuBwtVnaTw+xjZRlCRr4Gs0eFUIMUqnoQ\nip4Px8Mrq5cqHl0HrJ/av/pJLCN1icCgegYW63b2gjjJwmps9NGGOydRzgoFkqj0\nDwIDAQAB",
         "history": {
           "v2.0.8": "修复通知",
           "v2.0.7": "修复通知标题",

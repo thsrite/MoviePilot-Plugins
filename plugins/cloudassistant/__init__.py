@@ -73,7 +73,8 @@ class CloudAssistant(_PluginBase):
     # 加载顺序
     plugin_order = 4
     # 可使用的用户级别
-    auth_level = 3
+    auth_level = 99
+    plugin_public_key = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlgN7RtXlPNXoFE9B67yey2mog/hDDrhBAIJogdvfAgBMZ1qVzIPcBfdjENPJ9kV/F+zOoh0CzEaDufM54ERTykK1pQw7yj7quRZDbv5byxVNqI8bJg8zQo8Q66SQ8SP+aftmpFrADKClQ8VcVYzZJ+YDu9H9q+TcvBqVtLyKfAH5T9WAxn0bXEh4OgkJn7oO5eI5+Fsi6Aq9suVN/HyKz2bDr237GmXJT4YPn9s7kj4Rypzg2ldiuBwtVnaTw+xjZRlCRr4Gs0eFUIMUqnoQip4Px8Mrq5cqHl0HrJ/av/pJLCN1icCgegYW63b2gjjJwmps9NGGOydRzgoFkqj0DwIDAQAB"
 
     # 私有属性
     _scheduler = None
