@@ -263,6 +263,7 @@ class FileSoftLink(_PluginBase):
                 return
             args = event_data.get("args")
             if not args:
+                logger.error(f"缺少参数：{event_data}")
                 return
 
             # 使用正则表达式匹配
@@ -275,9 +276,10 @@ class FileSoftLink(_PluginBase):
             if category:
                 for mon_path in self._categoryconf.keys():
                     mon_category = self._categoryconf.get(mon_path)
+                    logger.info(f"开始检查 {mon_path} {mon_category}")
                     if mon_category and str(category) in mon_category:
                         parent_path = os.path.join(mon_path, category)
-                        logger.info(f"获取到 {args} 对应的监控目录 {parent_path}")
+                        logger.info(f"获取到 {category} {args} 对应的监控目录 {parent_path}")
                         for root, dirs, files in os.walk(parent_path):
                             for dir_name in dirs:
                                 src_path = os.path.join(root, dir_name)
