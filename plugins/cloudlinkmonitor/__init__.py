@@ -102,6 +102,7 @@ class CloudLinkMonitor(_PluginBase):
     _medias = {}
     # 退出事件
     _event = threading.Event()
+    _auto_category = False
 
     def init_plugin(self, config: dict = None):
         self.transferhis = TransferHistoryOper()
@@ -128,6 +129,7 @@ class CloudLinkMonitor(_PluginBase):
             self._interval = config.get("interval") or 10
             self._cron = config.get("cron")
             self._size = config.get("size") or 0
+            self._auto_category = config.get("auto_category")
 
         # 停止现有任务
         self.stop_service()
@@ -248,7 +250,8 @@ class CloudLinkMonitor(_PluginBase):
             "history": self._history,
             "category": self._category,
             "scrape": self._scrape,
-            "size": self._size
+            "size": self._size,
+            "auto_category": self._auto_category
         })
 
     @eventmanager.register(EventType.PluginAction)
@@ -404,17 +407,28 @@ class CloudLinkMonitor(_PluginBase):
                 else:
                     episodes_info = None
 
-                if self._category and mediainfo.category:
+                if self._category and mediainfo.category and not self._auto_category:
                     target = target / mediainfo.category
 
-                # 转移文件
-                transferinfo: TransferInfo = self.filetransfer.transfer_media(in_path=file_path,
-                                                                              in_meta=file_meta,
-                                                                              mediainfo=mediainfo,
-                                                                              transfer_type=transfer_type,
-                                                                              target_dir=target,
-                                                                              episodes_info=episodes_info,
-                                                                              need_scrape=self._scrape)
+                if self._auto_category:
+                    # 转移文件
+                    transferinfo: TransferInfo = self.filetransfer.transfer(path=file_path,
+                                                                            meta=file_meta,
+                                                                            mediainfo=mediainfo,
+                                                                            transfer_type=transfer_type,
+                                                                            target=target,
+                                                                            episodes_info=episodes_info,
+                                                                            scrape=self._scrape)
+                else:
+                    # 转移文件
+                    transferinfo: TransferInfo = self.filetransfer.transfer_media(in_path=file_path,
+                                                                                  in_meta=file_meta,
+                                                                                  mediainfo=mediainfo,
+                                                                                  transfer_type=transfer_type,
+                                                                                  target_dir=target,
+                                                                                  episodes_info=episodes_info,
+                                                                                  need_scrape=self._scrape)
+
                 if not transferinfo:
                     logger.error("文件转移模块运行失败")
                     return
@@ -729,7 +743,7 @@ class CloudLinkMonitor(_PluginBase):
                                         'component': 'VCol',
                                         'props': {
                                             'cols': 12,
-                                            'md': 4
+                                            'md': 3
                                         },
                                         'content': [
                                             {
@@ -745,7 +759,7 @@ class CloudLinkMonitor(_PluginBase):
                                         'component': 'VCol',
                                         'props': {
                                             'cols': 12,
-                                            'md': 4
+                                            'md': 3
                                         },
                                         'content': [
                                             {
@@ -761,7 +775,7 @@ class CloudLinkMonitor(_PluginBase):
                                         'component': 'VCol',
                                         'props': {
                                             'cols': 12,
-                                            'md': 4
+                                            'md': 3
                                         },
                                         'content': [
                                             {
@@ -770,6 +784,23 @@ class CloudLinkMonitor(_PluginBase):
                                                     'model': 'category',
                                                     'label': '二级目录',
                                                 }
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        'component': 'VCol',
+                                        'props': {
+                                            'cols': 12,
+                                            'md': 3
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'VSwitch',
+                                                'props': {
+                                                    'model': 'auto_category',
+                                                    'label': '启用媒体库目录',
+                                                },
+                                                'hint': '使用媒体库配置目录'
                                             }
                                         ]
                                     }
@@ -940,6 +971,7 @@ class CloudLinkMonitor(_PluginBase):
             "history": False,
             "scrape": False,
             "category": False,
+            "auto_category": False,
             "mode": "fast",
             "transfer_type": settings.TRANSFER_TYPE,
             "monitor_dirs": "",
