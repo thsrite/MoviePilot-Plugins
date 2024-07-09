@@ -30,7 +30,7 @@ class PluginAutoUpdate(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/pluginupdate.png"
     # 插件版本
-    plugin_version = "1.9.1"
+    plugin_version = "1.9.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -165,6 +165,9 @@ class PluginAutoUpdate(_PluginBase):
                 if plugin.has_update or not plugin.installed:
                     # 已安装插件版本
                     install_plugin_version = self._plugin_version.get(str(plugin.id))
+                    if not install_plugin_version or str(install_plugin_version) == "None":
+                        continue
+
                     version_text = f"更新版本：v{install_plugin_version} -> v{plugin.plugin_version}"
 
                     # 自动更新
@@ -251,8 +254,7 @@ class PluginAutoUpdate(_PluginBase):
         # 本地插件
         local_plugins = PluginManager().get_local_plugins()
         for plugin in local_plugins:
-            if plugin.plugin_version:
-                self._plugin_version[plugin.id] = plugin.plugin_version
+            self._plugin_version[plugin.id] = plugin.plugin_version
 
     def get_state(self) -> bool:
         return self._enabled
@@ -306,7 +308,8 @@ class PluginAutoUpdate(_PluginBase):
                 if pid in install_plugins:
                     local_plugin = local_plugins.get(pid)
                     if local_plugin:
-                        if StringUtils.compare_version(local_plugin.get("plugin_version"), plugin.get("version")) < 0:
+                        if StringUtils.compare_version(local_plugin.get("plugin_version"),
+                                                       plugin.get("version")) < 0:
                             local_plugins[pid] = {
                                 "id": pid,
                                 "plugin_name": plugin.get("name"),

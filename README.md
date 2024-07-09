@@ -17,7 +17,7 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - 清理订阅缓存 v1.0
 - 添加种子下载 v1.0
 - 删除站点种子 v1.2
-- 插件更新管理 v1.9.1
+- 插件更新管理 v1.9.2
 - 插件强制重装 v1.7
 - 群辉Webhook通知 v1.1
 - 同步CookieCloud v1.2
