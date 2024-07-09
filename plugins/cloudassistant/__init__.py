@@ -340,18 +340,11 @@ class CloudAssistant(_PluginBase):
         logger.info("云盘助手全量同步监控目录 ...")
         # 遍历所有监控目录
         for mon_path in self._dirconf.keys():
-            monitor_conf = self._dirconf.get(mon_path)
-            only_media = monitor_conf.get("only_media") or "true"
             # 遍历目录下所有文件
             for root, dirs, files in os.walk(mon_path):
                 for name in dirs + files:
                     file_path = os.path.join(root, name)
                     if Path(str(file_path)).is_file():
-                        if str(only_media) == "true" and Path(str(file_path)).suffix.lower() not in [ext.strip() for ext
-                                                                                                     in
-                                                                                                     self._rmt_mediaext.split(
-                                                                                                         ",")]:
-                            continue
                         self.__handle_file(event_path=str(file_path), mon_path=mon_path)
         logger.info("云盘助手全量同步监控目录完成！")
 
@@ -434,7 +427,11 @@ class CloudAssistant(_PluginBase):
                 logger.info(f"挂载目录文件 {file_path}")
                 mount_file = str(file_path).replace(str(mon_path), str(mount_path))
 
-                if str(upload_cloud) == "true":
+                # 上传cloud时，如果不是仅媒体文件，则全上传，如果是仅媒体文件，则只上传媒体文件
+                if str(upload_cloud) == "true" and str(only_media) == "false" or (
+                        str(only_media) == "true" and Path(file_path).suffix.lower() in [ext.strip() for ext in
+                                                                                         self._rmt_mediaext.split(
+                                                                                             ",")]):
                     upload = True
                     if str(overwrite) == "false":
                         if Path(mount_file).exists():
@@ -458,16 +455,18 @@ class CloudAssistant(_PluginBase):
                                                  target_file=mount_file,
                                                  transfer_type="copy")
 
-                # 2、软连接回本地路径
-                if not Path(mount_file).exists():
-                    logger.info(f"挂载目录文件 {mount_file} 不存在，不创建 {self._return_mode}")
-                    return
-
+                # 2、软连接或者strm回本地路径
                 target_return_file = str(file_path).replace(str(mon_path), str(return_path))
                 if Path(target_return_file).suffix.lower() in [ext.strip() for ext in
                                                                self._rmt_mediaext.split(",")]:
+                    # 检查云盘文件是否存在
+                    if not Path(mount_file).exists():
+                        logger.info(f"挂载目录文件 {mount_file} 不存在，不创建 {self._return_mode}")
+                        return
+
                     # 媒体文件软连接
                     if str(self._return_mode) == "softlink":
+                        # 检查软连接指向是否正确，如果不正确，修正
                         if os.path.islink(target_return_file):
                             current_target = os.readlink(target_return_file)
                             if str(current_target) != str(target_return_file):
