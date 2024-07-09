@@ -52,7 +52,7 @@ class FileSoftLink(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png"
     # 插件版本
-    plugin_version = "1.9.4"
+    plugin_version = "1.9.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -306,6 +306,7 @@ class FileSoftLink(_PluginBase):
                         mon_path = mon
                         break
 
+                # 指定路径软连接
                 if mon_path:
                     if not Path(args).exists():
                         logger.info(f"同步路径 {args} 不存在")
@@ -322,6 +323,22 @@ class FileSoftLink(_PluginBase):
                         self.post_message(channel=event.event_data.get("channel"),
                                           title=f"{args} 软连接完成！", userid=event.event_data.get("user"))
                     return
+                else:
+                    for mon_path in self._categoryconf.keys():
+                        mon_category = self._categoryconf.get(mon_path)
+                        logger.info(f"开始检查 {mon_path} {mon_category}")
+                        if mon_category and str(args) in mon_category:
+                            parent_path = os.path.join(mon_path, args)
+                            logger.info(f"获取到 {args} 对应的监控目录 {parent_path}")
+                            for sroot, sdirs, sfiles in os.walk(parent_path):
+                                for file_name in sdirs + sfiles:
+                                    src_file = os.path.join(sroot, file_name)
+                                    if Path(src_file).is_file():
+                                        self.__handle_file(event_path=str(src_file), mon_path=mon_path)
+                            if event:
+                                self.post_message(channel=event.event_data.get("channel"),
+                                                  title=f"{args} 软连接完成！",
+                                                  userid=event.event_data.get("user"))
 
     def sync_all(self):
         """
