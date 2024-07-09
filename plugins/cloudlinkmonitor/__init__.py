@@ -743,7 +743,7 @@ class CloudLinkMonitor(_PluginBase):
                                         'component': 'VCol',
                                         'props': {
                                             'cols': 12,
-                                            'md': 3
+                                            'md': 4
                                         },
                                         'content': [
                                             {
@@ -759,7 +759,7 @@ class CloudLinkMonitor(_PluginBase):
                                         'component': 'VCol',
                                         'props': {
                                             'cols': 12,
-                                            'md': 3
+                                            'md': 4
                                         },
                                         'content': [
                                             {
@@ -775,7 +775,7 @@ class CloudLinkMonitor(_PluginBase):
                                         'component': 'VCol',
                                         'props': {
                                             'cols': 12,
-                                            'md': 3
+                                            'md': 4
                                         },
                                         'content': [
                                             {
@@ -786,12 +786,22 @@ class CloudLinkMonitor(_PluginBase):
                                                 }
                                             }
                                         ]
-                                    },
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VForm',
+                        'content': [
+                            {
+                                'component': 'VRow',
+                                'content': [
                                     {
                                         'component': 'VCol',
                                         'props': {
                                             'cols': 12,
-                                            'md': 3
+                                            'md': 4
                                         },
                                         'content': [
                                             {
