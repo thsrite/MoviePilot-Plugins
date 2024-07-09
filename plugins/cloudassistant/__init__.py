@@ -645,19 +645,6 @@ class CloudAssistant(_PluginBase):
         """
         key = f"{transferhis.title} ({transferhis.year})"
 
-        # 获取图片
-        try:
-            backrop_image = self.chain.obtain_specific_image(
-                mediaid=transferhis.tmdbid,
-                mtype=MediaType(transferhis.type),
-                image_type=MediaImageType.Backdrop,
-                season=int(transferhis.seasons.replace("S", "")) if transferhis.seasons else None,
-                episode=int(transferhis.episodes.replace("E", "")) if transferhis.episodes else None,
-            ) or transferhis.image
-        except Exception as e:
-            logger.error(f"获取图片失败 {str(e)} 使用转移记录图片")
-            backrop_image = transferhis.image
-
         # 发送消息汇总
         media_list = self._medias.get(
             key + " " + transferhis.seasons) or {}
@@ -672,9 +659,10 @@ class CloudAssistant(_PluginBase):
                 "key": key,
                 "mtype": transferhis.type,
                 "category": transferhis.category,
-                "image": backrop_image,
+                "image": transferhis.image,
                 "season": transferhis.seasons,
                 "episodes": episodes,
+                "tmdbid": transferhis.tmdbid,
                 "time": datetime.datetime.now()
             }
         else:
@@ -682,9 +670,10 @@ class CloudAssistant(_PluginBase):
                 "key": key,
                 "mtype": transferhis.type,
                 "category": transferhis.category,
-                "image": backrop_image,
+                "image": transferhis.image,
                 "season": transferhis.seasons,
                 "episodes": [int(transferhis.episodes.replace("E", ""))],
+                "tmdbid": transferhis.tmdbid,
                 "time": datetime.datetime.now()
             }
         self._medias[key + " " + transferhis.seasons] = media_list
@@ -712,6 +701,7 @@ class CloudAssistant(_PluginBase):
             image = media_list.get("image")
             season = media_list.get("season")
             episodes = media_list.get("episodes")
+            tmdbid = media_list.get("tmdbid")
             if not last_update_time or not episodes:
                 continue
 
@@ -726,6 +716,20 @@ class CloudAssistant(_PluginBase):
                     if season:
                         # 季集文本
                         season_episode = f"{season} {StringUtils.format_ep(episodes)}"
+
+                    if tmdbid:
+                        # 获取图片
+                        try:
+                            image = self.chain.obtain_specific_image(
+                                mediaid=tmdbid,
+                                mtype=MediaType(mtype),
+                                image_type=MediaImageType.Backdrop,
+                                season=int(season.replace("S", "")) if season else None,
+                                episode=int(episodes[0]) if episodes else None,
+                            ) or image
+                        except Exception:
+                            image = image
+
                     # 发送消息
                     self.__send_transfer_message(title_year=key,
                                                  season_episodes=season_episode,
