@@ -1374,7 +1374,7 @@ class Cd2Assistant(_PluginBase):
                                                             'props': {
                                                                 'class': 'text-caption'
                                                             },
-                                                            'text': '打开文件数'
+                                                            'text': '存储空间'
                                                         },
                                                         {
                                                             'component': 'div',
@@ -1387,7 +1387,7 @@ class Cd2Assistant(_PluginBase):
                                                                     'props': {
                                                                         'class': 'text-h6'
                                                                     },
-                                                                    'text': cd2_info.get('fhTableCount')
+                                                                    'text': cd2_info.get('cloud_space')
                                                                 }
                                                             ]
                                                         }
@@ -1426,7 +1426,7 @@ class Cd2Assistant(_PluginBase):
                                                             'props': {
                                                                 'class': 'text-caption'
                                                             },
-                                                            'text': '缓存目录数'
+                                                            'text': '打开文件数'
                                                         },
                                                         {
                                                             'component': 'div',
@@ -1439,7 +1439,7 @@ class Cd2Assistant(_PluginBase):
                                                                     'props': {
                                                                         'class': 'text-h6'
                                                                     },
-                                                                    'text': cd2_info.get('dirCacheCount')
+                                                                    'text': cd2_info.get('fhTableCount')
                                                                 }
                                                             ]
                                                         }
@@ -1451,6 +1451,7 @@ class Cd2Assistant(_PluginBase):
                                 },
                             ]
                         },
+
                         {
                             'component': 'VCol',
                             'props': {
@@ -1634,6 +1635,58 @@ class Cd2Assistant(_PluginBase):
                                                             'props': {
                                                                 'class': 'text-caption'
                                                             },
+                                                            'text': '缓存目录数'
+                                                        },
+                                                        {
+                                                            'component': 'div',
+                                                            'props': {
+                                                                'class': 'd-flex align-center flex-wrap'
+                                                            },
+                                                            'content': [
+                                                                {
+                                                                    'component': 'span',
+                                                                    'props': {
+                                                                        'class': 'text-h6'
+                                                                    },
+                                                                    'text': cd2_info.get('dirCacheCount')
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                },
+                            ]
+                        },
+                        {
+                            'component': 'VCol',
+                            'props': {
+                                'cols': 6,
+                                'md': 3
+                            },
+                            'content': [
+                                {
+                                    'component': 'VCard',
+                                    'props': {
+                                        'variant': 'tonal',
+                                    },
+                                    'content': [
+                                        {
+                                            'component': 'VCardText',
+                                            'props': {
+                                                'class': 'd-flex align-center',
+                                            },
+                                            'content': [
+                                                {
+                                                    'component': 'div',
+                                                    'content': [
+                                                        {
+                                                            'component': 'span',
+                                                            'props': {
+                                                                'class': 'text-caption'
+                                                            },
                                                             'text': '下载速率'
                                                         },
                                                         {
@@ -1711,58 +1764,7 @@ class Cd2Assistant(_PluginBase):
                                 },
                             ]
                         },
-                        {
-                            'component': 'VCol',
-                            'props': {
-                                'cols': 6,
-                                'md': 3
-                            },
-                            'content': [
-                                {
-                                    'component': 'VCard',
-                                    'props': {
-                                        'variant': 'tonal',
-                                    },
-                                    'content': [
-                                        {
-                                            'component': 'VCardText',
-                                            'props': {
-                                                'class': 'd-flex align-center',
-                                            },
-                                            'content': [
-                                                {
-                                                    'component': 'div',
-                                                    'content': [
-                                                        {
-                                                            'component': 'span',
-                                                            'props': {
-                                                                'class': 'text-caption'
-                                                            },
-                                                            'text': '存储空间'
-                                                        },
-                                                        {
-                                                            'component': 'div',
-                                                            'props': {
-                                                                'class': 'd-flex align-center flex-wrap'
-                                                            },
-                                                            'content': [
-                                                                {
-                                                                    'component': 'span',
-                                                                    'props': {
-                                                                        'class': 'text-h6'
-                                                                    },
-                                                                    'text': cd2_info.get('cloud_space')
-                                                                }
-                                                            ]
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        }
-                                    ]
-                                },
-                            ]
-                        }
+
                     ]
                 }]
 
