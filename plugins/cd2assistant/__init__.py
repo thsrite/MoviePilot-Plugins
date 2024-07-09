@@ -25,7 +25,7 @@ class Cd2Assistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png"
     # 插件版本
-    plugin_version = "1.3"
+    plugin_version = "1.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -212,6 +212,26 @@ class Cd2Assistant(_PluginBase):
 
         self._client.RestartService()
 
+    def __get_cloud_space(self):
+        """
+        获取云盘空间
+        """
+        fs = self._cd2_client.fs
+        if not fs:
+            logger.error("CloudDrive2连接失败，请检查配置")
+            return
+
+        _space_info = "\n"
+        for f in fs.listdir():
+            space_info = self._cd2_client.GetSpaceInfo(CloudDrive_pb2.FileRequest(path=f))
+            space_info = self.__str_to_dict(space_info)
+            total = self.__convert_bytes(space_info.get("totalSpace"))
+            used = self.__convert_bytes(space_info.get("usedSpace"))
+            free = self.__convert_bytes(space_info.get("freeSpace"))
+            _space_info += f"{f}：{used}/{total}\n"
+
+        return _space_info
+
     @eventmanager.register(EventType.PluginAction)
     def cd2_info(self, event: Event = None):
         """
@@ -236,6 +256,9 @@ class Cd2Assistant(_PluginBase):
         uploadFileList = self._client.GetUploadFileList(CloudDrive_pb2.GetUploadFileListRequest(getAll=True))
         uploadFileList = self.__str_to_dict(uploadFileList) if uploadFileList else {}
 
+        # 云盘空间
+        cloud_space = self.__get_cloud_space()
+
         system_info_dict = {
             "cpuUsage": f"{system_info.get('cpuUsage'):.2f}%" if system_info.get(
                 "cpuUsage") else "0.00%" if system_info else None,
@@ -255,6 +278,7 @@ class Cd2Assistant(_PluginBase):
                 "globalBytesPerSecond") else "0KB/s" if downloadFileList else "0KB/s",
             "upload_speed": f"{uploadFileList.get('globalBytesPerSecond') / 1024 / 1024:.2f}MB/s" if uploadFileList.get(
                 "globalBytesPerSecond") else "0KB/s" if uploadFileList else "0KB/s",
+            "cloud_space": cloud_space
         }
 
         logger.info(f"获取CloudDrive2系统信息：\n{system_info_dict}")
@@ -272,9 +296,22 @@ class Cd2Assistant(_PluginBase):
                                    f"上传任务数量：{system_info_dict.get('upload_count')}\n"
                                    f"下载任务数量：{system_info_dict.get('download_count')}\n"
                                    f"下载速度：{system_info_dict.get('download_speed')}\n"
-                                   f"上传速度：{system_info_dict.get('upload_speed')}\n")
+                                   f"上传速度：{system_info_dict.get('upload_speed')}\n"
+                                   f"存储空间：{system_info_dict.get('cloud_space')}\n")
 
         return system_info_dict
+
+    @staticmethod
+    def __convert_bytes(size_in_bytes):
+        """ Convert bytes to the most appropriate unit (PB, TB, GB, etc.) """
+        units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
+        unit_index = 0
+
+        while size_in_bytes >= 1024 and unit_index < len(units) - 1:
+            size_in_bytes /= 1024
+            unit_index += 1
+
+        return f"{size_in_bytes:.2f} {units[unit_index]}"
 
     @staticmethod
     def __str_to_dict(str_data):
@@ -576,6 +613,7 @@ class Cd2Assistant(_PluginBase):
 
     def get_page(self) -> List[dict]:
         cd2_info = self.cd2_info()
+
         # 拼装页面
         return [
             {
@@ -1047,6 +1085,59 @@ class Cd2Assistant(_PluginBase):
                                                                     'class': 'text-h6'
                                                                 },
                                                                 'text': f"↑ {cd2_info.get('download_speed')}  ↓ {cd2_info.get('upload_speed')}"
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VCol',
+                        'props': {
+                            'cols': 12,
+                            'md': 4,
+                            'sm': 6
+                        },
+                        'content': [
+                            {
+                                'component': 'VCard',
+                                'props': {
+                                    'variant': 'tonal',
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VCardText',
+                                        'props': {
+                                            'class': 'd-flex align-center',
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'div',
+                                                'content': [
+                                                    {
+                                                        'component': 'span',
+                                                        'props': {
+                                                            'class': 'text-caption'
+                                                        },
+                                                        'text': '存储空间'
+                                                    },
+                                                    {
+                                                        'component': 'div',
+                                                        'props': {
+                                                            'class': 'd-flex align-center flex-wrap'
+                                                        },
+                                                        'content': [
+                                                            {
+                                                                'component': 'span',
+                                                                'props': {
+                                                                    'class': 'text-h6'
+                                                                },
+                                                                'text': cd2_info.get('cloud_space')
                                                             }
                                                         ]
                                                     }
@@ -1609,6 +1700,58 @@ class Cd2Assistant(_PluginBase):
                                                                         'class': 'text-h6'
                                                                     },
                                                                     'text': cd2_info.get('upload_speed')
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                },
+                            ]
+                        },
+                        {
+                            'component': 'VCol',
+                            'props': {
+                                'cols': 6,
+                                'md': 3
+                            },
+                            'content': [
+                                {
+                                    'component': 'VCard',
+                                    'props': {
+                                        'variant': 'tonal',
+                                    },
+                                    'content': [
+                                        {
+                                            'component': 'VCardText',
+                                            'props': {
+                                                'class': 'd-flex align-center',
+                                            },
+                                            'content': [
+                                                {
+                                                    'component': 'div',
+                                                    'content': [
+                                                        {
+                                                            'component': 'span',
+                                                            'props': {
+                                                                'class': 'text-caption'
+                                                            },
+                                                            'text': '存储空间'
+                                                        },
+                                                        {
+                                                            'component': 'div',
+                                                            'props': {
+                                                                'class': 'd-flex align-center flex-wrap'
+                                                            },
+                                                            'content': [
+                                                                {
+                                                                    'component': 'span',
+                                                                    'props': {
+                                                                        'class': 'text-h6'
+                                                                    },
+                                                                    'text': cd2_info.get('cloud_space')
                                                                 }
                                                             ]
                                                         }
