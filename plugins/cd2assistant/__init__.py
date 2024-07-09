@@ -1172,7 +1172,7 @@ class Cd2Assistant(_PluginBase):
         }
         # 全局配置
         attrs = {
-            "refresh": 10
+            "refresh": 10, "border": False
         }
         if not self._client:
             logger.warn(f"请求CloudDrive2服务失败")
@@ -1214,9 +1214,11 @@ class Cd2Assistant(_PluginBase):
                                                     'component': 'div',
                                                     'content': [
                                                         {
-                                                            'component': 'span',
+                                                            'component': 'a',
                                                             'props': {
-                                                                'class': 'text-caption'
+                                                                'class': 'text-caption',
+                                                                'href': self._cd2_url,
+                                                                'target': '_blank',
                                                             },
                                                             'text': 'CPU占用'
                                                         },
