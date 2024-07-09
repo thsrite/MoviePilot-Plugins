@@ -60,7 +60,7 @@ class CloudLinkMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
-    plugin_version = "2.4.2"
+    plugin_version = "2.4.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -85,6 +85,7 @@ class CloudLinkMonitor(_PluginBase):
     _history = False
     _scrape = False
     _category = False
+    _refresh = False
     _cron = None
     filetransfer = None
     _size = 0
@@ -122,6 +123,7 @@ class CloudLinkMonitor(_PluginBase):
             self._history = config.get("history")
             self._scrape = config.get("scrape")
             self._category = config.get("category")
+            self._refresh = config.get("refresh") or True
             self._mode = config.get("mode")
             self._transfer_type = config.get("transfer_type")
             self._monitor_dirs = config.get("monitor_dirs") or ""
@@ -129,7 +131,7 @@ class CloudLinkMonitor(_PluginBase):
             self._interval = config.get("interval") or 10
             self._cron = config.get("cron")
             self._size = config.get("size") or 0
-            self._auto_category = config.get("auto_category")
+            self._auto_category = config.get("auto_category") or False
 
         # 停止现有任务
         self.stop_service()
@@ -251,6 +253,7 @@ class CloudLinkMonitor(_PluginBase):
             "category": self._category,
             "scrape": self._scrape,
             "size": self._size,
+            "refresh": self._refresh,
             "auto_category": self._auto_category
         })
 
@@ -534,12 +537,13 @@ class CloudLinkMonitor(_PluginBase):
                         }
                     self._medias[mediainfo.title_year + " " + file_meta.season] = media_list
 
-                # 广播事件
-                self.eventmanager.send_event(EventType.TransferComplete, {
-                    'meta': file_meta,
-                    'mediainfo': mediainfo,
-                    'transferinfo': transferinfo
-                })
+                if self._refresh:
+                    # 广播事件
+                    self.eventmanager.send_event(EventType.TransferComplete, {
+                        'meta': file_meta,
+                        'mediainfo': mediainfo,
+                        'transferinfo': transferinfo
+                    })
 
                 # 移动模式删除空目录
                 if transfer_type == "move":
@@ -813,6 +817,22 @@ class CloudLinkMonitor(_PluginBase):
                                                 'hint': '使用媒体库配置目录'
                                             }
                                         ]
+                                    },
+                                    {
+                                        'component': 'VCol',
+                                        'props': {
+                                            'cols': 12,
+                                            'md': 4
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'VSwitch',
+                                                'props': {
+                                                    'model': 'refresh',
+                                                    'label': '刷新媒体库',
+                                                },
+                                            }
+                                        ]
                                     }
                                 ]
                             }
@@ -965,7 +985,7 @@ class CloudLinkMonitor(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '监控文件大小：单位GB，0为不开启，低于监控文件大小的文件不会被监控转移。'
+                                            'text': '可选使用媒体库目录进行分类或者自定义一级分类，开启二级分类。'
                                         }
                                     }
                                 ]
@@ -981,6 +1001,7 @@ class CloudLinkMonitor(_PluginBase):
             "history": False,
             "scrape": False,
             "category": False,
+            "refresh": True,
             "auto_category": False,
             "mode": "fast",
             "transfer_type": settings.TRANSFER_TYPE,
