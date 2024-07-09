@@ -60,7 +60,7 @@ class CloudLinkMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
-    plugin_version = "2.4.1"
+    plugin_version = "2.4.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -407,9 +407,6 @@ class CloudLinkMonitor(_PluginBase):
                 else:
                     episodes_info = None
 
-                if self._category and mediainfo.category and not self._auto_category:
-                    target = target / mediainfo.category
-
                 if self._auto_category:
                     # 转移文件
                     transferinfo: TransferInfo = self.filetransfer.transfer(path=file_path,
@@ -420,6 +417,9 @@ class CloudLinkMonitor(_PluginBase):
                                                                             episodes_info=episodes_info,
                                                                             scrape=self._scrape)
                 else:
+                    if self._category and mediainfo.category:
+                        target = target / mediainfo.category
+
                     # 转移文件
                     transferinfo: TransferInfo = self.filetransfer.transfer_media(in_path=file_path,
                                                                                   in_meta=file_meta,
