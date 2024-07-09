@@ -225,10 +225,11 @@ class Cd2Assistant(_PluginBase):
         for f in fs.listdir():
             space_info = self._cd2_client.GetSpaceInfo(CloudDrive_pb2.FileRequest(path=f))
             space_info = self.__str_to_dict(space_info)
-            total = self.__convert_bytes(space_info.get("totalSpace"))
-            used = self.__convert_bytes(space_info.get("usedSpace"))
-            free = self.__convert_bytes(space_info.get("freeSpace"))
-            _space_info += f"{f}：{used}/{total}\n"
+            if space_info:
+                total = self.__convert_bytes(space_info.get("totalSpace"))
+                used = self.__convert_bytes(space_info.get("usedSpace"))
+                free = self.__convert_bytes(space_info.get("freeSpace"))
+                _space_info += f"{f}：{used}/{total}\n"
 
         return _space_info
 
