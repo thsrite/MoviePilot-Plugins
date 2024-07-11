@@ -25,7 +25,7 @@ class Cd2Assistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png"
     # 插件版本
-    plugin_version = "1.4"
+    plugin_version = "1.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -45,6 +45,7 @@ class Cd2Assistant(_PluginBase):
     _notify = False
     _msgtype = None
     _keyword = None
+    _black_dir = None
     _cd2_url = None
     _cd2_username = None
     _cd2_password = None
@@ -65,6 +66,7 @@ class Cd2Assistant(_PluginBase):
             self._cd2_url = config.get("cd2_url")
             self._cd2_username = config.get("cd2_username")
             self._cd2_password = config.get("cd2_password")
+            self._black_dir = config.get("black_dir") or ""
 
         # 停止现有任务
         self.stop_service()
@@ -140,6 +142,7 @@ class Cd2Assistant(_PluginBase):
             "cd2_url": self._cd2_url,
             "cd2_username": self._cd2_username,
             "cd2_password": self._cd2_password,
+            "black_dir": self._black_dir,
         })
 
     def check(self):
@@ -161,7 +164,7 @@ class Cd2Assistant(_PluginBase):
 
         for f in fs.listdir():
             error_msg = None
-            if f:
+            if f and f not in self._black_dir.sprlit(","):
                 try:
                     cloud_file = fs.listdir(f)
                     if not cloud_file or len(cloud_file) == 0:
@@ -223,12 +226,13 @@ class Cd2Assistant(_PluginBase):
 
         _space_info = "\n"
         for f in fs.listdir():
-            space_info = self._cd2_client.GetSpaceInfo(CloudDrive_pb2.FileRequest(path=f))
-            space_info = self.__str_to_dict(space_info)
-            total = self.__convert_bytes(space_info.get("totalSpace"))
-            used = self.__convert_bytes(space_info.get("usedSpace"))
-            free = self.__convert_bytes(space_info.get("freeSpace"))
-            _space_info += f"{f}：{used}/{total}\n"
+            if f and f not in self._black_dir.sprlit(","):
+                space_info = self._cd2_client.GetSpaceInfo(CloudDrive_pb2.FileRequest(path=f))
+                space_info = self.__str_to_dict(space_info)
+                total = self.__convert_bytes(space_info.get("totalSpace"))
+                used = self.__convert_bytes(space_info.get("usedSpace"))
+                free = self.__convert_bytes(space_info.get("freeSpace"))
+                _space_info += f"{f}：{used}/{total}\n"
 
         return _space_info
 
@@ -582,6 +586,44 @@ class Cd2Assistant(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'cron',
+                                            'label': '检测周期',
+                                            'placeholder': '5位cron表达式'
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'black_dir',
+                                            'label': 'cd2黑名单目录'
+                                        }
+                                    }
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
                                 },
                                 'content': [
                                     {
@@ -590,6 +632,27 @@ class Cd2Assistant(_PluginBase):
                                             'type': 'info',
                                             'variant': 'tonal',
                                             'text': '周期检测CloudDrive2上传任务，检测是否命中检测关键词，发送通知。'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '周期检测CloudDrive2云盘CK是否过期，发送通知（挂载的本地路径可添加黑名单）。'
                                         }
                                     }
                                 ]
@@ -608,7 +671,8 @@ class Cd2Assistant(_PluginBase):
             "cd2_url": "",
             "cd2_username": "",
             "cd2_password": "",
-            "msgtype": "Manual"
+            "msgtype": "Manual",
+            "black_dir": ""
         }
 
     def get_page(self) -> List[dict]:

@@ -568,11 +568,12 @@
         "name": "CloudDrive2助手",
         "description": "监控上传任务，检测是否有异常，发送通知。",
         "labels": "云盘",
-        "version": "1.4",
+        "version": "1.5",
         "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png",
         "author": "thsrite",
         "level": 2,
         "history": {
+          "v1.5": "增加云盘同步黑名单（排序挂载本地目录）",
           "v1.4": "增加云盘存储空间展示",
           "v1.3": "增加云盘Cookie失效检测",
           "v1.2": "实时速率显示",
