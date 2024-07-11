@@ -256,11 +256,12 @@
         "name": "云盘实时监控",
         "description": "监控云盘目录文件变化，自动转移链接。",
         "labels": "云盘",
-        "version": "2.4.3",
+        "version": "2.4.4",
         "icon": "Linkease_A.png",
         "author": "thsrite",
         "level": 1,
         "history": {
+          "v2.4.4": "修复刷新媒体库",
           "v2.4.3": "可选转移完刷新媒体库",
           "v2.4.2": "fix #65",
           "v2.4.1": "增加log",

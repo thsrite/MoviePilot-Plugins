@@ -60,7 +60,7 @@ class CloudLinkMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
-    plugin_version = "2.4.3"
+    plugin_version = "2.4.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -123,7 +123,7 @@ class CloudLinkMonitor(_PluginBase):
             self._history = config.get("history")
             self._scrape = config.get("scrape")
             self._category = config.get("category")
-            self._refresh = config.get("refresh") or True
+            self._refresh = config.get("refresh")
             self._mode = config.get("mode")
             self._transfer_type = config.get("transfer_type")
             self._monitor_dirs = config.get("monitor_dirs") or ""
