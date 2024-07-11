@@ -164,7 +164,7 @@ class Cd2Assistant(_PluginBase):
 
         for f in fs.listdir():
             error_msg = None
-            if f and f not in self._black_dir.sprlit(","):
+            if f and f not in self._black_dir.split(","):
                 try:
                     cloud_file = fs.listdir(f)
                     if not cloud_file or len(cloud_file) == 0:
@@ -226,7 +226,7 @@ class Cd2Assistant(_PluginBase):
 
         _space_info = "\n"
         for f in fs.listdir():
-            if f and f not in self._black_dir.sprlit(","):
+            if f and f not in self._black_dir.split(","):
                 space_info = self._cd2_client.GetSpaceInfo(CloudDrive_pb2.FileRequest(path=f))
                 space_info = self.__str_to_dict(space_info)
                 total = self.__convert_bytes(space_info.get("totalSpace"))
