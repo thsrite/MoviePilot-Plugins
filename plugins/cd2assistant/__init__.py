@@ -592,23 +592,6 @@ class Cd2Assistant(_PluginBase):
                                     {
                                         'component': 'VTextField',
                                         'props': {
-                                            'model': 'cron',
-                                            'label': '检测周期',
-                                            'placeholder': '5位cron表达式'
-                                        }
-                                    }
-                                ]
-                            },
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextField',
-                                        'props': {
                                             'model': 'black_dir',
                                             'label': 'cd2黑名单目录'
                                         }
