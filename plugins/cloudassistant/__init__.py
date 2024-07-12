@@ -436,8 +436,9 @@ class CloudAssistant(_PluginBase):
                     if str(overwrite) == "false":
                         if Path(mount_file).exists():
                             logger.info(f"云盘文件 {mount_file} 已存在且未开启覆盖，跳过上传")
-                            Path(file_path).unlink()
                             upload = False
+                            if str(self._transfer_type) == "move":
+                                Path(file_path).unlink()
                     else:
                         if Path(mount_file).exists():
                             logger.info(f"云盘文件 {mount_file} 已存在且开启覆盖，删除原云盘文件")
