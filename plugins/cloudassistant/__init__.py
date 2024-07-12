@@ -64,7 +64,7 @@ class CloudAssistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png"
     # 插件版本
-    plugin_version = "2.0.8"
+    plugin_version = "2.0.9"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -436,7 +436,7 @@ class CloudAssistant(_PluginBase):
                     if str(overwrite) == "false":
                         if Path(mount_file).exists():
                             logger.info(f"云盘文件 {mount_file} 已存在且未开启覆盖，跳过上传")
-                            Path(mount_file).unlink()
+                            Path(file_path).unlink()
                             upload = False
                     else:
                         if Path(mount_file).exists():
