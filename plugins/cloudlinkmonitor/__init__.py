@@ -156,7 +156,7 @@ class CloudLinkMonitor(_PluginBase):
                     continue
 
                 # 是否二级目录 默认False
-                _categroy = self._auto_category
+                _categroy = self._category
                 if mon_path.count("$") == 1:
                     _categroy = True if mon_path.split("$")[1] == "True" else False
                     mon_path = mon_path.split("$")[0]
