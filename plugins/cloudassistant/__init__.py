@@ -894,7 +894,7 @@ class CloudAssistant(_PluginBase):
             for root, dirs, files in os.walk(mon_path):
                 for name in dirs + files:
                     file_path = os.path.join(root, name)
-                    if Path(str(file_path)).is_file() and self.is_broken_symlink(file_path):
+                    if Path(str(file_path)).is_file() and self.is_broken_symlink(str(file_path)):
                         print(f"删除无效软连接: {file_path}")
                         os.remove(file_path)
         logger.info("云盘助手清理无效软连接完成！")
