@@ -115,6 +115,7 @@ class CloudLinkMonitor(_PluginBase):
         # 清空配置
         self._dirconf = {}
         self._transferconf = {}
+        self._categoryconf = {}
 
         # 读取配置
         if config:
@@ -154,6 +155,12 @@ class CloudLinkMonitor(_PluginBase):
                 if not mon_path:
                     continue
 
+                # 是否二级目录 默认False
+                _categroy = self._auto_category
+                if mon_path.count("$") == 1:
+                    _categroy = True if mon_path.split("$")[1] == "True" else False
+                    mon_path = mon_path.split("$")[0]
+
                 # 自定义转移方式
                 _transfer_type = self._transfer_type
                 if mon_path.count("#") == 1:
@@ -181,6 +188,7 @@ class CloudLinkMonitor(_PluginBase):
 
                 # 转移方式
                 self._transferconf[mon_path] = _transfer_type
+                self._categoryconf[mon_path] = _categroy
 
                 # 启用目录监控
                 if self._enabled:
@@ -379,6 +387,7 @@ class CloudLinkMonitor(_PluginBase):
                 target: Path = self._dirconf.get(mon_path)
                 # 查询转移方式
                 transfer_type = self._transferconf.get(mon_path)
+                category = self._categoryconf.get(mon_path)
 
                 # 识别媒体信息
                 mediainfo: MediaInfo = self.chain.recognize_media(meta=file_meta)
@@ -423,7 +432,7 @@ class CloudLinkMonitor(_PluginBase):
                                                                             episodes_info=episodes_info,
                                                                             scrape=self._scrape)
                 else:
-                    if self._category and mediainfo.category:
+                    if category and mediainfo.category:
                         target = target / mediainfo.category
 
                     # 转移文件
