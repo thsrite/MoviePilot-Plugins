@@ -52,7 +52,7 @@ class FileSoftLink(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png"
     # 插件版本
-    plugin_version = "1.9.6"
+    plugin_version = "1.9.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -256,6 +256,31 @@ class FileSoftLink(_PluginBase):
                               title="监控目录同步完成！", userid=event.event_data.get("user"))
 
     @eventmanager.register(EventType.PluginAction)
+    def softlink_file(self, event: Event = None):
+        if event:
+            event_data = event.event_data
+            if not event_data or event_data.get("action") != "softlink_file":
+                return
+            file_path = event_data.get("file_path")
+            if not file_path:
+                logger.error(f"缺少参数：{event_data}")
+                return
+
+            # 遍历所有监控目录
+            mon_path = None
+            for mon in self._dirconf.keys():
+                if str(file_path).startswith(mon):
+                    mon_path = mon
+                    break
+
+            if not mon_path:
+                logger.error(f"未找到文件 {file_path} 对应的监控目录")
+                return
+
+            # 处理单文件
+            self.__handle_file(event_path=file_path, mon_path=mon_path)
+
+    @eventmanager.register(EventType.PluginAction)
     def remote_sync_one(self, event: Event = None):
         if event:
             event_data = event.event_data
@@ -265,7 +290,7 @@ class FileSoftLink(_PluginBase):
             if not args:
                 logger.error(f"缺少参数：{event_data}")
                 return
-            all_args  = args
+            all_args = args
 
             # 使用正则表达式匹配
             category = None
@@ -293,9 +318,10 @@ class FileSoftLink(_PluginBase):
                                             src_file = os.path.join(sroot, file_name)
                                             if Path(src_file).is_file():
                                                 self.__handle_file(event_path=str(src_file), mon_path=mon_path)
-                                    self.post_message(channel=event.event_data.get("channel"),
-                                                      title=f"{all_args} 软连接完成！",
-                                                      userid=event.event_data.get("user"))
+                                    if event.event_data.get("user"):
+                                        self.post_message(channel=event.event_data.get("channel"),
+                                                          title=f"{all_args} 软连接完成！",
+                                                          userid=event.event_data.get("user"))
                                     return
                         return
             else:
@@ -311,17 +337,24 @@ class FileSoftLink(_PluginBase):
                     if not Path(args).exists():
                         logger.info(f"同步路径 {args} 不存在")
                         return
-                    logger.info(f"获取到 {args} 对应的监控目录 {mon_path}")
+                    # 处理单文件
+                    if Path(args).is_file():
+                        self.__handle_file(event_path=str(args), mon_path=mon_path)
+                        return
+                    else:
+                        # 处理指定目录
+                        logger.info(f"获取到 {args} 对应的监控目录 {mon_path}")
 
-                    logger.info(f"开始定向处理文件夹 ...{args}")
-                    for sroot, sdirs, sfiles in os.walk(args):
-                        for file_name in sdirs + sfiles:
-                            src_file = os.path.join(sroot, file_name)
-                            if Path(str(src_file)).is_file():
-                                self.__handle_file(event_path=str(src_file), mon_path=mon_path)
-                    self.post_message(channel=event.event_data.get("channel"),
-                                      title=f"{all_args} 软连接完成！", userid=event.event_data.get("user"))
-                    return
+                        logger.info(f"开始定向处理文件夹 ...{args}")
+                        for sroot, sdirs, sfiles in os.walk(args):
+                            for file_name in sdirs + sfiles:
+                                src_file = os.path.join(sroot, file_name)
+                                if Path(str(src_file)).is_file():
+                                    self.__handle_file(event_path=str(src_file), mon_path=mon_path)
+                        if event.event_data.get("user"):
+                            self.post_message(channel=event.event_data.get("channel"),
+                                              title=f"{all_args} 软连接完成！", userid=event.event_data.get("user"))
+                        return
                 else:
                     for mon_path in self._categoryconf.keys():
                         mon_category = self._categoryconf.get(mon_path)
@@ -334,13 +367,15 @@ class FileSoftLink(_PluginBase):
                                     src_file = os.path.join(sroot, file_name)
                                     if Path(src_file).is_file():
                                         self.__handle_file(event_path=str(src_file), mon_path=mon_path)
-                            self.post_message(channel=event.event_data.get("channel"),
-                                              title=f"{all_args} 软连接完成！",
-                                              userid=event.event_data.get("user"))
+                            if event.event_data.get("user"):
+                                self.post_message(channel=event.event_data.get("channel"),
+                                                  title=f"{all_args} 软连接完成！",
+                                                  userid=event.event_data.get("user"))
                             return
-            self.post_message(channel=event.event_data.get("channel"),
-                              title=f"{all_args} 未检索到，请检查输入是否正确！",
-                              userid=event.event_data.get("user"))
+            if event.event_data.get("user"):
+                self.post_message(channel=event.event_data.get("channel"),
+                                  title=f"{all_args} 未检索到，请检查输入是否正确！",
+                                  userid=event.event_data.get("user"))
 
     def sync_all(self):
         """

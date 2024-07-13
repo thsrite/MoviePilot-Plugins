@@ -694,6 +694,7 @@ class CloudAssistant(_PluginBase):
             logger.info(f"开始处理媒体 {medis_title_year_season} 消息")
 
             if not media_list:
+                del self._medias[medis_title_year_season]
                 continue
 
             # 获取最后更新时间
@@ -705,7 +706,8 @@ class CloudAssistant(_PluginBase):
             season = media_list.get("season")
             episodes = media_list.get("episodes")
             tmdbid = media_list.get("tmdbid")
-            if not last_update_time or not episodes:
+            if not last_update_time:
+                del self._medias[medis_title_year_season]
                 continue
 
             # 判断剧集最后更新时间距现在是已超过10秒或者电影，发送消息
