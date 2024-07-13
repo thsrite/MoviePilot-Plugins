@@ -25,7 +25,7 @@ class Cd2Assistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png"
     # 插件版本
-    plugin_version = "1.5"
+    plugin_version = "1.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -46,6 +46,7 @@ class Cd2Assistant(_PluginBase):
     _msgtype = None
     _keyword = None
     _black_dir = None
+    _cloud_path = None
     _cd2_url = None
     _cd2_username = None
     _cd2_password = None
@@ -67,6 +68,7 @@ class Cd2Assistant(_PluginBase):
             self._cd2_username = config.get("cd2_username")
             self._cd2_password = config.get("cd2_password")
             self._black_dir = config.get("black_dir") or ""
+            self._cloud_path = config.get("cloud_path") or ""
 
         # 停止现有任务
         self.stop_service()
@@ -143,6 +145,7 @@ class Cd2Assistant(_PluginBase):
             "cd2_username": self._cd2_username,
             "cd2_password": self._cd2_password,
             "black_dir": self._black_dir,
+            "cloud_path": self._cloud_path,
         })
 
     def check(self):
@@ -235,6 +238,49 @@ class Cd2Assistant(_PluginBase):
                 _space_info += f"{f}：{used}/{total}\n"
 
         return _space_info
+
+    @eventmanager.register(EventType.PluginAction)
+    def add_offline_files(self, event: Event = None):
+        """
+        离线下载
+        """
+        if event:
+            event_data = event.event_data
+            if not event_data or event_data.get("action") != "cloud_download":
+                return
+            args = event_data.get("args")
+            if not args:
+                logger.error(f"缺少参数：{event_data}")
+                return
+            args = args.replace(" ", "\n")
+
+            if not self._cloud_path:
+                logger.error("请先设置云盘路径")
+                if event.event_data.get("user"):
+                    self.post_message(channel=event.event_data.get("channel"),
+                                      title=f"请先设置云盘路径！",
+                                      userid=event.event_data.get("user"))
+                return
+
+            logger.info(f"开始离线下载：{args}")
+            result = self._client.AddOfflineFiles(
+                CloudDrive_pb2.AddOfflineFileRequest(urls=args, toFolder=self._cloud_path))
+            if result and result.success:
+                logger.info(f"离线下载成功")
+                if event.event_data.get("user"):
+                    self.post_message(channel=event.event_data.get("channel"),
+                                      title=f"离线下载成功！",
+                                      userid=event.event_data.get("user"))
+            else:
+                errorMessage = None
+                if result and result.errorMessage:
+                    errorMessage = result.errorMessage
+                logger.error(f"离线下载失败：{errorMessage}")
+                if event.event_data.get("user"):
+                    self.post_message(channel=event.event_data.get("channel"),
+                                      title=f"离线下载失败！",
+                                      userid=event.event_data.get("user"),
+                                      text=f"错误信息：{errorMessage}")
 
     @eventmanager.register(EventType.PluginAction)
     def cd2_info(self, event: Event = None):
@@ -377,6 +423,15 @@ class Cd2Assistant(_PluginBase):
                 "category": "",
                 "data": {
                     "action": "cd2_info"
+                }
+            },
+            {
+                "cmd": "/cd",
+                "event": EventType.PluginAction,
+                "desc": "云下载",
+                "category": "",
+                "data": {
+                    "action": "cloud_download"
                 }
             }
         ]
@@ -598,6 +653,22 @@ class Cd2Assistant(_PluginBase):
                                     }
                                 ]
                             },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'cloud_path',
+                                            'label': '云下载路径'
+                                        }
+                                    }
+                                ]
+                            },
                         ]
                     },
                     {
@@ -655,7 +726,8 @@ class Cd2Assistant(_PluginBase):
             "cd2_username": "",
             "cd2_password": "",
             "msgtype": "Manual",
-            "black_dir": ""
+            "black_dir": "",
+            "cloud_path": "",
         }
 
     def get_page(self) -> List[dict]:
