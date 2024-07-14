@@ -64,7 +64,7 @@ class CloudAssistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png"
     # 插件版本
-    plugin_version = "2.0.9"
+    plugin_version = "2.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -482,7 +482,7 @@ class CloudAssistant(_PluginBase):
                         # 生成strm文件
                         retcode = self.__create_strm_file(mount_file=mount_file,
                                                           mount_path=mount_path,
-                                                          file_path=str(file_path),
+                                                          target_file=target_return_file,
                                                           library_dir=monitor_dir.get("library_dir"),
                                                           cloud_type=monitor_dir.get("cloud_type"),
                                                           cloud_path=monitor_dir.get("cloud_path"),
@@ -816,7 +816,7 @@ class CloudAssistant(_PluginBase):
         return retcode, retmsg
 
     @staticmethod
-    def __create_strm_file(mount_file: str, mount_path: str, file_path: str, library_dir: str = None,
+    def __create_strm_file(mount_file: str, mount_path: str, target_file: str, library_dir: str = None,
                            cloud_type: str = None, cloud_path: str = None, cloud_url: str = None,
                            cloud_scheme: str = None):
         """
@@ -827,9 +827,9 @@ class CloudAssistant(_PluginBase):
         """
         try:
             # 获取视频文件名和目录
-            video_name = Path(mount_file).name
+            video_name = Path(target_file).name
             # 获取视频目录
-            dest_path = Path(mount_file).parent
+            dest_path = Path(target_file).parent
 
             if not dest_path.exists():
                 logger.info(f"创建目标文件夹 {dest_path}")
@@ -842,12 +842,12 @@ class CloudAssistant(_PluginBase):
                 logger.info(f"strm文件已存在 {strm_path}")
                 return
 
-            logger.info(f"替换前本地路径:::{mount_file}")
+            logger.info(f"替换前挂载云盘路径:::{mount_file}")
 
             # 云盘模式
             if cloud_type:
                 # 替换路径中的\为/
-                dest_file = file_path.replace("\\", "/")
+                dest_file = mount_file.replace("\\", "/")
                 dest_file = dest_file.replace(cloud_path, "")
                 # 对盘符之后的所有内容进行url转码
                 dest_file = urllib.parse.quote(dest_file, safe='')
