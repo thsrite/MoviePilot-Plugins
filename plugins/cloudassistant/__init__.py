@@ -894,9 +894,18 @@ class CloudAssistant(_PluginBase):
             for root, dirs, files in os.walk(mon_path):
                 for name in dirs + files:
                     file_path = os.path.join(root, name)
-                    if Path(str(file_path)).is_file() and self.is_broken_symlink(str(file_path)):
+                    if Path(str(file_path)).is_symlink() and self.is_broken_symlink(file_path):
                         print(f"删除无效软连接: {file_path}")
                         os.remove(file_path)
+
+                        # 判断文件夹是否可删除
+                        for file_dir in Path(str(file_path)).parents:
+                            if not SystemUtils.list_files(file_dir, [ext.strip() for ext in
+                                                                     self._rmt_mediaext.split(
+                                                                         ",")] + settings.DOWNLOAD_TMPEXT):
+                                logger.warn(f"删除空目录：{file_dir}")
+                                shutil.rmtree(file_dir, ignore_errors=True)
+
         logger.info("云盘助手清理无效软连接完成！")
 
     def __refresh_emby(self, transferinfo):
