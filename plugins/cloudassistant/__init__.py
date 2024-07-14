@@ -64,7 +64,7 @@ class CloudAssistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png"
     # 插件版本
-    plugin_version = "2.1"
+    plugin_version = "2.1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -890,8 +890,11 @@ class CloudAssistant(_PluginBase):
         """
         # 遍历所有监控目录
         for mon_path in self._dirconf.keys():
+            monitor_dir = self._dirconf.get(mon_path)
+            return_path = monitor_dir.get("return_path")
+            logger.info(f"开始处理无效软连接 {return_path}")
             # 遍历目录下所有文件
-            for root, dirs, files in os.walk(mon_path):
+            for root, dirs, files in os.walk(return_path):
                 for name in dirs + files:
                     file_path = os.path.join(root, name)
                     if Path(str(file_path)).is_symlink() and self.is_broken_symlink(file_path):
@@ -905,6 +908,8 @@ class CloudAssistant(_PluginBase):
                                                                          ",")] + settings.DOWNLOAD_TMPEXT):
                                 logger.warn(f"删除空目录：{file_dir}")
                                 shutil.rmtree(file_dir, ignore_errors=True)
+
+            logger.info(f"处理无效软连接 {return_path} 完成！")
 
         logger.info("云盘助手清理无效软连接完成！")
 
