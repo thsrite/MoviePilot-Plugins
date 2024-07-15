@@ -64,7 +64,7 @@ class CloudAssistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png"
     # 插件版本
-    plugin_version = "2.1.1"
+    plugin_version = "2.1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -892,25 +892,35 @@ class CloudAssistant(_PluginBase):
         for mon_path in self._dirconf.keys():
             monitor_dir = self._dirconf.get(mon_path)
             return_path = monitor_dir.get("return_path")
-            logger.info(f"开始处理无效软连接 {return_path}")
+            logger.info(f"{return_path} 开始检查无效软连接")
+            # 获取文件列表
+            list_files = SystemUtils.list_files(Path(return_path), [ext.strip() for ext in
+                                                                    self._rmt_mediaext.split(",")])
+            if not list_files:
+                logger.info(f"检测路径 {return_path} 为空，跳过处理")
+                continue
+            logger.info(f"检测路径 {return_path} 下共有 {len(list_files)} 个媒体文件")
+
             # 遍历目录下所有文件
-            for root, dirs, files in os.walk(return_path):
-                for name in dirs + files:
-                    file_path = os.path.join(root, name)
-                    logger.info(f"检查文件 {file_path}")
-                    if Path(str(file_path)).is_symlink() and self.is_broken_symlink(file_path):
-                        logger.warn(f"删除无效软连接: {file_path}")
-                        Path(str(file_path)).unlink()
+            for file_path in list_files:
+                if file_path.is_symlink():
+                    if self.is_broken_symlink(file_path):
+                        logger.warn(f"删除无效软连接: {str(file_path)}")
+                        file_path.unlink()
 
                         # 判断文件夹是否可删除
-                        for file_dir in Path(str(file_path)).parents:
+                        for file_dir in file_path.parents:
                             if not SystemUtils.list_files(file_dir, [ext.strip() for ext in
                                                                      self._rmt_mediaext.split(
-                                                                         ",")] + settings.DOWNLOAD_TMPEXT):
+                                                                         ",")]):
                                 logger.warn(f"删除空目录：{file_dir}")
                                 shutil.rmtree(file_dir, ignore_errors=True)
+                    else:
+                        logger.info(f"{str(file_path)} 链接正常，跳过处理")
+                else:
+                    logger.info(f"{str(file_path)} 不是软链接，跳过处理")
 
-            logger.info(f"处理无效软连接 {return_path} 完成！")
+            logger.info(f"{return_path} 处理无效软连接完成！")
 
         logger.info("云盘助手清理无效软连接完成！")
 
