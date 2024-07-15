@@ -897,9 +897,10 @@ class CloudAssistant(_PluginBase):
             for root, dirs, files in os.walk(return_path):
                 for name in dirs + files:
                     file_path = os.path.join(root, name)
+                    logger.info(f"检查文件 {file_path}")
                     if Path(str(file_path)).is_symlink() and self.is_broken_symlink(file_path):
                         logger.warn(f"删除无效软连接: {file_path}")
-                        os.remove(file_path)
+                        Path(str(file_path)).unlink()
 
                         # 判断文件夹是否可删除
                         for file_dir in Path(str(file_path)).parents:
