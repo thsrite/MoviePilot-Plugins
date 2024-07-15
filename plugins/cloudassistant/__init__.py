@@ -923,7 +923,7 @@ class CloudAssistant(_PluginBase):
 
                     # 递归删除空目录，最多到三级深度
                     for depth, file_dir in enumerate(file_path.parents):
-                        if depth >= 3:
+                        if depth >= 3 and str(file_dir) == str(return_path):
                             break
                         if not any(file_dir.iterdir()):  # 检查目录是否为空
                             logger.warning(f"删除空目录：{file_dir}")
