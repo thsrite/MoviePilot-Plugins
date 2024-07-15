@@ -179,14 +179,15 @@ class CloudAssistant(_PluginBase):
 
             if self._invalid:
                 logger.info("清理无效软连接服务启动，立即运行一次")
-                self._scheduler.add_job(func=self.handle_invalid_links, trigger='date',
-                                        run_date=datetime.datetime.now(
-                                            tz=pytz.timezone(settings.TZ)) + datetime.timedelta(seconds=3)
-                                        )
                 # 关闭无效软连接开关
                 self._invalid = False
                 # 保存配置
                 self.__update_config()
+
+                self._scheduler.add_job(func=self.handle_invalid_links, trigger='date',
+                                        run_date=datetime.datetime.now(
+                                            tz=pytz.timezone(settings.TZ)) + datetime.timedelta(seconds=3)
+                                        )
 
             if self._enabled or self._onlyonce:
                 if self._notify and (self._cron or self._monitor):
@@ -884,6 +885,19 @@ class CloudAssistant(_PluginBase):
             return True
         return False
 
+    @staticmethod
+    def __get_softlink_list(path, parrent):
+        """
+        获取软链接列表
+        """
+        if not os.path.exists(path):
+            return []
+        softlink_list = []
+        for file_path in Path(path).rglob('**/*'):
+            if file_path.is_symlink() and file_path.suffix in parrent:
+                softlink_list.append(file_path)
+        return softlink_list
+
     def handle_invalid_links(self):
         """
         立即运行一次，清理无效软连接
@@ -893,32 +907,33 @@ class CloudAssistant(_PluginBase):
             monitor_dir = self._dirconf.get(mon_path)
             return_path = monitor_dir.get("return_path")
             logger.info(f"{return_path} 开始检查无效软连接")
-            # 获取文件列表
-            list_files = SystemUtils.list_files(Path(return_path), [ext.strip() for ext in
-                                                                    self._rmt_mediaext.split(",")])
-            if not list_files:
-                logger.info(f"检测路径 {return_path} 为空，跳过处理")
+
+            # 遍历目录及子目录
+            softlink_list = self.__get_softlink_list(path=return_path,
+                                                     parrent=[ext.strip() for ext in self._rmt_mediaext.split(",")])
+            if not softlink_list:
+                logger.info(f"{return_path} 没有软连接")
                 continue
-            logger.info(f"检测路径 {return_path} 下共有 {len(list_files)} 个媒体文件")
+            logger.info(f"{return_path} 软连接数量：{len(softlink_list)}")
 
-            # 遍历目录下所有文件
-            for file_path in list_files:
-                if file_path.is_symlink():
-                    if self.is_broken_symlink(file_path):
-                        logger.warn(f"删除无效软连接: {str(file_path)}")
-                        file_path.unlink()
+            for file_path in softlink_list:
+                if self.is_broken_symlink(file_path):
+                    logger.warn(f"删除无效软连接: {str(file_path)}")
+                    file_path.unlink()
 
-                        # 判断文件夹是否可删除
-                        for file_dir in file_path.parents:
-                            if not SystemUtils.list_files(file_dir, [ext.strip() for ext in
-                                                                     self._rmt_mediaext.split(
-                                                                         ",")]):
-                                logger.warn(f"删除空目录：{file_dir}")
+                    # 递归删除空目录，最多到三级深度
+                    for depth, file_dir in enumerate(file_path.parents):
+                        if depth >= 3:
+                            break
+                        if not any(file_dir.iterdir()):  # 检查目录是否为空
+                            logger.warning(f"删除空目录：{file_dir}")
+                            try:
                                 shutil.rmtree(file_dir, ignore_errors=True)
-                    else:
-                        logger.info(f"{str(file_path)} 链接正常，跳过处理")
+                            except OSError as e:
+                                logger.error(f"删除目录失败: {e}")
+                                break
                 else:
-                    logger.info(f"{str(file_path)} 不是软链接，跳过处理")
+                    logger.info(f"{str(file_path)} 链接正常，跳过处理")
 
             logger.info(f"{return_path} 处理无效软连接完成！")
 
