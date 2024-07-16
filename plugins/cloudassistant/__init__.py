@@ -652,7 +652,7 @@ class CloudAssistant(_PluginBase):
             key + " " + transferhis.seasons) or {}
         if media_list:
             episodes = media_list.get("episodes") or []
-            if transferhis.type == MediaType.TV.name:
+            if transferhis.type == MediaType.TV.value:
                 if episodes:
                     if int(transferhis.episodes.replace("E", "")) not in episodes:
                         episodes.append(int(transferhis.episodes.replace("E", "")))
@@ -676,7 +676,7 @@ class CloudAssistant(_PluginBase):
                 "image": transferhis.image,
                 "season": transferhis.seasons,
                 "episodes": [
-                    int(transferhis.episodes.replace("E", ""))] if transferhis.type == MediaType.TV.name else None,
+                    int(transferhis.episodes.replace("E", ""))] if transferhis.type == MediaType.TV.value else [],
                 "tmdbid": transferhis.tmdbid,
                 "time": datetime.datetime.now()
             }
