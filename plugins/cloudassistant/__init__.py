@@ -64,7 +64,7 @@ class CloudAssistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png"
     # 插件版本
-    plugin_version = "2.1.3"
+    plugin_version = "2.1.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -110,6 +110,7 @@ class CloudAssistant(_PluginBase):
         "return_mode": "softlink",
         "monitor_dirs": [
             {
+                "retention_time": 0,
                 "monitor_mode": "模式 compatibility/fast",
                 "dest_path": "/mnt/media/movies",
                 "mount_path": "/mnt/cloud/115/media/movies",
@@ -401,13 +402,6 @@ class CloudAssistant(_PluginBase):
                             logger.info(f"{event_path} 命中整理屏蔽词 {keyword}，不处理")
                             return
 
-                # 判断是不是蓝光目录
-                if re.search(r"BDMV[/\\]STREAM", event_path, re.IGNORECASE):
-                    # 截取BDMV前面的路径
-                    blurray_dir = event_path[:event_path.find("BDMV")]
-                    file_path = Path(blurray_dir)
-                    logger.info(f"{event_path} 是蓝光目录，更正文件路径为：{str(file_path)}")
-
                 # 查询转移配置
                 monitor_dir = self._dirconf.get(mon_path)
                 mount_path = monitor_dir.get("mount_path")
@@ -422,6 +416,24 @@ class CloudAssistant(_PluginBase):
                 dest_preserve_hierarchy = monitor_dir.get("dest_preserve_hierarchy") or 0
                 src_paths = monitor_dir.get("src_paths") or ""
                 src_preserve_hierarchy = monitor_dir.get("src_preserve_hierarchy") or 0
+                # 本地文件保留时间 （小时）
+                retention_time = monitor_dir.get("retention_time") or 0
+                if retention_time > 0:
+                    creation_time = self.__get_file_creation_time(file_path)
+                    creation_datetime = datetime.datetime.fromtimestamp(creation_time)
+                    current_datetime = datetime.datetime.now()
+                    time_difference = (current_datetime - creation_datetime).total_seconds()
+                    if time_difference < (int(retention_time) * 3600):
+                        logger.warning(
+                            f"{file_path} 创建 {time_difference / 3600} 小时，小于保留时间 {retention_time} 小时，暂不处理")
+                        return
+
+                # 判断是不是蓝光目录
+                if re.search(r"BDMV[/\\]STREAM", event_path, re.IGNORECASE):
+                    # 截取BDMV前面的路径
+                    blurray_dir = event_path[:event_path.find("BDMV")]
+                    file_path = Path(blurray_dir)
+                    logger.info(f"{event_path} 是蓝光目录，更正文件路径为：{str(file_path)}")
 
                 # 1、转移到云盘挂载路径 上传到cd2
                 # 挂载的路径
@@ -627,6 +639,18 @@ class CloudAssistant(_PluginBase):
                 if not files:
                     logger.warn(f"删除源文件空目录：{file_dir}")
                     shutil.rmtree(file_dir, ignore_errors=True)
+
+    @staticmethod
+    def __get_file_creation_time(file_path):
+        """获取文件的创建时间"""
+        if os.name == 'nt':  # Windows系统
+            return os.path.getctime(file_path)
+        else:  # Unix系统
+            stat = os.stat(file_path)
+            try:
+                return stat.st_birthtime
+            except AttributeError:
+                return stat.st_mtime
 
     def __msg_handler(self, transferhis):
         """
