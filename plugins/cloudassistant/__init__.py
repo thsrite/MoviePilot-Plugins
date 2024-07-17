@@ -766,7 +766,7 @@ class CloudAssistant(_PluginBase):
                                                  mtype=mtype,
                                                  category=category,
                                                  image=image,
-                                                 count=len(episodes))
+                                                 count=len(episodes) if episodes else 1)
                 # 发送完消息，移出key
                 del self._medias[medis_title_year_season]
                 continue
