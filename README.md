@@ -46,3 +46,4 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - 软连接重定向 v1.1
 - 云盘同步删除 v1.4
 - 媒体库重复媒体检测 v1.9
+- 演员作品订阅 v1.0

@@ -643,5 +643,17 @@
           "v1.1": "支持自动刷新媒体库",
           "v1.0": "媒体库重复媒体检查，可选择保留规则保留其一"
         }
+      },
+      "ActorSubscribePlus": {
+        "name": "演员作品订阅",
+        "description": "获取TMDB演员作品，并自动添加到订阅。",
+        "labels": "订阅",
+        "version": "1.0",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/actorsubscribeplus.png",
+        "author": "thsrite",
+        "level": 2,
+        "history": {
+          "v1.0": "获取TMDB演员作品，并自动添加到订阅"
+        }
       }
 }
