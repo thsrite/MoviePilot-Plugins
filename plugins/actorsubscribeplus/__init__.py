@@ -194,7 +194,7 @@ class ActorSubscribePlus(_PluginBase):
                     continue
 
                 if mediainfo.title_year in already_handle:
-                    logger.info(f"{mediainfo.type.value} {mediainfo.title_year} 已被处理，跳过")
+                    logger.warn(f"{mediainfo.type.value} {mediainfo.title_year} 已被处理，跳过")
                     continue
 
                 already_handle.append(mediainfo.title_year)
@@ -206,12 +206,12 @@ class ActorSubscribePlus(_PluginBase):
                 # 查询缺失的媒体信息
                 exist_flag, _ = self.downloadchain.get_no_exists_info(meta=meta, mediainfo=mediainfo)
                 if exist_flag:
-                    logger.info(f'{mediainfo.title_year} 媒体库中已存在')
+                    logger.warn(f'{mediainfo.title_year} 媒体库中已存在')
                     continue
 
                 # 判断用户是否已经添加订阅
                 if self.subscribechain.exists(mediainfo=mediainfo):
-                    logger.info(f'{mediainfo.title_year} 订阅已存在')
+                    logger.warn(f'{mediainfo.title_year} 订阅已存在')
                     continue
 
                 # 开始订阅
