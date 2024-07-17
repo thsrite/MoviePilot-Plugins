@@ -23,7 +23,7 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - 同步CookieCloud v1.2
 - 日程提醒 v1.0
 - 订阅提醒 v1.1
-- [Emby观影报告 v1.5](docs%2FEmbyReporter.md)
+- [Emby观影报告 v1.6](docs%2FEmbyReporter.md)
 - 演员订阅 v2.1
 - [短剧刮削 v3.2](docs%2FShortPlayMonitor.md)
 - 云盘实时监控 v2.4.6
