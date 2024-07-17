@@ -767,6 +767,7 @@ class CloudAssistant(_PluginBase):
                                                  category=category,
                                                  image=image,
                                                  count=len(episodes) if episodes else 1)
+                    logger.info(f"发送媒体 {medis_title_year_season} 转移消息成功")
                 # 发送完消息，移出key
                 del self._medias[medis_title_year_season]
                 continue
