@@ -1,16 +1,13 @@
-import time
 from datetime import datetime, timedelta
 
 import pytz
 
 from app import schemas
-from app.chain.douban import DoubanChain
 from app.chain.media import MediaChain
 from app.chain.tmdb import TmdbChain
 from app.chain.download import DownloadChain
 from app.chain.subscribe import SubscribeChain
 from app.core.config import settings
-from app.core.context import MediaInfo
 from app.core.metainfo import MetaInfo
 from app.plugins import _PluginBase
 from typing import Any, List, Dict, Tuple, Optional
@@ -49,7 +46,10 @@ class ActorSubscribePlus(_PluginBase):
     _scheduler: Optional[BackgroundScheduler] = None
     _clear = False
     _clear_already_handle = False
-    _mtype = False
+    _mtype = None
+    _year = None
+    _last = None
+    _vate = None
 
     def init_plugin(self, config: dict = None):
         self.downloadchain = DownloadChain()
@@ -65,6 +65,9 @@ class ActorSubscribePlus(_PluginBase):
             self._clear = config.get("clear")
             self._clear_already_handle = config.get("clear_already_handle")
             self._mtype = config.get("mtype") or ['电影', '电视剧']
+            self._year = config.get("year")
+            self._last = config.get("last")
+            self._vate = config.get("vate")
 
             # 清理插件订阅历史
             if self._clear:
@@ -164,14 +167,38 @@ class ActorSubscribePlus(_PluginBase):
             logger.info(f"获取到演员 {actor} 的作品 {len(actor_medias)} 部")
 
             for mediainfo in actor_medias:
+                # 过滤类型
                 if mediainfo.type.value not in self._mtype:
+                    logger.warn(f"{mediainfo.type.value} {mediainfo.title_year} 类型不在订阅列表中，跳过")
                     continue
+
+                # 过滤年份
+                if not mediainfo.year or int(mediainfo.year) < int(self._year):
+                    logger.warn(
+                        f"{mediainfo.type.value} {mediainfo.title_year} {mediainfo.year} 年份不在订阅列表中，跳过")
+                    continue
+
+                # 过滤最近上映
+                release_date = mediainfo.first_air_date or mediainfo.release_date
+                release_date = datetime.strptime(release_date, "%Y-%m-%d")
+                if not release_date or (release_date > datetime.now()
+                                        and (release_date - datetime.now()).days > int(self._last)):
+                    logger.warn(
+                        f"{mediainfo.type.value} {mediainfo.title_year} {release_date} 最近上映时间不在时间范围内，跳过")
+                    continue
+
+                # 过滤评分
+                if not mediainfo.vote_average or float(mediainfo.vote_average) < float(self._vate):
+                    logger.warn(
+                        f"{mediainfo.type.value} {mediainfo.title_year} {mediainfo.vote_average} 评分不足，跳过")
+                    continue
+
                 if mediainfo.title_year in already_handle:
                     logger.info(f"{mediainfo.type.value} {mediainfo.title_year} 已被处理，跳过")
                     continue
 
                 already_handle.append(mediainfo.title_year)
-                logger.info(f"开始处理电影 {mediainfo.title_year}")
+                logger.info(f"开始处理 {mediainfo.type.value} {mediainfo.title_year}")
 
                 # 元数据
                 meta = MetaInfo(mediainfo.title)
@@ -217,36 +244,6 @@ class ActorSubscribePlus(_PluginBase):
         self.save_data('already_handle', already_handle)
         logger.info(f"演员订阅任务完成")
 
-    def __get_douban_actors(self, mediainfo: MediaInfo, season: int = None) -> List[dict]:
-        """
-        获取豆瓣演员信息
-        """
-        sleep_time = 3 + int(time.time()) % 7
-        logger.debug(f"随机休眠 {sleep_time}秒 ...")
-        time.sleep(sleep_time)
-        if mediainfo.douban_id:
-            doubanitem = DoubanChain().douban_info(mediainfo.douban_id) or {}
-        else:
-            # 匹配豆瓣信息
-            doubaninfo = DoubanChain().match_doubaninfo(name=mediainfo.title,
-                                                        imdbid=mediainfo.imdb_id,
-                                                        mtype=mediainfo.type,
-                                                        year=mediainfo.year,
-                                                        season=season)
-            # 豆瓣演员
-            if doubaninfo:
-                mediainfo.douban_id = doubaninfo.get("id")
-                doubanitem = DoubanChain().douban_info(doubaninfo.get("id")) or {}
-            else:
-                doubanitem = None
-
-        if doubanitem:
-            actors = (doubanitem.get("actors") or []) + (doubanitem.get("directors") or [])
-            return [actor.get("name") for actor in actors]
-        else:
-            logger.debug(f"未找到豆瓣信息：{mediainfo.title_year}")
-            return []
-
     def __update_config(self):
         self.update_config({
             "enabled": self._enabled,
@@ -256,6 +253,9 @@ class ActorSubscribePlus(_PluginBase):
             "clear": self._clear,
             "clear_already_handle": self._clear_already_handle,
             "mtype": self._mtype,
+            "year": self._year,
+            "last": self._last,
+            "vate": self._vate,
         })
 
     def delete_history(self, key: str, apikey: str):
@@ -413,7 +413,63 @@ class ActorSubscribePlus(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 6
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'year',
+                                            'label': '年份',
+                                            'placeholder': '大于该年份才会被订阅'
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'last',
+                                            'label': '最近多久上映',
+                                            'placeholder': '当前日期几天内上映的才会被订阅'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'vate',
+                                            'label': '评分',
+                                            'placeholder': '大于该评分才会被订阅'
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 9
                                 },
                                 'content': [
                                     {
@@ -436,6 +492,9 @@ class ActorSubscribePlus(_PluginBase):
             "cron": "5 1 * * *",
             "actors": "",
             "clear": False,
+            "year": 2000,
+            "last": 30,
+            "vate": 0,
             "clear_already_handle": False,
             "mtype": ['电影', '电视剧'],
         }
