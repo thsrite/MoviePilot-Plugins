@@ -64,7 +64,7 @@ class CloudAssistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png"
     # 插件版本
-    plugin_version = "2.1.4"
+    plugin_version = "2.1.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -418,7 +418,7 @@ class CloudAssistant(_PluginBase):
                 src_preserve_hierarchy = monitor_dir.get("src_preserve_hierarchy") or 0
                 # 本地文件保留时间 （小时）
                 retention_time = monitor_dir.get("retention_time") or 0
-                if retention_time > 0:
+                if not self._monitor and retention_time > 0:
                     creation_time = self.__get_file_creation_time(file_path)
                     creation_datetime = datetime.datetime.fromtimestamp(creation_time)
                     current_datetime = datetime.datetime.now()
