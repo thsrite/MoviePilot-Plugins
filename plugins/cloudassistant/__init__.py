@@ -425,7 +425,7 @@ class CloudAssistant(_PluginBase):
                     time_difference = (current_datetime - creation_datetime).total_seconds()
                     if time_difference < (int(retention_time) * 3600):
                         logger.warning(
-                            f"{file_path} 创建 {time_difference / 3600} 小时，小于保留时间 {retention_time} 小时，暂不处理")
+                            f"{file_path} 创建 {round(time_difference / 3600, 2)} 小时，小于保留时间 {retention_time} 小时，暂不处理")
                         return
 
                 # 判断是不是蓝光目录
