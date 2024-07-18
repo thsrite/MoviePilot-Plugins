@@ -52,7 +52,7 @@ class FileSoftLink(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png"
     # 插件版本
-    plugin_version = "1.9.7"
+    plugin_version = "1.9.8"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -284,7 +284,8 @@ class FileSoftLink(_PluginBase):
     def remote_sync_one(self, event: Event = None):
         if event:
             event_data = event.event_data
-            if not event_data or event_data.get("action") != "softlink_one":
+            if not event_data or (
+                    event_data.get("action") != "softlink_one" and event_data.get("action") != "softlink_all"):
                 return
             args = event_data.get("args")
             if not args:
@@ -306,23 +307,27 @@ class FileSoftLink(_PluginBase):
                     if mon_category and str(category) in mon_category:
                         parent_path = os.path.join(mon_path, category)
                         logger.info(f"获取到 {category} {args} 对应的监控目录 {parent_path}")
-                        for root, dirs, files in os.walk(parent_path):
-                            for dir_name in dirs:
-                                src_path = os.path.join(root, dir_name)
-                                # 定向上级文件夹
-                                src_name = Path(src_path).name
-                                if str(args) in str(src_name):
-                                    logger.info(f"开始定向处理文件夹 ...{src_path}")
-                                    for sroot, sdirs, sfiles in os.walk(src_path):
-                                        for file_name in sdirs + sfiles:
-                                            src_file = os.path.join(sroot, file_name)
-                                            if Path(src_file).is_file():
-                                                self.__handle_file(event_path=str(src_file), mon_path=mon_path)
-                                    if event.event_data.get("user"):
-                                        self.post_message(channel=event.event_data.get("channel"),
-                                                          title=f"{all_args} 软连接完成！",
-                                                          userid=event.event_data.get("user"))
-                                    return
+                        target_paths = self.__find_related_paths(os.path.join(str(parent_path), args))
+                        if not target_paths:
+                            logger.error(f"未查找到 {category} {args} 对应的具体目录")
+                            return
+
+                        for target_path in target_paths:
+                            logger.info(f"开始定向处理文件夹 ...{target_path}")
+                            for sroot, sdirs, sfiles in os.walk(target_path):
+                                for file_name in sdirs + sfiles:
+                                    src_file = os.path.join(sroot, file_name)
+                                    if Path(src_file).is_file():
+                                        self.__handle_file(event_path=str(src_file), mon_path=mon_path)
+
+                            if event.event_data.get("user"):
+                                self.post_message(channel=event.event_data.get("channel"),
+                                                  title=f"{target_path} 软连接完成！",
+                                                  userid=event.event_data.get("user"))
+
+                            if event_data and event_data.get("action") == "softlink_one":
+                                return
+
                         return
             else:
                 # 遍历所有监控目录
@@ -376,6 +381,23 @@ class FileSoftLink(_PluginBase):
                 self.post_message(channel=event.event_data.get("channel"),
                                   title=f"{all_args} 未检索到，请检查输入是否正确！",
                                   userid=event.event_data.get("user"))
+
+    @staticmethod
+    def __find_related_paths(base_path):
+        related_paths = []
+        base_dir = os.path.dirname(base_path)
+        base_name = os.path.basename(base_path)
+
+        for entry in os.listdir(base_dir):
+            if entry.startswith(base_name):
+                full_path = os.path.join(base_dir, entry)
+                if os.path.isdir(full_path):
+                    related_paths.append(full_path)
+
+        # 按照修改时间倒序排列
+        related_paths.sort(key=lambda path: os.path.getmtime(path), reverse=True)
+
+        return related_paths
 
     def sync_all(self):
         """
@@ -517,6 +539,15 @@ class FileSoftLink(_PluginBase):
                 "category": "",
                 "data": {
                     "action": "softlink_one"
+                }
+            },
+            {
+                "cmd": "/softall",
+                "event": EventType.PluginAction,
+                "desc": "定向软连接处理",
+                "category": "",
+                "data": {
+                    "action": "softlink_all"
                 }
             }
         ]
