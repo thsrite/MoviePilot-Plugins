@@ -329,11 +329,12 @@
     "name": "订阅下载统计",
     "description": "统计指定时间内各站点订阅及下载情况。",
     "labels": "订阅",
-    "version": "1.5",
+    "version": "1.6",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/subscribestatistic.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v1.6": "调整page页及消息",
       "v1.5": "增加消息推送",
       "v1.4": "无订阅站点也统计数量",
       "v1.3": "fix 数据统计",

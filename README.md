@@ -29,7 +29,7 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - 云盘实时监控 v2.4.6
 - 源文件恢复 v1.2
 - [微信消息转发 v2.7](docs%2FWeChatForward.md)
-- 订阅下载统计 v1.5
+- 订阅下载统计 v1.6
 - [自定义命令 v1.7](docs%2FCustomCommand.md)
 - docker自定义任务 v1.3
 - 插件彻底卸载 v1.0
