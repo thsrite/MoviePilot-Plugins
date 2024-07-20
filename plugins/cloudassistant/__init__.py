@@ -340,14 +340,29 @@ class CloudAssistant(_PluginBase):
         立即运行一次，全量同步目录中所有文件
         """
         logger.info("云盘助手全量同步监控目录 ...")
+        
         # 遍历所有监控目录
         for mon_path in self._dirconf.keys():
+            video_files = []
+            other_files = []
             # 遍历目录下所有文件
             for root, dirs, files in os.walk(mon_path):
                 for name in dirs + files:
                     file_path = os.path.join(root, name)
                     if Path(str(file_path)).is_file():
-                        self.__handle_file(event_path=str(file_path), mon_path=mon_path)
+                        if Path(str(file_path)).suffix.lower() in [ext.strip() for ext in
+                                                              self._rmt_mediaext.split(",")]:
+                            video_files.append(file_path)
+                        else:
+                            other_files.append(file_path)
+
+            # First, handle video files
+            for video_file in video_files:
+                self.__handle_file(event_path=str(video_file), mon_path=mon_path)
+
+            # Then, handle other files
+            for other_file in other_files:
+                self.__handle_file(event_path=str(other_file), mon_path=mon_path)
         logger.info("云盘助手全量同步监控目录完成！")
 
     def event_handler(self, event, mon_path: str, text: str, event_path: str):
