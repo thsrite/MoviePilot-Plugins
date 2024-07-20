@@ -607,11 +607,12 @@
         "name": "云盘同步删除",
         "description": "媒体库删除软连接文件后，同步删除云盘文件。",
         "labels": "云盘",
-        "version": "1.4",
+        "version": "1.5",
         "icon": "clouddisk.png",
         "author": "thsrite",
         "level": 2,
         "history": {
+          "v1.5": "支持软连接指向本地路径的同步删除",
           "v1.4": "插件删除历史",
           "v1.3.1": "添加log",
           "v1.3": "同步删除thumb图片",

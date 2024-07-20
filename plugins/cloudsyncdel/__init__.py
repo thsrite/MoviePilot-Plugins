@@ -22,7 +22,7 @@ class CloudSyncDel(_PluginBase):
     # 插件图标
     plugin_icon = "clouddisk.png"
     # 插件版本
-    plugin_version = "1.4"
+    plugin_version = "1.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -39,6 +39,7 @@ class CloudSyncDel(_PluginBase):
     # 任务执行间隔
     _paths = {}
     _cloud_paths = {}
+    _local_paths = {}
     _notify = False
     _del_history = False
 
@@ -55,6 +56,9 @@ class CloudSyncDel(_PluginBase):
                     cloud_path = path.split("#")[1]
                     self._paths[paths.split(":")[0]] = paths.split(":")[1]
                     self._cloud_paths[paths.split(":")[0]] = cloud_path
+            if config.get("local_path"):
+                for path in str(config.get("local_path")).split("\n"):
+                    self._local_paths[path.split(":")[0]] = path.split(":")[1]
 
             # 清理插件历史
             if self._del_history:
@@ -90,6 +94,20 @@ class CloudSyncDel(_PluginBase):
         media_type = event_data.get("media_type")
         season_num = event_data.get("season_num")
         episode_num = event_data.get("episode_num")
+
+        local_path = self.__get_path(self._local_paths, media_path)
+        if Path(local_path).exists() and not Path(local_path).is_symlink():
+            logger.info(f"获取到本地路径 {local_path}, 通知媒体库同步删除插件删除")
+            eventItem = schemas.WebhookEventInfo(event="media_del", channel="emby")
+            eventItem.item_type = media_type
+            eventItem.item_name = media_name
+            eventItem.item_path = local_path
+            eventItem.tmdb_id = tmdb_id
+            eventItem.season_id = season_num
+            eventItem.episode_id = episode_num
+            eventItem.item_isvirtual = "False"
+            self.eventmanager.send_event(EventType.WebhookMessage, eventItem)
+            return
 
         media_path = self.__get_path(self._paths, media_path)
         logger.info(f"获取到本地软连接路径 {media_path}")
@@ -351,6 +369,28 @@ class CloudSyncDel(_PluginBase):
                                 },
                                 'content': [
                                     {
+                                        'component': 'VTextarea',
+                                        'props': {
+                                            'model': 'local_path',
+                                            'rows': '2',
+                                            'label': '本地路径映射',
+                                            'placeholder': '媒体服务器软连接路径:MoviePilot本地文件路径（一行一个）'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
                                         'component': 'VAlert',
                                         'props': {
                                             'type': 'info',
@@ -392,6 +432,7 @@ class CloudSyncDel(_PluginBase):
         ], {
             "enabled": False,
             "path": "",
+            "local_path": "",
             "notify": False,
             "del_history": False
         }
