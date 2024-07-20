@@ -356,13 +356,13 @@ class CloudAssistant(_PluginBase):
                         else:
                             other_files.append(file_path)
 
+             # Then, handle other files
+            for other_file in other_files:
+                self.__handle_file(event_path=str(other_file), mon_path=mon_path)
             # First, handle video files
             for video_file in video_files:
                 self.__handle_file(event_path=str(video_file), mon_path=mon_path)
 
-            # Then, handle other files
-            for other_file in other_files:
-                self.__handle_file(event_path=str(other_file), mon_path=mon_path)
         logger.info("云盘助手全量同步监控目录完成！")
 
     def event_handler(self, event, mon_path: str, text: str, event_path: str):
