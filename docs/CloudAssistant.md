@@ -11,6 +11,7 @@
   "return_mode": "softlink",
   "monitor_dirs": [
       {
+          "retention_time": 0,
           "monitor_mode": "fast",
           /* 监控模式 compatibility/ */
           "dest_path": "/series/link",
@@ -132,6 +133,7 @@ cd2方式上传--strm回本地（暂时移除）
 - return_mode: 云盘文件回本地模式：softlink/strm
 - return_path：MoviePilot中软链接/strm生成路径
 
+- retention_time: 本地文件保留时长（小时） 当前日期与文件创建日期的时间差（小时），大于此值的文件将被转移
 - monitor_mode：监控模式 compatibility/fast
 - tranfer_type：转移类型，可选值：copy/move
 - dest_path: MoviePilot本地刮削好的文件路径（MoviePilot媒体库目录）

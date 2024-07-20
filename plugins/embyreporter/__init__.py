@@ -33,7 +33,7 @@ class EmbyReporter(_PluginBase):
     # 插件图标
     plugin_icon = "Pydiocells_A.png"
     # 插件版本
-    plugin_version = "1.5"
+    plugin_version = "1.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -652,7 +652,7 @@ class EmbyReporter(_PluginBase):
             except Exception:
                 continue
 
-        if index > 0:
+        if index >= 0:
             save_path = "/public/report.jpg"
             if Path(save_path).exists():
                 Path.unlink(Path(save_path))

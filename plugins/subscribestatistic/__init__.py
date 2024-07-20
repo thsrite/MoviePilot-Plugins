@@ -25,7 +25,7 @@ class SubscribeStatistic(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/subscribestatistic.png"
     # 插件版本
-    plugin_version = "1.5"
+    plugin_version = "1.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -127,39 +127,51 @@ class SubscribeStatistic(_PluginBase):
         """
         text = ""
         if 'movie_subscribes' in self._notify_type:
-            text += f"【电影{self._movie_subscribe_days}天内订阅统计】\n"
+            text += f"【电影{self._movie_subscribe_days}天内订阅 共STATIC】\n"
             _, movie_subscribe_sites, movie_subscribe_datas = self.__get_movie_subscribes()
             movie_subscribe_dict = dict(zip(movie_subscribe_sites, movie_subscribe_datas))
             movie_subscribe_dict = dict(sorted(movie_subscribe_dict.items(), key=lambda x: x[1], reverse=True))
+            total = 0
             for movie_subscribe_site in movie_subscribe_dict.keys():
-                text += f"{movie_subscribe_site}: {movie_subscribe_dict[movie_subscribe_site]}\n"
+                text += f"{movie_subscribe_site}\n"
+                total += movie_subscribe_dict[movie_subscribe_site]
             text += "\n"
+            text = text.replace("STATIC", str(total))
 
         if 'tv_subscribes' in self._notify_type:
-            text += f"【电视剧{self._tv_subscribe_days}天内订阅统计】\n"
+            text += f"【电视剧{self._tv_subscribe_days}天内订阅 共STATIC】\n"
             _, tv_subscribe_sites, tv_subscribe_datas = self.__get_tv_subscribes()
             tv_subscribe_dict = dict(zip(tv_subscribe_sites, tv_subscribe_datas))
             tv_subscribe_dict = dict(sorted(tv_subscribe_dict.items(), key=lambda x: x[1], reverse=True))
+            total = 0
             for tv_subscribe_site in tv_subscribe_dict.keys():
-                text += f"{tv_subscribe_site}: {tv_subscribe_dict[tv_subscribe_site]}\n"
+                text += f"{tv_subscribe_site}\n"
+                total += tv_subscribe_dict[tv_subscribe_site]
             text += "\n"
+            text = text.replace("STATIC", str(total))
 
         if 'movie_downloads' in self._notify_type:
-            text += f"【电影{self._movie_download_days}天内下载统计】\n"
+            text += f"【电影{self._movie_download_days}天内下载 共STATIC】\n"
             _, movie_download_sites, movie_download_datas = self.__get_movie_downloads()
             movie_download_dict = dict(zip(movie_download_sites, movie_download_datas))
             movie_download_dict = dict(sorted(movie_download_dict.items(), key=lambda x: x[1], reverse=True))
+            total = 0
             for movie_download_site in movie_download_dict.keys():
-                text += f"{movie_download_site}: {movie_download_dict[movie_download_site]}\n"
+                text += f"{movie_download_site}\n"
+                total += movie_download_dict[movie_download_site]
             text += "\n"
+            text = text.replace("STATIC", str(total))
 
         if 'tv_downloads' in self._notify_type:
-            text += f"【电视剧{self._tv_download_days}天内下载统计】\n"
+            text += f"【电视剧{self._tv_download_days}天内下载 共STATIC】\n"
             _, tv_download_sites, tv_download_datas = self.__get_tv_downloads()
             tv_download_dict = dict(zip(tv_download_sites, tv_download_datas))
             tv_download_dict = dict(sorted(tv_download_dict.items(), key=lambda x: x[1], reverse=True))
+            total = 0
             for tv_download_site in tv_download_dict.keys():
-                text += f"{tv_download_site}: {tv_download_dict[tv_download_site]}\n"
+                text += f"{tv_download_site}\n"
+                total += tv_download_dict[tv_download_site]
+            text = text.replace("STATIC", str(total))
 
         # 发送通知
         mtype = NotificationType.Manual
@@ -199,8 +211,10 @@ class SubscribeStatistic(_PluginBase):
             for movie_subscribe_site_id in movie_subscribe_site_ids:
                 site = self.siteoper.get(movie_subscribe_site_id)
                 if site:
-                    if not movie_subscribe_sites.__contains__(site.name):
-                        movie_subscribe_sites.append(site.name)
+                    if site.name not in [movie_subscribe_site.split("：")[0] for movie_subscribe_site in
+                                         movie_subscribe_sites]:
+                        movie_subscribe_sites.append(
+                            f"{site.name}：{movie_subscribe_site_ids.count(movie_subscribe_site_id)}")
                         movie_subscribe_datas.append(movie_subscribe_site_ids.count(movie_subscribe_site_id))
 
         return movie_subscribes, movie_subscribe_sites, movie_subscribe_datas
@@ -223,8 +237,8 @@ class SubscribeStatistic(_PluginBase):
             for tv_subscribe_site_id in tv_subscribe_site_ids:
                 site = self.siteoper.get(tv_subscribe_site_id)
                 if site:
-                    if not tv_subscribe_sites.__contains__(site.name):
-                        tv_subscribe_sites.append(site.name)
+                    if site.name not in [tv_subscribe_site.split("：")[0] for tv_subscribe_site in tv_subscribe_sites]:
+                        tv_subscribe_sites.append(f"{site.name}：{tv_subscribe_site_ids.count(tv_subscribe_site_id)}")
                         tv_subscribe_datas.append(tv_subscribe_site_ids.count(tv_subscribe_site_id))
 
         return tv_subscribes, tv_subscribe_sites, tv_subscribe_datas
@@ -243,10 +257,12 @@ class SubscribeStatistic(_PluginBase):
                     movie_download_sites2.append(movie_download.torrent_site)
 
             for movie_download_site in movie_download_sites2:
-                if not movie_download_sites.__contains__(movie_download_site):
-                    movie_download_sites.append(movie_download_site)
-                    if not movie_download_datas.__contains__(movie_download_site):
+                if movie_download_site not in [movie_download_site2.split("：")[0] for movie_download_site2 in
+                                               movie_download_sites]:
+                    if movie_download_site not in movie_download_datas:
                         movie_download_datas.append(movie_download_sites2.count(movie_download_site))
+                    movie_download_sites.append(
+                        f"{movie_download_site}：{movie_download_sites2.count(movie_download_site)}")
 
         return movie_downloads, movie_download_sites, movie_download_datas
 
@@ -264,10 +280,10 @@ class SubscribeStatistic(_PluginBase):
                     tv_download_sites2.append(tv_download.torrent_site)
 
             for tv_download_site in tv_download_sites2:
-                if not tv_download_sites.__contains__(tv_download_site):
-                    tv_download_sites.append(tv_download_site)
-                    if not tv_download_datas.__contains__(tv_download_site):
+                if tv_download_site not in [tv_download_site2.split("：")[0] for tv_download_site2 in tv_download_sites]:
+                    if tv_download_site not in tv_download_datas:
                         tv_download_datas.append(tv_download_sites2.count(tv_download_site))
+                    tv_download_sites.append(f"{tv_download_site}：{tv_download_sites2.count(tv_download_site)}")
 
         return tv_downloads, tv_download_sites, tv_download_datas
 
@@ -532,7 +548,7 @@ class SubscribeStatistic(_PluginBase):
             "movie_download_days": 7,
             "tv_download_days": 7,
             "notify_type": "",
-            "msgtype": ""
+            "msgtype": []
         }
 
     def get_page(self) -> List[dict]:
@@ -547,172 +563,180 @@ class SubscribeStatistic(_PluginBase):
                 }
             ]
 
-        # 电影订阅
-        movie_subscribes, movie_subscribe_sites, movie_subscribe_datas = self.__get_movie_subscribes()
+        form_page = []
+        if "movie_subscribes" in self._notify_type:
+            # 电影订阅
+            movie_subscribes, movie_subscribe_sites, movie_subscribe_datas = self.__get_movie_subscribes()
+            form_page.append(
+                {
+                    'component': 'VCol',
+                    'props': {
+                        'cols': 12,
+                        'md': 6
+                    },
+                    'content': [
+                        {
+                            'component': 'VApexChart',
+                            'props': {
+                                'height': 300,
+                                'options': {
+                                    'chart': {
+                                        'type': 'pie',
+                                    },
+                                    'labels': movie_subscribe_sites,
+                                    'title': {
+                                        'text': f'电影近 {self._movie_subscribe_days} 天订阅 {len(movie_subscribes)} 部'
+                                    },
+                                    'legend': {
+                                        'show': True
+                                    },
+                                    'plotOptions': {
+                                        'pie': {
+                                            'expandOnClick': False
+                                        }
+                                    },
+                                    'noData': {
+                                        'text': '订阅未选择站点或站点已删除'
+                                    }
+                                },
+                                'series': movie_subscribe_datas
+                            }
+                        }
+                    ]
+                }
+            )
 
-        # 电视剧订阅
-        tv_subscribes, tv_subscribe_sites, tv_subscribe_datas = self.__get_tv_subscribes()
+        if "tv_subscribes" in self._notify_type:
+            # 电视剧订阅
+            tv_subscribes, tv_subscribe_sites, tv_subscribe_datas = self.__get_tv_subscribes()
+            form_page.append(
+                {
+                    'component': 'VCol',
+                    'props': {
+                        'cols': 12,
+                        'md': 6
+                    },
+                    'content': [
+                        {
+                            'component': 'VApexChart',
+                            'props': {
+                                'height': 300,
+                                'options': {
+                                    'chart': {
+                                        'type': 'pie',
+                                    },
+                                    'labels': tv_subscribe_sites,
+                                    'title': {
+                                        'text': f'电视剧近 {self._tv_subscribe_days} 天订阅 {len(tv_subscribes)} 部'
+                                    },
+                                    'legend': {
+                                        'show': True
+                                    },
+                                    'plotOptions': {
+                                        'pie': {
+                                            'expandOnClick': False
+                                        }
+                                    },
+                                    'noData': {
+                                        'text': '订阅未选择站点或站点已删除'
+                                    }
+                                },
+                                'series': tv_subscribe_datas
+                            }
+                        }
+                    ]
+                }
+            )
 
-        # 电影下载
-        movie_downloads, movie_download_sites, movie_download_datas = self.__get_movie_downloads()
+        if "movie_downloads" in self._notify_type:
+            # 电影下载
+            movie_downloads, movie_download_sites, movie_download_datas = self.__get_movie_downloads()
+            form_page.append(
+                {
+                    'component': 'VCol',
+                    'props': {
+                        'cols': 12,
+                        'md': 6
+                    },
+                    'content': [
+                        {
+                            'component': 'VApexChart',
+                            'props': {
+                                'height': 300,
+                                'options': {
+                                    'chart': {
+                                        'type': 'pie',
+                                    },
+                                    'labels': movie_download_sites,
+                                    'title': {
+                                        'text': f'电影近 {self._movie_download_days} 天下载 {len(movie_downloads)} 个种子'
+                                    },
+                                    'legend': {
+                                        'show': True
+                                    },
+                                    'plotOptions': {
+                                        'pie': {
+                                            'expandOnClick': False
+                                        }
+                                    },
+                                    'noData': {
+                                        'text': '暂无数据'
+                                    }
+                                },
+                                'series': movie_download_datas
+                            }
+                        }
+                    ]
+                }
+            )
 
-        # 电视剧下载
-        tv_downloads, tv_download_sites, tv_download_datas = self.__get_tv_downloads()
+        if "tv_downloads" in self._notify_type:
+            # 电视剧下载
+            tv_downloads, tv_download_sites, tv_download_datas = self.__get_tv_downloads()
+            form_page.append(
+                {
+                    'component': 'VCol',
+                    'props': {
+                        'cols': 12,
+                        'md': 6
+                    },
+                    'content': [
+                        {
+                            'component': 'VApexChart',
+                            'props': {
+                                'height': 300,
+                                'options': {
+                                    'chart': {
+                                        'type': 'pie',
+                                    },
+                                    'labels': tv_download_sites,
+                                    'title': {
+                                        'text': f'电视剧近 {self._tv_download_days} 天下载 {len(tv_downloads)} 个种子'
+                                    },
+                                    'legend': {
+                                        'show': True
+                                    },
+                                    'plotOptions': {
+                                        'pie': {
+                                            'expandOnClick': False
+                                        }
+                                    },
+                                    'noData': {
+                                        'text': '暂无数据'
+                                    }
+                                },
+                                'series': tv_download_datas
+                            }
+                        }
+                    ]
+                }
+            )
 
         # 拼装页面
         return [
             {
                 'component': 'VRow',
-                'content': [
-                    # 电影订阅图表
-                    {
-                        'component': 'VCol',
-                        'props': {
-                            'cols': 12,
-                            'md': 6
-                        },
-                        'content': [
-                            {
-                                'component': 'VApexChart',
-                                'props': {
-                                    'height': 300,
-                                    'options': {
-                                        'chart': {
-                                            'type': 'pie',
-                                        },
-                                        'labels': movie_subscribe_sites,
-                                        'title': {
-                                            'text': f'电影近 {self._movie_subscribe_days} 天订阅 {len(movie_subscribes)} 部'
-                                        },
-                                        'legend': {
-                                            'show': True
-                                        },
-                                        'plotOptions': {
-                                            'pie': {
-                                                'expandOnClick': False
-                                            }
-                                        },
-                                        'noData': {
-                                            'text': '订阅未选择站点或站点已删除'
-                                        }
-                                    },
-                                    'series': movie_subscribe_datas
-                                }
-                            }
-                        ]
-                    },
-                    # 电视剧订阅图表
-                    {
-                        'component': 'VCol',
-                        'props': {
-                            'cols': 12,
-                            'md': 6
-                        },
-                        'content': [
-                            {
-                                'component': 'VApexChart',
-                                'props': {
-                                    'height': 300,
-                                    'options': {
-                                        'chart': {
-                                            'type': 'pie',
-                                        },
-                                        'labels': tv_subscribe_sites,
-                                        'title': {
-                                            'text': f'电视剧近 {self._tv_subscribe_days} 天订阅 {len(tv_subscribes)} 部'
-                                        },
-                                        'legend': {
-                                            'show': True
-                                        },
-                                        'plotOptions': {
-                                            'pie': {
-                                                'expandOnClick': False
-                                            }
-                                        },
-                                        'noData': {
-                                            'text': '订阅未选择站点或站点已删除'
-                                        }
-                                    },
-                                    'series': tv_subscribe_datas
-                                }
-                            }
-                        ]
-                    },
-                    # 电影下载图表
-                    {
-                        'component': 'VCol',
-                        'props': {
-                            'cols': 12,
-                            'md': 6
-                        },
-                        'content': [
-                            {
-                                'component': 'VApexChart',
-                                'props': {
-                                    'height': 300,
-                                    'options': {
-                                        'chart': {
-                                            'type': 'pie',
-                                        },
-                                        'labels': movie_download_sites,
-                                        'title': {
-                                            'text': f'电影近 {self._movie_download_days} 天下载 {len(movie_downloads)} 个种子'
-                                        },
-                                        'legend': {
-                                            'show': True
-                                        },
-                                        'plotOptions': {
-                                            'pie': {
-                                                'expandOnClick': False
-                                            }
-                                        },
-                                        'noData': {
-                                            'text': '暂无数据'
-                                        }
-                                    },
-                                    'series': movie_download_datas
-                                }
-                            }
-                        ]
-                    },
-                    # 电视剧下载图表
-                    {
-                        'component': 'VCol',
-                        'props': {
-                            'cols': 12,
-                            'md': 6
-                        },
-                        'content': [
-                            {
-                                'component': 'VApexChart',
-                                'props': {
-                                    'height': 300,
-                                    'options': {
-                                        'chart': {
-                                            'type': 'pie',
-                                        },
-                                        'labels': tv_download_sites,
-                                        'title': {
-                                            'text': f'电视剧近 {self._tv_download_days} 天下载 {len(tv_downloads)} 个种子'
-                                        },
-                                        'legend': {
-                                            'show': True
-                                        },
-                                        'plotOptions': {
-                                            'pie': {
-                                                'expandOnClick': False
-                                            }
-                                        },
-                                        'noData': {
-                                            'text': '暂无数据'
-                                        }
-                                    },
-                                    'series': tv_download_datas
-                                }
-                            }
-                        ]
-                    }
-                ]
+                'content': form_page
             }
         ]
 

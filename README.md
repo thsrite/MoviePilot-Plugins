@@ -23,17 +23,17 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - 同步CookieCloud v1.2
 - 日程提醒 v1.0
 - 订阅提醒 v1.1
-- [Emby观影报告 v1.5](docs%2FEmbyReporter.md)
+- [Emby观影报告 v1.6](docs%2FEmbyReporter.md)
 - 演员订阅 v2.1
 - [短剧刮削 v3.2](docs%2FShortPlayMonitor.md)
 - 云盘实时监控 v2.4.6
 - 源文件恢复 v1.2
 - [微信消息转发 v2.7](docs%2FWeChatForward.md)
-- 订阅下载统计 v1.5
+- 订阅下载统计 v1.6
 - [自定义命令 v1.7](docs%2FCustomCommand.md)
 - docker自定义任务 v1.3
 - 插件彻底卸载 v1.0
-- 实时软连接 v1.9.7
+- 实时软连接 v1.9.8
 - 订阅规则自动填充 v2.7
 - Emby元数据刷新 v1.3
 - Emby媒体标签 v1.2
@@ -46,3 +46,5 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - 软连接重定向 v1.1
 - 云盘同步删除 v1.5
 - 媒体库重复媒体检测 v1.9
+- 演员作品订阅 v1.0
+- 文件复制 v1.0

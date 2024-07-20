@@ -64,7 +64,7 @@ class CloudAssistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudassistant.png"
     # 插件版本
-    plugin_version = "2.1.1"
+    plugin_version = "2.1.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -110,6 +110,7 @@ class CloudAssistant(_PluginBase):
         "return_mode": "softlink",
         "monitor_dirs": [
             {
+                "retention_time": 0,
                 "monitor_mode": "模式 compatibility/fast",
                 "dest_path": "/mnt/media/movies",
                 "mount_path": "/mnt/cloud/115/media/movies",
@@ -179,14 +180,15 @@ class CloudAssistant(_PluginBase):
 
             if self._invalid:
                 logger.info("清理无效软连接服务启动，立即运行一次")
-                self._scheduler.add_job(func=self.handle_invalid_links, trigger='date',
-                                        run_date=datetime.datetime.now(
-                                            tz=pytz.timezone(settings.TZ)) + datetime.timedelta(seconds=3)
-                                        )
                 # 关闭无效软连接开关
                 self._invalid = False
                 # 保存配置
                 self.__update_config()
+
+                self._scheduler.add_job(func=self.handle_invalid_links, trigger='date',
+                                        run_date=datetime.datetime.now(
+                                            tz=pytz.timezone(settings.TZ)) + datetime.timedelta(seconds=3)
+                                        )
 
             if self._enabled or self._onlyonce:
                 if self._notify and (self._cron or self._monitor):
@@ -338,14 +340,29 @@ class CloudAssistant(_PluginBase):
         立即运行一次，全量同步目录中所有文件
         """
         logger.info("云盘助手全量同步监控目录 ...")
+        
         # 遍历所有监控目录
         for mon_path in self._dirconf.keys():
+            video_files = []
+            other_files = []
             # 遍历目录下所有文件
             for root, dirs, files in os.walk(mon_path):
                 for name in dirs + files:
                     file_path = os.path.join(root, name)
                     if Path(str(file_path)).is_file():
-                        self.__handle_file(event_path=str(file_path), mon_path=mon_path)
+                        if Path(str(file_path)).suffix.lower() in [ext.strip() for ext in
+                                                              self._rmt_mediaext.split(",")]:
+                            video_files.append(file_path)
+                        else:
+                            other_files.append(file_path)
+
+             # Then, handle other files
+            for other_file in other_files:
+                self.__handle_file(event_path=str(other_file), mon_path=mon_path)
+            # First, handle video files
+            for video_file in video_files:
+                self.__handle_file(event_path=str(video_file), mon_path=mon_path)
+
         logger.info("云盘助手全量同步监控目录完成！")
 
     def event_handler(self, event, mon_path: str, text: str, event_path: str):
@@ -400,13 +417,6 @@ class CloudAssistant(_PluginBase):
                             logger.info(f"{event_path} 命中整理屏蔽词 {keyword}，不处理")
                             return
 
-                # 判断是不是蓝光目录
-                if re.search(r"BDMV[/\\]STREAM", event_path, re.IGNORECASE):
-                    # 截取BDMV前面的路径
-                    blurray_dir = event_path[:event_path.find("BDMV")]
-                    file_path = Path(blurray_dir)
-                    logger.info(f"{event_path} 是蓝光目录，更正文件路径为：{str(file_path)}")
-
                 # 查询转移配置
                 monitor_dir = self._dirconf.get(mon_path)
                 mount_path = monitor_dir.get("mount_path")
@@ -421,6 +431,24 @@ class CloudAssistant(_PluginBase):
                 dest_preserve_hierarchy = monitor_dir.get("dest_preserve_hierarchy") or 0
                 src_paths = monitor_dir.get("src_paths") or ""
                 src_preserve_hierarchy = monitor_dir.get("src_preserve_hierarchy") or 0
+                # 本地文件保留时间 （小时）
+                retention_time = monitor_dir.get("retention_time") or 0
+                if not self._monitor and retention_time > 0:
+                    creation_time = self.__get_file_creation_time(file_path)
+                    creation_datetime = datetime.datetime.fromtimestamp(creation_time)
+                    current_datetime = datetime.datetime.now()
+                    time_difference = (current_datetime - creation_datetime).total_seconds()
+                    if time_difference < (int(retention_time) * 3600):
+                        logger.warning(
+                            f"{file_path} 创建 {round(time_difference / 3600, 2)} 小时，小于保留时间 {retention_time} 小时，暂不处理")
+                        return
+
+                # 判断是不是蓝光目录
+                if re.search(r"BDMV[/\\]STREAM", event_path, re.IGNORECASE):
+                    # 截取BDMV前面的路径
+                    blurray_dir = event_path[:event_path.find("BDMV")]
+                    file_path = Path(blurray_dir)
+                    logger.info(f"{event_path} 是蓝光目录，更正文件路径为：{str(file_path)}")
 
                 # 1、转移到云盘挂载路径 上传到cd2
                 # 挂载的路径
@@ -627,6 +655,18 @@ class CloudAssistant(_PluginBase):
                     logger.warn(f"删除源文件空目录：{file_dir}")
                     shutil.rmtree(file_dir, ignore_errors=True)
 
+    @staticmethod
+    def __get_file_creation_time(file_path):
+        """获取文件的创建时间"""
+        if os.name == 'nt':  # Windows系统
+            return os.path.getctime(file_path)
+        else:  # Unix系统
+            stat = os.stat(file_path)
+            try:
+                return stat.st_birthtime
+            except AttributeError:
+                return stat.st_mtime
+
     def __msg_handler(self, transferhis):
         """
         组织消息发送数据
@@ -651,7 +691,7 @@ class CloudAssistant(_PluginBase):
             key + " " + transferhis.seasons) or {}
         if media_list:
             episodes = media_list.get("episodes") or []
-            if transferhis.type == MediaType.TV.name:
+            if transferhis.type == MediaType.TV.value:
                 if episodes:
                     if int(transferhis.episodes.replace("E", "")) not in episodes:
                         episodes.append(int(transferhis.episodes.replace("E", "")))
@@ -675,7 +715,7 @@ class CloudAssistant(_PluginBase):
                 "image": transferhis.image,
                 "season": transferhis.seasons,
                 "episodes": [
-                    int(transferhis.episodes.replace("E", ""))] if transferhis.type == MediaType.TV.name else None,
+                    int(transferhis.episodes.replace("E", ""))] if transferhis.type == MediaType.TV.value else [],
                 "tmdbid": transferhis.tmdbid,
                 "time": datetime.datetime.now()
             }
@@ -741,7 +781,8 @@ class CloudAssistant(_PluginBase):
                                                  mtype=mtype,
                                                  category=category,
                                                  image=image,
-                                                 count=len(episodes))
+                                                 count=len(episodes) if episodes else 1)
+                    logger.info(f"发送媒体 {medis_title_year_season} 转移消息成功")
                 # 发送完消息，移出key
                 del self._medias[medis_title_year_season]
                 continue
@@ -884,6 +925,19 @@ class CloudAssistant(_PluginBase):
             return True
         return False
 
+    @staticmethod
+    def __get_softlink_list(path, parrent):
+        """
+        获取软链接列表
+        """
+        if not os.path.exists(path):
+            return []
+        softlink_list = []
+        for file_path in Path(path).rglob('**/*'):
+            if file_path.is_symlink() and file_path.suffix in parrent:
+                softlink_list.append(file_path)
+        return softlink_list
+
     def handle_invalid_links(self):
         """
         立即运行一次，清理无效软连接
@@ -892,24 +946,36 @@ class CloudAssistant(_PluginBase):
         for mon_path in self._dirconf.keys():
             monitor_dir = self._dirconf.get(mon_path)
             return_path = monitor_dir.get("return_path")
-            logger.info(f"开始处理无效软连接 {return_path}")
-            # 遍历目录下所有文件
-            for root, dirs, files in os.walk(return_path):
-                for name in dirs + files:
-                    file_path = os.path.join(root, name)
-                    if Path(str(file_path)).is_symlink() and self.is_broken_symlink(file_path):
-                        logger.warn(f"删除无效软连接: {file_path}")
-                        os.remove(file_path)
+            logger.info(f"{return_path} 开始检查无效软连接")
 
-                        # 判断文件夹是否可删除
-                        for file_dir in Path(str(file_path)).parents:
-                            if not SystemUtils.list_files(file_dir, [ext.strip() for ext in
-                                                                     self._rmt_mediaext.split(
-                                                                         ",")] + settings.DOWNLOAD_TMPEXT):
-                                logger.warn(f"删除空目录：{file_dir}")
+            # 遍历目录及子目录
+            softlink_list = self.__get_softlink_list(path=return_path,
+                                                     parrent=[ext.strip() for ext in self._rmt_mediaext.split(",")])
+            if not softlink_list:
+                logger.info(f"{return_path} 没有软连接")
+                continue
+            logger.info(f"{return_path} 软连接数量：{len(softlink_list)}")
+
+            for file_path in softlink_list:
+                if self.is_broken_symlink(file_path):
+                    logger.warn(f"删除无效软连接: {str(file_path)}")
+                    file_path.unlink()
+
+                    # 递归删除空目录，最多到三级深度
+                    for depth, file_dir in enumerate(file_path.parents):
+                        if depth >= 3 and str(file_dir) == str(return_path):
+                            break
+                        if not any(file_dir.iterdir()):  # 检查目录是否为空
+                            logger.warning(f"删除空目录：{file_dir}")
+                            try:
                                 shutil.rmtree(file_dir, ignore_errors=True)
+                            except OSError as e:
+                                logger.error(f"删除目录失败: {e}")
+                                break
+                else:
+                    logger.info(f"{str(file_path)} 链接正常，跳过处理")
 
-            logger.info(f"处理无效软连接 {return_path} 完成！")
+            logger.info(f"{return_path} 处理无效软连接完成！")
 
         logger.info("云盘助手清理无效软连接完成！")
 
