@@ -52,7 +52,7 @@ class FileSoftLink(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png"
     # 插件版本
-    plugin_version = "1.9.8"
+    plugin_version = "1.9.9"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -296,39 +296,90 @@ class FileSoftLink(_PluginBase):
             # 使用正则表达式匹配
             category = None
             args_arr = args.split(maxsplit=1)
+            limit = None
             if len(args_arr) == 2:
                 category = args_arr[0]
                 args = args_arr[1]
+                if str(args).isdigit():
+                    limit = int(args)
 
             if category:
-                for mon_path in self._categoryconf.keys():
-                    mon_category = self._categoryconf.get(mon_path)
-                    logger.info(f"开始检查 {mon_path} {mon_category}")
-                    if mon_category and str(category) in mon_category:
-                        parent_path = os.path.join(mon_path, category)
-                        logger.info(f"获取到 {category} {args} 对应的监控目录 {parent_path}")
-                        target_paths = self.__find_related_paths(os.path.join(str(parent_path), args))
-                        if not target_paths:
-                            logger.error(f"未查找到 {category} {args} 对应的具体目录")
-                            return
+                # 判断是不是目录
+                if Path(category).is_dir() and Path(category).exists() and limit is not None:
+                    # 遍历所有监控目录
+                    mon_path = None
+                    for mon in self._dirconf.keys():
+                        if str(category).startswith(mon):
+                            mon_path = mon
+                            break
 
-                        for target_path in target_paths:
-                            logger.info(f"开始定向处理文件夹 ...{target_path}")
-                            for sroot, sdirs, sfiles in os.walk(target_path):
-                                for file_name in sdirs + sfiles:
-                                    src_file = os.path.join(sroot, file_name)
-                                    if Path(src_file).is_file():
-                                        self.__handle_file(event_path=str(src_file), mon_path=mon_path)
+                    # 指定路径软连接
+                    if not mon_path:
+                        logger.error(f"未找到 {category} 对应的监控目录")
+                        return
 
-                            if event.event_data.get("user"):
-                                self.post_message(channel=event.event_data.get("channel"),
-                                                  title=f"{target_path} 软连接完成！",
-                                                  userid=event.event_data.get("user"))
+                    sub_paths = []
+                    for entry in os.listdir(category):
+                        full_path = os.path.join(category, entry)
+                        if os.path.isdir(full_path):
+                            sub_paths.append(full_path)
 
-                            if event_data and event_data.get("action") == "softlink_one":
+                    if not sub_paths:
+                        logger.error(f"未找到 {category} 目录下的文件夹")
+                        return
+
+                    # 按照修改时间倒序排列
+                    sub_paths.sort(key=lambda path: os.path.getmtime(path), reverse=True)
+                    logger.info(f"开始定向处理文件夹 ...{category}, 最新 {limit} 个文件夹")
+                    for sub_path in sub_paths[:limit]:
+                        logger.info(f"开始定向处理文件夹 ...{sub_path}")
+                        for sroot, sdirs, sfiles in os.walk(sub_path):
+                            for file_name in sdirs + sfiles:
+                                src_file = os.path.join(sroot, file_name)
+                                if Path(src_file).is_file():
+                                    self.__handle_file(event_path=str(src_file), mon_path=mon_path)
+                        if event.event_data.get("user"):
+                            self.post_message(channel=event.event_data.get("channel"),
+                                              title=f"{sub_path} 软连接完成！", userid=event.event_data.get("user"))
+
+                    return
+                else:
+                    for mon_path in self._categoryconf.keys():
+                        mon_category = self._categoryconf.get(mon_path)
+                        logger.info(f"开始检查 {mon_path} {mon_category}")
+                        if mon_category and str(category) in mon_category:
+                            parent_path = os.path.join(mon_path, category)
+                            logger.info(f"获取到 {category} {args} 对应的监控目录 {parent_path}")
+                            target_paths = self.__find_related_paths(os.path.join(str(parent_path), args))
+                            if not target_paths:
+                                logger.error(f"未查找到 {category} {args} 对应的具体目录")
                                 return
 
-                        return
+                            handle_cnt = 0
+                            for target_path in target_paths:
+                                if limit is not None:
+                                    logger.info(f"开始定向处理文件夹 ...{target_path} {handle_cnt + 1}/{limit}")
+                                else:
+                                    logger.info(f"开始定向处理文件夹 ...{target_path}")
+                                for sroot, sdirs, sfiles in os.walk(target_path):
+                                    for file_name in sdirs + sfiles:
+                                        src_file = os.path.join(sroot, file_name)
+                                        if Path(src_file).is_file():
+                                            self.__handle_file(event_path=str(src_file), mon_path=mon_path)
+
+                                if event.event_data.get("user"):
+                                    self.post_message(channel=event.event_data.get("channel"),
+                                                      title=f"{target_path} 软连接完成！",
+                                                      userid=event.event_data.get("user"))
+
+                                if limit is None and event_data and event_data.get("action") == "softlink_one":
+                                    return
+                                handle_cnt += 1
+                                # 限制处理数量
+                                if limit and handle_cnt >= limit:
+                                    return
+
+                            return
             else:
                 # 遍历所有监控目录
                 mon_path = None
