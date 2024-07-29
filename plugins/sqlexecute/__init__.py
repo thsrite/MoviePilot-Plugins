@@ -15,7 +15,7 @@ class SqlExecute(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/sqlite.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -54,8 +54,8 @@ class SqlExecute(_PluginBase):
                         # 执行SQL语句
                         cursor.execute(sql)
 
-                        rows = cursor.fetchall()
                         if 'select' in sql.lower():
+                            rows = cursor.fetchall()
                             # 获取列名
                             columns = [desc[0] for desc in cursor.description]
                             # 将查询结果转换为key-value对的列表
@@ -64,11 +64,12 @@ class SqlExecute(_PluginBase):
                                 result = dict(zip(columns, row))
                                 results.append(result)
                             result = "\n".join([str(i) for i in results])
+                            result = str(result).replace("'", "\"")
+                            logger.info(result)
                         else:
-                            result = "\n".join([str(i) for i in rows])
-
-                        result = str(result).replace("'", "\"")
-                        logger.info(result)
+                            gradedb.commit()
+                            result = f"执行成功，影响行数：{cursor.rowcount}"
+                            logger.info(result)
                 except Exception as e:
                     logger.error(f"SQL语句执行失败 {str(e)}")
                     return
@@ -108,8 +109,8 @@ class SqlExecute(_PluginBase):
             try:
                 # 执行SQL语句
                 cursor.execute(args)
-                rows = cursor.fetchall()
                 if 'select' in args.lower():
+                    rows = cursor.fetchall()
                     # 获取列名
                     columns = [desc[0] for desc in cursor.description]
                     # 将查询结果转换为key-value对的列表
@@ -118,18 +119,27 @@ class SqlExecute(_PluginBase):
                         result = dict(zip(columns, row))
                         results.append(result)
                     result = "\n".join([str(i) for i in results])
+                    result = str(result).replace("'", "\"")
+                    logger.info(result)
+
+                    if event.event_data.get("channel") == MessageChannel.Telegram:
+                        result = f"```plaintext\n{result}\n```"
+                    self.post_message(channel=event.event_data.get("channel"),
+                                      title="SQL执行结果",
+                                      text=result,
+                                      userid=event.event_data.get("user"))
                 else:
-                    result = "\n".join([str(i) for i in rows])
+                    gradedb.commit()
+                    result = f"执行成功，影响行数：{cursor.rowcount}"
+                    logger.info(result)
 
-                result = str(result).replace("'", "\"")
-                logger.info(result)
+                    if event.event_data.get("channel") == MessageChannel.Telegram:
+                        result = f"```plaintext\n{result}\n```"
+                    self.post_message(channel=event.event_data.get("channel"),
+                                      title="SQL执行结果",
+                                      text=result,
+                                      userid=event.event_data.get("user"))
 
-                if event.event_data.get("channel") == MessageChannel.Telegram:
-                    result = f"```plaintext\n{result}\n```"
-                self.post_message(channel=event.event_data.get("channel"),
-                                  title="SQL执行结果",
-                                  text=result,
-                                  userid=event.event_data.get("user"))
             except Exception as e:
                 logger.error(f"SQL语句执行失败 {str(e)}")
                 return
