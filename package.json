@@ -680,11 +680,12 @@
     "name": "Emby合集媒体排序",
     "description": "Emby保留按照加入时间倒序的前提下，把合集中的媒体按照发布日期排序，修改加入时间已到达顺序排列的目的。",
     "labels": "媒体库",
-    "version": "1.0",
+    "version": "1.1",
     "icon": "Element_A.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v1.1": "优化处理逻辑",
       "v1.0": "保留按照加入时间倒序的前提下，把合集中的媒体放一块，不用到处找。"
     }
   }

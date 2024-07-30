@@ -1,4 +1,6 @@
 import json
+import threading
+import time
 from datetime import datetime, timedelta
 from typing import Optional, Any, List, Dict, Tuple
 
@@ -14,6 +16,8 @@ from app.modules.emby import Emby
 from app.schemas.types import EventType
 from app.utils.http import RequestUtils
 
+lock = threading.Lock()
+
 
 class EmbyCollectionSort(_PluginBase):
     # 插件名称
@@ -23,7 +27,7 @@ class EmbyCollectionSort(_PluginBase):
     # 插件图标
     plugin_icon = "Element_A.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -125,7 +129,7 @@ class EmbyCollectionSort(_PluginBase):
 
         # 获取合集列表
         collections = self.__get_items(self._collection_library_id)
-        handle_times = self.get_data("handle_times") or []
+        handle_times = []
 
         for collection in collections:
             logger.info(f"开始处理合集: {collection.get('Name')} {collection.get('Id')}")
@@ -140,30 +144,56 @@ class EmbyCollectionSort(_PluginBase):
                                   reverse=self._sort_type == "降序")
             # 初始化时间
             current_time = datetime.strptime(sorted_items[0]["item_info"]["DateCreated"], "%Y-%m-%dT%H:%M:%S.%f0Z")
-            logger.info(f"获取合集 {self._sort_type} 排序后第一条的入库时间: {current_time}")
 
             # 更新每个 item 的 DateCreated，规则为
             updated_items = []
 
             while sorted_items:
+                sub_update_items = []
+
                 for item in sorted_items:
-                    if current_time in handle_times:
-                        # 时间已被占用，跳出 for 循环
-                        break
-                    item["item_info"]["DateCreated"] = current_time.strftime("%Y-%m-%dT%H:%M:%S.%f0Z")
-                    updated_items.append(item["item_info"])
-                    handle_times.append(current_time)
-                    # 时间减一毫秒，用于下一个 item 的更新
-                    current_time -= timedelta(milliseconds=1)
+                    with lock:
+                        new_date_created = current_time.strftime("%Y-%m-%dT%H:%M:%S.%f0Z")
+                        # 时间相同，跳过
+                        if str(new_date_created) == str(item['item_info']['DateCreated']):
+                            logger.debug(
+                                f"合集媒体: {item.get('Name')} 原入库时间 {item['item_info']['DateCreated']} 新入库时间 {new_date_created} 时间相同，跳过")
+                            handle_times.append(str(current_time))
+                            sub_update_items.append(str(current_time))
+                            # 时间减一秒，用于下一个 item 的更新
+                            current_time -= timedelta(seconds=1)
+                            continue
+
+                        if str(current_time) in handle_times:
+                            logger.warn(
+                                f"合集媒体: {item.get('Name')} {current_time} 时间已被占用，开始增加 {len(sorted_items)} 秒，重新尝试处理")
+                            # 处理完成的 items 从列表中移除
+                            handle_times = [str(_time) for _time in handle_times if _time not in sub_update_items]
+                            # 如果时间已被占用，增加 len(sorted_items) 秒
+                            current_time += timedelta(seconds=len(sorted_items))
+                            # 重置已处理的 items 列表和 handle_times 集合
+                            updated_items.clear()
+                            # 时间已被占用，跳出 for 循环
+                            break
+
+                        logger.debug(
+                            f"合集媒体: {item.get('Name')} 原入库时间 {item['item_info']['DateCreated']} 新入库时间 {new_date_created}")
+                        item["item_info"]["DateCreated"] = new_date_created
+                        updated_items.append(item["item_info"])
+                        handle_times.append(str(current_time))
+                        sub_update_items.append(str(current_time))
+                        # 时间减一秒，用于下一个 item 的更新
+                        current_time -= timedelta(seconds=1)
                 else:
                     # 所有 item 处理完成，跳出 while 循环
                     break
+                time.sleep(1)
 
-                logger.warn(f"合集: {collection.get('Name')} 时间已被占用，开始增加 1 秒，重新尝试处理")
-                # 如果时间已被占用，增加 1 秒
-                current_time += timedelta(seconds=1)
-                # 重置已处理的 items 列表和 handle_times 集合
-                updated_items.clear()
+            if not updated_items:
+                logger.warn(f"合集: {collection.get('Name')} {collection.get('Id')} 无需更新入库时间")
+                continue
+
+            logger.debug(f"获取合集排序后最新的入库时间: {current_time}")
 
             # 更新入库时间
             for item_info in updated_items:
@@ -175,7 +205,6 @@ class EmbyCollectionSort(_PluginBase):
 
             logger.info(f"合集处理完成: {collection.get('Name')} {collection.get('Id')}")
 
-        self.save_data("handle_times", handle_times)
         logger.info(f"更新Emby合集媒体排序完成")
 
     @eventmanager.register(EventType.PluginAction)
