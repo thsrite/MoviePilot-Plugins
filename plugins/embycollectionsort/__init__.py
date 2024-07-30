@@ -166,11 +166,11 @@ class EmbyCollectionSort(_PluginBase):
 
                         if str(current_time) in handle_times:
                             logger.warn(
-                                f"合集媒体: {item.get('Name')} {current_time} 时间已被占用，开始增加 {len(sorted_items)} 秒，重新尝试处理")
+                                f"合集媒体: {item.get('Name')} {current_time} 时间已被占用，开始增加 {len(sorted_items) + 1} 秒，重新尝试处理")
                             # 处理完成的 items 从列表中移除
                             handle_times = [str(_time) for _time in handle_times if _time not in sub_update_items]
-                            # 如果时间已被占用，增加 len(sorted_items) 秒
-                            current_time += timedelta(seconds=len(sorted_items))
+                            # 如果时间已被占用，增加 len(sorted_items) + 1 秒
+                            current_time += timedelta(seconds=len(sorted_items) + 1)
                             # 重置已处理的 items 列表和 handle_times 集合
                             updated_items.clear()
                             # 时间已被占用，跳出 for 循环
