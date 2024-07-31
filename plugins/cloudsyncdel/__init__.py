@@ -11,6 +11,7 @@ from app.plugins import _PluginBase
 from typing import Any, List, Dict, Tuple
 
 from app.schemas.types import EventType, MediaImageType, NotificationType, MediaType
+from app.utils.http import RequestUtils
 from app.utils.system import SystemUtils
 
 
@@ -22,7 +23,7 @@ class CloudSyncDel(_PluginBase):
     # 插件图标
     plugin_icon = "clouddisk.png"
     # 插件版本
-    plugin_version = "1.5"
+    plugin_version = "1.5.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -41,6 +42,7 @@ class CloudSyncDel(_PluginBase):
     _cloud_paths = {}
     _local_paths = {}
     _notify = False
+    _url = None
     _del_history = False
 
     _video_formats = ('.mp4', '.avi', '.rmvb', '.wmv', '.mov', '.mkv', '.flv', '.ts', '.webm', '.iso', '.mpg')
@@ -49,6 +51,7 @@ class CloudSyncDel(_PluginBase):
         if config:
             self._enabled = config.get("enabled")
             self._notify = config.get("notify")
+            self._url = config.get("url")
             self._del_history = config.get("del_history")
             if config.get("path"):
                 for path in str(config.get("path")).split("\n"):
@@ -67,6 +70,7 @@ class CloudSyncDel(_PluginBase):
                     "enabled": self._enabled,
                     "notify": self._notify,
                     "path": config.get("path"),
+                    "url": self._url,
                     "del_history": False
                 })
 
@@ -165,6 +169,12 @@ class CloudSyncDel(_PluginBase):
         media_type = MediaType.MOVIE if media_type in ["Movie", "MOV"] else MediaType.TV
 
         if cloud_file_flag and self._notify:
+            if self._url:
+                RequestUtils().post(url=self._url, json={
+                    "path": str(media_path),
+                    "type": "del"
+                })
+
             backrop_image = self.chain.obtain_specific_image(
                 mediaid=tmdb_id,
                 mtype=media_type,
@@ -392,6 +402,27 @@ class CloudSyncDel(_PluginBase):
                                 },
                                 'content': [
                                     {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'url',
+                                            'label': '任务推送url',
+                                            'placeholder': 'post请求json方式推送path和type(del)字段'
+                                        }
+                                    }
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
                                         'component': 'VAlert',
                                         'props': {
                                             'type': 'info',
@@ -433,6 +464,7 @@ class CloudSyncDel(_PluginBase):
         ], {
             "enabled": False,
             "path": "",
+            "url": "",
             "local_path": "",
             "notify": False,
             "del_history": False

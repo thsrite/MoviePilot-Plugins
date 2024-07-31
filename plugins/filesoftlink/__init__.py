@@ -20,6 +20,7 @@ from app.core.event import eventmanager, Event
 from app.log import logger
 from app.plugins import _PluginBase
 from app.schemas.types import EventType, SystemConfigKey
+from app.utils.http import RequestUtils
 from app.utils.system import SystemUtils
 
 lock = threading.Lock()
@@ -52,7 +53,7 @@ class FileSoftLink(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png"
     # 插件版本
-    plugin_version = "2.0"
+    plugin_version = "2.0.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -71,6 +72,7 @@ class FileSoftLink(_PluginBase):
     _onlyonce = False
     _copy_files = False
     _cron = None
+    _url = None
     _size = 0
     # 模式 compatibility/fast
     _mode = "compatibility"
@@ -99,6 +101,7 @@ class FileSoftLink(_PluginBase):
             self._monitor_dirs = config.get("monitor_dirs") or ""
             self._exclude_keywords = config.get("exclude_keywords") or ""
             self._cron = config.get("cron")
+            self._url = config.get("url")
             self._size = config.get("size") or 0
             self._rmt_mediaext = config.get(
                 "rmt_mediaext") or ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
@@ -234,6 +237,7 @@ class FileSoftLink(_PluginBase):
             "monitor_dirs": self._monitor_dirs,
             "exclude_keywords": self._exclude_keywords,
             "cron": self._cron,
+            "url": self._url,
             "size": self._size,
             "rmt_mediaext": self._rmt_mediaext
         })
@@ -555,6 +559,11 @@ class FileSoftLink(_PluginBase):
                                                             self._rmt_mediaext.split(",")]:
                         retcode, retmsg = SystemUtils.softlink(file_path, Path(target_file))
                         logger.info(f"创建媒体文件软连接 {str(file_path)} 到 {target_file} {retcode} {retmsg}")
+                        if self._url:
+                            RequestUtils().post(url=self._url, json={
+                                "path": str(file_path),
+                                "type": "add"
+                            })
                     else:
                         if self._copy_files:
                             # 其他nfo、jpg等复制文件
@@ -833,6 +842,27 @@ class FileSoftLink(_PluginBase):
                                 },
                                 'content': [
                                     {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'url',
+                                            'label': '任务推送url',
+                                            'placeholder': 'post请求json方式推送path和type(add)字段'
+                                        }
+                                    }
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
                                         'component': 'VAlert',
                                         'props': {
                                             'type': 'info',
@@ -855,6 +885,7 @@ class FileSoftLink(_PluginBase):
             "exclude_keywords": "",
             "cron": "",
             "size": 0,
+            "url": "",
             "rmt_mediaext": ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
         }
 
