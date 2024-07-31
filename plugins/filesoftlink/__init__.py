@@ -15,7 +15,7 @@ from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
 
 from app import schemas
-from app.core.config import settings
+from app.core.config import settings, Settings
 from app.core.event import eventmanager, Event
 from app.log import logger
 from app.plugins import _PluginBase
@@ -560,10 +560,11 @@ class FileSoftLink(_PluginBase):
                         retcode, retmsg = SystemUtils.softlink(file_path, Path(target_file))
                         logger.info(f"创建媒体文件软连接 {str(file_path)} 到 {target_file} {retcode} {retmsg}")
                         if self._url:
-                            RequestUtils().post(url=self._url, json={
-                                "path": str(file_path),
-                                "type": "add"
-                            })
+                            if file_path.suffix in Settings.RMT_MEDIAEXT:
+                                RequestUtils().post(url=self._url, json={
+                                    "path": str(file_path),
+                                    "type": "add"
+                                })
                     else:
                         if self._copy_files:
                             # 其他nfo、jpg等复制文件
