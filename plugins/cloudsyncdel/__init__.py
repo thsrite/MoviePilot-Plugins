@@ -1,10 +1,9 @@
-import os
 import shutil
 import time
 from pathlib import Path
 
 from app import schemas
-from app.core.config import settings, Settings
+from app.core.config import settings
 from app.core.event import eventmanager, Event
 from app.log import logger
 from app.plugins import _PluginBase
@@ -170,7 +169,7 @@ class CloudSyncDel(_PluginBase):
 
         if cloud_file_flag and self._notify:
             if self._url:
-                if not media_path.suffix or media_path.suffix in Settings.RMT_MEDIAEXT:
+                if not media_path.suffix or media_path.suffix in settings.RMT_MEDIAEXT:
                     RequestUtils().post(url=self._url, json={
                         "path": str(media_path),
                         "type": "del"
