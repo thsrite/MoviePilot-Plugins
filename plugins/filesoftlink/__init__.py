@@ -561,7 +561,7 @@ class FileSoftLink(_PluginBase):
                         logger.info(f"创建媒体文件软连接 {str(file_path)} 到 {target_file} {retcode} {retmsg}")
                         if self._url and file_path.suffix in settings.RMT_MEDIAEXT:
                             logger.info(f"发送媒体文件软连接通知 {self._url} {str(file_path)}")
-                            RequestUtils().post(url=self._url, json={
+                            RequestUtils(content_type="application/json").post(url=self._url, json={
                                 "path": str(file_path),
                                 "type": "add"
                             })

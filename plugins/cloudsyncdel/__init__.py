@@ -170,7 +170,7 @@ class CloudSyncDel(_PluginBase):
         if cloud_file_flag and self._notify:
             if self._url:
                 if not media_path.suffix or media_path.suffix in settings.RMT_MEDIAEXT:
-                    RequestUtils().post(url=self._url, json={
+                    RequestUtils(content_type="application/json").post(url=self._url, json={
                         "path": str(media_path),
                         "type": "del"
                     })
