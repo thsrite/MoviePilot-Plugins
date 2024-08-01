@@ -123,7 +123,8 @@ class CloudAssistant(_PluginBase):
                 "src_preserve_hierarchy": 0,
                 "only_media": "true",
                 "overwrite": "false",
-                "upload_cloud": "true"
+                "upload_cloud": "true",
+                "notify_url": ""
             }
         ]
     }
@@ -340,7 +341,7 @@ class CloudAssistant(_PluginBase):
         立即运行一次，全量同步目录中所有文件
         """
         logger.info("云盘助手全量同步监控目录 ...")
-        
+
         # 遍历所有监控目录
         for mon_path in self._dirconf.keys():
             video_files = []
@@ -351,12 +352,12 @@ class CloudAssistant(_PluginBase):
                     file_path = os.path.join(root, name)
                     if Path(str(file_path)).is_file():
                         if Path(str(file_path)).suffix.lower() in [ext.strip() for ext in
-                                                              self._rmt_mediaext.split(",")]:
+                                                                   self._rmt_mediaext.split(",")]:
                             video_files.append(file_path)
                         else:
                             other_files.append(file_path)
 
-             # Then, handle other files
+            # Then, handle other files
             for other_file in other_files:
                 self.__handle_file(event_path=str(other_file), mon_path=mon_path)
             # First, handle video files
@@ -517,6 +518,11 @@ class CloudAssistant(_PluginBase):
                                                           cloud_url=monitor_dir.get("cloud_url"),
                                                           cloud_scheme=monitor_dir.get("cloud_scheme"))
 
+                    if monitor_dir.get("notify_url"):
+                        RequestUtils(content_type="application/json").post(url=monitor_dir.get("notify_url"), json={
+                            "path": str(mount_file),
+                            "type": "add"
+                        })
                 else:
                     # 其他nfo、jpg等复制文件
                     SystemUtils.copy(file_path, Path(target_return_file))

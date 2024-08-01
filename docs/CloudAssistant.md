@@ -151,6 +151,7 @@ cd2方式上传--strm回本地（暂时移除）
 - only_media：是否只监控媒体文件
 - overwrite：是否覆盖已存在云盘文件
 - upload_cloud: 是否上传到云盘, false则直接软连接或者strm回本地
+- notify_url: 软连接或者strm回本地成功后，通知接口地址，post请求参数：`{"path": "文件路径", "type": "add"}`
 
 - strm配置具体看[CloudStrm.md](CloudStrm.md)
 - library_dir：strm模式下，媒体服务器内源文件路径
