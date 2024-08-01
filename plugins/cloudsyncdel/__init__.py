@@ -119,11 +119,13 @@ class CloudSyncDel(_PluginBase):
         # 判断文件是否存在
         cloud_file_flag = False
         media_path = Path(media_path)
+        cloud_path = None
         if media_path.suffix:
             # 删除云盘文件
             cloud_file = self.__get_path(self._cloud_paths, str(media_path))
 
             if Path(cloud_file).exists():
+                cloud_path = cloud_file
                 logger.info(f"获取到云盘文件 {cloud_file}")
                 cloud_file_path = Path(cloud_file)
                 # 删除文件、nfo、jpg等同名文件
@@ -171,7 +173,7 @@ class CloudSyncDel(_PluginBase):
             if self._url:
                 if not media_path.suffix or media_path.suffix in settings.RMT_MEDIAEXT:
                     RequestUtils(content_type="application/json").post(url=self._url, json={
-                        "path": str(media_path),
+                        "path": str(cloud_path),
                         "type": "del"
                     })
 
