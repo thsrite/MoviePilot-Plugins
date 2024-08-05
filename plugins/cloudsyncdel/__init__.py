@@ -22,7 +22,7 @@ class CloudSyncDel(_PluginBase):
     # 插件图标
     plugin_icon = "clouddisk.png"
     # 插件版本
-    plugin_version = "1.5.1"
+    plugin_version = "1.5.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -99,7 +99,7 @@ class CloudSyncDel(_PluginBase):
         episode_num = event_data.get("episode_num")
 
         local_path = self.__get_path(self._local_paths, media_path)
-        if Path(local_path).exists() and not Path(local_path).is_symlink():
+        if Path(local_path).exists() and (Path(local_path).is_dir() or not Path(local_path).is_symlink()):
             Path(local_path).unlink()
             logger.info(f"获取到本地路径 {local_path}, 通知媒体库同步删除插件删除")
             eventItem = schemas.WebhookEventInfo(event="media_del", channel="emby")
