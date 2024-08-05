@@ -5,6 +5,7 @@ import pytz
 from clouddrive import CloudDriveClient, Client
 from clouddrive.proto import CloudDrive_pb2
 
+from app import schemas
 from app.core.config import settings
 from app.core.event import eventmanager, Event
 from app.plugins import _PluginBase
@@ -25,7 +26,7 @@ class Cd2Assistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png"
     # 插件版本
-    plugin_version = "1.6"
+    plugin_version = "1.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -351,6 +352,15 @@ class Cd2Assistant(_PluginBase):
 
         return system_info_dict
 
+    def homepage(self, apikey: str) -> Any:
+        """
+        homepage自定义api
+        """
+        if apikey != settings.API_TOKEN:
+            return schemas.Response(success=False, message="API密钥错误")
+
+        return self.cd2_info()
+
     @staticmethod
     def __convert_bytes(size_in_bytes):
         """ Convert bytes to the most appropriate unit (PB, TB, GB, etc.) """
@@ -437,7 +447,13 @@ class Cd2Assistant(_PluginBase):
         ]
 
     def get_api(self) -> List[Dict[str, Any]]:
-        pass
+        return [{
+            "path": "/homepage",
+            "endpoint": self.homepage,
+            "methods": ["GET"],
+            "summary": "HomePage",
+            "description": "HomePage自定义api",
+        }]
 
     def get_form(self) -> Tuple[List[dict], Dict[str, Any]]:
         """
@@ -707,6 +723,61 @@ class Cd2Assistant(_PluginBase):
                                             'type': 'info',
                                             'variant': 'tonal',
                                             'text': '周期检测CloudDrive2云盘CK是否过期，发送通知（挂载的本地路径可添加黑名单）。'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'success',
+                                            'variant': 'tonal'
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'span',
+                                                'text': 'HomePage配置教程请参考：'
+                                            },
+                                            {
+                                                'component': 'a',
+                                                'props': {
+                                                    'href': 'https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/docs/Cd2Assistant.md',
+                                                    'target': '_blank'
+                                                },
+                                                'text': 'https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/docs/Cd2Assistant.md'
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '如安装完启用插件后，HomePage提示404，重启MoviePilot即可。'
                                         }
                                     }
                                 ]
