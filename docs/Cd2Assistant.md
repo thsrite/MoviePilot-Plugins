@@ -1,6 +1,9 @@
 # CloudDriver HomePage自定义API
 
-![img.png](../img/HomePage/img.png)
+# 插件安装不上
+容器内执行 `pip install clouddrive`
+
+![img.png](../img/Cd2Assistant/img.png)
 
 HomePage services.yaml配置
 ```angular2html
