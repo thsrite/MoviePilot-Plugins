@@ -2,9 +2,13 @@ import re
 from datetime import datetime, timedelta
 
 import pytz
-from clouddrive import CloudDriveClient, Client
-from clouddrive.proto import CloudDrive_pb2
-
+try:
+    from clouddrive import CloudDriveClient, Client
+    from clouddrive.proto import CloudDrive_pb2
+except ImportError:
+    from sys import executable
+    from subprocess import run
+    run([executable, "-m", "pip", "install", "-U", "clouddrive"], check=True)
 from app import schemas
 from app.core.config import settings
 from app.core.event import eventmanager, Event
@@ -26,7 +30,7 @@ class Cd2Assistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png"
     # 插件版本
-    plugin_version = "1.7"
+    plugin_version = "1.8"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
