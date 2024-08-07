@@ -339,14 +339,14 @@ class EmbyMetaRefresh(_PluginBase):
                             or douban_actor.get("name") == people.get("Name"):
                         # 名称
                         if not updated_name:
-                            logger.debug(f"{people.get('Name')} 从豆瓣中获取到中文名：{douban_actor.get('name')}")
+                            logger.info(f"{people.get('Name')} 从豆瓣中获取到中文名：{douban_actor.get('name')}")
                             personinfo["Name"] = douban_actor.get("name")
                             ret_people["Name"] = douban_actor.get("name")
                             updated_name = True
                         # 描述
                         if not updated_overview:
                             if douban_actor.get("title"):
-                                logger.debug(f"{people.get('Name')} 从豆瓣中获取到中文描述：{douban_actor.get('title')}")
+                                logger.info(f"{people.get('Name')} 从豆瓣中获取到中文描述：{douban_actor.get('title')}")
                                 personinfo["Overview"] = douban_actor.get("title")
                                 updated_overview = True
                         # 饰演角色
@@ -357,15 +357,19 @@ class EmbyMetaRefresh(_PluginBase):
                                                    douban_actor.get("character"))
                                 character = re.sub("演员", "",
                                                    character)
+                                character = re.sub("voice", "配音",
+                                                   character)
+                                character = re.sub("Director", "导演",
+                                                   character)
                                 if character:
-                                    logger.debug(f"{people.get('Name')} 从豆瓣中获取到饰演角色：{character}")
+                                    logger.info(f"{people.get('Name')} 从豆瓣中获取到饰演角色：{character}")
                                     ret_people["Role"] = character
                                     update_character = True
                         # 图片
                         if not profile_path:
                             avatar = douban_actor.get("avatar") or {}
                             if avatar.get("large"):
-                                logger.debug(f"{people.get('Name')} 从豆瓣中获取到图片：{avatar.get('large')}")
+                                logger.info(f"{people.get('Name')} 从豆瓣中获取到图片：{avatar.get('large')}")
                                 profile_path = avatar.get("large")
                         break
 
@@ -384,7 +388,7 @@ class EmbyMetaRefresh(_PluginBase):
 
             # 更新人物信息
             if updated_name or updated_overview or update_character:
-                logger.info(f"更新人物 {people.get('Name')} 的信息：{personinfo}")
+                logger.debug(f"更新人物 {people.get('Name')} 的信息：{personinfo}")
                 ret = self.set_iteminfo(itemid=people.get("Id"), iteminfo=personinfo)
                 if ret:
                     return ret_people
