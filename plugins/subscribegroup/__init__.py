@@ -219,11 +219,11 @@ class SubscribeGroup(_PluginBase):
             return
 
         if not self._enabled:
-            logger.error("种子下载自定义填充未开启")
+            # logger.error("种子下载自定义填充未开启")
             return
 
         if len(self._update_details) == 0:
-            logger.error("插件未开启更新填充内容")
+            # logger.error("插件未开启更新填充内容")
             return
 
         if event:
