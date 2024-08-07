@@ -587,11 +587,12 @@
     "name": "CloudDrive2助手",
     "description": "监控上传任务，检测是否有异常，发送通知。",
     "labels": "云盘",
-    "version": "1.8",
+    "version": "1.8.1",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png",
     "author": "thsrite",
     "level": 2,
     "history": {
+      "v1.8.1": "云下载支持自定义路径 /cd /cd2路径 磁链",
       "v1.8": "修复插件依赖安装问题",
       "v1.7": "增加HomePage自定义API（详见插件说明）",
       "v1.6": "支持交互命令云下载",

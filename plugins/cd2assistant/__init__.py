@@ -30,7 +30,7 @@ class Cd2Assistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png"
     # 插件版本
-    plugin_version = "1.8"
+    plugin_version = "1.8.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -257,9 +257,14 @@ class Cd2Assistant(_PluginBase):
             if not args:
                 logger.error(f"缺少参数：{event_data}")
                 return
-            args = args.replace(" ", "\n")
 
-            if not self._cloud_path:
+            # 判断有无指定路径
+            args = args.replace(" ", "\n")
+            _cloud_path = self._cloud_path.strip()
+            if args.split("\n")[0].startswith("/"):
+                _cloud_path = str(args.split("\n")[0])
+                args = args.replace(f"{_cloud_path}\n", "")
+            if not _cloud_path:
                 logger.error("请先设置云盘路径")
                 if event.event_data.get("user"):
                     self.post_message(channel=event.event_data.get("channel"),
@@ -267,14 +272,15 @@ class Cd2Assistant(_PluginBase):
                                       userid=event.event_data.get("user"))
                 return
 
+            logger.info(f"获取到离线云盘路径：{_cloud_path}")
             logger.info(f"开始离线下载：{args}")
             result = self._client.AddOfflineFiles(
-                CloudDrive_pb2.AddOfflineFileRequest(urls=args, toFolder=self._cloud_path))
+                CloudDrive_pb2.AddOfflineFileRequest(urls=args, toFolder=_cloud_path))
             if result and result.success:
                 logger.info(f"离线下载成功")
                 if event.event_data.get("user"):
                     self.post_message(channel=event.event_data.get("channel"),
-                                      title=f"离线下载成功！",
+                                      title=f"{_cloud_path} 离线下载成功！",
                                       userid=event.event_data.get("user"))
             else:
                 errorMessage = None
