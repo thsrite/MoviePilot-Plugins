@@ -524,11 +524,15 @@ class CloudAssistant(_PluginBase):
                             "type": "add"
                         })
                 else:
-                    # 其他nfo、jpg等复制文件
-                    SystemUtils.copy(file_path, Path(target_return_file))
-                    # shutil.copy2(str(file_path), target_return_file)
-                    logger.info(f"复制其他文件 {str(file_path)} 到 {target_return_file}")
-                    retcode = 0
+                    if Path(target_return_file).is_file() and Path(target_return_file).exists():
+                        logger.info(f"目标文件 {target_return_file} 已存在，不处理")
+                        retcode = 0
+                    else:
+                        # 其他nfo、jpg等复制文件
+                        SystemUtils.copy(file_path, Path(target_return_file))
+                        # shutil.copy2(str(file_path), target_return_file)
+                        logger.info(f"复制其他文件 {str(file_path)} 到 {target_return_file}")
+                        retcode = 0
 
                 if retcode == 0:
                     transferhis = self.__get_transferhis_by_dest(db=None, dest_path=str(file_path))
