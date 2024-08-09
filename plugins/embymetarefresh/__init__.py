@@ -228,7 +228,8 @@ class EmbyMetaRefresh(_PluginBase):
         # 保存媒体项信息
         if peoples:
             iteminfo["People"] = peoples
-            self.set_iteminfo(itemid=itemid, iteminfo=iteminfo)
+            flag = self.set_iteminfo(itemid=itemid, iteminfo=iteminfo)
+            logger.info(f"更新媒体 {iteminfo.get('Name')} 演员信息完成 {flag}")
 
     def __update_people(self, people: dict, douban_actors: list = None) -> Optional[dict]:
         """
