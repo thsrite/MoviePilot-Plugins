@@ -357,9 +357,12 @@ class CloudAssistant(_PluginBase):
                         else:
                             other_files.append(file_path)
 
-            # Then, handle other files
-            for other_file in other_files:
-                self.__handle_file(event_path=str(other_file), mon_path=mon_path)
+            monitor_dir = self._dirconf.get(mon_path)
+            only_media = monitor_dir.get("only_media") or "true"
+            if str(only_media) == "false":
+                # Then, handle other files
+                for other_file in other_files:
+                    self.__handle_file(event_path=str(other_file), mon_path=mon_path)
             # First, handle video files
             for video_file in video_files:
                 self.__handle_file(event_path=str(video_file), mon_path=mon_path)
@@ -457,10 +460,10 @@ class CloudAssistant(_PluginBase):
                 mount_file = str(file_path).replace(str(mon_path), str(mount_path))
 
                 # 上传cloud时，如果不是仅媒体文件，则全上传，如果是仅媒体文件，则只上传媒体文件
-                if str(upload_cloud) == "true" and str(only_media) == "false" or (
+                if str(upload_cloud) == "true" and (str(only_media) == "false" or (
                         str(only_media) == "true" and Path(file_path).suffix.lower() in [ext.strip() for ext in
                                                                                          self._rmt_mediaext.split(
-                                                                                             ",")]):
+                                                                                             ",")])):
                     upload = True
                     if str(overwrite) == "false":
                         if Path(mount_file).exists():
