@@ -229,7 +229,7 @@ class EmbyMetaRefresh(_PluginBase):
         if peoples:
             iteminfo["People"] = peoples
             flag = self.set_iteminfo(itemid=itemid, iteminfo=iteminfo)
-            logger.info(f"更新媒体 {iteminfo.get('Name')} 演员信息完成 {flag}")
+            logger.info(f"更新媒体 {iteminfo.get('Name')} ({iteminfo.get('ProductionYear')} 演员信息完成 {flag}")
 
     def __update_people(self, people: dict, douban_actors: list = None) -> Optional[dict]:
         """
