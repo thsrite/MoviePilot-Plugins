@@ -100,7 +100,8 @@ class CloudSyncDel(_PluginBase):
 
         local_path = self.__get_path(self._local_paths, media_path)
         logger.info(f"获取到本地文件路径 {local_path}")
-        if Path(local_path).exists() and (Path(local_path).is_dir() or not Path(local_path).is_symlink()):
+        if Path(local_path).exists() and (
+                Path(local_path).is_dir() or (Path(local_path).is_file() and not Path(local_path).is_symlink())):
             Path(local_path).unlink()
             logger.info(f"获取到本地路径 {local_path}, 通知媒体库同步删除插件删除")
             eventItem = schemas.WebhookEventInfo(event="media_del", channel="emby")
