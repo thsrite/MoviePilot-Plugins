@@ -1,3 +1,4 @@
+import os
 import shutil
 import time
 from pathlib import Path
@@ -22,7 +23,7 @@ class CloudSyncDel(_PluginBase):
     # 插件图标
     plugin_icon = "clouddisk.png"
     # 插件版本
-    plugin_version = "1.5.2"
+    plugin_version = "1.5.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -74,7 +75,7 @@ class CloudSyncDel(_PluginBase):
                 })
 
     @eventmanager.register(EventType.PluginAction)
-    def clouddisk_del(self, event: Event):
+    def clouddisk_del(self, event: Event = None):
         if not self._enabled:
             return
         if not event:
@@ -102,7 +103,11 @@ class CloudSyncDel(_PluginBase):
         logger.info(f"获取到本地文件路径 {local_path}")
         if Path(local_path).exists() and (
                 Path(local_path).is_dir() or (Path(local_path).is_file() and not Path(local_path).is_symlink())):
-            Path(local_path).unlink()
+            if Path(local_path).is_dir():
+                shutil.rmtree(local_path)
+            elif Path(local_path).is_file():
+                Path(local_path).unlink()  # 删除文件
+
             logger.info(f"获取到本地路径 {local_path}, 通知媒体库同步删除插件删除")
             eventItem = schemas.WebhookEventInfo(event="media_del", channel="emby")
             eventItem.item_type = media_type
