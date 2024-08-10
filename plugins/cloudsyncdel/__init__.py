@@ -243,7 +243,7 @@ class CloudSyncDel(_PluginBase):
             for library_path in paths.keys():
                 if str(file_path).startswith(str(library_path)):
                     # 替换网盘路径
-                    return str(file_path).replace(str(library_path), paths.get(str(library_path)))
+                    return str(file_path).replace(str(library_path), str(paths.get(str(library_path))))
         # 未匹配到路径，返回原路径
         return file_path
 
