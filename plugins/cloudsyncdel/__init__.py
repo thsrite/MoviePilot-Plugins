@@ -99,6 +99,7 @@ class CloudSyncDel(_PluginBase):
         episode_num = event_data.get("episode_num")
 
         local_path = self.__get_path(self._local_paths, media_path)
+        logger.info(f"获取到本地文件路径 {local_path}")
         if Path(local_path).exists() and (Path(local_path).is_dir() or not Path(local_path).is_symlink()):
             Path(local_path).unlink()
             logger.info(f"获取到本地路径 {local_path}, 通知媒体库同步删除插件删除")
@@ -111,9 +112,10 @@ class CloudSyncDel(_PluginBase):
             eventItem.episode_id = episode_num
             eventItem.item_isvirtual = "False"
             self.eventmanager.send_event(EventType.WebhookMessage, eventItem)
-            return
 
         media_path = self.__get_path(self._paths, media_path)
+        if not media_path:
+            return
         logger.info(f"获取到本地软连接路径 {media_path}")
 
         # 判断文件是否存在
@@ -238,11 +240,10 @@ class CloudSyncDel(_PluginBase):
         """
         if paths and paths.keys():
             for library_path in list(paths.keys()):
-                if str(file_path).startswith(library_path):
+                if str(file_path).startswith(str(library_path)):
                     # 替换网盘路径
-                    file_path = str(file_path).replace(library_path, paths.get(library_path))
-                    break
-
+                    return str(file_path).replace(library_path, paths.get(library_path))
+        # 未匹配到路径，返回原路径
         return file_path
 
     def delete_history(self, key: str, apikey: str):
