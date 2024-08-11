@@ -235,12 +235,15 @@ class MediaRelease(_PluginBase):
                     return
                 else:
                     movies.append(str(content))
-                self._movies = ",".join(movies)
+                if len(movies) == 1:
+                    self._movies = movies[0]
+                else:
+                    self._movies = ",".join(movies)
                 # 保存配置
                 self.__update_config()
                 if event.event_data.get("user"):
                     self.post_message(channel=event.event_data.get("channel"),
-                                      title=f"{content} 以添加电影将映订阅！",
+                                      title=f"{content} 已添加电影将映订阅！",
                                       userid=event.event_data.get("user"))
 
             elif str(args[0]) == "电视剧":
@@ -254,12 +257,15 @@ class MediaRelease(_PluginBase):
                     return
                 else:
                     tvs.append(str(content))
-                self._tvs = ",".join(tvs)
+                if len(tvs) == 1:
+                    self._tvs = tvs[0]
+                else:
+                    self._tvs = ",".join(tvs)
                 # 保存配置
                 self.__update_config()
                 if event.event_data.get("user"):
                     self.post_message(channel=event.event_data.get("channel"),
-                                      title=f"{content} 以添加电视剧将映订阅！",
+                                      title=f"{content} 已添加电视剧将映订阅！",
                                       userid=event.event_data.get("user"))
             else:
                 logger.error(f"参数错误：{event_data} 电影/电视剧 名称 年份")
