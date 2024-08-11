@@ -6,9 +6,10 @@ from app import schemas
 from app.chain.download import DownloadChain
 from app.chain.subscribe import SubscribeChain
 from app.core.config import settings
+from app.core.context import MediaInfo
 from app.core.event import eventmanager, Event
 from app.core.metainfo import MetaInfo
-from app.modules.themoviedb import TheMovieDbModule
+from app.modules.themoviedb import TmdbApi
 from app.plugins import _PluginBase
 from typing import Any, List, Dict, Tuple, Optional
 from app.log import logger
@@ -17,6 +18,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from app.schemas import MediaType
 from app.schemas.types import EventType
+from app.utils.string import StringUtils
 
 
 class MediaRelease(_PluginBase):
@@ -45,7 +47,7 @@ class MediaRelease(_PluginBase):
     _cron: str = ""
     subscribechain = None
     downloadchain = None
-    tmdbmodule = None
+    tmdb = None
     _scheduler: Optional[BackgroundScheduler] = None
     _clear = False
     _movies = None
@@ -54,7 +56,7 @@ class MediaRelease(_PluginBase):
     def init_plugin(self, config: dict = None):
         self.downloadchain = DownloadChain()
         self.subscribechain = SubscribeChain()
-        self.tmdbmodule = TheMovieDbModule()
+        self.tmdb = TmdbApi()
         # 停止现有任务
         self.stop_service()
 
@@ -139,17 +141,30 @@ class MediaRelease(_PluginBase):
 
     def __subscribe(self, medias, mtype: MediaType, history):
         noexist_medias = []
-        for movie in medias.split(","):
+        for media_name in medias.split(","):
+            # 提取要素
+            _, key_word, season_num, episode_num, year, content = StringUtils.get_keyword(media_name)
             # 元数据
-            meta = MetaInfo(movie)
+            meta = MetaInfo(content)
             meta.type = mtype
-            movies = self.tmdbmodule.search_medias(meta)
-            if not movies:
-                logger.warn(f"{mtype.value}在TMDB中未找到 {movie}")
-                noexist_medias.append(movie)
+            if season_num:
+                meta.begin_season = season_num
+            if episode_num:
+                meta.begin_episode = episode_num
+            if year:
+                meta.year = year
+            if mtype == MediaType.MOVIE:
+                search_medias = self.tmdb.search_movies(meta.name, meta.year)
+            else:
+                search_medias = self.tmdb.search_tvs(meta.name, meta.year)
+
+            search_medias = [MediaInfo(tmdb_info=info) for info in search_medias]
+            if not search_medias:
+                logger.warn(f"{mtype.value} 在TMDB中未找到 {media_name}")
+                noexist_medias.append(media_name)
                 continue
 
-            for mediainfo in movies:
+            for mediainfo in search_medias:
                 # 查询缺失的媒体信息
                 exist_flag, _ = self.downloadchain.get_no_exists_info(meta=meta, mediainfo=mediainfo)
                 if exist_flag:
@@ -163,7 +178,7 @@ class MediaRelease(_PluginBase):
 
                 # 开始订阅
                 logger.info(
-                    f"开始订阅 {mediainfo.type.value} {mediainfo.title_year} TMDBID {mediainfo.tmdb_id}")
+                    f"开始订阅 {mtype.value} {mediainfo.title_year} TMDBID {mediainfo.tmdb_id}")
                 # 添加订阅
                 self.subscribechain.add(title=mediainfo.title,
                                         year=mediainfo.year,
@@ -176,7 +191,7 @@ class MediaRelease(_PluginBase):
                 # 存储历史记录
                 history.append({
                     "title": mediainfo.title,
-                    "type": mediainfo.type.value,
+                    "type": mtype.value,
                     "year": mediainfo.year,
                     "poster": mediainfo.get_poster_image(),
                     "overview": mediainfo.overview,
@@ -323,7 +338,7 @@ class MediaRelease(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 3
+                                    'md': 4
                                 },
                                 'content': [
                                     {
@@ -339,7 +354,7 @@ class MediaRelease(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 3
+                                    'md': 4
                                 },
                                 'content': [
                                     {
@@ -355,7 +370,7 @@ class MediaRelease(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 3
+                                    'md': 4
                                 },
                                 'content': [
                                     {
@@ -397,7 +412,8 @@ class MediaRelease(_PluginBase):
                             {
                                 'component': 'VCol',
                                 'props': {
-                                    'cols': 12
+                                    'cols': 12,
+                                    'md': 6
                                 },
                                 'content': [
                                     {
@@ -405,21 +421,17 @@ class MediaRelease(_PluginBase):
                                         'props': {
                                             'model': 'movies',
                                             'label': '电影',
-                                            'rows': 3,
+                                            'rows': 4,
                                             'placeholder': '电影名称(多个英文逗号拼接)'
                                         }
                                     }
                                 ]
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
+                            },
                             {
                                 'component': 'VCol',
                                 'props': {
-                                    'cols': 12
+                                    'cols': 12,
+                                    'md': 6
                                 },
                                 'content': [
                                     {
@@ -427,7 +439,7 @@ class MediaRelease(_PluginBase):
                                         'props': {
                                             'model': 'tvs',
                                             'label': '电视剧',
-                                            'rows': 3,
+                                            'rows': 4,
                                             'placeholder': '电视剧名称(多个英文逗号拼接)'
                                         }
                                     }
