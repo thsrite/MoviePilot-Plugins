@@ -696,5 +696,17 @@
       "v1.1": "优化处理逻辑",
       "v1.0": "保留按照加入时间倒序的前提下，把合集中的媒体放一块，不用到处找。"
     }
+  },
+  "MediaRelease": {
+    "name": "影视将映订阅",
+    "description": "监控未上线影视作品，自动添加订阅。",
+    "labels": "订阅",
+    "version": "1.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/mediarelease.png",
+    "author": "thsrite",
+    "level": 1,
+    "history": {
+      "v1.0": "监控未上线影视作品，自动添加订阅。"
+    }
   }
 }
