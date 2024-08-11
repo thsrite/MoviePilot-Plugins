@@ -45,7 +45,7 @@ class MediaRelease(_PluginBase):
     _cron: str = ""
     subscribechain = None
     downloadchain = None
-    tmdb = None
+    tmdbmodule = None
     _scheduler: Optional[BackgroundScheduler] = None
     _clear = False
     _movies = None
@@ -54,7 +54,7 @@ class MediaRelease(_PluginBase):
     def init_plugin(self, config: dict = None):
         self.downloadchain = DownloadChain()
         self.subscribechain = SubscribeChain()
-        self.tmdb = TheMovieDbModule()
+        self.tmdbmodule = TheMovieDbModule()
         # 停止现有任务
         self.stop_service()
 
@@ -143,7 +143,7 @@ class MediaRelease(_PluginBase):
             # 元数据
             meta = MetaInfo(movie)
             meta.type = mtype
-            movies = self.tmdb.search_medias(meta)
+            movies = self.tmdbmodule.search_medias(meta)
             if not movies:
                 logger.warn(f"{mtype.value}在TMDB中未找到 {movie}")
                 noexist_medias.append(movie)
