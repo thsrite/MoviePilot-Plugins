@@ -216,54 +216,55 @@ class MediaRelease(_PluginBase):
                 logger.error(f"缺少参数：{event_data}")
                 return
             args = args.split(" ")
-            if len(args) != 2:
-                logger.error(f"参数错误：{event_data} 电影/电视剧 名称")
+            if len(args) < 2:
+                logger.error(f"参数错误：{event_data} 电影/电视剧 名称 年份")
                 self.post_message(channel=event.event_data.get("channel"),
-                                  title=f"参数错误！格式：电影/电视剧 名称！",
+                                  title=f"参数错误！格式：电影/电视剧 名称 年份！",
                                   userid=event.event_data.get("user"))
                 return
 
+            content = " ".join(args[1:])
             if str(args[0]) == "电影":
                 movies = [movie for movie in self._movies.split(",")]
-                if str(args[1]) in movies:
-                    logger.error(f"{args[1]} 已在电影列表中")
+                if str(content) in movies:
+                    logger.error(f"{content} 已在电影列表中")
                     if event.event_data.get("user"):
                         self.post_message(channel=event.event_data.get("channel"),
-                                          title=f"{args[1]} 已在电影列表中！",
+                                          title=f"{content} 已在电影列表中！",
                                           userid=event.event_data.get("user"))
                     return
                 else:
-                    movies.append(str(args[1]))
+                    movies.append(str(content))
                 self._movies = ",".join(movies)
                 # 保存配置
                 self.__update_config()
                 if event.event_data.get("user"):
                     self.post_message(channel=event.event_data.get("channel"),
-                                      title=f"{args[1]} 以添加电影将映订阅！",
+                                      title=f"{content} 以添加电影将映订阅！",
                                       userid=event.event_data.get("user"))
 
             elif str(args[0]) == "电视剧":
                 tvs = [tv for tv in self._tvs.split(",")]
-                if str(args[1]) in tvs:
-                    logger.error(f"{args[1]} 已在电视剧列表中")
+                if str(content) in tvs:
+                    logger.error(f"{content} 已在电视剧列表中")
                     if event.event_data.get("user"):
                         self.post_message(channel=event.event_data.get("channel"),
-                                          title=f"{args[1]} 已在电视剧列表中！",
+                                          title=f"{content} 已在电视剧列表中！",
                                           userid=event.event_data.get("user"))
                     return
                 else:
-                    tvs.append(str(args[1]))
+                    tvs.append(str(content))
                 self._tvs = ",".join(tvs)
                 # 保存配置
                 self.__update_config()
                 if event.event_data.get("user"):
                     self.post_message(channel=event.event_data.get("channel"),
-                                      title=f"{args[1]} 以添加电视剧将映订阅！",
+                                      title=f"{content} 以添加电视剧将映订阅！",
                                       userid=event.event_data.get("user"))
             else:
-                logger.error(f"参数错误：{event_data} 电影/电视剧 名称")
+                logger.error(f"参数错误：{event_data} 电影/电视剧 名称 年份")
                 self.post_message(channel=event.event_data.get("channel"),
-                                  title=f"参数错误！格式：电影/电视剧 名称！",
+                                  title=f"参数错误！格式：电影/电视剧 名称 年份！",
                                   userid=event.event_data.get("user"))
                 return
 
