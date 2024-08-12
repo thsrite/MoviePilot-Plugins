@@ -35,7 +35,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "1.4"
+    plugin_version = "1.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -59,6 +59,7 @@ class EmbyMetaRefresh(_PluginBase):
     _refresh_type = None
     _ReplaceAllMetadata = "true"
     _ReplaceAllImages = "true"
+    _actor_path = None
     _EMBY_HOST = settings.EMBY_HOST
     _EMBY_USER = Emby().get_user()
     _EMBY_APIKEY = settings.EMBY_API_KEY
@@ -75,6 +76,7 @@ class EmbyMetaRefresh(_PluginBase):
             self._cron = config.get("cron")
             self._actor_chi = config.get("actor_chi")
             self._num = config.get("num") or 5
+            self._actor_path = config.get("actor_path")
             self._refresh_type = config.get("refresh_type") or "历史记录"
             self._ReplaceAllMetadata = config.get("ReplaceAllMetadata") or "true"
             self._ReplaceAllImages = config.get("ReplaceAllImages") or "true"
@@ -134,6 +136,7 @@ class EmbyMetaRefresh(_PluginBase):
                 "refresh_type": self._refresh_type,
                 "ReplaceAllMetadata": self._ReplaceAllMetadata,
                 "ReplaceAllImages": self._ReplaceAllImages,
+                "actor_path": self._actor_path,
             }
         )
 
@@ -177,13 +180,17 @@ class EmbyMetaRefresh(_PluginBase):
 
         logger.info(f"刷新媒体库元数据完成")
 
-    def __update_people_chi(self, item_id, title,  type):
+    def __update_people_chi(self, item_id, title, type):
         """
         刮削演员中文名
         """
         # 刮演员中文
         item_info = self.__get_item_info(item_id)
         if item_info:
+            if self._actor_path and not any(
+                    str(actor_path) in item_info.get("Path") for actor_path in self._actor_path.split(",")):
+                return
+
             imdb_id = item_info.get("ProviderIds", {}).get("Imdb")
             if imdb_id and self.__need_trans_actor(item_info):
                 logger.info(f"开始获取 {title} ({item_info.get('ProductionYear')}) 的豆瓣演员信息 ...")
@@ -191,10 +198,10 @@ class EmbyMetaRefresh(_PluginBase):
                                                          imdb_id=imdb_id,
                                                          type=type,
                                                          year=item_info.get("ProductionYear"))
-                logger.debug(f"获取 {title} ({item_info.get('ProductionYear')}) 的豆瓣演员信息 完成，演员：{douban_actors}")
+                logger.debug(
+                    f"获取 {title} ({item_info.get('ProductionYear')}) 的豆瓣演员信息 完成，演员：{douban_actors}")
                 self.__update_peoples(itemid=item_id, iteminfo=item_info,
                                       douban_actors=douban_actors)
-
 
     def __update_peoples(self, itemid: str, iteminfo: dict, douban_actors):
         # 处理媒体项中的人物信息
@@ -744,6 +751,22 @@ class EmbyMetaRefresh(_PluginBase):
                                     }
                                 ]
                             },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'actor_chi',
+                                            'label': '刮削演员中文',
+                                        }
+                                    }
+                                ]
+                            },
                         ]
                     },
                     {
@@ -855,14 +878,15 @@ class EmbyMetaRefresh(_PluginBase):
                                 },
                                 'content': [
                                     {
-                                        'component': 'VSwitch',
+                                        'component': 'VTextField',
                                         'props': {
-                                            'model': 'actor_chi',
-                                            'label': '刮削演员中文',
+                                            'model': 'actor_path',
+                                            'label': '演员刮削生效路径关键词',
+                                            'placeholder': '留空则全部处理，否则只处理相应路径关键词的媒体(多个英文逗号分割)'
                                         }
                                     }
                                 ]
-                            },
+                            }
                         ],
                     },
                     {
@@ -896,6 +920,7 @@ class EmbyMetaRefresh(_PluginBase):
             "ReplaceAllImages": "true",
             "cron": "5 1 * * *",
             "refresh_type": "历史记录",
+            "actor_path": "",
             "num": 5
         }
 
