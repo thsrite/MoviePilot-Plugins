@@ -29,7 +29,7 @@ class MediaRelease(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/mediarelease.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -142,10 +142,12 @@ class MediaRelease(_PluginBase):
     def __subscribe(self, medias, mtype: MediaType, history):
         noexist_medias = []
         for media_name in medias.split(","):
+            if not media_name:
+                continue
             # 提取要素
             _, key_word, season_num, episode_num, year, content = StringUtils.get_keyword(media_name)
             # 元数据
-            meta = MetaInfo(content)
+            meta = MetaInfo(key_word)
             meta.type = mtype
             if season_num:
                 meta.begin_season = season_num
@@ -160,7 +162,7 @@ class MediaRelease(_PluginBase):
 
             search_medias = [MediaInfo(tmdb_info=info) for info in search_medias]
             if not search_medias:
-                logger.warn(f"{mtype.value} 在TMDB中未找到 {media_name}")
+                logger.warn(f"{mtype.value} {media_name} 在TMDB中未找到")
                 noexist_medias.append(media_name)
                 continue
 
@@ -225,19 +227,19 @@ class MediaRelease(_PluginBase):
 
             content = " ".join(args[1:])
             if str(args[0]) == "电影":
-                movies = [movie for movie in self._movies.split(",")]
-                if str(content) in movies:
-                    logger.error(f"{content} 已在电影列表中")
-                    if event.event_data.get("user"):
-                        self.post_message(channel=event.event_data.get("channel"),
-                                          title=f"{content} 已在电影列表中！",
-                                          userid=event.event_data.get("user"))
-                    return
+                if not self._movies:
+                    self._movies = str(content)
                 else:
-                    movies.append(str(content))
-                if len(movies) == 1:
-                    self._movies = movies[0]
-                else:
+                    movies = [movie for movie in self._movies.split(",")]
+                    if str(content) in movies:
+                        logger.error(f"{content} 已在电影列表中")
+                        if event.event_data.get("user"):
+                            self.post_message(channel=event.event_data.get("channel"),
+                                              title=f"{content} 已在电影列表中！",
+                                              userid=event.event_data.get("user"))
+                        return
+                    else:
+                        movies.append(str(content))
                     self._movies = ",".join(movies)
                 # 保存配置
                 self.__update_config()
@@ -247,19 +249,19 @@ class MediaRelease(_PluginBase):
                                       userid=event.event_data.get("user"))
 
             elif str(args[0]) == "电视剧":
-                tvs = [tv for tv in self._tvs.split(",")]
-                if str(content) in tvs:
-                    logger.error(f"{content} 已在电视剧列表中")
-                    if event.event_data.get("user"):
-                        self.post_message(channel=event.event_data.get("channel"),
-                                          title=f"{content} 已在电视剧列表中！",
-                                          userid=event.event_data.get("user"))
-                    return
+                if not self._tvs:
+                    self._tvs = str(content)
                 else:
-                    tvs.append(str(content))
-                if len(tvs) == 1:
-                    self._tvs = tvs[0]
-                else:
+                    tvs = [tv for tv in self._tvs.split(",")]
+                    if str(content) in tvs:
+                        logger.error(f"{content} 已在电视剧列表中")
+                        if event.event_data.get("user"):
+                            self.post_message(channel=event.event_data.get("channel"),
+                                              title=f"{content} 已在电视剧列表中！",
+                                              userid=event.event_data.get("user"))
+                        return
+                    else:
+                        tvs.append(str(content))
                     self._tvs = ",".join(tvs)
                 # 保存配置
                 self.__update_config()
@@ -503,10 +505,10 @@ class MediaRelease(_PluginBase):
                             },
                             'events': {
                                 'click': {
-                                    'api': 'plugin/ActorSubscribePlus/delete_history',
+                                    'api': 'plugin/MediaRelease/delete_history',
                                     'method': 'get',
                                     'params': {
-                                        'key': f"actorsubscribeplus: {title} (DB:{tmdbid})",
+                                        'key': f"mediarelease: {title} (DB:{tmdbid})",
                                         'apikey': settings.API_TOKEN
                                     }
                                 }

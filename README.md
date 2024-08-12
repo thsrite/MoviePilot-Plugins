@@ -49,4 +49,4 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - 演员作品订阅 v1.0
 - 文件复制 v1.0
 - Emby合集媒体排序 v1.1
-- 影视将映订阅 v1.0
+- 影视将映订阅 v1.1
