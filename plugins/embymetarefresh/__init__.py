@@ -225,11 +225,13 @@ class EmbyMetaRefresh(_PluginBase):
                                         douban_actors=douban_actors)
             if info:
                 peoples.append(info)
+            else:
+                peoples.append(people)
         # 保存媒体项信息
         if peoples:
             iteminfo["People"] = peoples
             flag = self.set_iteminfo(itemid=itemid, iteminfo=iteminfo)
-            logger.info(f"更新媒体 {iteminfo.get('Name')} ({iteminfo.get('ProductionYear')} 演员信息完成 {flag}")
+            logger.info(f"更新媒体 {iteminfo.get('Name')} ({iteminfo.get('ProductionYear')}) 演员信息完成 {flag}")
 
     def __update_people(self, people: dict, douban_actors: list = None) -> Optional[dict]:
         """
