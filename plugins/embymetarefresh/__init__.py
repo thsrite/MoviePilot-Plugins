@@ -31,7 +31,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件名称
     plugin_name = "Emby元数据刷新"
     # 插件描述
-    plugin_desc = "定时刷新Emby媒体库元数据。"
+    plugin_desc = "定时刷新Emby媒体库元数据，演职人员中文。"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
