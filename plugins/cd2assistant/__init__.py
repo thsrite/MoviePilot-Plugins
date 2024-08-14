@@ -681,7 +681,7 @@ class Cd2Assistant(_PluginBase):
                                         'props': {
                                             'model': 'black_dir',
                                             'label': 'cd2黑名单目录',
-                                            'placeholder': 'cd2上添加的本地目录'
+                                            'placeholder': 'cd2上添加的本地目录(多个目录用英文逗号分隔)'
                                         }
                                     }
                                 ]
