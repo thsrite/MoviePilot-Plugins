@@ -678,11 +678,12 @@
     "name": "文件复制",
     "description": "自定义文件类型从源目录复制到目的目录。",
     "labels": "工具",
-    "version": "1.0",
+    "version": "1.1",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/copy_files.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v1.1": "增加log显示",
       "v1.0": "自定义文件类型从源目录复制到目的目录"
     }
   },

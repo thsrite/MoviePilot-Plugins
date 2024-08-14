@@ -25,7 +25,7 @@ class FileCopy(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/copy_files.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -139,8 +139,8 @@ class FileCopy(_PluginBase):
                 if Path(cloud_file).exists():
                     logger.info(f"{cloud_file} 文件已存在，跳过")
                     continue
-                state, _ = SystemUtils.copy(file, Path(cloud_file))
-                print(f"{file} -> {cloud_file} {'成功' if state == 0 else '失败'}")
+                state, error = SystemUtils.copy(file, Path(cloud_file))
+                logger.info(f"{file} -> {cloud_file} {'成功' if state == 0 else '失败'} {error}")
 
                 # 随机延时
                 if self._delay:
