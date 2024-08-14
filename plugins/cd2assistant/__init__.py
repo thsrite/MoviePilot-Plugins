@@ -2,12 +2,14 @@ import re
 from datetime import datetime, timedelta
 
 import pytz
+
 try:
     from clouddrive import CloudDriveClient, Client
     from clouddrive.proto import CloudDrive_pb2
 except ImportError:
     from sys import executable
     from subprocess import run
+
     run([executable, "-m", "pip", "install", "-U", "clouddrive"], check=True)
 from app import schemas
 from app.core.config import settings
@@ -30,7 +32,7 @@ class Cd2Assistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png"
     # 插件版本
-    plugin_version = "1.8.2"
+    plugin_version = "1.8.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -234,13 +236,16 @@ class Cd2Assistant(_PluginBase):
 
         _space_info = "\n"
         for f in fs.listdir():
-            if f and f not in self._black_dir.split(","):
-                space_info = self._cd2_client.GetSpaceInfo(CloudDrive_pb2.FileRequest(path=f))
-                space_info = self.__str_to_dict(space_info)
-                total = self.__convert_bytes(space_info.get("totalSpace"))
-                used = self.__convert_bytes(space_info.get("usedSpace"))
-                free = self.__convert_bytes(space_info.get("freeSpace"))
-                _space_info += f"{f}：{used}/{total}\n"
+            try:
+                if f and f not in self._black_dir.split(","):
+                    space_info = self._cd2_client.GetSpaceInfo(CloudDrive_pb2.FileRequest(path=f))
+                    space_info = self.__str_to_dict(space_info)
+                    total = self.__convert_bytes(space_info.get("totalSpace"))
+                    used = self.__convert_bytes(space_info.get("usedSpace"))
+                    free = self.__convert_bytes(space_info.get("freeSpace"))
+                    _space_info += f"{f}：{used}/{total}\n"
+            except Exception:
+                logger.error(f"获取云盘 {f} 空间信息失败")
 
         return _space_info
 
@@ -675,7 +680,8 @@ class Cd2Assistant(_PluginBase):
                                         'component': 'VTextField',
                                         'props': {
                                             'model': 'black_dir',
-                                            'label': 'cd2黑名单目录'
+                                            'label': 'cd2黑名单目录',
+                                            'placeholder': 'cd2上添加的本地目录'
                                         }
                                     }
                                 ]
