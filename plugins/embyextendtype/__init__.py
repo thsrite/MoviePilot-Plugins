@@ -4,6 +4,7 @@ from typing import List, Tuple, Dict, Any
 
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 from app.core.config import settings
 from app.log import logger
@@ -79,11 +80,16 @@ class EmbyExtendType(_PluginBase):
             self._scheduler = BackgroundScheduler(timezone=settings.TZ)
 
             # 启用目录监控
-            if self._enabled:
-                self._scheduler.add_job(func=self.check_extend, trigger='date',
-                                        run_date=datetime.datetime.now(
-                                            tz=pytz.timezone(settings.TZ)) + datetime.timedelta(seconds=3),
-                                        name="Emby视频类型检查")
+            if self._cron:
+                try:
+                    self._scheduler.add_job(func=self.check_extend,
+                                            trigger=CronTrigger.from_crontab(self._cron),
+                                            name="Emby视频类型检查")
+                except Exception as err:
+                    logger.error(f"定时任务配置错误：{str(err)}")
+                    # 推送实时消息
+                    self.systemmessage.put(f"执行周期配置错误：{err}")
+
             # 运行一次定时服务
             if self._onlyonce:
                 logger.info("文件复制服务启动，立即运行一次")
