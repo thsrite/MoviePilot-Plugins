@@ -1,4 +1,3 @@
-import os
 import shutil
 import time
 from pathlib import Path
@@ -23,7 +22,7 @@ class CloudSyncDel(_PluginBase):
     # 插件图标
     plugin_icon = "clouddisk.png"
     # 插件版本
-    plugin_version = "1.5.3"
+    plugin_version = "1.5.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -509,43 +508,75 @@ class CloudSyncDel(_PluginBase):
             unique = history.get("unique")
 
             if season:
-                sub_contents = [
-                    {
-                        'component': 'VCardText',
-                        'props': {
-                            'class': 'pa-0 px-2'
+                if episode:
+                    sub_contents = [
+                        {
+                            'component': 'VCardText',
+                            'props': {
+                                'class': 'pa-0 px-2'
+                            },
+                            'text': f'类型：{htype}'
                         },
-                        'text': f'类型：{htype}'
-                    },
-                    {
-                        'component': 'VCardText',
-                        'props': {
-                            'class': 'pa-0 px-2'
+                        {
+                            'component': 'VCardText',
+                            'props': {
+                                'class': 'pa-0 px-2'
+                            },
+                            'text': f'标题：{title}'
                         },
-                        'text': f'标题：{title}'
-                    },
-                    {
-                        'component': 'VCardText',
-                        'props': {
-                            'class': 'pa-0 px-2'
+                        {
+                            'component': 'VCardText',
+                            'props': {
+                                'class': 'pa-0 px-2'
+                            },
+                            'text': f'季：{season}'
                         },
-                        'text': f'季：{season}'
-                    },
-                    {
-                        'component': 'VCardText',
-                        'props': {
-                            'class': 'pa-0 px-2'
+                        {
+                            'component': 'VCardText',
+                            'props': {
+                                'class': 'pa-0 px-2'
+                            },
+                            'text': f'集：{episode}'
                         },
-                        'text': f'集：{episode}'
-                    },
-                    {
-                        'component': 'VCardText',
-                        'props': {
-                            'class': 'pa-0 px-2'
+                        {
+                            'component': 'VCardText',
+                            'props': {
+                                'class': 'pa-0 px-2'
+                            },
+                            'text': f'时间：{del_time}'
+                        }
+                    ]
+                else:
+                    sub_contents = [
+                        {
+                            'component': 'VCardText',
+                            'props': {
+                                'class': 'pa-0 px-2'
+                            },
+                            'text': f'类型：{htype}'
                         },
-                        'text': f'时间：{del_time}'
-                    }
-                ]
+                        {
+                            'component': 'VCardText',
+                            'props': {
+                                'class': 'pa-0 px-2'
+                            },
+                            'text': f'标题：{title}'
+                        },
+                        {
+                            'component': 'VCardText',
+                            'props': {
+                                'class': 'pa-0 px-2'
+                            },
+                            'text': f'季：{season}'
+                        },
+                        {
+                            'component': 'VCardText',
+                            'props': {
+                                'class': 'pa-0 px-2'
+                            },
+                            'text': f'时间：{del_time}'
+                        }
+                    ]
             else:
                 sub_contents = [
                     {
