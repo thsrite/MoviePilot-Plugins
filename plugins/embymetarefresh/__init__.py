@@ -35,7 +35,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "1.5"
+    plugin_version = "1.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -176,7 +176,7 @@ class EmbyMetaRefresh(_PluginBase):
 
                 # 刮演员中文
                 if self._actor_chi:
-                    self.__update_people_chi(item_id=item.id, title=item.title, type=item.type)
+                    self.__update_people_chi(item_id=item.id, title=item.title, type=MediaType(item.type))
 
         logger.info(f"刷新媒体库元数据完成")
 
@@ -202,6 +202,8 @@ class EmbyMetaRefresh(_PluginBase):
                     f"获取 {title} ({item_info.get('ProductionYear')}) 的豆瓣演员信息 完成，演员：{douban_actors}")
                 self.__update_peoples(itemid=item_id, iteminfo=item_info,
                                       douban_actors=douban_actors)
+            else:
+                logger.info(f"媒体 {title} ({item_info.get('ProductionYear')}) 演员信息无需更新")
 
     def __update_peoples(self, itemid: str, iteminfo: dict, douban_actors):
         # 处理媒体项中的人物信息
@@ -217,6 +219,7 @@ class EmbyMetaRefresh(_PluginBase):
         ]
         """
         peoples = []
+        need_update_people = False
         # 更新当前媒体项人物
         for people in iteminfo["People"] or []:
             if self._event.is_set():
@@ -231,14 +234,18 @@ class EmbyMetaRefresh(_PluginBase):
             info = self.__update_people(people=people,
                                         douban_actors=douban_actors)
             if info:
+                logger.info(f"更新演职人员 {people.get('Name')} ({people.get('Role')}) 信息：{info.get('Name')} ({info.get('Role')})")
+                need_update_people = True
                 peoples.append(info)
             else:
                 peoples.append(people)
         # 保存媒体项信息
-        if peoples:
+        if peoples and need_update_people:
             iteminfo["People"] = peoples
             flag = self.set_iteminfo(itemid=itemid, iteminfo=iteminfo)
             logger.info(f"更新媒体 {iteminfo.get('Name')} ({iteminfo.get('ProductionYear')}) 演员信息完成 {flag}")
+        else:
+            logger.info(f"媒体 {iteminfo.get('Name')} ({iteminfo.get('ProductionYear')}) 演员信息无需更新")
 
     def __update_people(self, people: dict, douban_actors: list = None) -> Optional[dict]:
         """
@@ -283,7 +290,7 @@ class EmbyMetaRefresh(_PluginBase):
             # 查询媒体库人物详情
             personinfo = __get_emby_iteminfo()
             if not personinfo:
-                logger.debug(f"未找到人物 {people.get('Name')} 的信息")
+                logger.warn(f"未找到人物 {people.get('Name')} 的信息")
                 return None
 
             # 是否更新标志
@@ -404,9 +411,10 @@ class EmbyMetaRefresh(_PluginBase):
                     return ret_people
             else:
                 logger.debug(f"人物 {people.get('Name')} 未找到中文数据")
+                return None
         except Exception as err:
             logger.error(f"更新人物信息失败：{str(err)}")
-        return None
+            return None
 
     @staticmethod
     def set_iteminfo(itemid: str, iteminfo: dict):
