@@ -717,5 +717,17 @@
       "v1.1": "bug修复",
       "v1.0": "监控未上线影视作品，自动添加订阅。"
     }
+  },
+  "EmbyExtendType": {
+    "name": "Emby视频类型检查",
+    "description": "定期检查Emby媒体库中是否包含指定的视频类型，发送通知。",
+    "labels": "媒体库",
+    "version": "1.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/extendtype.png",
+    "author": "thsrite",
+    "level": 1,
+    "history": {
+      "v1.0": "定期检查Emby媒体库中是否包含指定的视频类型，发送通知。"
+    }
   }
 }

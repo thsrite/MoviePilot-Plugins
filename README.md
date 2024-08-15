@@ -50,3 +50,4 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - 文件复制 v1.1
 - Emby合集媒体排序 v1.1
 - 影视将映订阅 v1.1
+- Emby视频类型检查 v1.0

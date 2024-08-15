@@ -738,7 +738,7 @@ class EmbyMetaRefresh(_PluginBase):
         获取最新入库项目
         """
         if not self._EMBY_HOST or not self._EMBY_APIKEY:
-            return False
+            return []
         req_url = "%semby/Users/%s/Items?Limit=%s&api_key=%s&SortBy=DateCreated,SortName&SortOrder=Descending&IncludeItemTypes=Episode,Movie&Recursive=true&Fields=DateCreated" % (
             self._EMBY_HOST, self._EMBY_USER, limit, self._EMBY_APIKEY)
         try:
@@ -747,10 +747,10 @@ class EmbyMetaRefresh(_PluginBase):
                     return res.json().get("Items")
                 else:
                     logger.info(f"获取最新入库项目失败，无法连接Emby！")
+                    return []
         except Exception as e:
             logger.error(f"连接Items出错：" + str(e))
-            return False
-        return False
+            return []
 
     def __get_emby_series_id_by_name(self, name: str, year: str) -> Optional[str]:
         """
