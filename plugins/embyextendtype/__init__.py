@@ -65,6 +65,12 @@ class EmbyExtendType(_PluginBase):
             self._extend = config.get("extend")
             self._msgtype = config.get("msgtype")
 
+            if self._EMBY_HOST:
+                if not self._EMBY_HOST.endswith("/"):
+                    self._EMBY_HOST += "/"
+                if not self._EMBY_HOST.startswith("http"):
+                    self._EMBY_HOST = "http://" + self._EMBY_HOST
+
         # 停止现有任务
         self.stop_service()
 
@@ -124,6 +130,7 @@ class EmbyExtendType(_PluginBase):
                             self.post_message(title="Emby视频类型检查",
                                               mtype=mtype,
                                               text=f"媒体库 {library_name} 命中 {extend} 视频类型")
+            logger.info(f"媒体库 {library_name} 中全部视频类型检查完毕")
 
         logger.info(f"媒体库 {self._librarys} 中全部视频类型检查完毕")
 
