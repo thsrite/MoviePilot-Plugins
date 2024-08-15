@@ -10,6 +10,7 @@ from typing import Optional, Any, List, Dict, Tuple
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from dateutil.parser import isoparse
 from requests import RequestException
 from zhconv import zhconv
 
@@ -35,7 +36,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "1.6"
+    plugin_version = "1.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -158,27 +159,87 @@ class EmbyMetaRefresh(_PluginBase):
                 logger.error(f"{self._num}天内没有媒体库入库记录")
                 return
 
-            logger.info(f"开始刷新媒体库元数据，最近{self._num}天内入库媒体：{len(transferhistorys)}个")
+            logger.info(f"开始刷新媒体库元数据，最近 {self._num} 天内入库媒体：{len(transferhistorys)}个")
             # 刷新媒体库
             for transferinfo in transferhistorys:
                 self.__refresh_emby(transferinfo)
         else:
-            latest = Emby().get_latest(num=int(self._num))
+            latest = self.__get_latest_media()
             if not latest:
                 logger.error(f"Emby中没有最新媒体")
                 return
 
-            logger.info(f"开始刷新媒体库元数据，最新媒体：{len(latest)}个")
+            logger.info(f"开始刷新媒体库元数据，{self._num} 天内最新媒体：{len(latest)} 个")
+
+            # 已处理的媒体
+            handle_itmes = {}
+
             # 刷新媒体库
             for item in latest:
-                logger.info(f"开始刷新媒体库元数据，最新媒体：{item.type} {item.title} ({item.subtitle})")
-                self.__refresh_emby_library_by_id(item.id)
+                logger.info(
+                    f"开始刷新媒体库元数据，最新媒体：{'电视剧' if str(item.get('Type')) == 'Episode' else '电影'} {'%s S%02dE%02d %s' % (item.get('SeriesName'), item.get('ParentIndexNumber'), item.get('IndexNumber'), item.get('Name')) if str(item.get('Type')) == 'Episode' else item.get('Name')} {item.get('Id')}")
+                self.__refresh_emby_library_by_id(item.get("Id"))
 
                 # 刮演员中文
                 if self._actor_chi:
-                    self.__update_people_chi(item_id=item.id, title=item.title, type=MediaType(item.type))
+                    key = f"{item.get('Type')}-{item.get('SeriesName') if str(item.get('Type')) == 'Episode' else item.get('Name')}"
+                    if key in handle_itmes.keys():
+                        continue
+                    douban_actors = self.__update_people_chi(
+                        item_id=item.get("SeriesId") if str(item.get('Type')) == 'Episode' else item.get("Id"),
+                        title=item.get('SeriesName') if str(item.get('Type')) == 'Episode' else item.get('Name'),
+                        type=MediaType('电视剧' if str(item.get('Type')) == 'Episode' else '电影'))
+
+                    # 是否有豆瓣演员信息
+                    if not douban_actors:
+                        handle_itmes[key] = {}
+                    else:
+                        if str(item.get('Type')) == 'Episode':
+                            item_dicts = handle_itmes.get(key, {})
+                            item_ids = item_dicts.get('itemIds', [])
+                            item_ids.append(item.get("Id"))
+                            handle_itmes[key] = {
+                                'itemIds': item_ids,
+                                'actors': douban_actors
+                            }
+                        else:
+                            handle_itmes[key] = {}
+            # 处理剧集
+            for key, value in handle_itmes.items():
+                if value:
+                    item_ids = value.get('itemIds', [])
+                    item_actors = value.get('actors', [])
+                    for item_id in item_ids:
+                        item_info = self.__get_item_info(item_id)
+                        self.__update_peoples(itemid=item_id, iteminfo=item_info,
+                                              douban_actors=item_actors)
 
         logger.info(f"刷新媒体库元数据完成")
+
+    def __get_latest_media(self) -> List[dict]:
+        """
+        获取Emby中最新媒体
+        """
+        refresh_date = datetime.utcnow() - timedelta(days=int(self._num))
+        refresh_date = refresh_date.replace(tzinfo=pytz.utc)  # 添加UTC时区信息
+        try:
+            latest_medias = self.__get_latest(limit=1000)
+            if not latest_medias:
+                return []
+
+            _latest_medias = []
+            for media in latest_medias:
+                media_date = media.get("DateCreated")
+                # 截断微秒部分，使其长度为六位数
+                media_date = isoparse(media_date)
+                if media_date > refresh_date:
+                    _latest_medias.append(media)
+                else:
+                    break
+            return _latest_medias
+        except Exception as err:
+            logger.error(f"获取Emby中最新媒体失败：{str(err)}")
+            return []
 
     def __update_people_chi(self, item_id, title, type):
         """
@@ -189,7 +250,7 @@ class EmbyMetaRefresh(_PluginBase):
         if item_info:
             if self._actor_path and not any(
                     str(actor_path) in item_info.get("Path") for actor_path in self._actor_path.split(",")):
-                return
+                return None
 
             imdb_id = item_info.get("ProviderIds", {}).get("Imdb")
             if imdb_id and self.__need_trans_actor(item_info):
@@ -202,8 +263,11 @@ class EmbyMetaRefresh(_PluginBase):
                     f"获取 {title} ({item_info.get('ProductionYear')}) 的豆瓣演员信息 完成，演员：{douban_actors}")
                 self.__update_peoples(itemid=item_id, iteminfo=item_info,
                                       douban_actors=douban_actors)
+
+                return douban_actors
             else:
                 logger.info(f"媒体 {title} ({item_info.get('ProductionYear')}) 演员信息无需更新")
+        return None
 
     def __update_peoples(self, itemid: str, iteminfo: dict, douban_actors):
         # 处理媒体项中的人物信息
@@ -234,7 +298,8 @@ class EmbyMetaRefresh(_PluginBase):
             info = self.__update_people(people=people,
                                         douban_actors=douban_actors)
             if info:
-                logger.info(f"更新演职人员 {people.get('Name')} ({people.get('Role')}) 信息：{info.get('Name')} ({info.get('Role')})")
+                logger.info(
+                    f"更新演职人员 {people.get('Name')} ({people.get('Role')}) 信息：{info.get('Name')} ({info.get('Role')})")
                 need_update_people = True
                 peoples.append(info)
             else:
@@ -654,8 +719,8 @@ class EmbyMetaRefresh(_PluginBase):
         """
         if not self._EMBY_HOST or not self._EMBY_APIKEY:
             return False
-        req_url = "%semby/Items/%s/Refresh?Recursive=true&MetadataRefreshMode=Default" \
-                  "&ImageRefreshMode=Default&ReplaceAllMetadata=%s&ReplaceAllImages=%s&api_key=%s" % (
+        req_url = "%semby/Items/%s/Refresh?Recursive=true&MetadataRefreshMode=FullRefresh" \
+                  "&ImageRefreshMode=FullRefresh&ReplaceAllMetadata=%s&ReplaceAllImages=%s&api_key=%s" % (
                       self._EMBY_HOST, item_id, self._ReplaceAllMetadata, self._ReplaceAllImages, self._EMBY_APIKEY)
         try:
             with RequestUtils().post_res(req_url) as res:
@@ -665,6 +730,25 @@ class EmbyMetaRefresh(_PluginBase):
                     logger.info(f"刷新媒体库对象 {item_id} 失败，无法连接Emby！")
         except Exception as e:
             logger.error(f"连接Items/Id/Refresh出错：" + str(e))
+            return False
+        return False
+
+    def __get_latest(self, limit) -> list:
+        """
+        获取最新入库项目
+        """
+        if not self._EMBY_HOST or not self._EMBY_APIKEY:
+            return False
+        req_url = "%semby/Users/%s/Items?Limit=%s&api_key=%s&SortBy=DateCreated,SortName&SortOrder=Descending&IncludeItemTypes=Episode,Movie&Recursive=true&Fields=DateCreated" % (
+            self._EMBY_HOST, self._EMBY_USER, limit, self._EMBY_APIKEY)
+        try:
+            with RequestUtils().get_res(req_url) as res:
+                if res:
+                    return res.json().get("Items")
+                else:
+                    logger.info(f"获取最新入库项目失败，无法连接Emby！")
+        except Exception as e:
+            logger.error(f"连接Items出错：" + str(e))
             return False
         return False
 
@@ -828,7 +912,7 @@ class EmbyMetaRefresh(_PluginBase):
                                         'component': 'VTextField',
                                         'props': {
                                             'model': 'num',
-                                            'label': '最新入库数量/历史记录天数'
+                                            'label': '最新入库天数/历史记录天数'
                                         }
                                     }
                                 ]

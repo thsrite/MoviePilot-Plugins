@@ -1068,8 +1068,8 @@ class CloudAssistant(_PluginBase):
         """
         if not self._EMBY_HOST or not self._EMBY_APIKEY:
             return False
-        req_url = "%semby/Items/%s/Refresh?MetadataRefreshMode=Default" \
-                  "&ImageRefreshMode=Default&ReplaceAllMetadata=true&ReplaceAllImages=true&api_key=%s" % (
+        req_url = "%semby/Items/%s/Refresh?MetadataRefreshMode=FullRefresh" \
+                  "&ImageRefreshMode=FullRefresh&ReplaceAllMetadata=true&ReplaceAllImages=true&api_key=%s" % (
                       self._EMBY_HOST, item_id, self._EMBY_APIKEY)
         try:
             with RequestUtils().post_res(req_url) as res:
