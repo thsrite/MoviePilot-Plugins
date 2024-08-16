@@ -149,6 +149,15 @@ class EmbyAudioBook(_PluginBase):
                 if not book_item.get("AlbumId"):
                     logger.info(f"有声书 {item.get('Name')} 需要整理，共 {len(book_items)} 集")
                     # self.__zl(items, -1)
+                    # 发送通知
+                    if self._notify:
+                        mtype = NotificationType.Manual
+                        if self._msgtype:
+                            mtype = NotificationType.__getitem__(str(self._msgtype)) or NotificationType.Manual
+                        self.post_message(title="Emby有声书整理",
+                                          mtype=mtype,
+                                          text=f"有声书 {item.get('Name')} 需要整理，共 {len(book_items)} 集")
+
                     break
 
         logger.info("Emby有声书整理服务执行完毕")
