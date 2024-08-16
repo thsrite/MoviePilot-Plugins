@@ -1,4 +1,5 @@
 import json
+import re
 import threading
 import time
 from pathlib import Path
@@ -127,21 +128,55 @@ class EmbyAudioBook(_PluginBase):
                                   userid=event.event_data.get("user"))
                 return
 
-            Album = items[book_idx - 1].get("Album")
-            AlbumId = items[book_idx - 1].get("AlbumId")
-            AlbumPrimaryImageTag = items[book_idx - 1].get("AlbumPrimaryImageTag")
-            Artists = items[book_idx - 1].get("Artists")
-            ArtistItems = items[book_idx - 1].get("ArtistItems")
-            Composers = items[book_idx - 1].get("Composers")
-            AlbumArtist = items[book_idx - 1].get("AlbumArtist")
-            AlbumArtists = items[book_idx - 1].get("AlbumArtists")
-            ParentIndexNumber = items[book_idx - 1].get("ParentIndexNumber")
-            logger.info(
-                f"从集数 {book_idx} 获取到有声书信息：{Album} - {Artists} - {Composers} - {AlbumArtist} - {AlbumArtists} - {ParentIndexNumber}")
+            AlbumId = None
+            Album = None
+            AlbumPrimaryImageTag = None
+            Artists = None
+            ArtistItems = None
+            Composers = None
+            AlbumArtist = None
+            AlbumArtists = None
+            ParentIndexNumber = None
+
+            if book_idx == -1:
+                for item in items:
+                    AlbumId = item.get("AlbumId")
+                    if not AlbumId:
+                        continue
+
+                    Album = item.get("Album")
+                    AlbumPrimaryImageTag = item.get("AlbumPrimaryImageTag")
+                    Artists = item.get("Artists")
+                    ArtistItems = item.get("ArtistItems")
+                    Composers = item.get("Composers")
+                    AlbumArtist = item.get("AlbumArtist")
+                    AlbumArtists = item.get("AlbumArtists")
+                    ParentIndexNumber = item.get("ParentIndexNumber")
+                    if AlbumId and Album and Artists and AlbumArtist and AlbumArtists and ParentIndexNumber:
+                        logger.info(
+                            f"从集数 {item.get('IndexNumber')} 获取到有声书信息：{Album} - {Artists} - {Composers} - {AlbumArtist} - {AlbumArtists} - {ParentIndexNumber}")
+                        break
+            else:
+                Album = items[book_idx - 1].get("Album")
+                AlbumId = items[book_idx - 1].get("AlbumId")
+                AlbumPrimaryImageTag = items[book_idx - 1].get("AlbumPrimaryImageTag")
+                Artists = items[book_idx - 1].get("Artists")
+                ArtistItems = items[book_idx - 1].get("ArtistItems")
+                Composers = items[book_idx - 1].get("Composers")
+                AlbumArtist = items[book_idx - 1].get("AlbumArtist")
+                AlbumArtists = items[book_idx - 1].get("AlbumArtists")
+                ParentIndexNumber = items[book_idx - 1].get("ParentIndexNumber")
+                logger.info(
+                    f"从集数 {book_idx} 获取到有声书信息：{Album} - {Artists} - {Composers} - {AlbumArtist} - {AlbumArtists} - {ParentIndexNumber}")
 
             # 更新有声书信息
             for i, item in enumerate(items):
-                # if len(items[0]) != len(item):
+                episode = i + 1
+                # 使用正则表达式匹配集数
+                match = re.search(r'第(\d+)集', item.get("Name"))
+                if match:
+                    episode = int(match.group(1))
+
                 if Album == item.get("Album") and \
                         AlbumId == item.get("AlbumId") and \
                         AlbumPrimaryImageTag == item.get("AlbumPrimaryImageTag") and \
@@ -150,40 +185,44 @@ class EmbyAudioBook(_PluginBase):
                         Composers == item.get("Composers") and \
                         AlbumArtist == item.get("AlbumArtist") and \
                         AlbumArtists == item.get("AlbumArtists") and not self._rename:
-                    logger.info(f"有声书 第{i + 1}集  {item.get('Name')} 信息完整，跳过！")
+                    logger.info(f"有声书 第{episode}集  {item.get('Name')} 信息完整，跳过！")
                     continue
 
-                # 获取有声书信息
-                item_info = self.__get_audiobook_item_info(item.get("Id"))
+                retry = 0
+                while retry < 3:
+                    try:
+                        # 获取有声书信息
+                        item_info = self.__get_audiobook_item_info(item.get("Id"))
 
-                # 重命名前判断名称是否一致
-                if self._rename and item.get("Name") == Path(Path(item_info.get("Path")).name).stem:
-                    logger.info(f"有声书 第{i + 1}集  {item.get('Name')} 名称相同，跳过！")
-                    continue
+                        # 重命名前判断名称是否一致
+                        if self._rename and item.get("Name") == Path(Path(item_info.get("Path")).name).stem:
+                            logger.info(f"有声书 第{episode}集  {item.get('Name')} 名称相同，跳过！")
+                            continue
 
-                try:
-                    item_info.update({
-                        "Album": Album,
-                        "AlbumId": AlbumId,
-                        "AlbumPrimaryImageTag": AlbumPrimaryImageTag,
-                        "Artists": Artists,
-                        "ArtistItems": ArtistItems,
-                        "Composers": Composers,
-                        "AlbumArtist": AlbumArtist,
-                        "AlbumArtists": AlbumArtists,
-                        "ParentIndexNumber": ParentIndexNumber,
-                        "IndexNumber": i + 1
-                    })
-                except Exception as e:
-                    logger.error(f"更新有声书信息出错：{e} {item_info}")
-                    continue
+                        item_info.update({
+                            "Album": Album,
+                            "AlbumId": AlbumId,
+                            "AlbumPrimaryImageTag": AlbumPrimaryImageTag,
+                            "Artists": Artists,
+                            "ArtistItems": ArtistItems,
+                            "Composers": Composers,
+                            "AlbumArtist": AlbumArtist,
+                            "AlbumArtists": AlbumArtists,
+                            "ParentIndexNumber": ParentIndexNumber,
+                            "IndexNumber": episode
+                        })
+                        retry = 3
+                    except Exception as e:
+                        retry += 1
+                        logger.error(f"更新有声书信息出错：{e} {item_info}, 开始重试...{retry} / 3")
+                        continue
 
                 if item_info.get("Name") == "filename" or self._rename:
                     item_info.update({
                         "Name": Path(Path(item_info.get("Path")).name).stem
                     })
                 flag = self.__update_item_info(item.get("Id"), item_info)
-                logger.info(f"{Album} 第{i + 1}集 {item_info.get('Name')} 更新{'成功' if flag else '失败'}")
+                logger.info(f"{Album} 第{episode}集 {item_info.get('Name')} 更新{'成功' if flag else '失败'}")
                 time.sleep(0.5)
 
     def get_state(self) -> bool:
