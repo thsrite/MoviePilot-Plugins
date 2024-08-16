@@ -53,9 +53,6 @@ class EmbyExtendType(_PluginBase):
     _EMBY_APIKEY = settings.EMBY_API_KEY
 
     def init_plugin(self, config: dict = None):
-        # 清空配置
-        self._dirconf = {}
-
         # 读取配置
         if config:
             self._enabled = config.get("enabled")
