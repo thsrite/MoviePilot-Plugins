@@ -127,24 +127,21 @@ class EmbyAudioBook(_PluginBase):
         })
 
     def check(self):
-        if not self._enabled:
-            return
-
         if not self._library_id:
             logger.error("请设置有声书文件夹ID！")
             return
 
         # 获取所有有声书
-        items = self.__get_items(self._library_id)
+        items = self.__get_items(parent_id=int(self._library_id))
         if not items:
             logger.error(f"获取媒体库 {self._library_id} 有声书列表失败！")
             return
 
         # 检查有声书是否需要整理
         for item in items:
-            book_items = self.__get_items(item.get("id"))
+            book_items = self.__get_items(item.get("Id"))
             if not book_items:
-                logger.error(f"获取 {item.get('Name')} {item.get('id')} 有声书失败！")
+                logger.error(f"获取 {item.get('Name')} {item.get('Id')} 有声书失败！")
                 return
 
             # 检查有声书是否需要整理
@@ -153,6 +150,8 @@ class EmbyAudioBook(_PluginBase):
                     logger.info(f"有声书 {item.get('Name')} 需要整理")
                     # self.__zl(items, -1)
                     break
+
+        logger.info("Emby有声书整理服务执行完毕")
 
     @eventmanager.register(EventType.PluginAction)
     def audiobook(self, event: Event = None):
