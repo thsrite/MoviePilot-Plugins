@@ -176,6 +176,12 @@ class EmbyAudioBook(_PluginBase):
                 match = re.search(r'第(\d+)集', item.get("Name"))
                 if match:
                     episode = int(match.group(1))
+                else:
+                    # 使用正则表达式匹配数字
+                    match = re.search(r'\d+', item.get("Name"))
+                    if match:
+                        # 提取数字
+                        episode = match.group()
 
                 if Album == item.get("Album") and \
                         AlbumId == item.get("AlbumId") and \
