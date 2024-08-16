@@ -729,5 +729,17 @@
     "history": {
       "v1.0": "定期检查Emby媒体库中是否包含指定的视频类型，发送通知。"
     }
+  },
+  "EmbyAudioBook": {
+    "name": "Emby有声书整理",
+    "description": "还在为Emby有声书整理烦恼吗？入库存在很多单集？",
+    "labels": "Emby,媒体库",
+    "version": "1.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/audiobook.png",
+    "author": "thsrite",
+    "level": 1,
+    "history": {
+      "v1.0": "还在为Emby有声书整理烦恼吗？入库存在很多单集。"
+    }
   }
 }
