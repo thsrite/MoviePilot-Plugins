@@ -89,7 +89,7 @@ class EmbyExtendType(_PluginBase):
 
             # 运行一次定时服务
             if self._onlyonce:
-                logger.info("文件复制服务启动，立即运行一次")
+                logger.info("Emby视频类型检查服务启动，立即运行一次")
                 self._scheduler.add_job(name="Emby视频类型检查", func=self.check_extend, trigger='date',
                                         run_date=datetime.datetime.now(
                                             tz=pytz.timezone(settings.TZ)) + datetime.timedelta(seconds=3)

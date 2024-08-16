@@ -1,9 +1,14 @@
+import datetime
 import json
 import re
 import threading
 import time
 from pathlib import Path
 from typing import List, Tuple, Dict, Any
+
+import pytz
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 from app.core.config import settings
 from app.core.event import eventmanager, Event
@@ -38,9 +43,12 @@ class EmbyAudioBook(_PluginBase):
     auth_level = 1
 
     # 私有属性
+    _scheduler = None
     _enabled = False
     _notify = False
     _rename = False
+    _onlyonce = False
+    _cron = None
     _library_id = None
     _extend = None
     _msgtype = None
@@ -49,10 +57,15 @@ class EmbyAudioBook(_PluginBase):
     _EMBY_USER = Emby().get_user()
     _EMBY_APIKEY = settings.EMBY_API_KEY
 
+    # 退出事件
+    _event = threading.Event()
+
     def init_plugin(self, config: dict = None):
         # 读取配置
         if config:
             self._enabled = config.get("enabled")
+            self._onlyonce = config.get("onlyonce")
+            self._cron = config.get("cron")
             self._library_id = config.get("library_id")
             self._notify = config.get("notify")
             self._rename = config.get("rename")
@@ -63,6 +76,83 @@ class EmbyAudioBook(_PluginBase):
                     self._EMBY_HOST += "/"
                 if not self._EMBY_HOST.startswith("http"):
                     self._EMBY_HOST = "http://" + self._EMBY_HOST
+
+            # 停止现有任务
+            self.stop_service()
+
+            if self._enabled or self._onlyonce:
+                # 定时服务管理器
+                self._scheduler = BackgroundScheduler(timezone=settings.TZ)
+
+                # 启用目录监控
+                if self._cron:
+                    try:
+                        self._scheduler.add_job(func=self.check,
+                                                trigger=CronTrigger.from_crontab(self._cron),
+                                                name="Emby有声书整理")
+                    except Exception as err:
+                        logger.error(f"定时任务配置错误：{str(err)}")
+                        # 推送实时消息
+                        self.systemmessage.put(f"执行周期配置错误：{err}")
+
+                # 运行一次定时服务
+                if self._onlyonce:
+                    logger.info("Emby有声书整理服务启动，立即运行一次")
+                    self._scheduler.add_job(name="Emby有声书整理", func=self.check, trigger='date',
+                                            run_date=datetime.datetime.now(
+                                                tz=pytz.timezone(settings.TZ)) + datetime.timedelta(seconds=3)
+                                            )
+                    # 关闭一次性开关
+                    self._onlyonce = False
+                    # 保存配置
+                    self.__update_config()
+
+                # 启动定时服务
+                if self._scheduler.get_jobs():
+                    self._scheduler.print_jobs()
+                    self._scheduler.start()
+
+    def __update_config(self):
+        """
+        更新配置
+        """
+        self.update_config({
+            "enabled": self._enabled,
+            "onlyonce": self._onlyonce,
+            "library_id": self._library_id,
+            "rename": self._rename,
+            "cron": self._cron,
+            "notify": self._notify,
+            "msgtype": self._msgtype,
+        })
+
+    def check(self):
+        if not self._enabled:
+            return
+
+        if not self._library_id:
+            logger.error("请设置有声书文件夹ID！")
+            return
+
+        # 获取所有有声书
+        items = self.__get_items(self._library_id)
+        if not items:
+            logger.error(f"获取媒体库 {self._library_id} 有声书列表失败！")
+            return
+
+        # 检查有声书是否需要整理
+        for item in items:
+            book_items = self.__get_items(item.get("id"))
+            if not book_items:
+                logger.error(f"获取 {item.get('Name')} {item.get('id')} 有声书失败！")
+                return
+
+            # 检查有声书是否需要整理
+            for book_item in book_items:
+                if not book_item.get("AlbumId"):
+                    logger.info(f"有声书 {item.get('Name')} 需要整理")
+                    # self.__zl(items, -1)
+                    break
 
     @eventmanager.register(EventType.PluginAction)
     def audiobook(self, event: Event = None):
@@ -100,7 +190,7 @@ class EmbyAudioBook(_PluginBase):
             # 获取所有有声书
             items = self.__get_items(self._library_id)
             if not items:
-                logger.error(f"获取 {self._library_id} 有声书失败！")
+                logger.error(f"获取媒体库 {self._library_id} 有声书列表失败！")
                 self.post_message(channel=event.event_data.get("channel"),
                                   title=f"获取 {self._library_id} 有声书失败！",
                                   userid=event.event_data.get("user"))
@@ -128,108 +218,117 @@ class EmbyAudioBook(_PluginBase):
                                   userid=event.event_data.get("user"))
                 return
 
-            AlbumId = None
-            Album = None
-            AlbumPrimaryImageTag = None
-            Artists = None
-            ArtistItems = None
-            Composers = None
-            AlbumArtist = None
-            AlbumArtists = None
-            ParentIndexNumber = None
+            self.__zl(items, int(book_idx))
+            self.post_message(channel=event.event_data.get("channel"),
+                              title=f"{book_name} 有声书整理完成！",
+                              userid=event.event_data.get("user"))
 
-            if book_idx == -1:
-                for item in items:
-                    AlbumId = item.get("AlbumId")
-                    if not AlbumId:
-                        continue
+    def __zl(self, items, book_idx):
+        """
+        有声书整理
+        """
+        AlbumId = None
+        Album = None
+        AlbumPrimaryImageTag = None
+        Artists = None
+        ArtistItems = None
+        Composers = None
+        AlbumArtist = None
+        AlbumArtists = None
+        ParentIndexNumber = None
 
-                    Album = item.get("Album")
-                    AlbumPrimaryImageTag = item.get("AlbumPrimaryImageTag")
-                    Artists = item.get("Artists")
-                    ArtistItems = item.get("ArtistItems")
-                    Composers = item.get("Composers")
-                    AlbumArtist = item.get("AlbumArtist")
-                    AlbumArtists = item.get("AlbumArtists")
-                    ParentIndexNumber = item.get("ParentIndexNumber")
-                    if AlbumId and Album and Artists and AlbumArtist and AlbumArtists and ParentIndexNumber:
-                        logger.info(
-                            f"从集数 {item.get('IndexNumber')} 获取到有声书信息：{Album} - {Artists} - {Composers} - {AlbumArtist} - {AlbumArtists} - {ParentIndexNumber}")
-                        break
-            else:
-                Album = items[book_idx - 1].get("Album")
-                AlbumId = items[book_idx - 1].get("AlbumId")
-                AlbumPrimaryImageTag = items[book_idx - 1].get("AlbumPrimaryImageTag")
-                Artists = items[book_idx - 1].get("Artists")
-                ArtistItems = items[book_idx - 1].get("ArtistItems")
-                Composers = items[book_idx - 1].get("Composers")
-                AlbumArtist = items[book_idx - 1].get("AlbumArtist")
-                AlbumArtists = items[book_idx - 1].get("AlbumArtists")
-                ParentIndexNumber = items[book_idx - 1].get("ParentIndexNumber")
-                logger.info(
-                    f"从集数 {book_idx} 获取到有声书信息：{Album} - {Artists} - {Composers} - {AlbumArtist} - {AlbumArtists} - {ParentIndexNumber}")
-
-            # 更新有声书信息
-            for i, item in enumerate(items):
-                episode = i + 1
-                # 使用正则表达式匹配集数
-                match = re.search(r'第(\d+)集', item.get("Name"))
-                if match:
-                    episode = int(match.group(1))
-                else:
-                    # 使用正则表达式匹配数字
-                    match = re.search(r'\d+', item.get("Name"))
-                    if match:
-                        # 提取数字
-                        episode = match.group()
-
-                if Album == item.get("Album") and \
-                        AlbumId == item.get("AlbumId") and \
-                        AlbumPrimaryImageTag == item.get("AlbumPrimaryImageTag") and \
-                        Artists == item.get("Artists") and \
-                        ArtistItems == item.get("ArtistItems") and \
-                        Composers == item.get("Composers") and \
-                        AlbumArtist == item.get("AlbumArtist") and \
-                        AlbumArtists == item.get("AlbumArtists") and not self._rename:
-                    logger.info(f"有声书 第{episode}集 {item.get('Name')} 信息完整，跳过！")
+        if book_idx == -1:
+            for item in items:
+                AlbumId = item.get("AlbumId")
+                if not AlbumId:
                     continue
 
-                retry = 0
-                while retry < 3:
-                    try:
-                        # 获取有声书信息
-                        item_info = self.__get_audiobook_item_info(item.get("Id"))
+                Album = item.get("Album")
+                AlbumPrimaryImageTag = item.get("AlbumPrimaryImageTag")
+                Artists = item.get("Artists")
+                ArtistItems = item.get("ArtistItems")
+                Composers = item.get("Composers")
+                AlbumArtist = item.get("AlbumArtist")
+                AlbumArtists = item.get("AlbumArtists")
+                ParentIndexNumber = item.get("ParentIndexNumber")
+                if AlbumId and Album and Artists and AlbumArtist and AlbumArtists and ParentIndexNumber:
+                    logger.info(
+                        f"从集数 {item.get('IndexNumber')} 获取到有声书信息：{Album} - {Artists} - {Composers} - {AlbumArtist} - {AlbumArtists} - {ParentIndexNumber}")
+                    break
+        else:
+            Album = items[book_idx - 1].get("Album")
+            AlbumId = items[book_idx - 1].get("AlbumId")
+            AlbumPrimaryImageTag = items[book_idx - 1].get("AlbumPrimaryImageTag")
+            Artists = items[book_idx - 1].get("Artists")
+            ArtistItems = items[book_idx - 1].get("ArtistItems")
+            Composers = items[book_idx - 1].get("Composers")
+            AlbumArtist = items[book_idx - 1].get("AlbumArtist")
+            AlbumArtists = items[book_idx - 1].get("AlbumArtists")
+            ParentIndexNumber = items[book_idx - 1].get("ParentIndexNumber")
+            logger.info(
+                f"从集数 {book_idx} 获取到有声书信息：{Album} - {Artists} - {Composers} - {AlbumArtist} - {AlbumArtists} - {ParentIndexNumber}")
 
-                        # 重命名前判断名称是否一致
-                        if self._rename and item.get("Name") == Path(Path(item_info.get("Path")).name).stem:
-                            logger.info(f"有声书 第{episode}集 {item.get('Name')} 名称相同，跳过！")
-                            continue
+        # 更新有声书信息
+        for i, item in enumerate(items):
+            episode = i + 1
+            # 使用正则表达式匹配集数
+            match = re.search(r'第(\d+)集', item.get("Name"))
+            if match:
+                episode = int(match.group(1))
+            else:
+                # 使用正则表达式匹配数字
+                match = re.search(r'\d+', item.get("Name"))
+                if match:
+                    # 提取数字
+                    episode = match.group()
 
-                        item_info.update({
-                            "Album": Album,
-                            "AlbumId": AlbumId,
-                            "AlbumPrimaryImageTag": AlbumPrimaryImageTag,
-                            "Artists": Artists,
-                            "ArtistItems": ArtistItems,
-                            "Composers": Composers,
-                            "AlbumArtist": AlbumArtist,
-                            "AlbumArtists": AlbumArtists,
-                            "ParentIndexNumber": ParentIndexNumber,
-                            "IndexNumber": episode
-                        })
-                        retry = 3
-                    except Exception as e:
-                        retry += 1
-                        logger.error(f"更新有声书 第{episode}集 {item.get('Name')} 信息出错：{e} 开始重试...{retry} / 3")
+            if Album == item.get("Album") and \
+                    AlbumId == item.get("AlbumId") and \
+                    AlbumPrimaryImageTag == item.get("AlbumPrimaryImageTag") and \
+                    Artists == item.get("Artists") and \
+                    ArtistItems == item.get("ArtistItems") and \
+                    Composers == item.get("Composers") and \
+                    AlbumArtist == item.get("AlbumArtist") and \
+                    AlbumArtists == item.get("AlbumArtists") and not self._rename:
+                logger.info(f"有声书 第{episode}集 {item.get('Name')} 信息完整，跳过！")
+                continue
+
+            retry = 0
+            while retry < 3:
+                try:
+                    # 获取有声书信息
+                    item_info = self.__get_audiobook_item_info(item.get("Id"))
+
+                    # 重命名前判断名称是否一致
+                    if self._rename and item.get("Name") == Path(Path(item_info.get("Path")).name).stem:
+                        logger.info(f"有声书 第{episode}集 {item.get('Name')} 名称相同，跳过！")
                         continue
 
-                if item_info.get("Name") == "filename" or self._rename:
                     item_info.update({
-                        "Name": Path(Path(item_info.get("Path")).name).stem
+                        "Album": Album,
+                        "AlbumId": AlbumId,
+                        "AlbumPrimaryImageTag": AlbumPrimaryImageTag,
+                        "Artists": Artists,
+                        "ArtistItems": ArtistItems,
+                        "Composers": Composers,
+                        "AlbumArtist": AlbumArtist,
+                        "AlbumArtists": AlbumArtists,
+                        "ParentIndexNumber": ParentIndexNumber,
+                        "IndexNumber": episode
                     })
-                flag = self.__update_item_info(item.get("Id"), item_info)
-                logger.info(f"{Album} 第{episode}集 {item_info.get('Name')} 更新{'成功' if flag else '失败'}")
-                time.sleep(0.5)
+                    retry = 3
+                except Exception as e:
+                    retry += 1
+                    logger.error(f"更新有声书 第{episode}集 {item.get('Name')} 信息出错：{e} 开始重试...{retry} / 3")
+                    continue
+
+            if item_info.get("Name") == "filename" or self._rename:
+                item_info.update({
+                    "Name": Path(Path(item_info.get("Path")).name).stem
+                })
+            flag = self.__update_item_info(item.get("Id"), item_info)
+            logger.info(f"{Album} 第{episode}集 {item_info.get('Name')} 更新{'成功' if flag else '失败'}")
+            time.sleep(0.5)
 
     def get_state(self) -> bool:
         return self._enabled
@@ -318,7 +417,7 @@ class EmbyAudioBook(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -334,7 +433,23 @@ class EmbyAudioBook(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'onlyonce',
+                                            'label': '立即运行一次',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -350,7 +465,7 @@ class EmbyAudioBook(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
+                                    'md': 3
                                 },
                                 'content': [
                                     {
@@ -367,6 +482,23 @@ class EmbyAudioBook(_PluginBase):
                     {
                         'component': 'VRow',
                         'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'cron',
+                                            'label': '定时全量同步周期',
+                                            'placeholder': '5位cron表达式，留空关闭'
+                                        }
+                                    }
+                                ]
+                            },
                             {
                                 'component': 'VCol',
                                 'props': {
@@ -431,7 +563,9 @@ class EmbyAudioBook(_PluginBase):
         ], {
             "enabled": False,
             "notify": False,
+            "onlyonce": False,
             "rename": False,
+            "cron": "",
             "extend": "",
             "library_id": "",
         }
@@ -440,4 +574,10 @@ class EmbyAudioBook(_PluginBase):
         pass
 
     def stop_service(self):
-        pass
+        if self._scheduler:
+            self._scheduler.remove_all_jobs()
+            if self._scheduler.running:
+                self._event.set()
+                self._scheduler.shutdown()
+                self._event.clear()
+            self._scheduler = None
