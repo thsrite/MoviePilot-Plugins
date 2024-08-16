@@ -147,7 +147,7 @@ class EmbyAudioBook(_PluginBase):
             # 检查有声书是否需要整理
             for book_item in book_items:
                 if not book_item.get("AlbumId"):
-                    logger.info(f"有声书 {item.get('Name')} 需要整理")
+                    logger.info(f"有声书 {item.get('Name')} 需要整理，共 {len(book_items)} 集")
                     # self.__zl(items, -1)
                     break
 
