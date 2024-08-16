@@ -185,7 +185,7 @@ class EmbyAudioBook(_PluginBase):
                         Composers == item.get("Composers") and \
                         AlbumArtist == item.get("AlbumArtist") and \
                         AlbumArtists == item.get("AlbumArtists") and not self._rename:
-                    logger.info(f"有声书 第{episode}集  {item.get('Name')} 信息完整，跳过！")
+                    logger.info(f"有声书 第{episode}集 {item.get('Name')} 信息完整，跳过！")
                     continue
 
                 retry = 0
@@ -196,7 +196,7 @@ class EmbyAudioBook(_PluginBase):
 
                         # 重命名前判断名称是否一致
                         if self._rename and item.get("Name") == Path(Path(item_info.get("Path")).name).stem:
-                            logger.info(f"有声书 第{episode}集  {item.get('Name')} 名称相同，跳过！")
+                            logger.info(f"有声书 第{episode}集 {item.get('Name')} 名称相同，跳过！")
                             continue
 
                         item_info.update({
@@ -214,7 +214,7 @@ class EmbyAudioBook(_PluginBase):
                         retry = 3
                     except Exception as e:
                         retry += 1
-                        logger.error(f"更新有声书信息出错：{e} {item_info}, 开始重试...{retry} / 3")
+                        logger.error(f"更新有声书 第{episode}集 {item.get('Name')} 信息出错：{e} 开始重试...{retry} / 3")
                         continue
 
                 if item_info.get("Name") == "filename" or self._rename:
@@ -255,16 +255,12 @@ class EmbyAudioBook(_PluginBase):
             return {}
         req_url = f"%semby/Users/%s/Items/%s?fields=ShareLevel&ExcludeFields=Chapters,Overview,People,MediaStreams,Subviews&api_key=%s" % (
             self._EMBY_HOST, self._EMBY_USER, item_id, self._EMBY_APIKEY)
-        try:
-            with RequestUtils().get_res(req_url) as res:
-                if res:
-                    return res.json()
-                else:
-                    logger.info(f"获取有声书剧集详情失败，无法连接Emby！")
-                    return {}
-        except Exception as e:
-            logger.error(f"连接有声书详情Items出错：" + str(e))
-            return {}
+        with RequestUtils().get_res(req_url) as res:
+            if res:
+                return res.json()
+            else:
+                logger.info(f"获取有声书剧集详情失败，无法连接Emby！")
+                return {}
 
     def __update_item_info(self, item_id, data):
         headers = {
