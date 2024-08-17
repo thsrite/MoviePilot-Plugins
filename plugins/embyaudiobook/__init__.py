@@ -30,7 +30,7 @@ class EmbyAudioBook(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/audiobook.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -145,20 +145,32 @@ class EmbyAudioBook(_PluginBase):
                 return
 
             # 检查有声书是否需要整理
+            __need_zl = False
             for book_item in book_items:
                 if not book_item.get("AlbumId"):
-                    logger.info(f"有声书 {item.get('Name')} 需要整理，共 {len(book_items)} 集")
-                    # self.__zl(items, -1)
-                    # 发送通知
-                    if self._notify:
-                        mtype = NotificationType.Manual
-                        if self._msgtype:
-                            mtype = NotificationType.__getitem__(str(self._msgtype)) or NotificationType.Manual
-                        self.post_message(title="Emby有声书整理",
-                                          mtype=mtype,
-                                          text=f"有声书 {item.get('Name')} 需要整理，共 {len(book_items)} 集")
-
+                    __need_zl = True
                     break
+
+            # 需要整理的提示需要整理
+            if __need_zl:
+                logger.info(f"有声书 {item.get('Name')} 需要整理，共 {len(book_items)} 集")
+                # self.__zl(items, -1)
+                # 发送通知
+                if self._notify:
+                    mtype = NotificationType.Manual
+                    if self._msgtype:
+                        mtype = NotificationType.__getitem__(str(self._msgtype)) or NotificationType.Manual
+                    self.post_message(title="Emby有声书整理",
+                                      mtype=mtype,
+                                      text=f"有声书 {item.get('Name')} 需要整理，共 {len(book_items)} 集")
+            else:
+                # 不需要整理的锁定
+                other_book_info = self.__get_item_info(item.get("Id"))
+                other_book_info.update({
+                    "LockData": True,
+                })
+                self.__update_item_info(item.get("Id"), other_book_info)
+                logger.info(f"有声书 {item.get('Name')} 不需要整理，已锁定")
 
         logger.info("Emby有声书整理服务执行完毕")
 
@@ -206,9 +218,11 @@ class EmbyAudioBook(_PluginBase):
 
             # 获取指定有声书
             book_id = None
+            book_info = None
             for item in items:
                 if book_name in item.get("Name"):
                     book_id = item.get("Id")
+                    book_info = self.__get_item_info(book_id)
                     break
 
             if not book_id:
@@ -227,6 +241,11 @@ class EmbyAudioBook(_PluginBase):
                 return
 
             self.__zl(items, int(book_idx))
+            if book_info:
+                book_info.update({
+                    "LockData": True,
+                })
+                self.__update_item_info(book_id, book_info)
             self.post_message(channel=event.event_data.get("channel"),
                               title=f"{book_name} 有声书整理完成！",
                               userid=event.event_data.get("user"))
@@ -305,7 +324,7 @@ class EmbyAudioBook(_PluginBase):
             while retry < 3:
                 try:
                     # 获取有声书信息
-                    item_info = self.__get_audiobook_item_info(item.get("Id"))
+                    item_info = self.__get_item_info(item.get("Id"))
 
                     # 重命名前判断名称是否一致
                     if self._rename and item.get("Name") == Path(Path(item_info.get("Path")).name).stem:
@@ -322,7 +341,8 @@ class EmbyAudioBook(_PluginBase):
                         "AlbumArtist": AlbumArtist,
                         "AlbumArtists": AlbumArtists,
                         "ParentIndexNumber": ParentIndexNumber,
-                        "IndexNumber": episode
+                        "IndexNumber": episode,
+                        "LockData": True,
                     })
                     retry = 3
                 except Exception as e:
@@ -360,7 +380,7 @@ class EmbyAudioBook(_PluginBase):
             logger.error(f"连接有声书Items出错：" + str(e))
             return []
 
-    def __get_audiobook_item_info(self, item_id) -> dict:
+    def __get_item_info(self, item_id) -> dict:
         """
         获取有声书剧集详情
         """
