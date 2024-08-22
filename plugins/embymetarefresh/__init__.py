@@ -36,7 +36,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "1.7"
+    plugin_version = "1.7.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -188,7 +188,8 @@ class EmbyMetaRefresh(_PluginBase):
                     douban_actors = self.__update_people_chi(
                         item_id=item.get("SeriesId") if str(item.get('Type')) == 'Episode' else item.get("Id"),
                         title=item.get('SeriesName') if str(item.get('Type')) == 'Episode' else item.get('Name'),
-                        type=MediaType('电视剧' if str(item.get('Type')) == 'Episode' else '电影'))
+                        type=MediaType('电视剧' if str(item.get('Type')) == 'Episode' else '电影'),
+                        season=item.get("ParentIndexNumber") if str(item.get('Type')) == 'Episode' else None)
 
                     # 是否有豆瓣演员信息
                     if not douban_actors:
@@ -241,7 +242,7 @@ class EmbyMetaRefresh(_PluginBase):
             logger.error(f"获取Emby中最新媒体失败：{str(err)}")
             return []
 
-    def __update_people_chi(self, item_id, title, type):
+    def __update_people_chi(self, item_id, title, type, season=None):
         """
         刮削演员中文名
         """
@@ -253,12 +254,17 @@ class EmbyMetaRefresh(_PluginBase):
                 return None
 
             imdb_id = item_info.get("ProviderIds", {}).get("Imdb")
-            if imdb_id and self.__need_trans_actor(item_info):
+            if self.__need_trans_actor(item_info):
                 logger.info(f"开始获取 {title} ({item_info.get('ProductionYear')}) 的豆瓣演员信息 ...")
                 douban_actors = self.__get_douban_actors(title=title,
                                                          imdb_id=imdb_id,
                                                          type=type,
-                                                         year=item_info.get("ProductionYear"))
+                                                         year=item_info.get("ProductionYear"),
+                                                         season=season)
+                if not douban_actors:
+                    logger.info(f"未找到 {title} ({item_info.get('ProductionYear')}) 的豆瓣演员信息")
+                    return None
+
                 logger.debug(
                     f"获取 {title} ({item_info.get('ProductionYear')}) 的豆瓣演员信息 完成，演员：{douban_actors}")
                 self.__update_peoples(itemid=item_id, iteminfo=item_info,
@@ -444,7 +450,7 @@ class EmbyMetaRefresh(_PluginBase):
                                 character = re.sub("Director", "导演",
                                                    character)
                                 if character:
-                                    logger.info(f"{people.get('Name')} 从豆瓣中获取到饰演角色：{character}")
+                                    logger.debug(f"{people.get('Name')} 从豆瓣中获取到饰演角色：{character}")
                                     ret_people["Role"] = character
                                     update_character = True
                         # 图片
@@ -600,7 +606,7 @@ class EmbyMetaRefresh(_PluginBase):
             doubanitem = self.chain.douban_info(doubaninfo.get("id")) or {}
             return (doubanitem.get("actors") or []) + (doubanitem.get("directors") or [])
         else:
-            logger.debug(f"未找到豆瓣信息：{title} {year}")
+            logger.info(f"未找到豆瓣信息：{title} {year}")
         return []
 
     @staticmethod
@@ -680,7 +686,7 @@ class EmbyMetaRefresh(_PluginBase):
             logger.info(
                 f"已通知刷新Emby电视剧：{transferinfo.title} ({transferinfo.year}) {transferinfo.seasons}{transferinfo.episodes} item_id:{episode_item_id}")
             if self._actor_chi:
-                self.__update_people_chi(item_id=item_id, title=transferinfo.title, type=MediaType.TV)
+                self.__update_people_chi(item_id=item_id, title=transferinfo.title, type=MediaType.TV, season=season)
 
     def __get_emby_episode_item_id(self, item_id: str, season: int, episode: int) -> Optional[str]:
         """
