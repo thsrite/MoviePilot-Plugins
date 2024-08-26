@@ -392,7 +392,7 @@ class EmbyDanmu(_PluginBase):
         检查媒体是否有弹幕
         """
         season_items = self.__get_items(season_id)
-        item_path = season_items[0].get("Path")
+        item_path = self.__get_item_info(season_items[0].get("Id")).get("Path")
         parent_path = Path(item_path).parent
         logger.info(f"开始检查路径 {parent_path} 下是是否有字幕文件")
         # 检查是否有字幕文件
