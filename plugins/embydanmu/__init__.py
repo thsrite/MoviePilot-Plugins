@@ -167,9 +167,9 @@ class EmbyDanmu(_PluginBase):
                                         f"已通知弹幕插件获取 {library_name} {library_item_name} 季度：{season_id}的弹幕")
                                     season_item_cnt, danmu_cnt = self.__check_danmu_exists(season_id)
                                     if season_item_cnt == 0:
-                                        logger.error(f"Emby已配置弹幕源全部匹配弹幕失败")
+                                        logger.error(f"{library_name} {library_item_name} Emby已配置弹幕源全部匹配弹幕失败")
                                         self.post_message(channel=event.event_data.get("channel"),
-                                                          title=f"Emby已配置弹幕源全部匹配弹幕失败",
+                                                          title=f"{library_name} {library_item_name} Emby已配置弹幕源全部匹配弹幕失败",
                                                           userid=event.event_data.get("user"))
                                     else:
                                         if season_item_cnt == danmu_cnt:
@@ -203,20 +203,20 @@ class EmbyDanmu(_PluginBase):
                                                     f"已通知弹幕插件获取 {library_name} {library_item_name} 季度：{season_id}的弹幕")
                                                 season_item_cnt, danmu_cnt = self.__check_danmu_exists(season_id)
                                                 if season_item_cnt == 0:
-                                                    logger.error(f"Emby已配置弹幕源全部匹配弹幕失败")
+                                                    logger.error(f"{library_name} {library_item_name} Emby已配置弹幕源全部匹配弹幕失败")
                                                     self.post_message(channel=event.event_data.get("channel"),
-                                                                      title=f"Emby已配置弹幕源全部匹配弹幕失败",
+                                                                      title=f"{library_name} {library_item_name} Emby已配置弹幕源全部匹配弹幕失败",
                                                                       userid=event.event_data.get("user"))
                                                 else:
                                                     if season_item_cnt == danmu_cnt:
                                                         logger.info(
-                                                            f"{library_item_name} 字幕文件已全部下载完成：{danmu_cnt}")
+                                                            f"{library_name} {library_item_name} 字幕文件已全部下载完成：{danmu_cnt}")
                                                         self.post_message(channel=event.event_data.get("channel"),
                                                                           title=f"{library_name} {library_item_name} 字幕文件已全部下载完成：{danmu_cnt}",
                                                                           userid=event.event_data.get("user"))
                                                     else:
                                                         logger.error(
-                                                            f"{library_item_name} 字幕文件未全部下载完成：{season_item_cnt}/{danmu_cnt}")
+                                                            f"{library_name} {library_item_name} 字幕文件未全部下载完成：{season_item_cnt}/{danmu_cnt}")
                                                         self.post_message(channel=event.event_data.get("channel"),
                                                                           title=f"{library_name} {library_item_name} 字幕文件未全部下载完成：{season_item_cnt}/{danmu_cnt}",
                                                                           userid=event.event_data.get("user"))
@@ -236,20 +236,20 @@ class EmbyDanmu(_PluginBase):
                                                 f"已通知弹幕插件获取 {library_name} {library_item_name} 季度：{season_id}的弹幕")
                                             season_item_cnt, danmu_cnt = self.__check_danmu_exists(season_id)
                                             if season_item_cnt == 0:
-                                                logger.error(f"Emby已配置弹幕源全部匹配弹幕失败")
+                                                logger.error(f"{library_name} {library_item_name} Emby已配置弹幕源全部匹配弹幕失败")
                                                 self.post_message(channel=event.event_data.get("channel"),
-                                                                  title=f"Emby已配置弹幕源全部匹配弹幕失败",
+                                                                  title=f"{library_name} {library_item_name} Emby已配置弹幕源全部匹配弹幕失败",
                                                                   userid=event.event_data.get("user"))
                                             else:
                                                 if season_item_cnt == danmu_cnt:
                                                     logger.info(
-                                                        f"{library_item_name} 字幕文件已全部下载完成：{danmu_cnt}")
+                                                        f"{library_name} {library_item_name} 字幕文件已全部下载完成：{danmu_cnt}")
                                                     self.post_message(channel=event.event_data.get("channel"),
                                                                       title=f"{library_name} {library_item_name} 字幕文件已全部下载完成：{danmu_cnt}",
                                                                       userid=event.event_data.get("user"))
                                                 else:
                                                     logger.error(
-                                                        f"{library_item_name} 字幕文件未全部下载完成：{danmu_cnt}/{season_item_cnt}")
+                                                        f"{library_name} {library_item_name} 字幕文件未全部下载完成：{danmu_cnt}/{season_item_cnt}")
                                                     self.post_message(channel=event.event_data.get("channel"),
                                                                       title=f"{library_name} {library_item_name} 字幕文件未全部下载完成：{danmu_cnt}/{season_item_cnt}",
                                                                       userid=event.event_data.get("user"))
@@ -304,7 +304,7 @@ class EmbyDanmu(_PluginBase):
                                     else:
                                         logger.error(f"{parent_path} 下未找到字幕文件：{danmu_path_pattern}")
                                         self.post_message(channel=event.event_data.get("channel"),
-                                                          title=f"{library_name} {item.get('Name')} 下载字幕文件失败",
+                                                          title=f"{library_name} {item.get('Name')} 已配置弹幕源全部匹配弹幕失败",
                                                           userid=event.event_data.get("user"))
                                 else:
                                     logger.error(
