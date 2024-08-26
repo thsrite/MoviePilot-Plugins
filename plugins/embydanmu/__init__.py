@@ -65,7 +65,7 @@ class EmbyDanmu(_PluginBase):
                 return
 
             args_list = args.split(" ")
-            if len(args_list) != 2 or len(args_list) != 3:
+            if len(args_list) != 2 and len(args_list) != 3:
                 logger.error(f"参数错误：{args_list}")
                 self.post_message(channel=event.event_data.get("channel"),
                                   title=f"参数错误！ /danmu 媒体库名 媒体名 (季)",
