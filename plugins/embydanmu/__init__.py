@@ -1,4 +1,5 @@
 import json
+import re
 import time
 from pathlib import Path
 from typing import List, Tuple, Dict, Any
@@ -20,7 +21,7 @@ class EmbyDanmu(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/danmu.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -69,6 +70,15 @@ class EmbyDanmu(_PluginBase):
                 logger.error(f"参数错误：{args_list}")
                 self.post_message(channel=event.event_data.get("channel"),
                                   title=f"参数错误！ /danmu 媒体库名 媒体名 (季)",
+                                  userid=event.event_data.get("user"))
+                return
+
+            # 检查插件是否正确配置
+            danmu_source = self.__get_danmu_source()
+            if not danmu_source:
+                logger.error(f"未配置弹幕源")
+                self.post_message(channel=event.event_data.get("channel"),
+                                  title=f"Emby未正确配置弹幕源",
                                   userid=event.event_data.get("user"))
                 return
 
@@ -156,18 +166,24 @@ class EmbyDanmu(_PluginBase):
                                     logger.info(
                                         f"已通知弹幕插件获取 {library_name} {library_item_name} 季度：{season_id}的弹幕")
                                     season_item_cnt, danmu_cnt = self.__check_danmu_exists(season_id)
-                                    if season_item_cnt == danmu_cnt:
-                                        logger.info(
-                                            f"{library_name} {library_item_name} 字幕文件已全部下载完成：{danmu_cnt}")
+                                    if season_item_cnt == 0:
+                                        logger.error(f"Emby已配置弹幕源全部匹配弹幕失败")
                                         self.post_message(channel=event.event_data.get("channel"),
-                                                          title=f"{library_name} {library_item_name} 字幕文件已全部下载完成：{danmu_cnt}",
+                                                          title=f"Emby已配置弹幕源全部匹配弹幕失败",
                                                           userid=event.event_data.get("user"))
                                     else:
-                                        logger.error(
-                                            f"{library_name} {library_item_name} 字幕文件未全部下载完成：{danmu_cnt}/{season_item_cnt}")
-                                        self.post_message(channel=event.event_data.get("channel"),
-                                                          title=f"{library_name} {library_item_name} 字幕文件未全部下载完成：{danmu_cnt}/{season_item_cnt}",
-                                                          userid=event.event_data.get("user"))
+                                        if season_item_cnt == danmu_cnt:
+                                            logger.info(
+                                                f"{library_name} {library_item_name} 字幕文件已全部下载完成：{danmu_cnt}")
+                                            self.post_message(channel=event.event_data.get("channel"),
+                                                              title=f"{library_name} {library_item_name} 字幕文件已全部下载完成：{danmu_cnt}",
+                                                              userid=event.event_data.get("user"))
+                                        else:
+                                            logger.error(
+                                                f"{library_name} {library_item_name} 字幕文件未全部下载完成：{season_item_cnt}/{danmu_cnt}")
+                                            self.post_message(channel=event.event_data.get("channel"),
+                                                              title=f"{library_name} {library_item_name} 字幕文件未全部下载完成：{season_item_cnt}/{danmu_cnt}",
+                                                              userid=event.event_data.get("user"))
                                 else:
                                     logger.error(
                                         f"通知弹幕插件获取 {library_name} {library_item_name} 季度：{season_id}的弹幕失败")
@@ -186,18 +202,24 @@ class EmbyDanmu(_PluginBase):
                                                 logger.info(
                                                     f"已通知弹幕插件获取 {library_name} {library_item_name} 季度：{season_id}的弹幕")
                                                 season_item_cnt, danmu_cnt = self.__check_danmu_exists(season_id)
-                                                if season_item_cnt == danmu_cnt:
-                                                    logger.info(
-                                                        f"{library_item_name} 字幕文件已全部下载完成：{danmu_cnt}")
+                                                if season_item_cnt == 0:
+                                                    logger.error(f"Emby已配置弹幕源全部匹配弹幕失败")
                                                     self.post_message(channel=event.event_data.get("channel"),
-                                                                      title=f"{library_name} {library_item_name} 字幕文件已全部下载完成：{danmu_cnt}",
+                                                                      title=f"Emby已配置弹幕源全部匹配弹幕失败",
                                                                       userid=event.event_data.get("user"))
                                                 else:
-                                                    logger.error(
-                                                        f"{library_item_name} 字幕文件未全部下载完成：{danmu_cnt}/{season_item_cnt}")
-                                                    self.post_message(channel=event.event_data.get("channel"),
-                                                                      title=f"{library_name} {library_item_name} 字幕文件未全部下载完成：{danmu_cnt}/{season_item_cnt}",
-                                                                      userid=event.event_data.get("user"))
+                                                    if season_item_cnt == danmu_cnt:
+                                                        logger.info(
+                                                            f"{library_item_name} 字幕文件已全部下载完成：{danmu_cnt}")
+                                                        self.post_message(channel=event.event_data.get("channel"),
+                                                                          title=f"{library_name} {library_item_name} 字幕文件已全部下载完成：{danmu_cnt}",
+                                                                          userid=event.event_data.get("user"))
+                                                    else:
+                                                        logger.error(
+                                                            f"{library_item_name} 字幕文件未全部下载完成：{season_item_cnt}/{danmu_cnt}")
+                                                        self.post_message(channel=event.event_data.get("channel"),
+                                                                          title=f"{library_name} {library_item_name} 字幕文件未全部下载完成：{season_item_cnt}/{danmu_cnt}",
+                                                                          userid=event.event_data.get("user"))
                                             else:
                                                 logger.error(
                                                     f"通知弹幕插件获取 {library_name} {library_item_name} 季度：{library_item_season}的弹幕失败")
@@ -213,18 +235,24 @@ class EmbyDanmu(_PluginBase):
                                             logger.info(
                                                 f"已通知弹幕插件获取 {library_name} {library_item_name} 季度：{season_id}的弹幕")
                                             season_item_cnt, danmu_cnt = self.__check_danmu_exists(season_id)
-                                            if season_item_cnt == danmu_cnt:
-                                                logger.info(
-                                                    f"{library_item_name} 字幕文件已全部下载完成：{danmu_cnt}")
+                                            if season_item_cnt == 0:
+                                                logger.error(f"Emby已配置弹幕源全部匹配弹幕失败")
                                                 self.post_message(channel=event.event_data.get("channel"),
-                                                                  title=f"{library_name} {library_item_name} 字幕文件已全部下载完成：{danmu_cnt}",
+                                                                  title=f"Emby已配置弹幕源全部匹配弹幕失败",
                                                                   userid=event.event_data.get("user"))
                                             else:
-                                                logger.error(
-                                                    f"{library_item_name} 字幕文件未全部下载完成：{danmu_cnt}/{season_item_cnt}")
-                                                self.post_message(channel=event.event_data.get("channel"),
-                                                                  title=f"{library_name} {library_item_name} 字幕文件未全部下载完成：{danmu_cnt}/{season_item_cnt}",
-                                                                  userid=event.event_data.get("user"))
+                                                if season_item_cnt == danmu_cnt:
+                                                    logger.info(
+                                                        f"{library_item_name} 字幕文件已全部下载完成：{danmu_cnt}")
+                                                    self.post_message(channel=event.event_data.get("channel"),
+                                                                      title=f"{library_name} {library_item_name} 字幕文件已全部下载完成：{danmu_cnt}",
+                                                                      userid=event.event_data.get("user"))
+                                                else:
+                                                    logger.error(
+                                                        f"{library_item_name} 字幕文件未全部下载完成：{danmu_cnt}/{season_item_cnt}")
+                                                    self.post_message(channel=event.event_data.get("channel"),
+                                                                      title=f"{library_name} {library_item_name} 字幕文件未全部下载完成：{danmu_cnt}/{season_item_cnt}",
+                                                                      userid=event.event_data.get("user"))
                                         else:
                                             logger.error(
                                                 f"通知弹幕插件获取 {library_name} {library_item_name} 季度：{season_id}的弹幕失败")
@@ -249,19 +277,24 @@ class EmbyDanmu(_PluginBase):
                                     logger.info(
                                         f"已通知弹幕插件获取 {library_name} {item.get('Name')} {movie_id} 的弹幕")
                                     # 获取媒体详情
-                                    movie_info = self.__get_item_info(movie_id)
-
-                                    movie_path = movie_info.get("Path")
-                                    parent_path = Path(movie_path).parent
+                                    item_info = self.__get_item_info(movie_id)
+                                    item_path = item_info.get("Path")
+                                    parent_path = Path(item_path).parent
                                     logger.info(f"开始检查路径 {parent_path} 下是是否有字幕文件")
                                     # 检查是否有字幕文件
-                                    danmu_path_pattern = Path(movie_path).stem + "*.xml"
+                                    danmu_path_pattern = Path(item_path).stem + "*.xml"
                                     retry_cnt = 3
                                     while len(list(parent_path.glob(danmu_path_pattern))) == 0 and retry_cnt > 0:
-                                        retry_cnt -= 1
-                                        logger.warn(
-                                            f"{parent_path} 下未找到字幕文件：{danmu_path_pattern}，等待60秒后重试 ({retry_cnt}次)")
-                                        time.sleep(60)
+                                        # 解析日志判断是否全部失败
+                                        if self.__check_all_failed_by_log(item_name=item_info.get("Name"),
+                                                                          item_year=item_info.get("ProductionYear")):
+                                            logger.error(f"解析日志判断已配置弹幕源全部匹配弹幕失败")
+                                            retry_cnt = -1
+                                        else:
+                                            retry_cnt -= 1
+                                            logger.warn(
+                                                f"{parent_path} 下未找到字幕文件：{danmu_path_pattern}，等待60秒后重试 ({retry_cnt}次)")
+                                            time.sleep(60)
 
                                     if len(list(parent_path.glob(danmu_path_pattern))) >= 1:
                                         logger.info(f"{parent_path} 下已找到字幕文件：{danmu_path_pattern}")
@@ -358,7 +391,7 @@ class EmbyDanmu(_PluginBase):
         通知Danmu插件获取弹幕
         """
         if not self._EMBY_HOST or not self._EMBY_APIKEY:
-            return []
+            return False
         req_url = f"%sapi/danmu/%s?option=Refresh&api_key=%s" % (
             self._EMBY_HOST, item_id, self._EMBY_APIKEY)
         try:
@@ -392,7 +425,8 @@ class EmbyDanmu(_PluginBase):
         检查媒体是否有弹幕
         """
         season_items = self.__get_items(season_id)
-        item_path = self.__get_item_info(season_items[0].get("Id")).get("Path")
+        item_info = self.__get_item_info(season_items[0].get("Id"))
+        item_path = item_info.get("Path")
         parent_path = Path(item_path).parent
         logger.info(f"开始检查路径 {parent_path} 下是是否有字幕文件")
         # 检查是否有字幕文件
@@ -401,17 +435,118 @@ class EmbyDanmu(_PluginBase):
         retry_cnt = len(season_items)
         _downloaded_danmu_files = []
         while len(_downloaded_danmu_files) < len(season_items) and retry_cnt > 0:
-            danmu_files = list(parent_path.glob(danmu_path_pattern))
-            for danmu_file in danmu_files:
-                if danmu_file.name not in _downloaded_danmu_files:
-                    _downloaded_danmu_files.append(danmu_file.name)
-                    logger.info(f"已下载字幕文件：{danmu_file.name}")
-            retry_cnt -= 1
-            logger.warn(
-                f"{parent_path} 下字幕文件：{danmu_path_pattern} 未下载完成，等待60秒后重试 ({retry_cnt}次)")
-            time.sleep(60)
+            # 解析日志判断是否全部失败
+            if self.__check_all_failed_by_log(item_name=item_info.get("SeriesName"),
+                                              item_year=item_info.get("ProductionYear")):
+                logger.error(f"解析日志判断已配置弹幕源全部匹配弹幕失败")
+                retry_cnt = -1
+            else:
+                danmu_files = list(parent_path.glob(danmu_path_pattern))
+                for danmu_file in danmu_files:
+                    if danmu_file.name not in _downloaded_danmu_files:
+                        _downloaded_danmu_files.append(danmu_file.name)
+                        logger.info(f"已下载字幕文件：{danmu_file.name}")
+                retry_cnt -= 1
+                logger.warn(
+                    f"{parent_path} 下字幕文件：{danmu_path_pattern} 未下载完成，等待60秒后重试 ({retry_cnt}次)")
+                time.sleep(60)
 
         return len(_downloaded_danmu_files), len(season_items)
+
+    def __get_plugins(self) -> list:
+        """
+        获取插件列表
+        """
+        if not self._EMBY_HOST or not self._EMBY_APIKEY:
+            return []
+        req_url = f"%semby/web/configurationpages?PageType=PluginConfiguration&EnableInMainMenu=true&UserId=%s&api_key=%s" % (
+            self._EMBY_HOST, self._EMBY_USER, self._EMBY_APIKEY)
+        with RequestUtils().get_res(req_url) as res:
+            if res:
+                return res.json()
+            else:
+                logger.info(f"获取插件列表失败，无法连接Emby！")
+                return []
+
+    def __get_plugin_info(self, plugin_id) -> dict:
+        """
+        获取插件详情
+        """
+        if not self._EMBY_HOST or not self._EMBY_APIKEY:
+            return {}
+        req_url = f"%semby/Plugins/%s/Configuration?api_key=%s" % (
+            self._EMBY_HOST, plugin_id, self._EMBY_APIKEY)
+        with RequestUtils().get_res(req_url) as res:
+            if res:
+                return res.json()
+            else:
+                logger.info(f"获取插件详情失败，无法连接Emby！")
+                return {}
+
+    def __get_danmu_source(self) -> list:
+        """
+        获取弹幕源
+        """
+        # 获取插件列表
+        list_plugins = self.__get_plugins()
+        if not list_plugins:
+            return []
+
+        # 获取弹幕配置插件
+        plugin_id = None
+        for plugin in list_plugins:
+            if plugin.get("Name") == "danmu":
+                plugin_id = plugin.get("PluginId")
+                break
+
+        if not plugin_id:
+            logger.error("弹幕配置插件未安装")
+            return []
+
+        # 获取弹幕源
+        plugin_info = self.__get_plugin_info(plugin_id)
+        if not plugin_info:
+            return []
+
+        scrapers = plugin_info.get("Scrapers", [])
+        if not scrapers:
+            return []
+
+        return [scraper.get("Name") for scraper in scrapers if scraper.get("Enable") == True]
+
+    def __get_emby_log(self) -> str:
+        """
+        获取emby日志
+        """
+        if not self._EMBY_HOST or not self._EMBY_APIKEY:
+            return ""
+        req_url = f"%sSystem/Logs/embyserver.txt?api_key=%s" % (
+            self._EMBY_HOST, self._EMBY_APIKEY)
+        with RequestUtils().get_res(req_url) as res:
+            if res:
+                return res.text
+            else:
+                logger.info(f"获取插件详情失败，无法连接Emby！")
+                return ""
+
+    def __check_all_failed_by_log(self, item_name, item_year) -> bool:
+        """
+        解析emby日志
+        """
+        danmu_source = self.__get_danmu_source()
+        emby_log = self.__get_emby_log()
+        if not emby_log:
+            return False
+
+        # 正则解析删除的媒体信息
+        all_matched = True
+        for source in danmu_source:
+            pattern = fr'\[{source}\]匹配失败：{item_name} \({item_year}\)'
+            matches = re.findall(pattern, emby_log)
+            if not matches:
+                all_matched = False
+                break
+        return all_matched
 
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
