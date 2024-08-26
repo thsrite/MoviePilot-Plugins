@@ -743,5 +743,17 @@
       "v1.1": "整理完锁定，防止数据被刷新",
       "v1.0": "还在为Emby有声书整理烦恼吗？入库存在很多单集。"
     }
+  },
+  "EmbyDanmu": {
+    "name": "Emby弹幕下载",
+    "description": "通知Emby Danmu插件下载弹幕。",
+    "labels": "Emby,媒体库",
+    "version": "1.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/danmu.png",
+    "author": "thsrite",
+    "level": 1,
+    "history": {
+      "v1.0": "通知Emby Danmu插件下载弹幕。"
+    }
   }
 }
