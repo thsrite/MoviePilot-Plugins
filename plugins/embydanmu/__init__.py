@@ -36,6 +36,7 @@ class EmbyDanmu(_PluginBase):
     # 私有属性
     _enabled = False
     _library_task = {}
+    _danmu_source = []
 
     _EMBY_HOST = settings.EMBY_HOST
     _EMBY_USER = Emby().get_user()
@@ -43,6 +44,7 @@ class EmbyDanmu(_PluginBase):
 
     def init_plugin(self, config: dict = None):
         self._library_task = {}
+        self._danmu_source = self.__get_danmu_source()
         # 读取配置
         if config:
             self._enabled = config.get("enabled")
@@ -76,8 +78,7 @@ class EmbyDanmu(_PluginBase):
                 return
 
             # 检查插件是否正确配置
-            danmu_source = self.__get_danmu_source()
-            if not danmu_source:
+            if not self._danmu_source:
                 logger.error(f"未配置弹幕源")
                 self.post_message(channel=event.event_data.get("channel"),
                                   title=f"Emby未正确配置弹幕源",
@@ -626,14 +627,13 @@ class EmbyDanmu(_PluginBase):
         """
         解析emby日志
         """
-        danmu_source = self.__get_danmu_source()
         emby_log = self.__get_emby_log()
         if not emby_log:
             return False
 
         # 正则解析删除的媒体信息
         all_matched = True
-        for source in danmu_source:
+        for source in self._danmu_source:
             pattern = fr'\[{source}\]匹配失败：{item_name} \({item_year}\)'
             matches = re.findall(pattern, emby_log)
             if not matches:
