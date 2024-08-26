@@ -19,8 +19,6 @@ from app.schemas import NotificationType
 from app.schemas.types import EventType
 from app.utils.http import RequestUtils
 
-lock = threading.Lock()
-
 
 class EmbyAudioBook(_PluginBase):
     # 插件名称
