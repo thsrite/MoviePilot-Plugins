@@ -50,7 +50,6 @@ class EmbyAudioBook(_PluginBase):
     _onlyonce = False
     _cron = None
     _library_id = None
-    _extend = None
     _msgtype = None
 
     _EMBY_HOST = settings.EMBY_HOST
@@ -594,7 +593,7 @@ class EmbyAudioBook(_PluginBase):
             "onlyonce": False,
             "rename": False,
             "cron": "",
-            "extend": "",
+            "msgtype": "",
             "library_id": "",
         }
 
