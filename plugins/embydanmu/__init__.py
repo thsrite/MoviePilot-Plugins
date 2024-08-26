@@ -44,7 +44,6 @@ class EmbyDanmu(_PluginBase):
 
     def init_plugin(self, config: dict = None):
         self._library_task = {}
-        self._danmu_source = self.__get_danmu_source()
         # 读取配置
         if config:
             self._enabled = config.get("enabled")
@@ -55,8 +54,10 @@ class EmbyDanmu(_PluginBase):
                 if not self._EMBY_HOST.startswith("http"):
                     self._EMBY_HOST = "http://" + self._EMBY_HOST
 
+            self._danmu_source = self.__get_danmu_source()
+
     @eventmanager.register(EventType.PluginAction)
-    def audiobook(self, event: Event = None):
+    def danmu(self, event: Event = None):
         if not self._enabled:
             return
         if event:
