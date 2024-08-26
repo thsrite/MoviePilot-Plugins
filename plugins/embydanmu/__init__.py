@@ -78,7 +78,7 @@ class EmbyDanmu(_PluginBase):
             if len(args_list) == 3:
                 library_item_season = int(args_list[2])
             logger.info(
-                f"开始下载字幕文件：{library_name} - {library_item_name} {f'(季{library_item_season})' if library_item_name else ''}")
+                f"开始下载字幕文件：{library_name} - {library_item_name} {f'(季{library_item_season})' if library_item_season else ''}")
 
             # 获取媒体库信息
             librarys = self.__get_librarys()
@@ -154,7 +154,7 @@ class EmbyDanmu(_PluginBase):
                                 danmu_flag = self.__download_danmu(season_id)
                                 if danmu_flag:
                                     logger.info(
-                                        f"已通知弹幕插件获取 {library_name} 电视剧 {library_item_name} 季度：{season_id}的弹幕")
+                                        f"已通知弹幕插件获取 {library_name} {library_item_name} 季度：{season_id}的弹幕")
                                     season_item_cnt, danmu_cnt = self.__check_danmu_exists(season_id)
                                     if season_item_cnt == danmu_cnt:
                                         logger.info(
@@ -170,9 +170,9 @@ class EmbyDanmu(_PluginBase):
                                                           userid=event.event_data.get("user"))
                                 else:
                                     logger.error(
-                                        f"通知弹幕插件获取 {library_name} 电视剧 {library_item_name} 季度：{season_id}的弹幕失败")
+                                        f"通知弹幕插件获取 {library_name} {library_item_name} 季度：{season_id}的弹幕失败")
                                     self.post_message(channel=event.event_data.get("channel"),
-                                                      title=f"通知弹幕插件获取 {library_name} 电视剧 {library_item_name} 季度：{season_id}的弹幕失败",
+                                                      title=f"通知弹幕插件获取 {library_name} {library_item_name} 季度：{season_id}的弹幕失败",
                                                       userid=event.event_data.get("user"))
                             else:
                                 for season in seasons:
@@ -184,7 +184,7 @@ class EmbyDanmu(_PluginBase):
                                             danmu_flag = self.__download_danmu(season_id)
                                             if danmu_flag:
                                                 logger.info(
-                                                    f"已通知弹幕插件获取 {library_name} 电视剧 {library_item_name} 季度：{season_id}的弹幕")
+                                                    f"已通知弹幕插件获取 {library_name} {library_item_name} 季度：{season_id}的弹幕")
                                                 season_item_cnt, danmu_cnt = self.__check_danmu_exists(season_id)
                                                 if season_item_cnt == danmu_cnt:
                                                     logger.info(
@@ -200,9 +200,9 @@ class EmbyDanmu(_PluginBase):
                                                                       userid=event.event_data.get("user"))
                                             else:
                                                 logger.error(
-                                                    f"通知弹幕插件获取 {library_name} 电视剧 {library_item_name} 季度：{library_item_season}的弹幕失败")
+                                                    f"通知弹幕插件获取 {library_name} {library_item_name} 季度：{library_item_season}的弹幕失败")
                                                 self.post_message(channel=event.event_data.get("channel"),
-                                                                  title=f"通知弹幕插件获取 {library_name} 电视剧 {library_item_name} 季度：{season_id}的弹幕失败",
+                                                                  title=f"通知弹幕插件获取 {library_name} {library_item_name} 季度：{season_id}的弹幕失败",
                                                                   userid=event.event_data.get("user"))
                                     else:
                                         # 未指定季度则获取全部季度的弹幕
@@ -211,7 +211,7 @@ class EmbyDanmu(_PluginBase):
                                         danmu_flag = self.__download_danmu(season_id)
                                         if danmu_flag:
                                             logger.info(
-                                                f"已通知弹幕插件获取 {library_name} 电视剧 {library_item_name} 季度：{season_id}的弹幕")
+                                                f"已通知弹幕插件获取 {library_name} {library_item_name} 季度：{season_id}的弹幕")
                                             season_item_cnt, danmu_cnt = self.__check_danmu_exists(season_id)
                                             if season_item_cnt == danmu_cnt:
                                                 logger.info(
@@ -227,9 +227,9 @@ class EmbyDanmu(_PluginBase):
                                                                   userid=event.event_data.get("user"))
                                         else:
                                             logger.error(
-                                                f"通知弹幕插件获取 {library_name} 电视剧 {library_item_name} 季度：{season_id}的弹幕失败")
+                                                f"通知弹幕插件获取 {library_name} {library_item_name} 季度：{season_id}的弹幕失败")
                                             self.post_message(channel=event.event_data.get("channel"),
-                                                              title=f"通知弹幕插件获取 {library_name}  电视剧 {library_item_name} 季度：{season_id}的弹幕失败",
+                                                              title=f"通知弹幕插件获取 {library_name} {library_item_name} 季度：{season_id}的弹幕失败",
                                                               userid=event.event_data.get("user"))
                     else:
                         # 电影弹幕
@@ -237,9 +237,9 @@ class EmbyDanmu(_PluginBase):
                             movie_id = item.get("Id")
                             movie_items = self.__get_items(movie_id)
                             if not movie_items:
-                                logger.error(f"获取 {library_name} 电影：{library_item_name}的媒体列表失败")
+                                logger.error(f"获取 {library_name} {item.get('Name')}的媒体列表失败")
                                 self.post_message(channel=event.event_data.get("channel"),
-                                                  title=f"获取电影：{library_name} {library_item_name}的媒体列表失败",
+                                                  title=f"获取电影：{library_name} {item.get('Name')}的媒体列表失败",
                                                   userid=event.event_data.get("user"))
                             else:
                                 movie_id = movie_items[0].get("Id")
@@ -247,7 +247,7 @@ class EmbyDanmu(_PluginBase):
                                 danmu_flag = self.__download_danmu(movie_id)
                                 if danmu_flag:
                                     logger.info(
-                                        f"已通知弹幕插件获取 {library_name} 电影 {library_item_name} {movie_id} 的弹幕")
+                                        f"已通知弹幕插件获取 {library_name} {item.get('Name')} {movie_id} 的弹幕")
                                     # 获取媒体详情
                                     movie_info = self.__get_item_info(movie_id)
 
@@ -266,18 +266,18 @@ class EmbyDanmu(_PluginBase):
                                     if len(list(parent_path.glob(danmu_path_pattern))) >= 1:
                                         logger.info(f"{parent_path} 下已找到字幕文件：{danmu_path_pattern}")
                                         self.post_message(channel=event.event_data.get("channel"),
-                                                          title=f"{library_name} {library_item_name} 下载字幕文件成功",
+                                                          title=f"{library_name} {item.get('Name')} 下载字幕文件成功",
                                                           userid=event.event_data.get("user"))
                                     else:
                                         logger.error(f"{parent_path} 下未找到字幕文件：{danmu_path_pattern}")
                                         self.post_message(channel=event.event_data.get("channel"),
-                                                          title=f"{library_name} {library_item_name} 下载字幕文件失败",
+                                                          title=f"{library_name} {item.get('Name')} 下载字幕文件失败",
                                                           userid=event.event_data.get("user"))
                                 else:
                                     logger.error(
-                                        f"通知弹幕插件获取 {library_name} 电影 {library_item_name} {movie_id} 的弹幕失败")
+                                        f"通知弹幕插件获取 {library_name} {item.get('Name')} {movie_id} 的弹幕失败")
                                     self.post_message(channel=event.event_data.get("channel"),
-                                                      title=f"通知弹幕插件获取 {library_name} 电影 {library_item_name} {movie_id} 的弹幕失败",
+                                                      title=f"通知弹幕插件获取 {library_name} 电影 {item.get('Name')} {movie_id} 的弹幕失败",
                                                       userid=event.event_data.get("user"))
 
             # 关闭弹幕插件
