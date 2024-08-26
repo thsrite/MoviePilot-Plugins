@@ -610,7 +610,7 @@ class EmbyDanmu(_PluginBase):
 
     def __get_emby_log(self) -> str:
         """
-        获取emby日志
+        获取emby日志 最新200行
         """
         if not self._EMBY_HOST or not self._EMBY_APIKEY:
             return ""
@@ -618,7 +618,9 @@ class EmbyDanmu(_PluginBase):
             self._EMBY_HOST, self._EMBY_APIKEY)
         with RequestUtils().get_res(req_url) as res:
             if res:
-                return res.text
+                emby_log = res.text.split("\n")
+                emby_log = emby_log[-200:]
+                return "\n".join(emby_log)
             else:
                 logger.info(f"获取插件详情失败，无法连接Emby！")
                 return ""
@@ -635,6 +637,12 @@ class EmbyDanmu(_PluginBase):
         all_matched = True
         for source in self._danmu_source:
             pattern = fr'\[{source}\]匹配失败：{item_name} \({item_year}\)'
+            matches = re.findall(pattern, emby_log)
+            if not matches:
+                all_matched = False
+                break
+
+            pattern = fr'\[{source}\]弹幕内容少于1KB，忽略处理：.{item_name}'
             matches = re.findall(pattern, emby_log)
             if not matches:
                 all_matched = False
