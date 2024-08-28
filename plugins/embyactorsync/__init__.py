@@ -10,7 +10,7 @@ from app.core.event import eventmanager, Event
 from app.log import logger
 from app.plugins import _PluginBase
 from app.modules.emby import Emby
-from app.schemas.types import EventType
+from app.schemas.types import EventType, MediaType
 from app.utils.http import RequestUtils
 
 
@@ -123,7 +123,7 @@ class EmbyActorSync(_PluginBase):
 
         # 匹配需要的媒体库
         for library in librarys:
-            if str(library.type) != "tvshows":
+            if library.type != MediaType.TV.value:
                 continue
             if self._librarys and library.name not in self._librarys:
                 continue
@@ -235,7 +235,7 @@ class EmbyActorSync(_PluginBase):
         """
         librarys = Emby().get_librarys()
         library_options = [{'title': library.name, 'value': library.name} for library in librarys if
-                           str(library.type) == "tvshows"]
+                           library.type == MediaType.TV.value]
         return [
             {
                 "component": "VForm",
