@@ -128,8 +128,11 @@ class EmbyActorSync(_PluginBase):
                                 flag = self.__update_item_info(season_item.get("Id"), season_item_info)
                                 logger.info(
                                     f"更新媒体：{item.get('Name')} {season_item_info.get('SeasonName')} {season_item_info.get('IndexNumber')} {season_item_info.get('Name')} 成功：{flag}")
-                                retry = 3
-                                time.sleep(0.5)
+                                if flag:
+                                    retry = 3
+                                    time.sleep(0.5)
+                                else:
+                                    retry += 1
                             except Exception as e:
                                 retry += 1
                                 logger.error(
