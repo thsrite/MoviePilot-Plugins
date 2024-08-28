@@ -6,9 +6,11 @@ from typing import Optional, Any, List, Dict, Tuple
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.core.config import settings
+from app.core.event import eventmanager, Event
 from app.log import logger
 from app.plugins import _PluginBase
 from app.modules.emby import Emby
+from app.schemas.types import EventType
 from app.utils.http import RequestUtils
 
 
@@ -20,7 +22,7 @@ class EmbyActorSync(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/embyactorsync.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -33,6 +35,7 @@ class EmbyActorSync(_PluginBase):
     auth_level = 1
 
     _onlyonce = False
+    _enabled = False
     _librarys = None
     _EMBY_HOST = settings.EMBY_HOST
     _EMBY_USER = Emby().get_user()
@@ -41,6 +44,7 @@ class EmbyActorSync(_PluginBase):
 
     def init_plugin(self, config: dict = None):
         if config:
+            self._enabled = config.get("enabled")
             self._onlyonce = config.get("onlyonce")
             self._librarys = config.get("librarys") or []
 
@@ -75,17 +79,42 @@ class EmbyActorSync(_PluginBase):
                     self._scheduler.start()
 
     def get_state(self) -> bool:
-        return False
+        return self._enabled
 
     def __update_config(self):
         self.update_config(
             {
+                "enabled": self._enabled,
                 "onlyonce": self._onlyonce,
                 "librarys": self._librarys,
             }
         )
 
-    def sync(self):
+    @eventmanager.register(EventType.PluginAction)
+    def sync_actor(self, event: Event = None):
+        if not self._enabled:
+            return
+        if event:
+            event_data = event.event_data
+            if not event_data or event_data.get("action") != "actorsync":
+                return
+
+            args = event_data.get("args")
+            if not args:
+                logger.error(f"缺少参数：{event_data}")
+                return
+
+            args_list = args.split(" ")
+            if len(args_list) != 2:
+                logger.error(f"参数错误：{args_list}")
+                self.post_message(channel=event.event_data.get("channel"),
+                                  title=f"参数错误！ /as 媒体库名 剧集名",
+                                  userid=event.event_data.get("user"))
+                return
+
+            self.sync(args_list[0], args_list[1])
+
+    def sync(self, library_name: str = None, media_name: str = None):
         """
         Emby剧集演员同步
         """
@@ -98,6 +127,9 @@ class EmbyActorSync(_PluginBase):
                 continue
             if self._librarys and library.name not in self._librarys:
                 continue
+            if library_name and library.name != library_name:
+                continue
+
             logger.info(f"开始同步媒体库：{library.name}，ID：{library.id}")
             # 获取媒体库媒体列表
             library_items = self.__get_items(library.id)
@@ -107,6 +139,8 @@ class EmbyActorSync(_PluginBase):
 
             # 遍历媒体列表，获取媒体的ID和名称
             for item in library_items:
+                if media_name and item.get("Name") != media_name:
+                    continue
                 item_info = self.__get_item_info(item.get("Id"))
                 seasons = self.__get_items(item.get("Id"))
                 for season in seasons:
@@ -180,7 +214,17 @@ class EmbyActorSync(_PluginBase):
 
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
-        pass
+        return [
+            {
+                "cmd": "/as",
+                "event": EventType.PluginAction,
+                "desc": "Emby剧集演员同步",
+                "category": "",
+                "data": {
+                    "action": "actorsync"
+                }
+            }
+        ]
 
     def get_api(self) -> List[Dict[str, Any]]:
         pass

@@ -68,4 +68,4 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 57. Emby视频类型检查 v1.0 `定期检查Emby媒体库中是否包含指定的视频类型，发送通知。`
 58. Emby有声书整理 v1.1 `还在为Emby有声书整理烦恼吗？入库存在很多单集？`
 59. Emby弹幕下载 v1.2 `通知Emby Danmu插件下载弹幕。`
-60. Emby剧集演员同步 v1.0 `同步剧演员信息到集演员信息。`
+60. Emby剧集演员同步 v1.1 `同步剧演员信息到集演员信息。`
