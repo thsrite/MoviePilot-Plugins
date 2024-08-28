@@ -36,7 +36,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "1.7.1"
+    plugin_version = "1.7.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -189,7 +189,8 @@ class EmbyMetaRefresh(_PluginBase):
                         item_id=item.get("SeriesId") if str(item.get('Type')) == 'Episode' else item.get("Id"),
                         title=item.get('SeriesName') if str(item.get('Type')) == 'Episode' else item.get('Name'),
                         type=MediaType('电视剧' if str(item.get('Type')) == 'Episode' else '电影'),
-                        season=item.get("ParentIndexNumber") if str(item.get('Type')) == 'Episode' else None)
+                        season=item.get("ParentIndexNumber") if str(item.get('Type')) == 'Episode' else None
+                    )
 
                     # 是否有豆瓣演员信息
                     if not douban_actors:
@@ -310,13 +311,18 @@ class EmbyMetaRefresh(_PluginBase):
                 peoples.append(info)
             else:
                 peoples.append(people)
+
+        item_name = f"{iteminfo.get('Name')} ({iteminfo.get('ProductionYear')})" if iteminfo.get('Type') == 'Series' or iteminfo.get(
+            'Type') == 'Movie' else f"{iteminfo.get('SeriesName')} ({iteminfo.get('ProductionYear')}) {iteminfo.get('SeasonName')} {iteminfo.get('Name')}"
         # 保存媒体项信息
         if peoples and need_update_people:
             iteminfo["People"] = peoples
+            iteminfo["LockedFields"].append("Cast")
             flag = self.set_iteminfo(itemid=itemid, iteminfo=iteminfo)
-            logger.info(f"更新媒体 {iteminfo.get('Name')} ({iteminfo.get('ProductionYear')}) 演员信息完成 {flag}")
+            logger.info(
+                f"更新媒体 {item_name} 演员信息完成 {flag}")
         else:
-            logger.info(f"媒体 {iteminfo.get('Name')} ({iteminfo.get('ProductionYear')}) 演员信息无需更新")
+            logger.info(f"媒体 {item_name} 演员信息无需更新")
 
     def __update_people(self, people: dict, douban_actors: list = None) -> Optional[dict]:
         """
