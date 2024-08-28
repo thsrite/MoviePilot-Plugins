@@ -253,6 +253,22 @@ class EmbyActorSync(_PluginBase):
                                     {
                                         'component': 'VSwitch',
                                         'props': {
+                                            'model': 'enabled',
+                                            'label': '启用插件',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
                                             'model': 'onlyonce',
                                             'label': '立即运行一次',
                                         }
@@ -307,6 +323,7 @@ class EmbyActorSync(_PluginBase):
                 ],
             }
         ], {
+            "enabled": False,
             "onlyonce": False,
             "librarys": [],
         }
