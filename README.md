@@ -53,3 +53,4 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 - Emby视频类型检查 v1.0
 - Emby有声书整理 v1.1
 - Emby弹幕下载 v1.2
+- Emby剧集演员同步 v1.0
