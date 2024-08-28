@@ -185,15 +185,15 @@ class EmbyMetaRefresh(_PluginBase):
                     key = f"{item.get('Type')}-{item.get('SeriesName') if str(item.get('Type')) == 'Episode' else item.get('Name')}"
                     if key in handle_itmes.keys():
                         continue
-                    douban_actors = self.__update_people_chi(
+                    peoples = self.__update_people_chi(
                         item_id=item.get("SeriesId") if str(item.get('Type')) == 'Episode' else item.get("Id"),
                         title=item.get('SeriesName') if str(item.get('Type')) == 'Episode' else item.get('Name'),
                         type=MediaType('电视剧' if str(item.get('Type')) == 'Episode' else '电影'),
                         season=item.get("ParentIndexNumber") if str(item.get('Type')) == 'Episode' else None
                     )
 
-                    # 是否有豆瓣演员信息
-                    if not douban_actors:
+                    # 是否有演员信息
+                    if not peoples:
                         handle_itmes[key] = {}
                     else:
                         if str(item.get('Type')) == 'Episode':
@@ -202,7 +202,7 @@ class EmbyMetaRefresh(_PluginBase):
                             item_ids.append(item.get("Id"))
                             handle_itmes[key] = {
                                 'itemIds': item_ids,
-                                'actors': douban_actors
+                                'actors': peoples
                             }
                         else:
                             handle_itmes[key] = {}
@@ -213,8 +213,15 @@ class EmbyMetaRefresh(_PluginBase):
                     item_actors = value.get('actors', [])
                     for item_id in item_ids:
                         item_info = self.__get_item_info(item_id)
-                        self.__update_peoples(itemid=item_id, iteminfo=item_info,
-                                              douban_actors=item_actors)
+                        if item_actors == item_info.get("People"):
+                            logger.warn(
+                                f"最新媒体：{'电视剧' if str(item_info.get('Type')) == 'Episode' else '电影'} {'%s S%02dE%02d %s' % (item_info.get('SeriesName'), item_info.get('ParentIndexNumber'), item_info.get('IndexNumber'), item_info.get('Name')) if str(item_info.get('Type')) == 'Episode' else item_info.get('Name')} {item_info.get('Id')} 演员信息已更新，跳过")
+                            continue
+                        item_info["People"] = item_actors
+                        item_info["LockedFields"].append("Cast")
+                        flag = self.set_iteminfo(itemid=item_info.get("Id"), iteminfo=item_info)
+                        logger.info(
+                            f"最新媒体：{'电视剧' if str(item_info.get('Type')) == 'Episode' else '电影'} {'%s S%02dE%02d %s' % (item_info.get('SeriesName'), item_info.get('ParentIndexNumber'), item_info.get('IndexNumber'), item_info.get('Name')) if str(item_info.get('Type')) == 'Episode' else item_info.get('Name')} {item_info.get('Id')} 演员信息完成 {flag}")
 
         logger.info(f"刷新媒体库元数据完成")
 
@@ -268,10 +275,10 @@ class EmbyMetaRefresh(_PluginBase):
 
                 logger.debug(
                     f"获取 {title} ({item_info.get('ProductionYear')}) 的豆瓣演员信息 完成，演员：{douban_actors}")
-                self.__update_peoples(itemid=item_id, iteminfo=item_info,
-                                      douban_actors=douban_actors)
+                peoples = self.__update_peoples(itemid=item_id, iteminfo=item_info,
+                                                douban_actors=douban_actors)
 
-                return douban_actors
+                return peoples
             else:
                 logger.info(f"媒体 {title} ({item_info.get('ProductionYear')}) 演员信息无需更新")
         return None
@@ -312,7 +319,8 @@ class EmbyMetaRefresh(_PluginBase):
             else:
                 peoples.append(people)
 
-        item_name = f"{iteminfo.get('Name')} ({iteminfo.get('ProductionYear')})" if iteminfo.get('Type') == 'Series' or iteminfo.get(
+        item_name = f"{iteminfo.get('Name')} ({iteminfo.get('ProductionYear')})" if iteminfo.get(
+            'Type') == 'Series' or iteminfo.get(
             'Type') == 'Movie' else f"{iteminfo.get('SeriesName')} ({iteminfo.get('ProductionYear')}) {iteminfo.get('SeasonName')} {iteminfo.get('Name')}"
         # 保存媒体项信息
         if peoples and need_update_people:
@@ -323,6 +331,8 @@ class EmbyMetaRefresh(_PluginBase):
                 f"更新媒体 {item_name} 演员信息完成 {flag}")
         else:
             logger.info(f"媒体 {item_name} 演员信息无需更新")
+
+        return iteminfo["People"]
 
     def __update_people(self, people: dict, douban_actors: list = None) -> Optional[dict]:
         """
