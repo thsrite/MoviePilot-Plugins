@@ -1,4 +1,5 @@
 import json
+import re
 import time
 from datetime import datetime, timedelta
 from typing import Optional, Any, List, Dict, Tuple
@@ -130,17 +131,23 @@ class EmbyActorSync(_PluginBase):
             if library_name and library.name != library_name:
                 continue
 
-            logger.info(f"开始同步媒体库：{library.name}，ID：{library.id}")
             # 获取媒体库媒体列表
             library_items = self.__get_items(library.id)
             if not library_items:
                 logger.error(f"获取媒体库：{library.name}的媒体列表失败")
                 continue
 
+            logger.info(f"开始同步媒体库：{library.name}，ID：{library.id}")
+
             # 遍历媒体列表，获取媒体的ID和名称
             for item in library_items:
-                if media_name and item.get("Name") != media_name:
-                    continue
+                if media_name:
+                    # 电影弹幕
+                    matches = re.findall(r'^(.+?)\s\(\d{4}\)$', item.get("Name").strip())
+                    if (not matches and media_name != item.get("Name")) or (matches and str(matches[0]) != media_name):
+                        continue
+
+                logger.info(f"开始同步媒体：{item.get('Name')}，ID：{item.get('Id')}")
                 item_info = self.__get_item_info(item.get("Id"))
                 seasons = self.__get_items(item.get("Id"))
                 for season in seasons:
