@@ -36,7 +36,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "1.7.2"
+    plugin_version = "1.7.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -172,7 +172,7 @@ class EmbyMetaRefresh(_PluginBase):
             logger.info(f"开始刷新媒体库元数据，{self._num} 天内最新媒体：{len(latest)} 个")
 
             # 已处理的媒体
-            handle_itmes = {}
+            handle_items = {}
 
             # 刷新媒体库
             for item in latest:
@@ -183,31 +183,27 @@ class EmbyMetaRefresh(_PluginBase):
                 # 刮演员中文
                 if self._actor_chi:
                     key = f"{item.get('Type')}-{item.get('SeriesName') if str(item.get('Type')) == 'Episode' else item.get('Name')}"
-                    if key in handle_itmes.keys():
-                        continue
-                    peoples = self.__update_people_chi(
-                        item_id=item.get("SeriesId") if str(item.get('Type')) == 'Episode' else item.get("Id"),
-                        title=item.get('SeriesName') if str(item.get('Type')) == 'Episode' else item.get('Name'),
-                        type=MediaType('电视剧' if str(item.get('Type')) == 'Episode' else '电影'),
-                        season=item.get("ParentIndexNumber") if str(item.get('Type')) == 'Episode' else None
-                    )
+                    peoples = None
+                    if key not in handle_items.keys():
+                        peoples = self.__update_people_chi(
+                            item_id=item.get("SeriesId") if str(item.get('Type')) == 'Episode' else item.get("Id"),
+                            title=item.get('SeriesName') if str(item.get('Type')) == 'Episode' else item.get('Name'),
+                            type=MediaType('电视剧' if str(item.get('Type')) == 'Episode' else '电影'),
+                            season=item.get("ParentIndexNumber") if str(item.get('Type')) == 'Episode' else None
+                        )
 
                     # 是否有演员信息
-                    if not peoples:
-                        handle_itmes[key] = {}
-                    else:
-                        if str(item.get('Type')) == 'Episode':
-                            item_dicts = handle_itmes.get(key, {})
-                            item_ids = item_dicts.get('itemIds', [])
-                            item_ids.append(item.get("Id"))
-                            handle_itmes[key] = {
-                                'itemIds': item_ids,
-                                'actors': peoples
-                            }
-                        else:
-                            handle_itmes[key] = {}
+                    if str(item.get('Type')) == 'Episode':
+                        item_dicts = handle_items.get(key, {})
+                        item_ids = item_dicts.get('itemIds', [])
+                        item_actors = item_dicts.get('actors', [])
+                        item_ids.append(item.get("Id"))
+                        handle_items[key] = {
+                            'itemIds': item_ids,
+                            'actors': peoples or item_actors
+                        }
             # 处理剧集
-            for key, value in handle_itmes.items():
+            for key, value in handle_items.items():
                 if value:
                     item_ids = value.get('itemIds', [])
                     item_actors = value.get('actors', [])
@@ -281,7 +277,7 @@ class EmbyMetaRefresh(_PluginBase):
                 return peoples
             else:
                 logger.info(f"媒体 {title} ({item_info.get('ProductionYear')}) 演员信息无需更新")
-        return None
+        return item_info.get("People")
 
     def __update_peoples(self, itemid: str, iteminfo: dict, douban_actors):
         # 处理媒体项中的人物信息
