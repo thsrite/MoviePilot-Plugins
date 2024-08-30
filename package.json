@@ -764,11 +764,12 @@
     "name": "Emby剧集演员同步",
     "description": "同步剧演员信息到集演员信息。",
     "labels": "Emby,媒体库",
-    "version": "1.0",
+    "version": "1.2",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/embyactorsync.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v1.2": "交互命令返回处理完成信息。",
       "v1.1": "支持交互命令手动同步单个剧集 /as 媒体库名 剧集名。",
       "v1.0": "同步剧演员信息到集演员信息。"
     }

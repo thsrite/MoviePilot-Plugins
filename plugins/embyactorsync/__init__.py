@@ -23,7 +23,7 @@ class EmbyActorSync(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/embyactorsync.png"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -113,9 +113,9 @@ class EmbyActorSync(_PluginBase):
                                   userid=event.event_data.get("user"))
                 return
 
-            self.sync(args_list[0], args_list[1])
+            self.sync(args_list[0], args_list[1], event)
 
-    def sync(self, library_name: str = None, media_name: str = None):
+    def sync(self, library_name: str = None, media_name: str = None, event: Event = None):
         """
         Emby剧集演员同步
         """
@@ -178,7 +178,10 @@ class EmbyActorSync(_PluginBase):
                                 retry += 1
                                 logger.error(
                                     f"更新媒体：{item.get('Name')} {season_item_info.get('SeasonName')} {season_item_info.get('IndexNumber')} {season_item_info.get('Name')} 信息出错：{e} 开始重试...{retry} / 3")
-
+                if event:
+                    self.post_message(channel=event.event_data.get("channel"),
+                                      title=f"{library_name} {media_name} 同步完成",
+                                      userid=event.event_data.get("user"))
         logger.info(f"Emby剧集演员同步完成")
 
     def __update_item_info(self, item_id, data):
