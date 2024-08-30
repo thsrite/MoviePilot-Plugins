@@ -23,7 +23,7 @@ class EmbyActorSync(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/embyactorsync.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -151,19 +151,21 @@ class EmbyActorSync(_PluginBase):
                 item_info = self.__get_item_info(item.get("Id"))
                 seasons = self.__get_items(item.get("Id"))
                 for season in seasons:
+                    season_info = self.__get_item_info(season.get("Id"))
+                    peoples = season_info.get("People") or item_info.get("People")
                     season_items = self.__get_items(season.get("Id"))
                     for season_item in season_items:
                         retry = 0
                         while retry < 3:
                             season_item_info = self.__get_item_info(season_item.get("Id"))
                             try:
-                                if season_item_info.get("People") == item_info.get("People"):
+                                if season_item_info.get("People") == peoples:
                                     logger.warn(
                                         f"媒体：{item.get('Name')} {season_item_info.get('SeasonName')} {season_item_info.get('IndexNumber')} {season_item_info.get('Name')} 演员信息已更新")
                                     retry = 3
                                     continue
                                 season_item_info.update({
-                                    "People": item_info.get("People")
+                                    "People": peoples
                                 })
                                 season_item_info["LockedFields"].append("Cast")
                                 flag = self.__update_item_info(season_item.get("Id"), season_item_info)
