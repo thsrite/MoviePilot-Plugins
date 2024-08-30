@@ -2,12 +2,7 @@
 
 MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 
-# 保持插件最新
-
-- 安装并开启`插件自动更新`插件，每次重启会更新已安装插件最新版本。也可设置cron定时任务更新插件。
-- 如未刷新到插件更新，或者插件更新版本未变，可用`插件强制重装`插件进行重装。
-
-### 插件新增
+### 插件列表
 
 1. [自动备份 v1.3](https://github.com/jxxghp/MoviePilot-Plugins/tree/main/plugins/autobackup) `自动备份数据和配置文件。`
 2. [定时清理媒体库 v1.1](https://github.com/jxxghp/MoviePilot-Plugins/tree/main/plugins/autoclean) `定时清理用户下载的种子、源文件、媒体库文件。`
