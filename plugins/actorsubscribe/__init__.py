@@ -1,22 +1,22 @@
 import time
 from datetime import datetime, timedelta
+from typing import Any, List, Dict, Tuple, Optional
 
 import pytz
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 from app import schemas
 from app.chain.douban import DoubanChain
-from app.chain.tmdb import TmdbChain
 from app.chain.download import DownloadChain
 from app.chain.subscribe import SubscribeChain
+from app.chain.tmdb import TmdbChain
 from app.core.config import settings
 from app.core.context import MediaInfo
 from app.core.metainfo import MetaInfo
-from app.schemas import MediaType
-from app.plugins import _PluginBase
-from typing import Any, List, Dict, Tuple, Optional
 from app.log import logger
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
+from app.plugins import _PluginBase
+from app.schemas import MediaType
 
 
 class ActorSubscribe(_PluginBase):
@@ -27,7 +27,7 @@ class ActorSubscribe(_PluginBase):
     # 插件图标
     plugin_icon = "Mdcng_A.png"
     # 插件版本
-    plugin_version = "2.1"
+    plugin_version = "2.1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -193,7 +193,7 @@ class ActorSubscribe(_PluginBase):
                 logger.warn(f"未知的订阅源：{source}")
 
         # 检查订阅
-        subscribe_actors = str(self._actors).split(",")
+        subscribe_actors = [actor.strip() for actor in self._actors.split(",")]
         for mediainfo in medias:
             if mediainfo.title_year in already_handle:
                 logger.warn(f"{mediainfo.type.value} {mediainfo.title_year} 已被处理，跳过")
@@ -232,54 +232,53 @@ class ActorSubscribe(_PluginBase):
 
             logger.info(f'获取到 {mediainfo.title} 演员：{mediainfo_actors}')
 
-            # 查询缺失的媒体信息
-            exist_flag, _ = self.downloadchain.get_no_exists_info(meta=meta, mediainfo=mediainfo)
-            if exist_flag:
-                logger.warn(f'{mediainfo.title_year} 媒体库中已存在')
-                continue
+            is_subscribe = False
+            for actor in mediainfo_actors:
+                logger.debug(f'正在处理 {mediainfo.title_year} 演员 {actor}')
+                if actor and str(actor).strip() in subscribe_actors:
+                    # 查询缺失的媒体信息
+                    exist_flag, _ = self.downloadchain.get_no_exists_info(meta=meta, mediainfo=mediainfo)
+                    if exist_flag:
+                        logger.warn(f'{mediainfo.title_year} 媒体库中已存在')
+                        continue
 
-            # 判断用户是否已经添加订阅
-            if self.subscribechain.exists(mediainfo=mediainfo):
-                logger.warn(f'{mediainfo.title_year} 订阅已存在')
-                continue
+                    # 判断用户是否已经添加订阅
+                    if self.subscribechain.exists(mediainfo=mediainfo):
+                        logger.warn(f'{mediainfo.title_year} 订阅已存在')
+                        continue
 
-            if mediainfo_actors:
-                is_subscribe = False
-                for actor in mediainfo_actors:
-                    # logger.info(f'正在处理 {mediainfo.title_year} 演员 {actor}')
-                    if actor and actor in subscribe_actors:
-                        # 开始订阅
-                        logger.info(
-                            f"{mediainfo.type.value} {mediainfo.title_year} TMDBID {mediainfo.tmdb_id} DOUBANID {mediainfo.douban_id} 命中订阅演员 {actor}，"
-                            f"开始订阅。订阅规则：{self._quality} {self._resolution} {self._effect} {self._username}")
-                        is_subscribe = True
-                        # 添加订阅
-                        self.subscribechain.add(title=mediainfo.title,
-                                                year=mediainfo.year,
-                                                mtype=mediainfo.type,
-                                                tmdbid=mediainfo.tmdb_id,
-                                                doubanid=mediainfo.douban_id,
-                                                exist_ok=True,
-                                                quality=self._quality,
-                                                resolution=self._resolution,
-                                                effect=self._effect,
-                                                username=self._username)
-                        # 存储历史记录
-                        history.append({
-                            "title": mediainfo.title,
-                            "type": mediainfo.type.value,
-                            "year": mediainfo.year,
-                            "poster": mediainfo.get_poster_image(),
-                            "overview": mediainfo.overview,
-                            "tmdbid": mediainfo.tmdb_id,
-                            "doubanid": mediainfo.douban_id,
-                            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            "unique": f"actorsubscribe: {mediainfo.title} (DB:{mediainfo.tmdb_id})"
-                        })
-
-                if not is_subscribe:
+                    # 开始订阅
                     logger.info(
-                        f"{mediainfo.type.value} {mediainfo.title_year} TMDBID {mediainfo.tmdb_id} DOUBANID {mediainfo.douban_id} 未命中订阅演员，跳过")
+                        f"{mediainfo.type.value} {mediainfo.title_year} TMDBID {mediainfo.tmdb_id} DOUBANID {mediainfo.douban_id} 命中订阅演员 {actor}，"
+                        f"开始订阅。订阅规则：{self._quality} {self._resolution} {self._effect} {self._username}")
+                    is_subscribe = True
+                    # 添加订阅
+                    self.subscribechain.add(title=mediainfo.title,
+                                            year=mediainfo.year,
+                                            mtype=mediainfo.type,
+                                            tmdbid=mediainfo.tmdb_id,
+                                            doubanid=mediainfo.douban_id,
+                                            exist_ok=True,
+                                            quality=self._quality,
+                                            resolution=self._resolution,
+                                            effect=self._effect,
+                                            username=self._username)
+                    # 存储历史记录
+                    history.append({
+                        "title": mediainfo.title,
+                        "type": mediainfo.type.value,
+                        "year": mediainfo.year,
+                        "poster": mediainfo.get_poster_image(),
+                        "overview": mediainfo.overview,
+                        "tmdbid": mediainfo.tmdb_id,
+                        "doubanid": mediainfo.douban_id,
+                        "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        "unique": f"actorsubscribe: {mediainfo.title} (DB:{mediainfo.tmdb_id})"
+                    })
+
+            if not is_subscribe:
+                logger.info(
+                    f"{mediainfo.type.value} {mediainfo.title_year} TMDBID {mediainfo.tmdb_id} DOUBANID {mediainfo.douban_id} 未命中订阅演员，跳过")
 
         # 保存历史记录
         self.save_data('history', history)
