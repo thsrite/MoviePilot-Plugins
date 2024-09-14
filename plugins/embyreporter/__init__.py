@@ -165,9 +165,10 @@ class EmbyReporter(_PluginBase):
             if self._type:
                 mtype = NotificationType.__getitem__(str(self._type)) or NotificationType.MediaServer
 
-            self.post_message(title='Movies观影排行' if i == 2 else 'TV Shows观影排行',
-                              mtype=mtype,
-                              image=report_url)
+            self.post_message(
+                title=f'Movies 近{self._days}日观影排行' if i == 2 else f'TV Shows 近{self._days}日观影排行',
+                mtype=mtype,
+                image=report_url)
             logger.info(f"Emby观影记录推送成功 {report_url}")
 
     @staticmethod
