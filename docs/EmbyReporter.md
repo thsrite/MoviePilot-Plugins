@@ -18,3 +18,14 @@
 
 ![img.png](../img/EmbyReporter/img.png)
 ![img_1.png](../img/EmbyReporter/img_1.png)
+
+每日一言推荐
+``
+https://v.api.aa1.cn/api/yiyan/index.php
+https://yijuzhan.com/api/word.php
+``
+
+点点推荐舔狗
+``
+https://v.api.aa1.cn/api/tiangou/index.php
+``

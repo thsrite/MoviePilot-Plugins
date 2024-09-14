@@ -33,7 +33,7 @@ class EmbyReporter(_PluginBase):
     # 插件图标
     plugin_icon = "Pydiocells_A.png"
     # 插件版本
-    plugin_version = "1.7"
+    plugin_version = "1.7.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -56,6 +56,7 @@ class EmbyReporter(_PluginBase):
     _mp_host = None
     _emby_host = None
     _emby_api_key = None
+    _text_url = None
     show_time = True
     _scheduler: Optional[BackgroundScheduler] = None
 
@@ -81,6 +82,7 @@ class EmbyReporter(_PluginBase):
             self._type = config.get("type") or "tg"
             self._mp_host = config.get("mp_host")
             self.show_time = config.get("show_time")
+            self._text_url = config.get("text_url")
             self._emby_host = config.get("emby_host")
             self._emby_api_key = config.get("emby_api_key")
             if self._emby_host and self._emby_api_key:
@@ -164,8 +166,22 @@ class EmbyReporter(_PluginBase):
             mtype = NotificationType.MediaServer
             if self._type:
                 mtype = NotificationType.__getitem__(str(self._type)) or NotificationType.MediaServer
+
+            # 每日一言
+            report_text = None
+            if self._text_url:
+                try:
+                    resp = RequestUtils().get_res(url=self._text_url)
+                    if resp.status_code == 200:
+                        report_text = resp.text
+
+                    if report_text:
+                        report_text = str(report_text).replace("<p>", "").replace("</p>", "")
+                except Exception as e:
+                    print(e)
             self.post_message(mtype=mtype,
-                              image=report_url)
+                              image=report_url,
+                              text=report_text)
         logger.info(f"Emby观影记录推送成功")
 
     @staticmethod
@@ -214,6 +230,7 @@ class EmbyReporter(_PluginBase):
             "cnt": self._cnt,
             "type": self._type,
             "mp_host": self._mp_host,
+            "text_url": self._text_url,
             "show_time": self.show_time,
             "emby_host": self._emby_host,
             "emby_api_key": self._emby_api_key,
@@ -424,6 +441,23 @@ class EmbyReporter(_PluginBase):
                                     }
                                 ]
                             },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'text_url',
+                                            'label': '每日一言api',
+                                            'placeholder': '空则不发送'
+                                        }
+                                    }
+                                ]
+                            }
                         ]
                     },
                     {
@@ -519,6 +553,7 @@ class EmbyReporter(_PluginBase):
             "emby_api_key": "",
             "mp_host": "",
             "show_time": True,
+            "text_url": "",
             "type": ""
         }
 

@@ -204,11 +204,12 @@
     "name": "Emby观影报告",
     "description": "推送Emby观影报告，需Emby安装Playback Report 插件。",
     "labels": "Emby",
-    "version": "1.7",
+    "version": "1.7.1",
     "icon": "Pydiocells_A.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v1.7.1": "分块发送，带每日一言",
       "v1.7": "分块发送，兼容微信推送",
       "v1.6": "fix #67",
       "v1.5": "按观影市场排序",
