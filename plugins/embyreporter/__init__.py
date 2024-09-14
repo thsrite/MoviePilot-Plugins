@@ -33,7 +33,7 @@ class EmbyReporter(_PluginBase):
     # 插件图标
     plugin_icon = "Pydiocells_A.png"
     # 插件版本
-    plugin_version = "1.6"
+    plugin_version = "1.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -56,7 +56,6 @@ class EmbyReporter(_PluginBase):
     _mp_host = None
     _emby_host = None
     _emby_api_key = None
-    _text_url = None
     show_time = True
     _scheduler: Optional[BackgroundScheduler] = None
 
@@ -82,7 +81,6 @@ class EmbyReporter(_PluginBase):
             self._type = config.get("type") or "tg"
             self._mp_host = config.get("mp_host")
             self.show_time = config.get("show_time")
-            self._text_url = config.get("text_url")
             self._emby_host = config.get("emby_host")
             self._emby_api_key = config.get("emby_api_key")
             if self._emby_host and self._emby_api_key:
@@ -156,31 +154,56 @@ class EmbyReporter(_PluginBase):
             logger.error("生成海报失败")
             return
 
-        # 发送海报
-        report_title = f"🌟*过去{self._days}日观影排行*"
+        # 示例调用
+        self.__split_image_by_height(report_path, "/public/report", [250, 330, 335])
 
-        report_url = self._mp_host + report_path.replace("/public", "")
-        mtype = NotificationType.MediaServer
-        if self._type:
-            mtype = NotificationType.__getitem__(str(self._type)) or NotificationType.MediaServer
+        # 分块推送
+        for i in range(1, 4):
+            report_path_part = report_path + f"_part_{i}.jpg"
+            report_url = self._mp_host + report_path_part.replace("/public", "")
+            mtype = NotificationType.MediaServer
+            if self._type:
+                mtype = NotificationType.__getitem__(str(self._type)) or NotificationType.MediaServer
+            self.post_message(mtype=mtype,
+                              image=report_url)
+        logger.info(f"Emby观影记录推送成功")
 
-        # 每日一言
-        report_text = None
-        if self._text_url:
-            try:
-                resp = RequestUtils().get_res(url=self._text_url)
-                if resp.status_code == 200:
-                    report_text = resp.text
+    @staticmethod
+    def __split_image_by_height(image_path, output_path_prefix, heights):
+        # 打开原始图像
+        img = Image.open(image_path)
+        img_width, img_height = img.size
 
-                if report_text:
-                    report_text = str(report_text).replace("<p>", "").replace("</p>", "")
-            except Exception as e:
-                print(e)
-        self.post_message(title=report_title,
-                          mtype=mtype,
-                          text=report_text,
-                          image=report_url)
-        logger.info(f"Emby观影记录推送成功 {report_url}")
+        # 如果图像是 RGBA 模式，转换为 RGB 模式
+        if img.mode == 'RGBA':
+            img = img.convert('RGB')
+
+        # 分割图像的起始位置
+        top = 0
+
+        # 按指定高度分割图像
+        for i, height in enumerate(heights):
+            # 确保不会超出图像边界
+            if top + height > img_height:
+                height = img_height - top
+
+            bottom = top + height
+
+            # 裁剪图像
+            box = (0, top, img_width, bottom)
+            part = img.crop(box)
+
+            # 保存图像部分
+            part.save(f"{output_path_prefix}_part_{i + 1}.jpg")
+
+            # 更新下一个部分的上边界
+            top = bottom
+
+            # 如果已经到达图像底部，停止
+            if top >= img_height:
+                break
+
+        print("图片按照指定高度分割完成！")
 
     def __update_config(self):
         self.update_config({
@@ -191,7 +214,6 @@ class EmbyReporter(_PluginBase):
             "cnt": self._cnt,
             "type": self._type,
             "mp_host": self._mp_host,
-            "text_url": self._text_url,
             "show_time": self.show_time,
             "emby_host": self._emby_host,
             "emby_api_key": self._emby_api_key,
@@ -402,23 +424,6 @@ class EmbyReporter(_PluginBase):
                                     }
                                 ]
                             },
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 6
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextField',
-                                        'props': {
-                                            'model': 'text_url',
-                                            'label': '每日一言api',
-                                            'placeholder': '空则不发送'
-                                        }
-                                    }
-                                ]
-                            }
                         ]
                     },
                     {
@@ -514,7 +519,6 @@ class EmbyReporter(_PluginBase):
             "emby_api_key": "",
             "mp_host": "",
             "show_time": True,
-            "text_url": "",
             "type": ""
         }
 

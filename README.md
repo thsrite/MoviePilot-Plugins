@@ -32,7 +32,7 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 26. 同步CookieCloud v1.2 `同步MoviePilot站点Cookie到本地CookieCloud。`
 27. 日程提醒 v1.0 `自定义提醒事项、提醒时间。`
 28. 订阅提醒 v1.1 `推送当天订阅更新内容。`
-29. [Emby观影报告 v1.6](docs%2FEmbyReporter.md) `推送Emby观影报告，需Emby安装Playback Report 插件。`
+29. [Emby观影报告 v1.7](docs%2FEmbyReporter.md) `推送Emby观影报告，需Emby安装Playback Report 插件。`
 30. 演员订阅 v2.1.1 `自动订阅指定演员热映电影、电视剧。`
 31. [短剧刮削 v3.2](docs%2FShortPlayMonitor.md) `监控视频短剧创建，刮削。`
 32. 云盘实时监控 v2.4.6 `监控云盘目录文件变化，自动转移链接。`
