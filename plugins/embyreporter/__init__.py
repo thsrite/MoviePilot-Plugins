@@ -33,7 +33,7 @@ class EmbyReporter(_PluginBase):
     # 插件图标
     plugin_icon = "Pydiocells_A.png"
     # 插件版本
-    plugin_version = "1.7"
+    plugin_version = "1.8"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -132,6 +132,9 @@ class EmbyReporter(_PluginBase):
         if not self._type:
             return
 
+        # 获取当前时间并格式化
+        current_time = datetime.now().strftime("%Y%m%d%H%M%S")
+
         # 获取数据
         success, movies = self.get_report(types=self.PLAYBACK_REPORTING_TYPE_MOVIE, days=int(self._days),
                                           limit=int(self._cnt))
@@ -160,7 +163,7 @@ class EmbyReporter(_PluginBase):
         # 分块推送
         for i in range(2, 4):
             report_path_part = f"/public/report_part_{i}.jpg"
-            report_url = self._mp_host + report_path_part.replace("/public", "")
+            report_url = self._mp_host + report_path_part.replace("/public", "") + f"?_timestamp={current_time}"
             mtype = NotificationType.MediaServer
             if self._type:
                 mtype = NotificationType.__getitem__(str(self._type)) or NotificationType.MediaServer
