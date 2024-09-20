@@ -7,6 +7,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v4.4": "修复bug",
       "v4.3": "回滚自定义媒体类型",
@@ -29,6 +30,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.1": "某种场景下可能出现卡死，修复bug",
       "v1.0": "增量监控"
@@ -42,6 +44,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/convert.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.0": "Strm文件内容转为本地路径或者cd2/alist API路径"
     }
@@ -54,6 +57,7 @@
     "icon": "Synomail_A.png",
     "author": "thsrite",
     "level": 2,
+    "v2": true,
     "history": {
       "v1.9": "同步主仓库",
       "v1.8": "自定义保留消息天数",
@@ -75,6 +79,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/broom.png",
     "author": "thsrite",
     "level": 2,
+    "v2": true,
     "history": {
       "v1.0": "清理订阅已下载集数"
     }
@@ -87,6 +92,7 @@
     "icon": "download.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.1": "支持选择MoviePilot配置的下载路径",
       "v1.0": "删除下载器中该站点辅种，保留该站点没有辅种的种子"
@@ -100,6 +106,7 @@
     "icon": "delete.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.2": "修复删除种子bug",
       "v1.1": "可选择删除有无辅种",
@@ -114,6 +121,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/pluginupdate.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.9.2": "修复获取本地插件版本None，重新更新问题",
       "v1.9.1": "修复bug",
@@ -137,6 +145,7 @@
     "icon": "refresh.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.7": "使用主程序GITHUB_PROXY代理",
       "v1.6": "插件API立即生效",
@@ -156,6 +165,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/synology.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.1": "修复bug",
       "v1.0": "接收群辉webhook通知并推送"
@@ -169,6 +179,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cookiecloud.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.2": "同步到本地CookieCloud",
       "v1.1": "修复CookieCloud覆盖到浏览器",
@@ -183,6 +194,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/reminder.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.0": "自定义提醒事项、提醒时间"
     }
@@ -195,6 +207,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/subscribe_reminder.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.1": "fix icon",
       "v1.0": "推送当天订阅更新内容"
@@ -208,6 +221,7 @@
     "icon": "Pydiocells_A.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.8": "推送微信增加时间戳，防止使用缓存",
       "v1.7": "分块发送，兼容微信推送",
@@ -228,6 +242,7 @@
     "icon": "Mdcng_A.png",
     "author": "thsrite",
     "level": 2,
+    "v2": true,
     "history": {
       "v2.1.1": "尝试修复未匹配到演员的bug",
       "v2.1": "逻辑优化",
@@ -251,6 +266,7 @@
     "icon": "Amule_B.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v3.2": "支持消息发送",
       "v3.1": "支持自定义转移方式",
@@ -265,6 +281,7 @@
     "icon": "Linkease_A.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v2.4.6": "修复bug",
       "v2.4.5": "联动实时软连接插件（近媒体文件）",
@@ -296,6 +313,7 @@
     "icon": "Time_machine_A.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.2": "fix 路径",
       "v1.1": "支持指定需要恢复的硬链接目录",
@@ -310,6 +328,7 @@
     "icon": "Wechat_A.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v2.7": "特殊消息指定用户支持title匹配",
       "v2.6": "已完成订阅额外消息查询订阅历史订阅用户",
@@ -337,6 +356,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/subscribestatistic.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.6": "调整page页及消息",
       "v1.5": "增加消息推送",
@@ -355,6 +375,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/code.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.7": "自定义通知关键词",
       "v1.6": "自定义保留消息天数",
@@ -374,6 +395,7 @@
     "icon": "Docker_F.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.3": "自定义保留消息天数",
       "v1.2": "多个容器名,拼接",
@@ -389,6 +411,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/uninstall.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.0": "init"
     }
@@ -401,6 +424,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v2.0.1": "不重要的更新",
       "v2.0": "修复交互命令",
@@ -429,6 +453,7 @@
     "icon": "teamwork.png",
     "author": "thsrite",
     "level": 2,
+    "v2": true,
     "history": {
       "v2.7": "下载填充判断当前站点是否在已选订阅站点范围内",
       "v2.6": "兼容属性值包含:号",
@@ -454,6 +479,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.7.3": "优化剧集演员刮削",
       "v1.7.2": "优化剧集演员刮削",
@@ -476,6 +502,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/tag.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.2": "支持指定特殊媒体名称添加标签",
       "v1.1": "添加远程交互命令",
@@ -490,6 +517,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/popular.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.7": "调整订阅用户名，默认：热门订阅",
       "v1.6": "调整历史unique唯一索引（可删除本次更新后的历史）",
@@ -509,6 +537,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/homepage.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.2": "适配v1.9.1-beta（不生效就重启）",
       "v1.1": "支持更多返回值、插件展示数据",
@@ -523,6 +552,7 @@
     "icon": "directory.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.0": "同步merge主仓库[目录监控]插件，增加统一发送消息逻辑（Testing…）"
     }
@@ -535,6 +565,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/sqlite.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.3": "修复执行delete锁表失败的bug",
       "v1.2": "调整交互命令返回信息",
@@ -550,6 +581,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/command.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.2": "调整交互命令返回信息",
       "v1.1": "支持交互命令/cmd [sql]执行，需主程序1.9.4+",
@@ -565,6 +597,7 @@
     "author": "thsrite",
     "level": 99,
     "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAlgN7RtXlPNXoFE9B67ye\ny2mog/hDDrhBAIJogdvfAgBMZ1qVzIPcBfdjENPJ9kV/F+zOoh0CzEaDufM54ERT\nykK1pQw7yj7quRZDbv5byxVNqI8bJg8zQo8Q66SQ8SP+aftmpFrADKClQ8VcVYzZ\nJ+YDu9H9q+TcvBqVtLyKfAH5T9WAxn0bXEh4OgkJn7oO5eI5+Fsi6Aq9suVN/HyK\nz2bDr237GmXJT4YPn9s7kj4Rypzg2ldiuBwtVnaTw+xjZRlCRr4Gs0eFUIMUqnoQ\nip4Px8Mrq5cqHl0HrJ/av/pJLCN1icCgegYW63b2gjjJwmps9NGGOydRzgoFkqj0\nDwIDAQAB",
+    "v2": true,
     "history": {
       "v2.1.5": "监控模式下自定义文件保留时长不生效",
       "v2.1.4": "自定义文件保留时长，大于该值会被转移",
@@ -602,6 +635,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png",
     "author": "thsrite",
     "level": 2,
+    "v2": true,
     "history": {
       "v1.8.3": "添加异常处理，解决cd2上本地目录获取存储空间失败的问题",
       "v1.8.2": "插件页面密码类型设置为pasword",
@@ -625,6 +659,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlinkredirect.png",
     "author": "thsrite",
     "level": 2,
+    "v2": true,
     "history": {
       "v1.1": "不删除软连接，强制更新重定向",
       "v1.0": "重定向软连接指向"
@@ -638,6 +673,7 @@
     "icon": "clouddisk.png",
     "author": "thsrite",
     "level": 2,
+    "v2": true,
     "history": {
       "v1.5.4": "fix插件历史ui",
       "v1.5.3": "修复删除文件夹包含本地+云盘的场景",
@@ -660,6 +696,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/libraryduplicate.png",
     "author": "thsrite",
     "level": 2,
+    "v2": true,
     "history": {
       "v1.9": "修复删除软连接",
       "v1.8": "仅检查模式下，预览操作不会删除任何文件。",
@@ -681,6 +718,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/actorsubscribeplus.png",
     "author": "thsrite",
     "level": 2,
+    "v2": true,
     "history": {
       "v1.0": "获取TMDB演员作品，并自动添加到订阅"
     }
@@ -693,6 +731,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/copy_files.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.1": "增加log显示",
       "v1.0": "自定义文件类型从源目录复制到目的目录"
@@ -706,6 +745,7 @@
     "icon": "Element_A.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.1": "优化处理逻辑",
       "v1.0": "保留按照加入时间倒序的前提下，把合集中的媒体放一块，不用到处找。"
@@ -719,6 +759,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/mediarelease.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.1": "bug修复",
       "v1.0": "监控未上线影视作品，自动添加订阅。"
@@ -732,6 +773,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/extendtype.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.0": "定期检查Emby媒体库中是否包含指定的视频类型，发送通知。"
     }
@@ -744,6 +786,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/audiobook.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.1": "整理完锁定，防止数据被刷新",
       "v1.0": "还在为Emby有声书整理烦恼吗？入库存在很多单集。"
@@ -757,6 +800,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/danmu.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.2": "检查本地弹幕文件是否已存在，避免重复下载。",
       "v1.1": "解析Emby日志，判断已配置弹幕源是否全部匹配失败。",
@@ -771,6 +815,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/embyactorsync.png",
     "author": "thsrite",
     "level": 1,
+    "v2": true,
     "history": {
       "v1.3": "剧集优先使用季演员。",
       "v1.2": "交互命令返回处理完成信息。",
