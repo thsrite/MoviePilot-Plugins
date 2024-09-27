@@ -677,11 +677,12 @@
     "name": "演员作品订阅",
     "description": "获取TMDB演员作品，并自动添加到订阅。",
     "labels": "订阅",
-    "version": "1.0",
+    "version": "1.1",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/actorsubscribeplus.png",
     "author": "thsrite",
     "level": 2,
     "history": {
+      "v1.1": "无评分默认评分0",
       "v1.0": "获取TMDB演员作品，并自动添加到订阅"
     }
   },
