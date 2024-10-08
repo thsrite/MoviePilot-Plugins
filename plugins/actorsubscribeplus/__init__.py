@@ -24,7 +24,7 @@ class ActorSubscribePlus(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/actorsubscribeplus.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -187,8 +187,10 @@ class ActorSubscribePlus(_PluginBase):
                         f"{mediainfo.type.value} {mediainfo.title_year} {release_date} 最近上映时间不在时间范围内，跳过")
                     continue
 
+                if not mediainfo.vote_average:
+                    mediainfo.vote_average = 0
                 # 过滤评分
-                if not mediainfo.vote_average or float(mediainfo.vote_average) < float(self._vate):
+                if float(mediainfo.vote_average) < float(self._vate):
                     logger.warn(
                         f"{mediainfo.type.value} {mediainfo.title_year} {mediainfo.vote_average} 评分不足，跳过")
                     continue
