@@ -1,6 +1,7 @@
 import json
 from datetime import datetime, timedelta
 from hashlib import md5
+from urllib.parse import urlparse
 
 import pytz
 
@@ -11,7 +12,7 @@ from typing import Any, List, Dict, Tuple, Optional
 from app.log import logger
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from app.utils.common import encrypt
+from app.utils.common import encrypt, decrypt
 
 
 class SyncCookieCloud(_PluginBase):
@@ -22,7 +23,7 @@ class SyncCookieCloud(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cookiecloud.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -100,7 +101,7 @@ class SyncCookieCloud(_PluginBase):
 
         cookies = {}
         for site in sites:
-            domain = site.domain
+            domain = urlparse(site.url).netloc
             cookie = site.cookie
 
             if not cookie:
@@ -112,39 +113,120 @@ class SyncCookieCloud(_PluginBase):
             for ck in cookie.split(";"):
                 site_cookies.append({
                     "domain": domain,
-                    "sameSite": "unspecified",
-                    "path": "/",
                     "name": ck.split("=")[0],
                     "value": ck.split("=")[1]
                 })
-
             # 存储cookies
             cookies[domain] = site_cookies
-
-        # 覆盖到cookiecloud
         if cookies:
+            decrypted_cookies_data = self.__download()
+            if decrypted_cookies_data:
+                update_data = self.__update_to_cloud(cookies, decrypted_cookies_data)
+                crypt_key = self._get_crypt_key()
+                try:
+                    cookies = {'cookie_data': update_data}
+                    encrypted_data = encrypt(json.dumps(cookies).encode('utf-8'), crypt_key).decode('utf-8')
+                except Exception as e:
+                    logger.error(f"CookieCloud加密失败，{e}")
+                    return
+
+                ck = {'encrypted': encrypted_data}
+                file = open(settings.COOKIE_PATH / f'{settings.COOKIECLOUD_KEY}.json', 'w')
+                file.write(json.dumps(ck))
+                file.close()
+
+                logger.info(f"------当前储存的cookie数据------")
+                logger.info(cookies)
+                logger.info(f"------当前储存的cookie数据------")
+                logger.info(f"同步站点cookie到CookieCloud成功")
+
+    def __download(self):
+        """
+        获取并解密本地CookieCloud数据
+        """
+        encrypt_data = self.__load_local_encrypt_data(uuid=self._get_crypt_key())
+        if not encrypt_data:
+            return {}, "未获取到本地CookieCloud数据"
+        encrypted = encrypt_data.get("encrypted")
+        if not encrypted:
+            return {}, "未获取到cookie密文"
+        else:
             crypt_key = self._get_crypt_key()
             try:
-                cookies = {'cookie_data': cookies}
-                encrypted_data = encrypt(json.dumps(cookies).encode('utf-8'), crypt_key).decode('utf-8')
+                decrypted_data = decrypt(encrypted, crypt_key).decode('utf-8')
+                result = json.loads(decrypted_data)
             except Exception as e:
-                logger.error(f"CookieCloud加密失败，{e}")
-                return
+                return {}, "cookie解密失败：" + str(e)
 
-            ck = {'encrypted': encrypted_data}
-            file = open(settings.COOKIE_PATH / f'{settings.COOKIECLOUD_KEY}.json', 'w')
-            file.write(json.dumps(ck))
-            file.close()
+        if not result:
+            return {}, "cookie解密为空"
 
-            logger.info(cookies)
-            logger.info(f"同步站点cookie到CookieCloud成功")
+        if result.get("cookie_data"):
+            contents = result.get("cookie_data")
+        else:
+            contents = result
+        return contents
+
+    def __load_local_encrypt_data(self, uuid: bytes) -> Dict[str, Any]:
+        """
+        加载本地CookieCloud加密数据
+        """
+        file_path = settings.COOKIE_PATH / f"{settings.COOKIECLOUD_KEY}.json"
+        # 检查文件是否存在
+        if not file_path.exists():
+            return {}
+
+        # 读取文件
+        with open(file_path, encoding="utf-8", mode="r") as file:
+            read_content = file.read()
+        data = json.loads(read_content.encode("utf-8"))
+        return data
+
+    def __update_to_cloud(self, in_list, out_list):
+        """
+        构建站点数据
+        """
+        # 清除空值
+        out_list = {key: value for key, value in out_list.items() if value}
+
+        temp_list = {}
+        for domain in in_list.keys():
+            # 构建站点数据模板
+            template = {}
+            for domain_out in out_list:
+                if domain.endswith(domain_out):
+                    for d in out_list[domain_out]:
+                        for key, value in d.items():
+                            if key not in template:
+                                template[key] = value
+
+            # 构建站点新数据
+            temp_list[domain] = []
+            for d1 in in_list[domain]:
+                temp_dict = {k: template.get(k, "") for k in template.keys()}
+                temp_dict.update(d1)
+                temp_list[domain].append(temp_dict)
+
+        # 覆盖修改源站点数据
+        for temp_domain in temp_list.keys():
+            found_match = False
+            for idx, domain2 in enumerate(out_list):
+                if temp_domain.endswith(domain2):
+                    out_list[temp_domain] = out_list.pop(domain2)
+                    out_list[temp_domain] = temp_list[temp_domain]
+                    found_match = True
+                    break
+            if not found_match:
+                out_list[temp_domain] = temp_list[temp_domain]
+        return out_list
 
     def _get_crypt_key(self) -> bytes:
         """
         使用UUID和密码生成CookieCloud的加解密密钥
         """
         md5_generator = md5()
-        md5_generator.update((str(settings.COOKIECLOUD_KEY).strip() + '-' + str(settings.COOKIECLOUD_PASSWORD).strip()).encode('utf-8'))
+        md5_generator.update(
+            (str(settings.COOKIECLOUD_KEY).strip() + '-' + str(settings.COOKIECLOUD_PASSWORD).strip()).encode('utf-8'))
         return (md5_generator.hexdigest()[:16]).encode('utf-8')
 
     def __update_config(self):
