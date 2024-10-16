@@ -282,7 +282,6 @@
     "icon": "Linkease_A.png",
     "author": "thsrite",
     "level": 1,
-    "v2": true,
     "history": {
       "v2.4.6": "修复bug",
       "v2.4.5": "联动实时软连接插件（近媒体文件）",
