@@ -327,7 +327,6 @@
     "icon": "Wechat_A.png",
     "author": "thsrite",
     "level": 1,
-    "v2": true,
     "history": {
       "v2.7": "特殊消息指定用户支持title匹配",
       "v2.6": "已完成订阅额外消息查询订阅历史订阅用户",
