@@ -742,7 +742,6 @@
     "icon": "Element_A.png",
     "author": "thsrite",
     "level": 1,
-    "v2": true,
     "history": {
       "v1.1": "优化处理逻辑",
       "v1.0": "保留按照加入时间倒序的前提下，把合集中的媒体放一块，不用到处找。"
