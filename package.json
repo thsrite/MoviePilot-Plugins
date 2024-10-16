@@ -808,7 +808,6 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/embyactorsync.png",
     "author": "thsrite",
     "level": 1,
-    "v2": true,
     "history": {
       "v1.3": "剧集优先使用季演员。",
       "v1.2": "交互命令返回处理完成信息。",
