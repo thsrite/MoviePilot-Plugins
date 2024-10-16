@@ -797,7 +797,6 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/danmu.png",
     "author": "thsrite",
     "level": 1,
-    "v2": true,
     "history": {
       "v1.2": "检查本地弹幕文件是否已存在，避免重复下载。",
       "v1.1": "解析Emby日志，判断已配置弹幕源是否全部匹配失败。",

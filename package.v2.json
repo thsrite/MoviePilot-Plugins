@@ -113,5 +113,19 @@
       "v1.1": "自定义发送额外消息",
       "v1.0": "根据正则转发通知到其他WeChat应用"
     }
+  },
+  "EmbyDanmu": {
+    "name": "Emby弹幕下载",
+    "description": "通知Emby Danmu插件下载弹幕。",
+    "labels": "Emby,媒体库",
+    "version": "1.2",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/danmu.png",
+    "author": "thsrite",
+    "level": 1,
+    "history": {
+      "v1.2": "检查本地弹幕文件是否已存在，避免重复下载。",
+      "v1.1": "解析Emby日志，判断已配置弹幕源是否全部匹配失败。",
+      "v1.0": "通知Emby Danmu插件下载弹幕。"
+    }
   }
 }
