@@ -222,7 +222,6 @@
     "icon": "Pydiocells_A.png",
     "author": "thsrite",
     "level": 1,
-    "v2": true,
     "history": {
       "v1.8": "推送微信增加时间戳，防止使用缓存",
       "v1.7": "分块发送，兼容微信推送",

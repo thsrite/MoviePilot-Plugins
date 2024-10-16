@@ -92,7 +92,7 @@ class EmbyMetaRefresh(_PluginBase):
 
             self._EMBY_USER = emby_server.instance.get_user()
             self._EMBY_HOST = emby_server.config.get("host")
-            self._EMBY_HOST = emby_server.config.get("apikey")
+            self._EMBY_APIKEY = emby_server.config.get("apikey")
             if not self._EMBY_HOST.endswith("/"):
                 self._EMBY_HOST += "/"
             if not self._EMBY_HOST.startswith("http"):
