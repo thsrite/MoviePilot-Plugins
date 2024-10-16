@@ -180,5 +180,20 @@
       "v1.1": "支持交互命令手动同步单个剧集 /as 媒体库名 剧集名。",
       "v1.0": "同步剧演员信息到集演员信息。"
     }
+  },
+  "SyncCookieCloud": {
+    "name": "同步CookieCloud",
+    "description": "同步MoviePilot站点Cookie到本地CookieCloud。",
+    "labels": "站点",
+    "version": "1.3",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cookiecloud.png",
+    "author": "thsrite",
+    "level": 1,
+    "history": {
+      "v1.3": "感谢MidnightShake共享代码（同步时保留MoviePilot不匹配站点的cookie）",
+      "v1.2": "同步到本地CookieCloud",
+      "v1.1": "修复CookieCloud覆盖到浏览器",
+      "v1.0": "同步MoviePilot站点Cookie到CookieCloud"
+    }
   }
 }

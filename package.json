@@ -179,7 +179,6 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cookiecloud.png",
     "author": "thsrite",
     "level": 1,
-    "v2": true,
     "history": {
       "v1.3": "感谢MidnightShake共享代码（同步时保留MoviePilot不匹配站点的cookie）",
       "v1.2": "同步到本地CookieCloud",
