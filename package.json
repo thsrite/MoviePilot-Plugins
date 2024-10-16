@@ -501,7 +501,6 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/tag.png",
     "author": "thsrite",
     "level": 1,
-    "v2": true,
     "history": {
       "v1.2": "支持指定特殊媒体名称添加标签",
       "v1.1": "添加远程交互命令",
