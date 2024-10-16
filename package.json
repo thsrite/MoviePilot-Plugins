@@ -479,7 +479,6 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png",
     "author": "thsrite",
     "level": 1,
-    "v2": true,
     "history": {
       "v1.7.3": "优化剧集演员刮削",
       "v1.7.2": "优化剧集演员刮削",

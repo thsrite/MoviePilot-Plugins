@@ -1063,7 +1063,7 @@ class CloudLinkMonitor(_PluginBase):
             "auto_category": False,
             "softlink": False,
             "mode": "fast",
-            "transfer_type": "软连接",
+            "transfer_type": "filesoftlink",
             "monitor_dirs": "",
             "exclude_keywords": "",
             "interval": 10,

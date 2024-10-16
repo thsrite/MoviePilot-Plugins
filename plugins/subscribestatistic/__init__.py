@@ -547,7 +547,7 @@ class SubscribeStatistic(_PluginBase):
             "tv_subscribe_days": 30,
             "movie_download_days": 7,
             "tv_download_days": 7,
-            "notify_type": "",
+            "notify_type": "movie_downloads",
             "msgtype": []
         }
 
