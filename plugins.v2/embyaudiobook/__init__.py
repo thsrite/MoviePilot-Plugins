@@ -28,7 +28,7 @@ class EmbyAudioBook(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/audiobook.png"
     # 插件版本
-    plugin_version = "1.1.1"
+    plugin_version = "1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -49,6 +49,7 @@ class EmbyAudioBook(_PluginBase):
     _cron = None
     _library_id = None
     _msgtype = None
+    _mediaservers = None
 
     mediaserver_helper = None
     _EMBY_HOST = None
@@ -70,20 +71,7 @@ class EmbyAudioBook(_PluginBase):
             self._notify = config.get("notify")
             self._rename = config.get("rename")
             self._msgtype = config.get("msgtype")
-
-            emby_server = self.mediaserver_helper.get_service(name="Emby")
-            if not emby_server:
-                logger.error("未配置Emby媒体服务器")
-                return
-
-            self._EMBY_USER = emby_server.instance.get_user()
-            self._EMBY_HOST = emby_server.config.get("host")
-            self._EMBY_APIKEY = emby_server.config.get("apikey")
-
-            if not self._EMBY_HOST.endswith("/"):
-                self._EMBY_HOST += "/"
-            if not self._EMBY_HOST.startswith("http"):
-                self._EMBY_HOST = "http://" + self._EMBY_HOST
+            self._mediaservers = config.get("mediaservers") or []
 
             # 停止现有任务
             self.stop_service()
@@ -132,6 +120,7 @@ class EmbyAudioBook(_PluginBase):
             "cron": self._cron,
             "notify": self._notify,
             "msgtype": self._msgtype,
+            "mediaservers": self._mediaservers,
         })
 
     def check(self):
@@ -139,48 +128,63 @@ class EmbyAudioBook(_PluginBase):
             logger.error("请设置有声书文件夹ID！")
             return
 
-        # 获取所有有声书
-        items = self.__get_items(parent_id=int(self._library_id))
-        if not items:
-            logger.error(f"获取媒体库 {self._library_id} 有声书列表失败！")
+        emby_servers = self.mediaserver_helper.get_services(name_filters=self._mediaservers, type_filter="emby")
+        if not emby_servers:
+            logger.error("未配置Emby媒体服务器")
             return
 
-        # 检查有声书是否需要整理
-        for item in items:
-            book_items = self.__get_items(item.get("Id"))
-            if not book_items:
-                logger.error(f"获取 {item.get('Name')} {item.get('Id')} 有声书失败！")
+        for emby_name, emby_server in emby_servers.items():
+            logger.info(f"开始处理媒体服务器 {emby_name}")
+            self._EMBY_USER = emby_server.instance.get_user()
+            self._EMBY_APIKEY = emby_server.config.config.get("apikey")
+            self._EMBY_HOST = emby_server.config.config.get("host")
+            if not self._EMBY_HOST.endswith("/"):
+                self._EMBY_HOST += "/"
+            if not self._EMBY_HOST.startswith("http"):
+                self._EMBY_HOST = "http://" + self._EMBY_HOST
+
+            # 获取所有有声书
+            items = self.__get_items(parent_id=int(self._library_id))
+            if not items:
+                logger.error(f"获取媒体库 {self._library_id} 有声书列表失败！")
                 return
 
             # 检查有声书是否需要整理
-            __need_zl = False
-            for book_item in book_items:
-                if not book_item.get("AlbumId"):
-                    __need_zl = True
-                    break
+            for item in items:
+                book_items = self.__get_items(item.get("Id"))
+                if not book_items:
+                    logger.error(f"获取 {item.get('Name')} {item.get('Id')} 有声书失败！")
+                    return
 
-            # 需要整理的提示需要整理
-            if __need_zl:
-                logger.info(f"有声书 {item.get('Name')} 需要整理，共 {len(book_items)} 集")
-                # self.__zl(items, -1)
-                # 发送通知
-                if self._notify:
-                    mtype = NotificationType.Manual
-                    if self._msgtype:
-                        mtype = NotificationType.__getitem__(str(self._msgtype)) or NotificationType.Manual
-                    self.post_message(title="Emby有声书整理",
-                                      mtype=mtype,
-                                      text=f"有声书 {item.get('Name')} 需要整理，共 {len(book_items)} 集")
-            else:
-                # 不需要整理的锁定
-                other_book_info = self.__get_item_info(item.get("Id"))
-                other_book_info.update({
-                    "LockData": True,
-                })
-                self.__update_item_info(item.get("Id"), other_book_info)
-                logger.info(f"有声书 {item.get('Name')} 不需要整理，已锁定")
+                # 检查有声书是否需要整理
+                __need_zl = False
+                for book_item in book_items:
+                    if not book_item.get("AlbumId"):
+                        __need_zl = True
+                        break
 
-        logger.info("Emby有声书整理服务执行完毕")
+                # 需要整理的提示需要整理
+                if __need_zl:
+                    logger.info(f"有声书 {item.get('Name')} 需要整理，共 {len(book_items)} 集")
+                    # self.__zl(items, -1)
+                    # 发送通知
+                    if self._notify:
+                        mtype = NotificationType.Manual
+                        if self._msgtype:
+                            mtype = NotificationType.__getitem__(str(self._msgtype)) or NotificationType.Manual
+                        self.post_message(title="Emby有声书整理",
+                                          mtype=mtype,
+                                          text=f"有声书 {item.get('Name')} 需要整理，共 {len(book_items)} 集")
+                else:
+                    # 不需要整理的锁定
+                    other_book_info = self.__get_item_info(item.get("Id"))
+                    other_book_info.update({
+                        "LockData": True,
+                    })
+                    self.__update_item_info(item.get("Id"), other_book_info)
+                    logger.info(f"有声书 {item.get('Name')} 不需要整理，已锁定")
+
+            logger.info(f"{emby_name} 有声书整理服务执行完毕")
 
     @eventmanager.register(EventType.PluginAction)
     def audiobook(self, event: Event = None):
@@ -579,6 +583,32 @@ class EmbyAudioBook(_PluginBase):
                             {
                                 'component': 'VCol',
                                 'props': {
+                                    'cols': 12
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'multiple': True,
+                                            'chips': True,
+                                            'clearable': True,
+                                            'model': 'mediaservers',
+                                            'label': '媒体服务器',
+                                            'items': [{"title": config.name, "value": config.name}
+                                                      for config in self.mediaserver_helper.get_configs().values() if
+                                                      config.type == "emby"]
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
                                     'cols': 12,
                                 },
                                 'content': [
@@ -604,6 +634,7 @@ class EmbyAudioBook(_PluginBase):
             "cron": "",
             "msgtype": "",
             "library_id": "",
+            "mediaservers": [],
         }
 
     def get_page(self) -> List[dict]:

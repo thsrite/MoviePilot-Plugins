@@ -57,11 +57,12 @@
     "name": "Emby媒体标签",
     "description": "自动给媒体库媒体添加标签。",
     "labels": "Emby",
-    "version": "1.2.1",
+    "version": "1.3",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/tag.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v1.3": "适配v2多媒体服务器",
       "v1.2": "支持指定特殊媒体名称添加标签",
       "v1.1": "添加远程交互命令",
       "v1.0": "自动给媒体库媒体添加标签"
@@ -71,11 +72,12 @@
     "name": "Emby观影报告",
     "description": "推送Emby观影报告，需Emby安装Playback Report 插件。",
     "labels": "Emby",
-    "version": "1.8.1",
+    "version": "1.9",
     "icon": "Pydiocells_A.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v1.9": "适配v2多媒体服务器",
       "v1.8": "推送微信增加时间戳，防止使用缓存",
       "v1.7": "分块发送，兼容微信推送",
       "v1.6": "fix #67",
@@ -118,11 +120,12 @@
     "name": "Emby弹幕下载",
     "description": "通知Emby Danmu插件下载弹幕。",
     "labels": "Emby,媒体库",
-    "version": "1.2.1",
+    "version": "1.3",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/danmu.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v1.3": "适配v2多媒体服务器",
       "v1.2": "检查本地弹幕文件是否已存在，避免重复下载。",
       "v1.1": "解析Emby日志，判断已配置弹幕源是否全部匹配失败。",
       "v1.0": "通知Emby Danmu插件下载弹幕。"
@@ -132,11 +135,12 @@
     "name": "Emby视频类型检查",
     "description": "定期检查Emby媒体库中是否包含指定的视频类型，发送通知。",
     "labels": "Emby,媒体库",
-    "version": "1.0.1",
+    "version": "1.1",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/extendtype.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v1.1": "适配v2多媒体服务器",
       "v1.0": "定期检查Emby媒体库中是否包含指定的视频类型，发送通知。"
     }
   },
@@ -144,11 +148,12 @@
     "name": "Emby有声书整理",
     "description": "还在为Emby有声书整理烦恼吗？入库存在很多单集？",
     "labels": "Emby,媒体库",
-    "version": "1.1.1",
+    "version": "1.2",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/audiobook.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v1.2": "适配v2多媒体服务器",
       "v1.1": "整理完锁定，防止数据被刷新",
       "v1.0": "还在为Emby有声书整理烦恼吗？入库存在很多单集。"
     }
@@ -157,11 +162,12 @@
     "name": "Emby合集媒体排序",
     "description": "Emby保留按照加入时间倒序的前提下，把合集中的媒体按照发布日期排序，修改加入时间已到达顺序排列的目的。",
     "labels": "媒体库",
-    "version": "1.1.1",
+    "version": "1.2",
     "icon": "Element_A.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v1.2": "适配v2多媒体服务器",
       "v1.1": "优化处理逻辑",
       "v1.0": "保留按照加入时间倒序的前提下，把合集中的媒体放一块，不用到处找。"
     }
@@ -170,11 +176,12 @@
     "name": "Emby剧集演员同步",
     "description": "同步剧演员信息到集演员信息。",
     "labels": "Emby,媒体库",
-    "version": "1.3.1",
+    "version": "1.4",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/embyactorsync.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v1.4": "适配v2多媒体服务器",
       "v1.3": "剧集优先使用季演员。",
       "v1.2": "交互命令返回处理完成信息。",
       "v1.1": "支持交互命令手动同步单个剧集 /as 媒体库名 剧集名。",

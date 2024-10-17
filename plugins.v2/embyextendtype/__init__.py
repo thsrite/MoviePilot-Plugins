@@ -25,7 +25,7 @@ class EmbyExtendType(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/extendtype.png"
     # 插件版本
-    plugin_version = "1.0.1"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -46,6 +46,7 @@ class EmbyExtendType(_PluginBase):
     _librarys = None
     _extend = None
     _msgtype = None
+    _mediaservers = None
 
     # 退出事件
     _event = threading.Event()
@@ -66,19 +67,7 @@ class EmbyExtendType(_PluginBase):
             self._notify = config.get("notify")
             self._extend = config.get("extend")
             self._msgtype = config.get("msgtype")
-
-            emby_server = self.mediaserver_helper.get_service(name="Emby")
-            if not emby_server:
-                logger.error("未配置Emby媒体服务器")
-                return
-
-            self._EMBY_USER = emby_server.instance.get_user()
-            self._EMBY_HOST = emby_server.config.get("host")
-            self._EMBY_APIKEY = emby_server.config.get("apikey")
-            if not self._EMBY_HOST.endswith("/"):
-                self._EMBY_HOST += "/"
-            if not self._EMBY_HOST.startswith("http"):
-                self._EMBY_HOST = "http://" + self._EMBY_HOST
+            self._mediaservers = config.get("mediaservers") or []
 
         # 停止现有任务
         self.stop_service()
@@ -123,30 +112,44 @@ class EmbyExtendType(_PluginBase):
             logger.error("视频类型为空，不进行检查")
             return
 
-        if not self._librarys:
-            logger.error("媒体库为空，不进行检查")
+        emby_servers = self.mediaserver_helper.get_services(name_filters=self._mediaservers, type_filter="emby")
+        if not emby_servers:
+            logger.error("未配置Emby媒体服务器")
             return
 
-        logger.info(f"开始检查媒体库 {self._librarys} 中是否包含 {self._extend} 类型")
-        for library in self._librarys:
-            library_name, library_id = library.split(" ")
-            logger.info(f"开始检查媒体库 {library_name} 中是否包含 {self._extend} 类型")
-            library_extends = self.__get_extend_type(library_id)
-            if library_extends:
-                for extend in self._extend.split(","):
-                    if extend in [item.get("Name") for item in library_extends]:
-                        logger.info(f"媒体库 {library_name} 中包含 {extend} 类型")
-                        # 发送通知
-                        if self._notify:
-                            mtype = NotificationType.Manual
-                            if self._msgtype:
-                                mtype = NotificationType.__getitem__(str(self._msgtype)) or NotificationType.Manual
-                            self.post_message(title="Emby视频类型检查",
-                                              mtype=mtype,
-                                              text=f"媒体库 {library_name} 命中 {extend} 视频类型")
-            logger.info(f"媒体库 {library_name} 中全部视频类型检查完毕")
+        for emby_name, emby_server in emby_servers.items():
+            logger.info(f"开始处理媒体服务器 {emby_name}")
+            self._EMBY_USER = emby_server.instance.get_user()
+            self._EMBY_APIKEY = emby_server.config.config.get("apikey")
+            self._EMBY_HOST = emby_server.config.config.get("host")
+            if not self._EMBY_HOST.endswith("/"):
+                self._EMBY_HOST += "/"
+            if not self._EMBY_HOST.startswith("http"):
+                self._EMBY_HOST = "http://" + self._EMBY_HOST
 
-        logger.info(f"媒体库 {self._librarys} 中全部视频类型检查完毕")
+            # 获取媒体库信息
+            librarys = emby_server.instance.get_librarys()
+            for library in librarys:
+                logger.info(f"开始检查媒体库 {emby_name} {library.name} 中是否包含 {self._extend} 类型")
+                library_id = library.id
+                library_name = library.name
+                logger.info(f"开始检查媒体库 {library_name} 中是否包含 {self._extend} 类型")
+                library_extends = self.__get_extend_type(library_id)
+                if library_extends:
+                    for extend in self._extend.split(","):
+                        if extend in [item.get("Name") for item in library_extends]:
+                            logger.info(f"媒体库 {library_name} 中包含 {extend} 类型")
+                            # 发送通知
+                            if self._notify:
+                                mtype = NotificationType.Manual
+                                if self._msgtype:
+                                    mtype = NotificationType.__getitem__(str(self._msgtype)) or NotificationType.Manual
+                                self.post_message(title="Emby视频类型检查",
+                                                  mtype=mtype,
+                                                  text=f"媒体库 {library_name} 命中 {extend} 视频类型")
+                logger.info(f"{emby_name} 媒体库 {library_name} 中全部视频类型检查完毕")
+
+            logger.info(f"{emby_name} 媒体库中全部视频类型检查完毕")
 
     def __get_extend_type(self, parent_id) -> list:
         """
@@ -179,6 +182,7 @@ class EmbyExtendType(_PluginBase):
             "extend": self._extend,
             "notify": self._notify,
             "msgtype": self._msgtype,
+            "mediaservers": self._mediaservers,
         })
 
     def get_state(self) -> bool:
@@ -325,7 +329,7 @@ class EmbyExtendType(_PluginBase):
                             {
                                 'component': 'VCol',
                                 'props': {
-                                    'cols': 12,
+                                    'cols': 12
                                 },
                                 'content': [
                                     {
@@ -333,13 +337,16 @@ class EmbyExtendType(_PluginBase):
                                         'props': {
                                             'multiple': True,
                                             'chips': True,
-                                            'model': 'librarys',
-                                            'label': '媒体库',
-                                            'items': library_items
+                                            'clearable': True,
+                                            'model': 'mediaservers',
+                                            'label': '媒体服务器',
+                                            'items': [{"title": config.name, "value": config.name}
+                                                      for config in self.mediaserver_helper.get_configs().values() if
+                                                      config.type == "emby"]
                                         }
                                     }
                                 ]
-                            },
+                            }
                         ]
                     },
                 ]
@@ -350,7 +357,7 @@ class EmbyExtendType(_PluginBase):
             "notify": False,
             "cron": "",
             "extend": "",
-            "librarys": [],
+            "mediaservers": [],
         }
 
     def get_page(self) -> List[dict]:

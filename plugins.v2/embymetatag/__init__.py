@@ -23,7 +23,7 @@ class EmbyMetaTag(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/tag.png"
     # 插件版本
-    plugin_version = "1.2.1"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -41,6 +41,8 @@ class EmbyMetaTag(_PluginBase):
     _cron = None
     _tag_confs = None
     _name_tag_confs = None
+    _mediaservers = None
+
     mediaserver_helper = None
     _EMBY_HOST = None
     _EMBY_USER = None
@@ -62,19 +64,7 @@ class EmbyMetaTag(_PluginBase):
             self._cron = config.get("cron")
             self._tag_confs = config.get("tag_confs")
             self._name_tag_confs = config.get("name_tag_confs")
-
-            emby_server = self.mediaserver_helper.get_service(name="Emby")
-            if not emby_server:
-                logger.error("未配置Emby媒体服务器")
-                return
-
-            self._EMBY_USER = emby_server.instance.get_user()
-            self._EMBY_HOST = emby_server.config.get("host")
-            self._EMBY_APIKEY = emby_server.config.get("apikey")
-            if not self._EMBY_HOST.endswith("/"):
-                self._EMBY_HOST += "/"
-            if not self._EMBY_HOST.startswith("http"):
-                self._EMBY_HOST = "http://" + self._EMBY_HOST
+            self._mediaservers = config.get("mediaservers") or []
 
             _tags = {}
             if self._tag_confs:
@@ -147,6 +137,7 @@ class EmbyMetaTag(_PluginBase):
                 "enabled": self._enabled,
                 "tag_confs": self._tag_confs,
                 "name_tag_confs": self._name_tag_confs,
+                "mediaservers": self._mediaservers,
             }
         )
 
@@ -154,85 +145,96 @@ class EmbyMetaTag(_PluginBase):
         """
         给设定媒体库打标签
         """
-        if "emby" not in settings.MEDIASERVER:
-            logger.error("未配置Emby媒体服务器")
-            return
-
         if (not self._tags or len(self._tags.keys()) == 0) and (
                 not self._media_tags or len(self._media_tags.keys()) == 0):
             logger.error("未配置Emby媒体标签")
             return
 
-        # 媒体库标签
-        if self._tags and len(self._tags.keys()) > 0:
-            # 获取emby 媒体库
-            librarys = Emby().get_librarys()
-            if not librarys:
-                logger.error("获取媒体库失败")
-                return
+        emby_servers = self.mediaserver_helper.get_services(name_filters=self._mediaservers, type_filter="emby")
+        if not emby_servers:
+            logger.error("未配置Emby媒体服务器")
+            return
 
-            # 遍历媒体库，获取媒体库媒体
-            for library in librarys:
-                # 获取媒体库标签
-                library_tags = self._tags.get(library.name)
-                if not library_tags:
-                    continue
+        for emby_name, emby_server in emby_servers.items():
+            logger.info(f"开始处理媒体服务器 {emby_name}")
+            self._EMBY_USER = emby_server.instance.get_user()
+            self._EMBY_APIKEY = emby_server.config.config.get("apikey")
+            self._EMBY_HOST = emby_server.config.config.get("host")
+            if not self._EMBY_HOST.endswith("/"):
+                self._EMBY_HOST += "/"
+            if not self._EMBY_HOST.startswith("http"):
+                self._EMBY_HOST = "http://" + self._EMBY_HOST
 
-                # 获取媒体库媒体
-                library_items = Emby().get_items(library.id)
-                if not library_items:
-                    continue
+            # 媒体库标签
+            if self._tags and len(self._tags.keys()) > 0:
+                # 获取emby 媒体库
+                librarys = emby_server.instance.get_librarys()
+                if not librarys:
+                    logger.error("获取媒体库失败")
+                    return
 
-                for library_item in library_items:
-                    if not library_item:
-                        continue
-                    # 获取item的tag
-                    item_tags = self.__get_item_tags(library_item.item_id) or []
-
-                    # 获取缺少的tag
-                    add_tags = []
-                    for library_tag in library_tags:
-                        if not item_tags or library_tag not in item_tags:
-                            add_tags.append(library_tag)
-
-                    # 添加标签
-                    if add_tags:
-                        tags = [{"Name": str(add_tag)} for add_tag in add_tags]
-                        tags = {"Tags": tags}
-                        add_flag = self.__add_tag(library_item.item_id, tags)
-                        logger.info(f"{library.name} 添加标签成功：{library_item.title} {tags} {add_flag}")
-
-        # 特殊媒体名标签
-        if self._media_tags and len(self._media_tags.keys()) > 0:
-            for media_name, media_tags in self._media_tags.items():
-
-                match_medias = []
-                # 根据Series/Movie搜索媒体
-                for media_type in self._media_type.get(media_name):
-                    match_medias += self.__get_medias_by_name(media_name, media_type)
-
-                # 遍历媒体 补充缺失tag
-                for media in match_medias:
-                    if not media:
+                # 遍历媒体库，获取媒体库媒体
+                for library in librarys:
+                    # 获取媒体库标签
+                    library_tags = self._tags.get(library.name)
+                    if not library_tags:
                         continue
 
-                    # 获取item的tag
-                    item_tags = self.__get_item_tags(media.get("Id")) or []
+                    # 获取媒体库媒体
+                    library_items = emby_server.instance.get_items(library.id)
+                    if not library_items:
+                        continue
 
-                    # 获取缺少的tag
-                    add_tags = []
-                    for media_tag in media_tags:
-                        if not item_tags or media_tag not in item_tags:
-                            add_tags.append(media_tag)
+                    for library_item in library_items:
+                        if not library_item:
+                            continue
+                        # 获取item的tag
+                        item_tags = self.__get_item_tags(library_item.item_id) or []
 
-                    # 添加标签
-                    if add_tags:
-                        tags = [{"Name": str(add_tag)} for add_tag in add_tags]
-                        tags = {"Tags": tags}
-                        add_flag = self.__add_tag(media.get("Id"), tags)
-                        logger.info(f"特殊媒体添加标签成功：{media.get('Name')} {tags} {add_flag}")
+                        # 获取缺少的tag
+                        add_tags = []
+                        for library_tag in library_tags:
+                            if not item_tags or library_tag not in item_tags:
+                                add_tags.append(library_tag)
 
-        logger.info("Emby媒体标签任务完成")
+                        # 添加标签
+                        if add_tags:
+                            tags = [{"Name": str(add_tag)} for add_tag in add_tags]
+                            tags = {"Tags": tags}
+                            add_flag = self.__add_tag(library_item.item_id, tags)
+                            logger.info(f"{library.name} 添加标签成功：{library_item.title} {tags} {add_flag}")
+
+            # 特殊媒体名标签
+            if self._media_tags and len(self._media_tags.keys()) > 0:
+                for media_name, media_tags in self._media_tags.items():
+
+                    match_medias = []
+                    # 根据Series/Movie搜索媒体
+                    for media_type in self._media_type.get(media_name):
+                        match_medias += self.__get_medias_by_name(media_name, media_type)
+
+                    # 遍历媒体 补充缺失tag
+                    for media in match_medias:
+                        if not media:
+                            continue
+
+                        # 获取item的tag
+                        item_tags = self.__get_item_tags(media.get("Id")) or []
+
+                        # 获取缺少的tag
+                        add_tags = []
+                        for media_tag in media_tags:
+                            if not item_tags or media_tag not in item_tags:
+                                add_tags.append(media_tag)
+
+                        # 添加标签
+                        if add_tags:
+                            tags = [{"Name": str(add_tag)} for add_tag in add_tags]
+                            tags = {"Tags": tags}
+                            add_flag = self.__add_tag(media.get("Id"), tags)
+                            logger.info(f"特殊媒体添加标签成功：{media.get('Name')} {tags} {add_flag}")
+
+            logger.info(f"{emby_name} 媒体标签任务完成")
 
     @eventmanager.register(EventType.PluginAction)
     def remote_sync(self, event: Event):
@@ -429,6 +431,32 @@ class EmbyMetaTag(_PluginBase):
                             {
                                 'component': 'VCol',
                                 'props': {
+                                    'cols': 12
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'multiple': True,
+                                            'chips': True,
+                                            'clearable': True,
+                                            'model': 'mediaservers',
+                                            'label': '媒体服务器',
+                                            'items': [{"title": config.name, "value": config.name}
+                                                      for config in self.mediaserver_helper.get_configs().values() if
+                                                      config.type == "emby"]
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
                                     'cols': 12,
                                 },
                                 'content': [
@@ -452,6 +480,7 @@ class EmbyMetaTag(_PluginBase):
             "cron": "5 1 * * *",
             "tag_confs": "",
             "name_tag_confs": "",
+            "mediaservers": [],
         }
 
     def get_page(self) -> List[dict]:

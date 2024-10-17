@@ -11,7 +11,6 @@ from app.core.event import eventmanager, Event
 from app.helper.mediaserver import MediaServerHelper
 from app.log import logger
 from app.plugins import _PluginBase
-from app.modules.emby import Emby
 from app.schemas.types import EventType, MediaType
 from app.utils.http import RequestUtils
 
@@ -24,7 +23,7 @@ class EmbyActorSync(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/embyactorsync.png"
     # 插件版本
-    plugin_version = "1.3.1"
+    plugin_version = "1.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -38,7 +37,8 @@ class EmbyActorSync(_PluginBase):
 
     _onlyonce = False
     _enabled = False
-    _librarys = None
+    _mediaservers = None
+
     mediaserver_helper = None
     _EMBY_HOST = None
     _EMBY_USER = None
@@ -51,20 +51,7 @@ class EmbyActorSync(_PluginBase):
         if config:
             self._enabled = config.get("enabled")
             self._onlyonce = config.get("onlyonce")
-            self._librarys = config.get("librarys") or []
-
-            emby_server = self.mediaserver_helper.get_service(name="Emby")
-            if not emby_server:
-                logger.error("未配置Emby媒体服务器")
-                return
-
-            self._EMBY_USER = emby_server.instance.get_user()
-            self._EMBY_HOST = emby_server.config.get("host")
-            self._EMBY_APIKEY = emby_server.config.get("apikey")
-            if not self._EMBY_HOST.endswith("/"):
-                self._EMBY_HOST += "/"
-            if not self._EMBY_HOST.startswith("http"):
-                self._EMBY_HOST = "http://" + self._EMBY_HOST
+            self._mediaservers = config.get("mediaservers") or []
 
             # 加载模块
             if self._onlyonce:
@@ -98,7 +85,7 @@ class EmbyActorSync(_PluginBase):
             {
                 "enabled": self._enabled,
                 "onlyonce": self._onlyonce,
-                "librarys": self._librarys,
+                "mediaservers": self._mediaservers,
             }
         )
 
@@ -130,72 +117,85 @@ class EmbyActorSync(_PluginBase):
         """
         Emby剧集演员同步
         """
-        # 获取媒体库信息
-        librarys = Emby().get_librarys()
+        emby_servers = self.mediaserver_helper.get_services(name_filters=self._mediaservers, type_filter="emby")
+        if not emby_servers:
+            logger.error("未配置Emby媒体服务器")
+            return
 
-        # 匹配需要的媒体库
-        for library in librarys:
-            if library.type != MediaType.TV.value:
-                continue
-            if self._librarys and library.name not in self._librarys:
-                continue
-            if library_name and library.name != library_name:
-                continue
+        for emby_name, emby_server in emby_servers.items():
+            logger.info(f"开始处理媒体服务器 {emby_name}")
+            self._EMBY_USER = emby_server.instance.get_user()
+            self._EMBY_APIKEY = emby_server.config.config.get("apikey")
+            self._EMBY_HOST = emby_server.config.config.get("host")
+            if not self._EMBY_HOST.endswith("/"):
+                self._EMBY_HOST += "/"
+            if not self._EMBY_HOST.startswith("http"):
+                self._EMBY_HOST = "http://" + self._EMBY_HOST
 
-            # 获取媒体库媒体列表
-            library_items = self.__get_items(library.id)
-            if not library_items:
-                logger.error(f"获取媒体库：{library.name}的媒体列表失败")
-                continue
+            # 获取媒体库信息
+            librarys = emby_server.instance.get_librarys()
 
-            logger.info(f"开始同步媒体库：{library.name}，ID：{library.id}")
+            # 匹配需要的媒体库
+            for library in librarys:
+                if library.type != MediaType.TV.value:
+                    continue
+                if library_name and library.name != library_name:
+                    continue
 
-            # 遍历媒体列表，获取媒体的ID和名称
-            for item in library_items:
-                if media_name:
-                    # 电影弹幕
-                    matches = re.findall(r'^(.+?)\s\(\d{4}\)$', item.get("Name").strip())
-                    if (not matches and media_name != item.get("Name")) or (matches and str(matches[0]) != media_name):
-                        continue
+                # 获取媒体库媒体列表
+                library_items = self.__get_items(library.id)
+                if not library_items:
+                    logger.error(f"获取媒体库：{library.name}的媒体列表失败")
+                    continue
 
-                logger.info(f"开始同步媒体：{item.get('Name')}，ID：{item.get('Id')}")
-                item_info = self.__get_item_info(item.get("Id"))
-                seasons = self.__get_items(item.get("Id"))
-                for season in seasons:
-                    season_info = self.__get_item_info(season.get("Id"))
-                    peoples = season_info.get("People") or item_info.get("People")
-                    season_items = self.__get_items(season.get("Id"))
-                    for season_item in season_items:
-                        retry = 0
-                        while retry < 3:
-                            season_item_info = self.__get_item_info(season_item.get("Id"))
-                            try:
-                                if season_item_info.get("People") == peoples:
-                                    logger.warn(
-                                        f"媒体：{item.get('Name')} {season_item_info.get('SeasonName')} {season_item_info.get('IndexNumber')} {season_item_info.get('Name')} 演员信息已更新")
-                                    retry = 3
-                                    continue
-                                season_item_info.update({
-                                    "People": peoples
-                                })
-                                season_item_info["LockedFields"].append("Cast")
-                                flag = self.__update_item_info(season_item.get("Id"), season_item_info)
-                                logger.info(
-                                    f"更新媒体：{item.get('Name')} {season_item_info.get('SeasonName')} {season_item_info.get('IndexNumber')} {season_item_info.get('Name')} 成功：{flag}")
-                                if flag:
-                                    retry = 3
-                                    time.sleep(0.5)
-                                else:
+                logger.info(f"开始同步媒体库：{library.name}，ID：{library.id}")
+
+                # 遍历媒体列表，获取媒体的ID和名称
+                for item in library_items:
+                    if media_name:
+                        # 电影弹幕
+                        matches = re.findall(r'^(.+?)\s\(\d{4}\)$', item.get("Name").strip())
+                        if (not matches and media_name != item.get("Name")) or (matches and str(matches[0]) != media_name):
+                            continue
+
+                    logger.info(f"开始同步媒体：{item.get('Name')}，ID：{item.get('Id')}")
+                    item_info = self.__get_item_info(item.get("Id"))
+                    seasons = self.__get_items(item.get("Id"))
+                    for season in seasons:
+                        season_info = self.__get_item_info(season.get("Id"))
+                        peoples = season_info.get("People") or item_info.get("People")
+                        season_items = self.__get_items(season.get("Id"))
+                        for season_item in season_items:
+                            retry = 0
+                            while retry < 3:
+                                season_item_info = self.__get_item_info(season_item.get("Id"))
+                                try:
+                                    if season_item_info.get("People") == peoples:
+                                        logger.warn(
+                                            f"媒体：{item.get('Name')} {season_item_info.get('SeasonName')} {season_item_info.get('IndexNumber')} {season_item_info.get('Name')} 演员信息已更新")
+                                        retry = 3
+                                        continue
+                                    season_item_info.update({
+                                        "People": peoples
+                                    })
+                                    season_item_info["LockedFields"].append("Cast")
+                                    flag = self.__update_item_info(season_item.get("Id"), season_item_info)
+                                    logger.info(
+                                        f"更新媒体：{item.get('Name')} {season_item_info.get('SeasonName')} {season_item_info.get('IndexNumber')} {season_item_info.get('Name')} 成功：{flag}")
+                                    if flag:
+                                        retry = 3
+                                        time.sleep(0.5)
+                                    else:
+                                        retry += 1
+                                except Exception as e:
                                     retry += 1
-                            except Exception as e:
-                                retry += 1
-                                logger.error(
-                                    f"更新媒体：{item.get('Name')} {season_item_info.get('SeasonName')} {season_item_info.get('IndexNumber')} {season_item_info.get('Name')} 信息出错：{e} 开始重试...{retry} / 3")
-                if event:
-                    self.post_message(channel=event.event_data.get("channel"),
-                                      title=f"{library_name} {media_name} 同步完成",
-                                      userid=event.event_data.get("user"))
-        logger.info(f"Emby剧集演员同步完成")
+                                    logger.error(
+                                        f"更新媒体：{item.get('Name')} {season_item_info.get('SeasonName')} {season_item_info.get('IndexNumber')} {season_item_info.get('Name')} 信息出错：{e} 开始重试...{retry} / 3")
+                    if event:
+                        self.post_message(channel=event.event_data.get("channel"),
+                                          title=f"{library_name} {media_name} 同步完成",
+                                          userid=event.event_data.get("user"))
+            logger.info(f"{emby_name} 剧集演员同步完成")
 
     def __update_item_info(self, item_id, data):
         headers = {
@@ -256,9 +256,6 @@ class EmbyActorSync(_PluginBase):
         """
         拼装插件配置页面，需要返回两块数据：1、页面配置；2、数据结构
         """
-        librarys = Emby().get_librarys()
-        library_options = [{'title': library.name, 'value': library.name} for library in librarys if
-                           library.type == MediaType.TV.value]
         return [
             {
                 "component": "VForm",
@@ -301,26 +298,30 @@ class EmbyActorSync(_PluginBase):
                         ]
                     },
                     {
-                        "component": "VRow",
-                        "content": [
+                        'component': 'VRow',
+                        'content': [
                             {
                                 'component': 'VCol',
                                 'props': {
-                                    'cols': 12,
-                                    'md': 4
+                                    'cols': 12
                                 },
                                 'content': [
                                     {
                                         'component': 'VSelect',
                                         'props': {
-                                            'model': 'librarys',
-                                            'label': '媒体库',
-                                            'items': library_options
+                                            'multiple': True,
+                                            'chips': True,
+                                            'clearable': True,
+                                            'model': 'mediaservers',
+                                            'label': '媒体服务器',
+                                            'items': [{"title": config.name, "value": config.name}
+                                                      for config in self.mediaserver_helper.get_configs().values() if
+                                                      config.type == "emby"]
                                         }
                                     }
                                 ]
-                            },
-                        ],
+                            }
+                        ]
                     },
                     {
                         'component': 'VRow',
@@ -348,7 +349,7 @@ class EmbyActorSync(_PluginBase):
         ], {
             "enabled": False,
             "onlyonce": False,
-            "librarys": [],
+            "mediaservers": [],
         }
 
     def get_page(self) -> List[dict]:

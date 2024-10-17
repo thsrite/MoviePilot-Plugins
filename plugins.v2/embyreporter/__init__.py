@@ -34,7 +34,7 @@ class EmbyReporter(_PluginBase):
     # 插件图标
     plugin_icon = "Pydiocells_A.png"
     # 插件版本
-    plugin_version = "1.8.1"
+    plugin_version = "1.9"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -58,6 +58,8 @@ class EmbyReporter(_PluginBase):
     _emby_host = None
     _emby_api_key = None
     show_time = True
+    _mediaservers = None
+
     _scheduler: Optional[BackgroundScheduler] = None
     mediaserver_helper = None
     PLAYBACK_REPORTING_TYPE_MOVIE = "ItemName"
@@ -69,12 +71,6 @@ class EmbyReporter(_PluginBase):
         # 停止现有任务
         self.stop_service()
         self.mediaserver_helper = MediaServerHelper()
-        emby_server = self.mediaserver_helper.get_service(name="Emby")
-        if not emby_server:
-            logger.error("未配置Emby媒体服务器")
-            return
-        self.host = emby_server.config.get("host")
-        self.api_key = emby_server.config.get("apikey")
 
         if config:
             self._enabled = config.get("enabled")
@@ -88,10 +84,7 @@ class EmbyReporter(_PluginBase):
             self.show_time = config.get("show_time")
             self._emby_host = config.get("emby_host")
             self._emby_api_key = config.get("emby_api_key")
-            if self._emby_host and self._emby_api_key:
-                self.host = f"http://{self._emby_host}" if not str(self._emby_host).startswith(
-                    "http") else self._emby_host
-                self.api_key = self._emby_api_key
+            self._mediaservers = config.get("mediaservers") or []
 
             if self._enabled or self._onlyonce:
                 # 定时服务
@@ -137,47 +130,62 @@ class EmbyReporter(_PluginBase):
         if not self._type:
             return
 
-        # 获取当前时间并格式化
-        current_time = datetime.now().strftime("%Y%m%d%H%M%S")
-
-        # 获取数据
-        success, movies = self.get_report(types=self.PLAYBACK_REPORTING_TYPE_MOVIE, days=int(self._days),
-                                          limit=int(self._cnt))
-        if not success:
-            exit(movies)
-        logger.info(f"获取到电影 {movies}")
-        success, tvshows = self.get_report(types=self.PLAYBACK_REPORTING_TYPE_TVSHOWS, days=int(self._days),
-                                           limit=int(self._cnt))
-        if not success:
-            exit(tvshows)
-        logger.info(f"获取到电视剧 {tvshows}")
-
-        # 绘制海报
-        report_path = self.draw(res_path=self._res_dir,
-                                movies=movies,
-                                tvshows=tvshows,
-                                show_time=self.show_time)
-
-        if not report_path:
-            logger.error("生成海报失败")
+        emby_servers = self.mediaserver_helper.get_services(name_filters=self._mediaservers, type_filter="emby")
+        if not emby_servers:
+            logger.error("未配置Emby媒体服务器")
             return
 
-        # 示例调用
-        self.__split_image_by_height(report_path, "/public/report", [250, 330, 335])
+        for emby_name, emby_server in emby_servers.items():
+            logger.info(f"开始处理媒体服务器 {emby_name}")
+            self.host = emby_server.config.get("host")
+            self.api_key = emby_server.config.get("apikey")
+            if not self.host.endswith("/"):
+                self.host += "/"
+            if not self.host.startswith("http"):
+                self.host = "http://" + self.host
 
-        # 分块推送
-        for i in range(2, 4):
-            report_path_part = f"/public/report_part_{i}.jpg"
-            report_url = self._mp_host + report_path_part.replace("/public", "") + f"?_timestamp={current_time}"
-            mtype = NotificationType.MediaServer
-            if self._type:
-                mtype = NotificationType.__getitem__(str(self._type)) or NotificationType.MediaServer
+            # 获取当前时间并格式化
+            current_time = datetime.now().strftime("%Y%m%d%H%M%S")
 
-            self.post_message(
-                title=f'Movies 近{self._days}日观影排行' if i == 2 else f'TV Shows 近{self._days}日观影排行',
-                mtype=mtype,
-                image=report_url)
-            logger.info(f"Emby观影记录推送成功 {report_url}")
+            # 获取数据
+            success, movies = self.get_report(types=self.PLAYBACK_REPORTING_TYPE_MOVIE, days=int(self._days),
+                                              limit=int(self._cnt))
+            if not success:
+                exit(movies)
+            logger.info(f"获取到电影 {movies}")
+            success, tvshows = self.get_report(types=self.PLAYBACK_REPORTING_TYPE_TVSHOWS, days=int(self._days),
+                                               limit=int(self._cnt))
+            if not success:
+                exit(tvshows)
+            logger.info(f"获取到电视剧 {tvshows}")
+
+            # 绘制海报
+            report_path = self.draw(res_path=self._res_dir,
+                                    movies=movies,
+                                    tvshows=tvshows,
+                                    show_time=self.show_time,
+                                    emby_name=emby_name)
+
+            if not report_path:
+                logger.error("生成海报失败")
+                break
+
+            # 示例调用
+            self.__split_image_by_height(report_path, f"/public/report_{emby_name}", [250, 330, 335])
+
+            # 分块推送
+            for i in range(2, 4):
+                report_path_part = f"/public/report_{emby_name}_part_{i}.jpg"
+                report_url = self._mp_host + report_path_part.replace("/public", "") + f"?_timestamp={current_time}"
+                mtype = NotificationType.MediaServer
+                if self._type:
+                    mtype = NotificationType.__getitem__(str(self._type)) or NotificationType.MediaServer
+
+                self.post_message(
+                    title=f'Movies 近{self._days}日观影排行' if i == 2 else f'TV Shows 近{self._days}日观影排行',
+                    mtype=mtype,
+                    image=report_url)
+                logger.info(f"{emby_name} 观影记录推送成功 {report_url}")
 
     @staticmethod
     def __split_image_by_height(image_path, output_path_prefix, heights):
@@ -228,7 +236,8 @@ class EmbyReporter(_PluginBase):
             "show_time": self.show_time,
             "emby_host": self._emby_host,
             "emby_api_key": self._emby_api_key,
-            "res_dir": self._res_dir
+            "res_dir": self._res_dir,
+            "mediaservers": self._mediaservers,
         })
 
     def get_state(self) -> bool:
@@ -481,6 +490,32 @@ class EmbyReporter(_PluginBase):
                             {
                                 'component': 'VCol',
                                 'props': {
+                                    'cols': 12
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'multiple': True,
+                                            'chips': True,
+                                            'clearable': True,
+                                            'model': 'mediaservers',
+                                            'label': '媒体服务器',
+                                            'items': [{"title": config.name, "value": config.name}
+                                                      for config in self.mediaserver_helper.get_configs().values() if
+                                                      config.type == "emby"]
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
                                     'cols': 12,
                                 },
                                 'content': [
@@ -530,7 +565,8 @@ class EmbyReporter(_PluginBase):
             "emby_api_key": "",
             "mp_host": "",
             "show_time": True,
-            "type": ""
+            "type": "",
+            "mediaservers": [],
         }
 
     def get_page(self) -> List[dict]:
@@ -549,7 +585,7 @@ class EmbyReporter(_PluginBase):
         except Exception as e:
             logger.error("退出插件失败：%s" % str(e))
 
-    def draw(self, res_path, movies, tvshows, show_time=True):
+    def draw(self, res_path, movies, tvshows, show_time=True, emby_name=None):
         # 默认路径 默认图
         if not res_path:
             res_path = os.path.join(Path(__file__).parent, "res")
@@ -668,7 +704,7 @@ class EmbyReporter(_PluginBase):
                 continue
 
         if index >= 0:
-            save_path = "/public/report.jpg"
+            save_path = f"/public/report_{emby_name}.jpg"
             if Path(save_path).exists():
                 Path.unlink(Path(save_path))
             bg.save(save_path)
