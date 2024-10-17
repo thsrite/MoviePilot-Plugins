@@ -689,7 +689,6 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/libraryduplicate.png",
     "author": "thsrite",
     "level": 2,
-    "v2": true,
     "history": {
       "v1.9": "修复删除软连接",
       "v1.8": "仅检查模式下，预览操作不会删除任何文件。",
