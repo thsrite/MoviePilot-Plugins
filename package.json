@@ -547,7 +547,6 @@
     "icon": "directory.png",
     "author": "thsrite",
     "level": 1,
-    "v2": true,
     "history": {
       "v1.0": "同步merge主仓库[目录监控]插件，增加统一发送消息逻辑（Testing…）"
     }
