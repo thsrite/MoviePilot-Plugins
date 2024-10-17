@@ -57,7 +57,6 @@
     "icon": "Synomail_A.png",
     "author": "thsrite",
     "level": 2,
-    "v2": true,
     "history": {
       "v1.9": "同步主仓库",
       "v1.8": "自定义保留消息天数",
