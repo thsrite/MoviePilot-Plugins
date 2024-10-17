@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import List, Tuple, Dict, Any, Optional
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
 
 from app import schemas
 from app.chain.transfer import TransferChain
