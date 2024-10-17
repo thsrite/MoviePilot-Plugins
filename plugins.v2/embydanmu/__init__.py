@@ -116,16 +116,16 @@ class EmbyDanmu(_PluginBase):
                 # 匹配需要的媒体库
                 for library in librarys:
                     if library.get("Name") == library_name:
-                        logger.info(f"找到媒体库：{library_name}，ID：{library.get('Id')}")
+                        logger.info(f"{emby_name} 找到媒体库：{library_name}，ID：{library.get('Id')}")
                         library_type = library.get("CollectionType")
                         library_id = library.get("Id")
                         library_options = library.get("LibraryOptions")
                         break
 
                 if not library_id or not library_options:
-                    logger.error(f"未找到媒体库：{library_name}")
+                    logger.error(f"{emby_name} 未找到媒体库：{library_name}")
                     self.post_message(channel=event.event_data.get("channel"),
-                                      title=f"未找到媒体库：{library_name}",
+                                      title=f"{emby_name} 未找到媒体库：{library_name}",
                                       userid=event.event_data.get("user"))
                     break
 
@@ -144,15 +144,15 @@ class EmbyDanmu(_PluginBase):
                 if enabled_danmu:
                     update_flag = self.__update_library(library_id, library_options)
                     if update_flag:
-                        logger.info(f"已启用媒体库：{library_name}的Danmu插件")
+                        logger.info(f"{emby_name} 已启用媒体库：{library_name}的Danmu插件")
                     else:
-                        logger.error(f"启用媒体库：{library_name}的Danmu插件失败")
+                        logger.error(f"{emby_name} 启用媒体库：{library_name}的Danmu插件失败")
                         self.post_message(channel=event.event_data.get("channel"),
-                                          title=f"启用媒体库：{library_name}的Danmu插件失败",
+                                          title=f"{emby_name} 启用媒体库：{library_name}的Danmu插件失败",
                                           userid=event.event_data.get("user"))
                         return
                 else:
-                    logger.info(f"媒体库：{library_name}的Danmu插件已启用")
+                    logger.info(f"{emby_name} 媒体库：{library_name}的Danmu插件已启用")
 
                 # 媒体库设置为正在任务，不关闭弹幕插件
                 _library_task = self._library_task.get(library_id, [])
@@ -163,9 +163,9 @@ class EmbyDanmu(_PluginBase):
                     # 获取媒体库媒体列表
                     library_items = self.__get_items(library_id)
                     if not library_items:
-                        logger.error(f"获取媒体库：{library_name}的媒体列表失败")
+                        logger.error(f"{emby_name} 获取媒体库：{library_name}的媒体列表失败")
                         self.post_message(channel=event.event_data.get("channel"),
-                                          title=f"获取媒体库：{library_name}的媒体列表失败",
+                                          title=f"{emby_name} 获取媒体库：{library_name}的媒体列表失败",
                                           userid=event.event_data.get("user"))
                     else:
                         found_item = False
@@ -174,7 +174,7 @@ class EmbyDanmu(_PluginBase):
                             if library_type == "tvshows":
                                 if item.get("Name") == library_item_name:
                                     found_item = True
-                                    logger.info(f"找到媒体：{library_item_name}，ID：{item.get('Id')}")
+                                    logger.info(f"{emby_name} 找到媒体：{library_item_name}，ID：{item.get('Id')}")
 
                                     # 电视剧弹幕
                                     seasons = self.__get_items(item.get("Id"))
@@ -191,45 +191,45 @@ class EmbyDanmu(_PluginBase):
                                                                                                only_check=True)
                                         if season_item_cnt == danmu_cnt:
                                             logger.info(
-                                                f"{library_name} {library_item_name} 第{season_item.get('IndexNumber')}季 弹幕文件已全部存在：{danmu_cnt}/{season_item_cnt}")
+                                                f"{emby_name} {library_name} {library_item_name} 第{season_item.get('IndexNumber')}季 弹幕文件已全部存在：{danmu_cnt}/{season_item_cnt}")
                                             self.post_message(channel=event.event_data.get("channel"),
-                                                              title=f"{library_name} {library_item_name} 第{season_item.get('IndexNumber')}季 弹幕文件已全部存在：{danmu_cnt}/{season_item_cnt}",
+                                                              title=f"{emby_name} {library_name} {library_item_name} 第{season_item.get('IndexNumber')}季 弹幕文件已全部存在：{danmu_cnt}/{season_item_cnt}",
                                                               userid=event.event_data.get("user"))
                                             break
 
                                         danmu_flag = self.__download_danmu(season_id)
                                         if danmu_flag:
                                             logger.info(
-                                                f"已通知弹幕插件获取 {library_name} {library_item_name} 第{season_item.get('IndexNumber')}季 的弹幕")
+                                                f"{emby_name} 已通知弹幕插件获取 {library_name} {library_item_name} 第{season_item.get('IndexNumber')}季 的弹幕")
                                             self.post_message(channel=event.event_data.get("channel"),
-                                                              title=f"开始通知Emby下载 {library_name} {library_item_name} 第{season_item.get('IndexNumber')}季 弹幕，异步执行，请耐心等候执行完成消息",
+                                                              title=f"{emby_name} 开始通知Emby下载 {library_name} {library_item_name} 第{season_item.get('IndexNumber')}季 弹幕，异步执行，请耐心等候执行完成消息",
                                                               userid=event.event_data.get("user"))
                                             danmu_cnt, season_item_cnt = self.__check_danmu_exists(season_id,
                                                                                                    only_check=False)
                                             if danmu_cnt == 0:
                                                 logger.error(
-                                                    f"{library_name} {library_item_name} Emby已配置弹幕源全部匹配弹幕失败")
+                                                    f"{emby_name} {library_name} {library_item_name} Emby已配置弹幕源全部匹配弹幕失败")
                                                 self.post_message(channel=event.event_data.get("channel"),
-                                                                  title=f"{library_name} {library_item_name} Emby已配置弹幕源全部匹配弹幕失败",
+                                                                  title=f"{emby_name} {library_name} {library_item_name} Emby已配置弹幕源全部匹配弹幕失败",
                                                                   userid=event.event_data.get("user"))
                                             else:
                                                 if season_item_cnt == danmu_cnt:
                                                     logger.info(
-                                                        f"{library_name} {library_item_name} 第{season_item.get('IndexNumber')}季 弹幕文件已全部下载完成：{danmu_cnt}/{season_item_cnt}")
+                                                        f"{emby_name} {library_name} {library_item_name} 第{season_item.get('IndexNumber')}季 弹幕文件已全部下载完成：{danmu_cnt}/{season_item_cnt}")
                                                     self.post_message(channel=event.event_data.get("channel"),
-                                                                      title=f"{library_name} {library_item_name} 第{season_item.get('IndexNumber')}季 弹幕文件已全部下载完成：{danmu_cnt}/{season_item_cnt}",
+                                                                      title=f"{emby_name} {library_name} {library_item_name} 第{season_item.get('IndexNumber')}季 弹幕文件已全部下载完成：{danmu_cnt}/{season_item_cnt}",
                                                                       userid=event.event_data.get("user"))
                                                 else:
                                                     logger.error(
-                                                        f"{library_name} {library_item_name} 弹幕文件未全部下载完成：{danmu_cnt}/{season_item_cnt}")
+                                                        f"{emby_name} {library_name} {library_item_name} 弹幕文件未全部下载完成：{danmu_cnt}/{season_item_cnt}")
                                                     self.post_message(channel=event.event_data.get("channel"),
-                                                                      title=f"{library_name} {library_item_name} 第{season_item.get('IndexNumber')}季 弹幕文件未全部下载完成：{danmu_cnt}/{season_item_cnt}",
+                                                                      title=f"{emby_name} {library_name} {library_item_name} 第{season_item.get('IndexNumber')}季 弹幕文件未全部下载完成：{danmu_cnt}/{season_item_cnt}",
                                                                       userid=event.event_data.get("user"))
                                         else:
                                             logger.error(
-                                                f"通知弹幕插件获取 {library_name} {library_item_name} 第{season_item.get('IndexNumber')}季 的弹幕失败")
+                                                f"{emby_name} 通知弹幕插件获取 {library_name} {library_item_name} 第{season_item.get('IndexNumber')}季 的弹幕失败")
                                             self.post_message(channel=event.event_data.get("channel"),
-                                                              title=f"通知弹幕插件获取 {library_name} {library_item_name} 第{season_item.get('IndexNumber')}季 的弹幕失败",
+                                                              title=f"{emby_name} 通知弹幕插件获取 {library_name} {library_item_name} 第{season_item.get('IndexNumber')}季 的弹幕失败",
                                                               userid=event.event_data.get("user"))
                                     else:
                                         for season in seasons:
@@ -244,9 +244,9 @@ class EmbyDanmu(_PluginBase):
                                                                                                            only_check=True)
                                                     if season_item_cnt == danmu_cnt:
                                                         logger.info(
-                                                            f"{library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕文件已全部存在：{danmu_cnt}/{season_item_cnt}")
+                                                            f"{emby_name} {library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕文件已全部存在：{danmu_cnt}/{season_item_cnt}")
                                                         self.post_message(channel=event.event_data.get("channel"),
-                                                                          title=f"{library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕文件已全部存在：{danmu_cnt}/{season_item_cnt}",
+                                                                          title=f"{emby_name} {library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕文件已全部存在：{danmu_cnt}/{season_item_cnt}",
                                                                           userid=event.event_data.get("user"))
                                                         break
 
@@ -254,36 +254,36 @@ class EmbyDanmu(_PluginBase):
                                                     danmu_flag = self.__download_danmu(season_id)
                                                     if danmu_flag:
                                                         logger.info(
-                                                            f"已通知弹幕插件获取 {library_name} {library_item_name} 第{season.get('IndexNumber')}季 的弹幕")
+                                                            f"{emby_name} 已通知弹幕插件获取 {library_name} {library_item_name} 第{season.get('IndexNumber')}季 的弹幕")
                                                         self.post_message(channel=event.event_data.get("channel"),
-                                                                          title=f"开始通知Emby下载 {library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕，异步执行，请耐心等候执行完成消息",
+                                                                          title=f"{emby_name} 开始通知Emby下载 {library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕，异步执行，请耐心等候执行完成消息",
                                                                           userid=event.event_data.get("user"))
                                                         danmu_cnt, season_item_cnt = self.__check_danmu_exists(season_id,
                                                                                                                only_check=False)
                                                         if danmu_cnt == 0:
                                                             logger.error(
-                                                                f"{library_name} {library_item_name} 第{season.get('IndexNumber')}季 Emby已配置弹幕源全部匹配弹幕失败")
+                                                                f"{emby_name} {library_name} {library_item_name} 第{season.get('IndexNumber')}季 Emby已配置弹幕源全部匹配弹幕失败")
                                                             self.post_message(channel=event.event_data.get("channel"),
-                                                                              title=f"{library_name} {library_item_name} 第{season.get('IndexNumber')}季 Emby已配置弹幕源全部匹配弹幕失败",
+                                                                              title=f"{emby_name} {library_name} {library_item_name} 第{season.get('IndexNumber')}季 Emby已配置弹幕源全部匹配弹幕失败",
                                                                               userid=event.event_data.get("user"))
                                                         else:
                                                             if season_item_cnt == danmu_cnt:
                                                                 logger.info(
-                                                                    f"{library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕文件已全部下载完成：{danmu_cnt}/{season_item_cnt}")
+                                                                    f"{emby_name} {library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕文件已全部下载完成：{danmu_cnt}/{season_item_cnt}")
                                                                 self.post_message(channel=event.event_data.get("channel"),
-                                                                                  title=f"{library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕文件已全部下载完成：{danmu_cnt}/{season_item_cnt}",
+                                                                                  title=f"{emby_name} {library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕文件已全部下载完成：{danmu_cnt}/{season_item_cnt}",
                                                                                   userid=event.event_data.get("user"))
                                                             else:
                                                                 logger.error(
-                                                                    f"{library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕文件未全部下载完成：{danmu_cnt}/{season_item_cnt}")
+                                                                    f"{emby_name} {library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕文件未全部下载完成：{danmu_cnt}/{season_item_cnt}")
                                                                 self.post_message(channel=event.event_data.get("channel"),
-                                                                                  title=f"{library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕文件未全部下载完成：{danmu_cnt}/{season_item_cnt}",
+                                                                                  title=f"{emby_name} {library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕文件未全部下载完成：{danmu_cnt}/{season_item_cnt}",
                                                                                   userid=event.event_data.get("user"))
                                                     else:
                                                         logger.error(
-                                                            f"通知弹幕插件获取 {library_name} {library_item_name} 第{season.get('IndexNumber')}季 的弹幕失败")
+                                                            f"{emby_name} 通知弹幕插件获取 {library_name} {library_item_name} 第{season.get('IndexNumber')}季 的弹幕失败")
                                                         self.post_message(channel=event.event_data.get("channel"),
-                                                                          title=f"通知弹幕插件获取 {library_name} {library_item_name} 第{season.get('IndexNumber')}季 的弹幕失败",
+                                                                          title=f"{emby_name} 通知弹幕插件获取 {library_name} {library_item_name} 第{season.get('IndexNumber')}季 的弹幕失败",
                                                                           userid=event.event_data.get("user"))
                                                     break
                                             else:
@@ -294,9 +294,9 @@ class EmbyDanmu(_PluginBase):
                                                                                                        only_check=True)
                                                 if season_item_cnt == danmu_cnt:
                                                     logger.info(
-                                                        f"{library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕文件已全部存在：{danmu_cnt}/{season_item_cnt}")
+                                                        f"{emby_name} {library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕文件已全部存在：{danmu_cnt}/{season_item_cnt}")
                                                     self.post_message(channel=event.event_data.get("channel"),
-                                                                      title=f"{library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕文件已全部存在：{danmu_cnt}/{season_item_cnt}",
+                                                                      title=f"{emby_name} {library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕文件已全部存在：{danmu_cnt}/{season_item_cnt}",
                                                                       userid=event.event_data.get("user"))
                                                     continue
 
@@ -304,36 +304,36 @@ class EmbyDanmu(_PluginBase):
                                                 danmu_flag = self.__download_danmu(season_id)
                                                 if danmu_flag:
                                                     logger.info(
-                                                        f"已通知弹幕插件获取 {library_name} {library_item_name} 第{season.get('IndexNumber')}季 的弹幕")
+                                                        f"{emby_name} 已通知弹幕插件获取 {library_name} {library_item_name} 第{season.get('IndexNumber')}季 的弹幕")
                                                     self.post_message(channel=event.event_data.get("channel"),
-                                                                      title=f"开始通知Emby下载 {library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕，异步执行，请耐心等候执行完成消息",
+                                                                      title=f"{emby_name} 开始通知Emby下载 {library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕，异步执行，请耐心等候执行完成消息",
                                                                       userid=event.event_data.get("user"))
                                                     danmu_cnt, season_item_cnt = self.__check_danmu_exists(season_id,
                                                                                                            only_check=False)
                                                     if danmu_cnt == 0:
                                                         logger.error(
-                                                            f"{library_name} {library_item_name} 第{season.get('IndexNumber')}季 Emby已配置弹幕源全部匹配弹幕失败")
+                                                            f"{emby_name} {library_name} {library_item_name} 第{season.get('IndexNumber')}季 Emby已配置弹幕源全部匹配弹幕失败")
                                                         self.post_message(channel=event.event_data.get("channel"),
-                                                                          title=f"{library_name} {library_item_name} 第{season.get('IndexNumber')}季 Emby已配置弹幕源全部匹配弹幕失败",
+                                                                          title=f"{emby_name} {library_name} {library_item_name} 第{season.get('IndexNumber')}季 Emby已配置弹幕源全部匹配弹幕失败",
                                                                           userid=event.event_data.get("user"))
                                                     else:
                                                         if season_item_cnt == danmu_cnt:
                                                             logger.info(
-                                                                f"{library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕文件已全部下载完成：{danmu_cnt}/{season_item_cnt}")
+                                                                f"{emby_name} {library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕文件已全部下载完成：{danmu_cnt}/{season_item_cnt}")
                                                             self.post_message(channel=event.event_data.get("channel"),
-                                                                              title=f"{library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕文件已全部下载完成：{danmu_cnt}/{season_item_cnt}",
+                                                                              title=f"{emby_name} {library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕文件已全部下载完成：{danmu_cnt}/{season_item_cnt}",
                                                                               userid=event.event_data.get("user"))
                                                         else:
                                                             logger.error(
-                                                                f"{library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕文件未全部下载完成：{danmu_cnt}/{season_item_cnt}")
+                                                                f"{emby_name} {library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕文件未全部下载完成：{danmu_cnt}/{season_item_cnt}")
                                                             self.post_message(channel=event.event_data.get("channel"),
-                                                                              title=f"{library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕文件未全部下载完成：{danmu_cnt}/{season_item_cnt}",
+                                                                              title=f"{emby_name} {library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕文件未全部下载完成：{danmu_cnt}/{season_item_cnt}",
                                                                               userid=event.event_data.get("user"))
                                                 else:
                                                     logger.error(
-                                                        f"通知弹幕插件获取 {library_name} {library_item_name} 第{season.get('IndexNumber')}季 的弹幕失败")
+                                                        f"{emby_name} 通知弹幕插件获取 {library_name} {library_item_name} 第{season.get('IndexNumber')}季 的弹幕失败")
                                                     self.post_message(channel=event.event_data.get("channel"),
-                                                                      title=f"通知弹幕插件获取 {library_name} {library_item_name} 第{season.get('IndexNumber')}季 的弹幕失败",
+                                                                      title=f"{emby_name} 通知弹幕插件获取 {library_name} {library_item_name} 第{season.get('IndexNumber')}季 的弹幕失败",
                                                                       userid=event.event_data.get("user"))
                             else:
                                 # 电影弹幕
@@ -343,9 +343,9 @@ class EmbyDanmu(_PluginBase):
                                     movie_id = item.get("Id")
                                     movie_items = self.__get_items(movie_id)
                                     if not movie_items:
-                                        logger.error(f"获取 {library_name} {item.get('Name')}的媒体列表失败")
+                                        logger.error(f"{emby_name} 获取 {library_name} {item.get('Name')}的媒体列表失败")
                                         self.post_message(channel=event.event_data.get("channel"),
-                                                          title=f"获取电影：{library_name} {item.get('Name')}的媒体列表失败",
+                                                          title=f"{emby_name} 获取电影：{library_name} {item.get('Name')}的媒体列表失败",
                                                           userid=event.event_data.get("user"))
                                     else:
                                         movie_id = movie_items[0].get("Id")
@@ -353,23 +353,23 @@ class EmbyDanmu(_PluginBase):
                                         item_info = self.__get_item_info(movie_id)
                                         item_path = item_info.get("Path")
                                         parent_path = Path(item_path).parent
-                                        logger.info(f"开始检查路径 {parent_path} 下是是否有弹幕文件")
+                                        logger.info(f"{emby_name} 开始检查路径 {parent_path} 下是是否有弹幕文件")
                                         # 检查是否有弹幕文件
                                         danmu_path_pattern = Path(item_path).stem + "*.xml"
 
                                         if len(list(parent_path.glob(danmu_path_pattern))) >= 1:
-                                            logger.info(f"{parent_path} 下已存在弹幕文件：{danmu_path_pattern}")
+                                            logger.info(f"{emby_name} {parent_path} 下已存在弹幕文件：{danmu_path_pattern}")
                                             self.post_message(channel=event.event_data.get("channel"),
-                                                              title=f"{library_name} {item.get('Name')} 弹幕已存在",
+                                                              title=f"{emby_name} {library_name} {item.get('Name')} 弹幕已存在",
                                                               userid=event.event_data.get("user"))
                                         else:
                                             # 通知Danmu插件获取弹幕
                                             danmu_flag = self.__download_danmu(movie_id)
                                             if danmu_flag:
                                                 logger.info(
-                                                    f"已通知弹幕插件获取 {library_name} {item.get('Name')} {movie_id} 的弹幕")
+                                                    f"{emby_name} 已通知弹幕插件获取 {library_name} {item.get('Name')} {movie_id} 的弹幕")
                                                 self.post_message(channel=event.event_data.get("channel"),
-                                                                  title=f"开始通知Emby下载 {library_name} {item.get('Name')} 弹幕，异步执行，请耐心等候执行完成消息",
+                                                                  title=f"{emby_name} 开始通知Emby下载 {library_name} {item.get('Name')} 弹幕，异步执行，请耐心等候执行完成消息",
                                                                   userid=event.event_data.get("user"))
                                                 retry_cnt = 3
                                                 while len(
@@ -378,46 +378,46 @@ class EmbyDanmu(_PluginBase):
                                                     if self.__check_all_failed_by_log(item_name=item_info.get("Name"),
                                                                                       item_year=item_info.get(
                                                                                           "ProductionYear")):
-                                                        logger.error(f"解析日志判断已配置弹幕源全部匹配弹幕失败")
+                                                        logger.error(f"{emby_name} 解析日志判断已配置弹幕源全部匹配弹幕失败")
                                                         retry_cnt = -1
                                                     else:
                                                         retry_cnt -= 1
                                                         logger.warn(
-                                                            f"{parent_path} 下未找到弹幕文件：{danmu_path_pattern}，等待60秒后重试 ({retry_cnt}次)")
+                                                            f"{emby_name} {parent_path} 下未找到弹幕文件：{danmu_path_pattern}，等待60秒后重试 ({retry_cnt}次)")
                                                         time.sleep(60)
 
                                                 if len(list(parent_path.glob(danmu_path_pattern))) >= 1:
-                                                    logger.info(f"{parent_path} 下已找到弹幕文件：{danmu_path_pattern}")
+                                                    logger.info(f"{emby_name} {parent_path} 下已找到弹幕文件：{danmu_path_pattern}")
                                                     self.post_message(channel=event.event_data.get("channel"),
-                                                                      title=f"{library_name} {item.get('Name')} 下载弹幕文件成功",
+                                                                      title=f"{emby_name} {library_name} {item.get('Name')} 下载弹幕文件成功",
                                                                       userid=event.event_data.get("user"))
                                                 else:
-                                                    logger.error(f"{parent_path} 下未找到弹幕文件：{danmu_path_pattern}")
+                                                    logger.error(f"{emby_name} {parent_path} 下未找到弹幕文件：{danmu_path_pattern}")
                                                     self.post_message(channel=event.event_data.get("channel"),
-                                                                      title=f"{library_name} {item.get('Name')} 已配置弹幕源全部匹配弹幕失败",
+                                                                      title=f"{emby_name} {library_name} {item.get('Name')} 已配置弹幕源全部匹配弹幕失败",
                                                                       userid=event.event_data.get("user"))
                                             else:
                                                 logger.error(
-                                                    f"通知弹幕插件获取 {library_name} {item.get('Name')} {movie_id} 的弹幕失败")
+                                                    f"{emby_name} 通知弹幕插件获取 {library_name} {item.get('Name')} {movie_id} 的弹幕失败")
                                                 self.post_message(channel=event.event_data.get("channel"),
-                                                                  title=f"通知弹幕插件获取 {library_name} 电影 {item.get('Name')} {movie_id} 的弹幕失败",
+                                                                  title=f"{emby_name} 通知弹幕插件获取 {library_name} 电影 {item.get('Name')} {movie_id} 的弹幕失败",
                                                                   userid=event.event_data.get("user"))
                         if not found_item:
                             logger.error(
-                                f"未找到媒体：{library_name} {library_item_name} {f'第{library_item_season}季 ' if library_item_season else ''}")
+                                f"{emby_name} 未找到媒体：{library_name} {library_item_name} {f'第{library_item_season}季 ' if library_item_season else ''}")
                             self.post_message(channel=event.event_data.get("channel"),
-                                              title=f"未找到媒体：{library_name} {library_item_name} {f'第{library_item_season}季 ' if library_item_season else ''}",
+                                              title=f"{emby_name} 未找到媒体：{library_name} {library_item_name} {f'第{library_item_season}季 ' if library_item_season else ''}",
                                               userid=event.event_data.get("user"))
                 except Exception as e:
                     logger.error(
-                        f"{library_name} {library_item_name} {f'第{library_item_season}季 ' if library_item_season else ''}获取弹幕任务出错：{str(e)}")
+                        f"{emby_name} {library_name} {library_item_name} {f'第{library_item_season}季 ' if library_item_season else ''}获取弹幕任务出错：{str(e)}")
 
                 # 判断当前媒体库是否有其他任务在执行
                 self._library_task[library_id].remove(library_item_name)
                 if len(self._library_task[library_id]) == 0:
                     # 关闭弹幕插件
                     logger.info(
-                        f"{library_name} {library_item_name} {f'第{library_item_season}季 ' if library_item_season else ''}获取弹幕任务完成，关闭弹幕插件")
+                        f"{emby_name} {library_name} {library_item_name} {f'第{library_item_season}季 ' if library_item_season else ''}获取弹幕任务完成，关闭弹幕插件")
                     # 禁用媒体库的Danmu插件
                     library_disabled_subtitle_fetchers = library_options.get("DisabledSubtitleFetchers", [])
                     library_disabled_subtitle_fetchers.append("Danmu")
@@ -426,9 +426,9 @@ class EmbyDanmu(_PluginBase):
                     })
                     update_flag = self.__update_library(library_id, library_options)
                     if update_flag:
-                        logger.info(f"已禁用媒体库：{library_name} Danmu插件")
+                        logger.info(f"{emby_name} 已禁用媒体库：{library_name} Danmu插件")
                     else:
-                        logger.error(f"禁用媒体库：{library_name} Danmu插件失败")
+                        logger.error(f"{emby_name} 禁用媒体库：{library_name} Danmu插件失败")
 
     def get_state(self) -> bool:
         return self._enabled
