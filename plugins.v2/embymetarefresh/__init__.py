@@ -37,7 +37,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "1.7.4"
+    plugin_version = "1.8"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -62,6 +62,7 @@ class EmbyMetaRefresh(_PluginBase):
     _ReplaceAllMetadata = "true"
     _ReplaceAllImages = "true"
     _actor_path = None
+    _mediaservers = None
     mediaserver_helper = None
     _EMBY_HOST = None
     _EMBY_USER = None
@@ -84,19 +85,8 @@ class EmbyMetaRefresh(_PluginBase):
             self._refresh_type = config.get("refresh_type") or "历史记录"
             self._ReplaceAllMetadata = config.get("ReplaceAllMetadata") or "true"
             self._ReplaceAllImages = config.get("ReplaceAllImages") or "true"
+            self._mediaservers = config.get("mediaservers") or []
 
-            emby_server = self.mediaserver_helper.get_service(name="Emby")
-            if not emby_server:
-                logger.error("未配置Emby媒体服务器")
-                return
-
-            self._EMBY_USER = emby_server.instance.get_user()
-            self._EMBY_HOST = emby_server.config.get("host")
-            self._EMBY_APIKEY = emby_server.config.get("apikey")
-            if not self._EMBY_HOST.endswith("/"):
-                self._EMBY_HOST += "/"
-            if not self._EMBY_HOST.startswith("http"):
-                self._EMBY_HOST = "http://" + self._EMBY_HOST
 
             # 加载模块
             if self._enabled or self._onlyonce:
@@ -148,6 +138,7 @@ class EmbyMetaRefresh(_PluginBase):
                 "ReplaceAllMetadata": self._ReplaceAllMetadata,
                 "ReplaceAllImages": self._ReplaceAllImages,
                 "actor_path": self._actor_path,
+                "mediaservers": self._mediaservers,
             }
         )
 
@@ -155,81 +146,92 @@ class EmbyMetaRefresh(_PluginBase):
         """
         刷新媒体库元数据
         """
-        if "emby" not in settings.MEDIASERVER:
+        emby_servers = self.mediaserver_helper.get_services(name_filters=self._mediaservers, type_filter="emby")
+        if not emby_servers:
             logger.error("未配置Emby媒体服务器")
             return
 
-        if str(self._refresh_type) == "历史记录":
-            # 获取days内入库的媒体
-            current_date = datetime.now()
-            # 计算几天前的日期
-            target_date = current_date - timedelta(days=int(self._num))
-            transferhistorys = TransferHistoryOper().list_by_date(target_date.strftime('%Y-%m-%d'))
-            if not transferhistorys:
-                logger.error(f"{self._num}天内没有媒体库入库记录")
-                return
+        for emby_name, emby_server in emby_servers.items():
+            logger.info(f"开始刷新媒体服务器 {emby_name} 的媒体库元数据")
+            self._EMBY_USER = emby_server.instance.get_user()
+            self._EMBY_APIKEY = emby_server.config.config.get("apikey")
+            self._EMBY_HOST = emby_server.config.config.get("host")
+            if not self._EMBY_HOST.endswith("/"):
+                self._EMBY_HOST += "/"
+            if not self._EMBY_HOST.startswith("http"):
+                self._EMBY_HOST = "http://" + self._EMBY_HOST
 
-            logger.info(f"开始刷新媒体库元数据，最近 {self._num} 天内入库媒体：{len(transferhistorys)}个")
-            # 刷新媒体库
-            for transferinfo in transferhistorys:
-                self.__refresh_emby(transferinfo)
-        else:
-            latest = self.__get_latest_media()
-            if not latest:
-                logger.error(f"Emby中没有最新媒体")
-                return
+            if str(self._refresh_type) == "历史记录":
+                # 获取days内入库的媒体
+                current_date = datetime.now()
+                # 计算几天前的日期
+                target_date = current_date - timedelta(days=int(self._num))
+                transferhistorys = TransferHistoryOper().list_by_date(target_date.strftime('%Y-%m-%d'))
+                if not transferhistorys:
+                    logger.error(f"{self._num}天内没有媒体库入库记录")
+                    return
 
-            logger.info(f"开始刷新媒体库元数据，{self._num} 天内最新媒体：{len(latest)} 个")
+                logger.info(f"开始刷新媒体库元数据，最近 {self._num} 天内入库媒体：{len(transferhistorys)}个")
+                # 刷新媒体库
+                for transferinfo in transferhistorys:
+                    self.__refresh_emby(transferinfo)
+            else:
+                latest = self.__get_latest_media()
+                if not latest:
+                    logger.error(f"Emby中没有最新媒体")
+                    return
 
-            # 已处理的媒体
-            handle_items = {}
+                logger.info(f"开始刷新媒体库元数据，{self._num} 天内最新媒体：{len(latest)} 个")
 
-            # 刷新媒体库
-            for item in latest:
-                logger.info(
-                    f"开始刷新媒体库元数据，最新媒体：{'电视剧' if str(item.get('Type')) == 'Episode' else '电影'} {'%s S%02dE%02d %s' % (item.get('SeriesName'), item.get('ParentIndexNumber'), item.get('IndexNumber'), item.get('Name')) if str(item.get('Type')) == 'Episode' else item.get('Name')} {item.get('Id')}")
-                self.__refresh_emby_library_by_id(item.get("Id"))
+                # 已处理的媒体
+                handle_items = {}
 
-                # 刮演员中文
-                if self._actor_chi:
-                    key = f"{item.get('Type')}-{item.get('SeriesName') if str(item.get('Type')) == 'Episode' else item.get('Name')}"
-                    peoples = None
-                    if key not in handle_items.keys():
-                        peoples = self.__update_people_chi(
-                            item_id=item.get("SeriesId") if str(item.get('Type')) == 'Episode' else item.get("Id"),
-                            title=item.get('SeriesName') if str(item.get('Type')) == 'Episode' else item.get('Name'),
-                            type=MediaType('电视剧' if str(item.get('Type')) == 'Episode' else '电影'),
-                            season=item.get("ParentIndexNumber") if str(item.get('Type')) == 'Episode' else None
-                        )
+                # 刷新媒体库
+                for item in latest:
+                    logger.info(
+                        f"开始刷新媒体库元数据，最新媒体：{'电视剧' if str(item.get('Type')) == 'Episode' else '电影'} {'%s S%02dE%02d %s' % (item.get('SeriesName'), item.get('ParentIndexNumber'), item.get('IndexNumber'), item.get('Name')) if str(item.get('Type')) == 'Episode' else item.get('Name')} {item.get('Id')}")
+                    self.__refresh_emby_library_by_id(item.get("Id"))
 
-                    # 是否有演员信息
-                    if str(item.get('Type')) == 'Episode':
-                        item_dicts = handle_items.get(key, {})
-                        item_ids = item_dicts.get('itemIds', [])
-                        item_actors = item_dicts.get('actors', [])
-                        item_ids.append(item.get("Id"))
-                        handle_items[key] = {
-                            'itemIds': item_ids,
-                            'actors': peoples or item_actors
-                        }
-            # 处理剧集
-            for key, value in handle_items.items():
-                if value:
-                    item_ids = value.get('itemIds', [])
-                    item_actors = value.get('actors', [])
-                    for item_id in item_ids:
-                        item_info = self.__get_item_info(item_id)
-                        if item_actors == item_info.get("People"):
-                            logger.warn(
-                                f"最新媒体：{'电视剧' if str(item_info.get('Type')) == 'Episode' else '电影'} {'%s S%02dE%02d %s' % (item_info.get('SeriesName'), item_info.get('ParentIndexNumber'), item_info.get('IndexNumber'), item_info.get('Name')) if str(item_info.get('Type')) == 'Episode' else item_info.get('Name')} {item_info.get('Id')} 演员信息已更新，跳过")
-                            continue
-                        item_info["People"] = item_actors
-                        item_info["LockedFields"].append("Cast")
-                        flag = self.set_iteminfo(itemid=item_info.get("Id"), iteminfo=item_info)
-                        logger.info(
-                            f"最新媒体：{'电视剧' if str(item_info.get('Type')) == 'Episode' else '电影'} {'%s S%02dE%02d %s' % (item_info.get('SeriesName'), item_info.get('ParentIndexNumber'), item_info.get('IndexNumber'), item_info.get('Name')) if str(item_info.get('Type')) == 'Episode' else item_info.get('Name')} {item_info.get('Id')} 演员信息完成 {flag}")
+                    # 刮演员中文
+                    if self._actor_chi:
+                        key = f"{item.get('Type')}-{item.get('SeriesName') if str(item.get('Type')) == 'Episode' else item.get('Name')}"
+                        peoples = None
+                        if key not in handle_items.keys():
+                            peoples = self.__update_people_chi(
+                                item_id=item.get("SeriesId") if str(item.get('Type')) == 'Episode' else item.get("Id"),
+                                title=item.get('SeriesName') if str(item.get('Type')) == 'Episode' else item.get('Name'),
+                                type=MediaType('电视剧' if str(item.get('Type')) == 'Episode' else '电影'),
+                                season=item.get("ParentIndexNumber") if str(item.get('Type')) == 'Episode' else None
+                            )
 
-        logger.info(f"刷新媒体库元数据完成")
+                        # 是否有演员信息
+                        if str(item.get('Type')) == 'Episode':
+                            item_dicts = handle_items.get(key, {})
+                            item_ids = item_dicts.get('itemIds', [])
+                            item_actors = item_dicts.get('actors', [])
+                            item_ids.append(item.get("Id"))
+                            handle_items[key] = {
+                                'itemIds': item_ids,
+                                'actors': peoples or item_actors
+                            }
+                # 处理剧集
+                for key, value in handle_items.items():
+                    if value:
+                        item_ids = value.get('itemIds', [])
+                        item_actors = value.get('actors', [])
+                        for item_id in item_ids:
+                            item_info = self.__get_item_info(item_id)
+                            if item_actors == item_info.get("People"):
+                                logger.warn(
+                                    f"最新媒体：{'电视剧' if str(item_info.get('Type')) == 'Episode' else '电影'} {'%s S%02dE%02d %s' % (item_info.get('SeriesName'), item_info.get('ParentIndexNumber'), item_info.get('IndexNumber'), item_info.get('Name')) if str(item_info.get('Type')) == 'Episode' else item_info.get('Name')} {item_info.get('Id')} 演员信息已更新，跳过")
+                                continue
+                            item_info["People"] = item_actors
+                            item_info["LockedFields"].append("Cast")
+                            flag = self.set_iteminfo(itemid=item_info.get("Id"), iteminfo=item_info)
+                            logger.info(
+                                f"最新媒体：{'电视剧' if str(item_info.get('Type')) == 'Episode' else '电影'} {'%s S%02dE%02d %s' % (item_info.get('SeriesName'), item_info.get('ParentIndexNumber'), item_info.get('IndexNumber'), item_info.get('Name')) if str(item_info.get('Type')) == 'Episode' else item_info.get('Name')} {item_info.get('Id')} 演员信息完成 {flag}")
+
+            logger.info(f"刷新 {emby_name} 媒体库元数据完成")
 
     def __get_latest_media(self) -> List[dict]:
         """
@@ -1015,6 +1017,31 @@ class EmbyMetaRefresh(_PluginBase):
                             {
                                 'component': 'VCol',
                                 'props': {
+                                    'cols': 12
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'multiple': True,
+                                            'chips': True,
+                                            'clearable': True,
+                                            'model': 'mediaservers',
+                                            'label': '媒体服务器',
+                                            'items': [{"title": config.name, "value": config.name}
+                                                      for config in self.mediaserver_helper.get_configs().values() if config.type == "emby"]
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
                                     'cols': 12,
                                 },
                                 'content': [
@@ -1041,6 +1068,7 @@ class EmbyMetaRefresh(_PluginBase):
             "cron": "5 1 * * *",
             "refresh_type": "历史记录",
             "actor_path": "",
+            "mediaservers": [],
             "num": 5
         }
 
