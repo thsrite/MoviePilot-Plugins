@@ -1,7 +1,4 @@
-import datetime
-import json
 import os
-import re
 import time
 from pathlib import Path
 from typing import List, Tuple, Dict, Any, Optional
@@ -15,8 +12,6 @@ from app.core.config import settings
 from app.core.event import eventmanager, Event
 from app.db.models.transferhistory import TransferHistory
 from app.log import logger
-from app.modules.emby import Emby
-from app.modules.jellyfin import Jellyfin
 from app.plugins import _PluginBase
 from app.schemas.types import NotificationType, EventType, MediaType, MediaImageType
 
@@ -45,7 +40,6 @@ class MediaSyncDel(_PluginBase):
     _scheduler: Optional[BackgroundScheduler] = None
     _enabled = False
     _sync_type: str = ""
-    _cron: str = ""
     _notify = False
     _del_source = False
     _del_history = False
@@ -60,14 +54,10 @@ class MediaSyncDel(_PluginBase):
         self._transferhis = self._transferchain.transferhis
         self._downloadhis = self._transferchain.downloadhis
 
-        # 停止现有任务
-        self.stop_service()
-
         # 读取配置
         if config:
             self._enabled = config.get("enabled")
             self._sync_type = config.get("sync_type")
-            self._cron = config.get("cron")
             self._notify = config.get("notify")
             self._del_source = config.get("del_source")
             self._del_history = config.get("del_history")
@@ -80,7 +70,6 @@ class MediaSyncDel(_PluginBase):
                 self.update_config({
                     "enabled": self._enabled,
                     "sync_type": self._sync_type,
-                    "cron": self._cron,
                     "notify": self._notify,
                     "del_source": self._del_source,
                     "del_history": False,
@@ -132,24 +121,6 @@ class MediaSyncDel(_PluginBase):
             "kwargs": {} # 定时器参数
         }]
         """
-        if self._enabled and str(self._sync_type) == "log":
-            # 媒体库同步删除日志方式
-            if self._cron:
-                return [{
-                    "id": "MediaSyncDel",
-                    "name": "媒体库同步删除服务",
-                    "trigger": CronTrigger.from_crontab(self._cron),
-                    "func": self.sync_del_by_log,
-                    "kwargs": {}
-                }]
-            else:
-                return [{
-                    "id": "MediaSyncDel",
-                    "name": "媒体库同步删除服务",
-                    "trigger": "interval",
-                    "func": self.sync_del_by_log,
-                    "kwargs": {"minutes": 30}
-                }]
         return []
 
     def get_form(self) -> Tuple[List[dict], Dict[str, Any]]:
@@ -246,7 +217,6 @@ class MediaSyncDel(_PluginBase):
                                             'label': '媒体库同步方式',
                                             'items': [
                                                 {'title': 'Webhook', 'value': 'webhook'},
-                                                {'title': '日志', 'value': 'log'},
                                                 {'title': 'Scripter X', 'value': 'plugin'}
                                             ]
                                         }
@@ -257,24 +227,7 @@ class MediaSyncDel(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextField',
-                                        'props': {
-                                            'model': 'cron',
-                                            'label': '日志检查周期',
-                                            'placeholder': '5位cron表达式，留空自动'
-                                        }
-                                    }
-                                ]
-                            },
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
+                                    'md': 8
                                 },
                                 'content': [
                                     {
@@ -324,11 +277,10 @@ class MediaSyncDel(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '媒体库同步方式分为Webhook、日志同步和Scripter X：'
+                                            'text': '媒体库同步方式分为Webhook、Scripter X：'
                                                     '1、Webhook需要Emby4.8.0.45及以上开启媒体删除的Webhook。'
-                                                    '2、日志同步需要配置检查周期，默认30分钟执行一次。'
-                                                    '3、Scripter X方式需要emby安装并配置Scripter X插件，无需配置执行周期。'
-                                                    '4、启用该插件后，非媒体服务器触发的源文件删除，也会同步处理下载器中的下载任务。'
+                                                    '2、Scripter X方式需要emby安装并配置Scripter X插件，无需配置执行周期。'
+                                                    '3、启用该插件后，非媒体服务器触发的源文件删除，也会同步处理下载器中的下载任务。'
                                         }
                                     }
                                 ]
@@ -435,7 +387,6 @@ class MediaSyncDel(_PluginBase):
             "del_history": False,
             "library_path": "",
             "sync_type": "webhook",
-            "cron": "*/30 * * * *",
             "exclude_path": "",
         }
 
@@ -947,190 +898,6 @@ class MediaSyncDel(_PluginBase):
 
         return msg, transfer_history
 
-    def sync_del_by_log(self):
-        """
-        emby删除媒体库同步删除历史记录
-        日志方式
-        """
-        # 读取历史记录
-        history = self.get_data('history') or []
-        last_time = self.get_data("last_time") or None
-        del_medias = []
-
-        # 媒体服务器类型，多个以,分隔
-        if not settings.MEDIASERVER:
-            return
-        media_servers = settings.MEDIASERVER.split(',')
-        for media_server in media_servers:
-            if media_server == 'emby':
-                del_medias.extend(self.parse_emby_log(last_time))
-            elif media_server == 'jellyfin':
-                del_medias.extend(self.parse_jellyfin_log(last_time))
-            elif media_server == 'plex':
-                # TODO plex解析日志
-                return
-
-        if not del_medias:
-            logger.error("未解析到已删除媒体信息")
-            return
-
-        # 遍历删除
-        last_del_time = None
-        for del_media in del_medias:
-            # 删除时间
-            del_time = del_media.get("time")
-            last_del_time = del_time or datetime.datetime.now()
-            # 媒体类型 Movie|Series|Season|Episode
-            media_type = del_media.get("type")
-            # 媒体名称 蜀山战纪
-            media_name = del_media.get("name")
-            # 媒体年份 2015
-            media_year = del_media.get("year")
-            # 媒体路径 /data/series/国产剧/蜀山战纪 (2015)/Season 2/蜀山战纪 - S02E01 - 第1集.mp4
-            media_path = del_media.get("path")
-            # 季数 S02
-            media_season = del_media.get("season")
-            # 集数 E02
-            media_episode = del_media.get("episode")
-
-            # 排除路径不处理
-            if self._exclude_path and media_path and any(
-                    os.path.abspath(media_path).startswith(os.path.abspath(path)) for path in
-                    self._exclude_path.split(",")):
-                logger.info(f"媒体路径 {media_path} 已被排除，暂不处理")
-                self.save_data("last_time", last_del_time)
-                return
-
-            # 处理路径映射 (处理同一媒体多分辨率的情况)
-            if self._library_path:
-                paths = self._library_path.split("\n")
-                for path in paths:
-                    sub_paths = path.split(":")
-                    if len(sub_paths) < 2:
-                        continue
-                    media_path = media_path.replace(sub_paths[0], sub_paths[1]).replace('\\', '/')
-
-            # 获取删除的记录
-            # 删除电影
-            if media_type == "Movie":
-                msg = f'电影 {media_name}'
-                transfer_history: List[TransferHistory] = self._transferhis.get_by(
-                    title=media_name,
-                    year=media_year,
-                    dest=media_path)
-            # 删除电视剧
-            elif media_type == "Series":
-                msg = f'剧集 {media_name}'
-                transfer_history: List[TransferHistory] = self._transferhis.get_by(
-                    title=media_name,
-                    year=media_year)
-            # 删除季 S02
-            elif media_type == "Season":
-                msg = f'剧集 {media_name} {media_season}'
-                transfer_history: List[TransferHistory] = self._transferhis.get_by(
-                    title=media_name,
-                    year=media_year,
-                    season=media_season)
-            # 删除剧集S02E02
-            elif media_type == "Episode":
-                msg = f'剧集 {media_name} {media_season}{media_episode}'
-                transfer_history: List[TransferHistory] = self._transferhis.get_by(
-                    title=media_name,
-                    year=media_year,
-                    season=media_season,
-                    episode=media_episode,
-                    dest=media_path)
-            else:
-                self.save_data("last_time", last_del_time)
-                continue
-
-            logger.info(f"正在同步删除 {msg}")
-
-            if not transfer_history:
-                logger.info(f"未获取到 {msg} 转移记录，请检查路径映射是否配置错误，请检查tmdbid获取是否正确")
-                self.save_data("last_time", last_del_time)
-                continue
-
-            logger.info(f"获取到删除历史记录数量 {len(transfer_history)}")
-
-            # 开始删除
-            image = 'https://emby.media/notificationicon.png'
-            del_torrent_hashs = []
-            stop_torrent_hashs = []
-            error_cnt = 0
-            for transferhis in transfer_history:
-                title = transferhis.title
-                if title not in media_name:
-                    logger.warn(
-                        f"当前转移记录 {transferhis.id} {title} {transferhis.tmdbid} 与删除媒体{media_name}不符，防误删，暂不自动删除")
-                    self.save_data("last_time", last_del_time)
-                    continue
-                image = transferhis.image or image
-                # 0、删除转移记录
-                self._transferhis.delete(transferhis.id)
-
-                # 删除种子任务
-                if self._del_source:
-                    # 1、直接删除源文件
-                    if transferhis.src and Path(transferhis.src).suffix in settings.RMT_MEDIAEXT:
-                        self._transferchain.delete_files(Path(transferhis.src))
-                        if transferhis.download_hash:
-                            try:
-                                # 2、判断种子是否被删除完
-                                delete_flag, success_flag, handle_torrent_hashs = self.handle_torrent(
-                                    type=transferhis.type,
-                                    src=transferhis.src,
-                                    torrent_hash=transferhis.download_hash)
-                                if not success_flag:
-                                    error_cnt += 1
-                                else:
-                                    if delete_flag:
-                                        del_torrent_hashs += handle_torrent_hashs
-                                    else:
-                                        stop_torrent_hashs += handle_torrent_hashs
-                            except Exception as e:
-                                logger.error("删除种子失败：%s" % str(e))
-
-            logger.info(f"同步删除 {msg} 完成！")
-
-            # 发送消息
-            if self._notify:
-                torrent_cnt_msg = ""
-                if del_torrent_hashs:
-                    torrent_cnt_msg += f"删除种子{len(set(del_torrent_hashs))}个\n"
-                if stop_torrent_hashs:
-                    stop_cnt = 0
-                    # 排除已删除
-                    for stop_hash in set(stop_torrent_hashs):
-                        if stop_hash not in set(del_torrent_hashs):
-                            stop_cnt += 1
-                    if stop_cnt > 0:
-                        torrent_cnt_msg += f"暂停种子{stop_cnt}个\n"
-                self.post_message(
-                    mtype=NotificationType.MediaServer,
-                    title="媒体库同步删除任务完成",
-                    text=f"{msg}\n"
-                         f"删除记录{len(transfer_history)}个\n"
-                         f"{torrent_cnt_msg}"
-                         f"时间 {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}",
-                    image=image)
-
-            history.append({
-                "type": "电影" if media_type == "Movie" else "电视剧",
-                "title": media_name,
-                "year": media_year,
-                "path": media_path,
-                "season": media_season,
-                "episode": media_episode,
-                "image": image,
-                "del_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
-            })
-
-        # 保存历史
-        self.save_data("history", history)
-
-        self.save_data("last_time", last_del_time)
-
     def handle_torrent(self, type: str, src: str, torrent_hash: str):
         """
         判断种子是否局部删除
@@ -1337,214 +1104,6 @@ class MediaSyncDel(_PluginBase):
                 self.del_data(key=history_key,
                               plugin_id=plugin_id)
         return handle_torrent_hashs
-
-    @staticmethod
-    def parse_emby_log(last_time):
-        """
-        获取emby日志列表、解析emby日志
-        """
-
-        def __parse_log(file_name: str, del_list: list):
-            """
-            解析emby日志
-            """
-            log_url = f"[HOST]System/Logs/{file_name}?api_key=[APIKEY]"
-            log_res = Emby().get_data(log_url)
-            if not log_res or log_res.status_code != 200:
-                logger.error("获取emby日志失败，请检查服务器配置")
-                return del_list
-
-            # 正则解析删除的媒体信息
-            pattern = r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}.\d{3}) Info App: Removing item from database, Type: (\w+), Name: (.*), Path: (.*), Id: (\d+)'
-            matches = re.findall(pattern, log_res.text)
-
-            # 循环获取媒体信息
-            for match in matches:
-                mtime = match[0]
-                # 排除已处理的媒体信息
-                if last_time and mtime < last_time:
-                    continue
-
-                mtype = match[1]
-                name = match[2]
-                path = match[3]
-
-                year = None
-                year_pattern = r'\(\d+\)'
-                year_match = re.search(year_pattern, path)
-                if year_match:
-                    year = year_match.group()[1:-1]
-
-                season = None
-                episode = None
-                if mtype == 'Episode' or mtype == 'Season':
-                    name_pattern = r"\/([\u4e00-\u9fa5]+)(?= \()"
-                    season_pattern = r"Season\s*(\d+)"
-                    episode_pattern = r"S\d+E(\d+)"
-                    name_match = re.search(name_pattern, path)
-                    season_match = re.search(season_pattern, path)
-                    episode_match = re.search(episode_pattern, path)
-
-                    if name_match:
-                        name = name_match.group(1)
-
-                    if season_match:
-                        season = season_match.group(1)
-                        if int(season) < 10:
-                            season = f'S0{season}'
-                        else:
-                            season = f'S{season}'
-                    else:
-                        season = None
-
-                    if episode_match:
-                        episode = episode_match.group(1)
-                        episode = f'E{episode}'
-                    else:
-                        episode = None
-
-                media = {
-                    "time": mtime,
-                    "type": mtype,
-                    "name": name,
-                    "year": year,
-                    "path": path,
-                    "season": season,
-                    "episode": episode,
-                }
-                logger.debug(f"解析到删除媒体：{json.dumps(media)}")
-                del_list.append(media)
-
-            return del_list
-
-        log_files = []
-        try:
-            # 获取所有emby日志
-            log_list_url = "[HOST]System/Logs/Query?Limit=3&api_key=[APIKEY]"
-            log_list_res = Emby().get_data(log_list_url)
-
-            if log_list_res and log_list_res.status_code == 200:
-                log_files_dict = json.loads(log_list_res.text)
-                for item in log_files_dict.get("Items"):
-                    if str(item.get('Name')).startswith("embyserver"):
-                        log_files.append(str(item.get('Name')))
-        except Exception as e:
-            print(str(e))
-
-        if not log_files:
-            log_files.append("embyserver.txt")
-
-        del_medias = []
-        log_files.reverse()
-        for log_file in log_files:
-            del_medias = __parse_log(file_name=log_file,
-                                     del_list=del_medias)
-
-        return del_medias
-
-    @staticmethod
-    def parse_jellyfin_log(last_time: datetime):
-        """
-        获取jellyfin日志列表、解析jellyfin日志
-        """
-
-        def __parse_log(file_name: str, del_list: list):
-            """
-            解析jellyfin日志
-            """
-            log_url = f"[HOST]System/Logs/Log?name={file_name}&api_key=[APIKEY]"
-            log_res = Jellyfin().get_data(log_url)
-            if not log_res or log_res.status_code != 200:
-                logger.error("获取jellyfin日志失败，请检查服务器配置")
-                return del_list
-
-            # 正则解析删除的媒体信息
-            pattern = r'\[(.*?)\].*?Removing item, Type: "(.*?)", Name: "(.*?)", Path: "(.*?)"'
-            matches = re.findall(pattern, log_res.text)
-
-            # 循环获取媒体信息
-            for match in matches:
-                mtime = match[0]
-                # 排除已处理的媒体信息
-                if last_time and mtime < last_time:
-                    continue
-
-                mtype = match[1]
-                name = match[2]
-                path = match[3]
-
-                year = None
-                year_pattern = r'\(\d+\)'
-                year_match = re.search(year_pattern, path)
-                if year_match:
-                    year = year_match.group()[1:-1]
-
-                season = None
-                episode = None
-                if mtype == 'Episode' or mtype == 'Season':
-                    name_pattern = r"\/([\u4e00-\u9fa5]+)(?= \()"
-                    season_pattern = r"Season\s*(\d+)"
-                    episode_pattern = r"S\d+E(\d+)"
-                    name_match = re.search(name_pattern, path)
-                    season_match = re.search(season_pattern, path)
-                    episode_match = re.search(episode_pattern, path)
-
-                    if name_match:
-                        name = name_match.group(1)
-
-                    if season_match:
-                        season = season_match.group(1)
-                        if int(season) < 10:
-                            season = f'S0{season}'
-                        else:
-                            season = f'S{season}'
-                    else:
-                        season = None
-
-                    if episode_match:
-                        episode = episode_match.group(1)
-                        episode = f'E{episode}'
-                    else:
-                        episode = None
-
-                media = {
-                    "time": mtime,
-                    "type": mtype,
-                    "name": name,
-                    "year": year,
-                    "path": path,
-                    "season": season,
-                    "episode": episode,
-                }
-                logger.debug(f"解析到删除媒体：{json.dumps(media)}")
-                del_list.append(media)
-
-            return del_list
-
-        log_files = []
-        try:
-            # 获取所有jellyfin日志
-            log_list_url = "[HOST]System/Logs?api_key=[APIKEY]"
-            log_list_res = Jellyfin().get_data(log_list_url)
-
-            if log_list_res and log_list_res.status_code == 200:
-                log_files_dict = json.loads(log_list_res.text)
-                for item in log_files_dict:
-                    if str(item.get('Name')).startswith("log_"):
-                        log_files.append(str(item.get('Name')))
-        except Exception as e:
-            print(str(e))
-
-        if not log_files:
-            log_files.append("log_%s.log" % datetime.date.today().strftime("%Y%m%d"))
-
-        del_medias = []
-        log_files.reverse()
-        for log_file in log_files:
-            del_medias = __parse_log(file_name=log_file,
-                                     del_list=del_medias)
-
-        return del_medias
 
     def get_state(self):
         return self._enabled
