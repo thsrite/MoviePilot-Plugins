@@ -23,7 +23,7 @@ class EmbyMetaTag(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/tag.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.2.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -63,7 +63,7 @@ class EmbyMetaTag(_PluginBase):
             self._tag_confs = config.get("tag_confs")
             self._name_tag_confs = config.get("name_tag_confs")
 
-            emby_server = self.mediaserver_helper.get_service(name="emby")
+            emby_server = self.mediaserver_helper.get_service(name="Emby")
             if not emby_server:
                 logger.error("未配置Emby媒体服务器")
                 return

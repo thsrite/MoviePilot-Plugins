@@ -14,7 +14,6 @@ from app.core.config import settings
 from app.core.event import eventmanager, Event
 from app.helper.mediaserver import MediaServerHelper
 from app.log import logger
-from app.modules.emby import Emby
 from app.plugins import _PluginBase
 from app.schemas import NotificationType
 from app.schemas.types import EventType
@@ -29,7 +28,7 @@ class EmbyAudioBook(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/audiobook.png"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -72,7 +71,7 @@ class EmbyAudioBook(_PluginBase):
             self._rename = config.get("rename")
             self._msgtype = config.get("msgtype")
 
-            emby_server = self.mediaserver_helper.get_service(name="emby")
+            emby_server = self.mediaserver_helper.get_service(name="Emby")
             if not emby_server:
                 logger.error("未配置Emby媒体服务器")
                 return

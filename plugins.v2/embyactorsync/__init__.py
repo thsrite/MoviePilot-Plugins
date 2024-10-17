@@ -24,7 +24,7 @@ class EmbyActorSync(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/embyactorsync.png"
     # 插件版本
-    plugin_version = "1.3"
+    plugin_version = "1.3.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -53,7 +53,7 @@ class EmbyActorSync(_PluginBase):
             self._onlyonce = config.get("onlyonce")
             self._librarys = config.get("librarys") or []
 
-            emby_server = self.mediaserver_helper.get_service(name="emby")
+            emby_server = self.mediaserver_helper.get_service(name="Emby")
             if not emby_server:
                 logger.error("未配置Emby媒体服务器")
                 return

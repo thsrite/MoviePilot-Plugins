@@ -37,7 +37,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "1.7.3"
+    plugin_version = "1.7.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -85,7 +85,7 @@ class EmbyMetaRefresh(_PluginBase):
             self._ReplaceAllMetadata = config.get("ReplaceAllMetadata") or "true"
             self._ReplaceAllImages = config.get("ReplaceAllImages") or "true"
 
-            emby_server = self.mediaserver_helper.get_service(name="emby")
+            emby_server = self.mediaserver_helper.get_service(name="Emby")
             if not emby_server:
                 logger.error("未配置Emby媒体服务器")
                 return

@@ -34,7 +34,7 @@ class EmbyReporter(_PluginBase):
     # 插件图标
     plugin_icon = "Pydiocells_A.png"
     # 插件版本
-    plugin_version = "1.8"
+    plugin_version = "1.8.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -69,7 +69,7 @@ class EmbyReporter(_PluginBase):
         # 停止现有任务
         self.stop_service()
         self.mediaserver_helper = MediaServerHelper()
-        emby_server = self.mediaserver_helper.get_service(name="emby")
+        emby_server = self.mediaserver_helper.get_service(name="Emby")
         if not emby_server:
             logger.error("未配置Emby媒体服务器")
             return
