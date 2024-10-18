@@ -1,3 +1,4 @@
+import json
 import os
 import time
 from pathlib import Path
@@ -6,6 +7,7 @@ from typing import List, Tuple, Dict, Any, Optional
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from app import schemas
+from app.chain.storage import StorageChain
 from app.chain.transfer import TransferChain
 from app.core.config import settings
 from app.core.event import eventmanager, Event
@@ -24,7 +26,7 @@ class MediaSyncDel(_PluginBase):
     # 插件图标
     plugin_icon = "mediasyncdel.png"
     # 插件版本
-    plugin_version = "1.8.1"
+    plugin_version = "1.8.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -742,6 +744,7 @@ class MediaSyncDel(_PluginBase):
                 f"{media_type} {media_name} 未获取到可删除数据，请检查路径映射是否配置错误，请检查tmdbid获取是否正确")
             return
 
+        logger.info(f"获取到 {len(transfer_history)} 条转移记录，开始同步删除")
         # 开始删除
         year = None
         del_torrent_hashs = []
@@ -749,6 +752,7 @@ class MediaSyncDel(_PluginBase):
         error_cnt = 0
         image = 'https://emby.media/notificationicon.png'
         for transferhis in transfer_history:
+            logger.info(f"开始删除 {json.dumps(transferhis)}")
             title = transferhis.title
             if title not in media_name:
                 logger.warn(
@@ -764,8 +768,9 @@ class MediaSyncDel(_PluginBase):
             if self._del_source:
                 # 1、直接删除源文件
                 if transferhis.src and Path(transferhis.src).suffix in settings.RMT_MEDIAEXT:
-                    self._transferchain.delete_files(Path(transferhis.src))
-                    if transferhis.download_hash:
+                    dest_fileitem = schemas.FileItem(**transferhis.dest_fileitem)
+                    state = StorageChain().delete_file(dest_fileitem)
+                    if state and transferhis.download_hash:
                         try:
                             # 2、判断种子是否被删除完
                             delete_flag, success_flag, handle_torrent_hashs = self.handle_torrent(
