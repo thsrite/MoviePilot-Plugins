@@ -26,7 +26,7 @@ class MediaSyncDel(_PluginBase):
     # 插件图标
     plugin_icon = "mediasyncdel.png"
     # 插件版本
-    plugin_version = "1.8.2"
+    plugin_version = "1.8.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -752,7 +752,6 @@ class MediaSyncDel(_PluginBase):
         error_cnt = 0
         image = 'https://emby.media/notificationicon.png'
         for transferhis in transfer_history:
-            logger.info(f"开始删除 {json.dumps(transferhis)}")
             title = transferhis.title
             if title not in media_name:
                 logger.warn(
