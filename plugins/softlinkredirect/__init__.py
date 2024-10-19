@@ -13,7 +13,7 @@ class SoftLinkRedirect(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlinkredirect.png"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -60,8 +60,9 @@ class SoftLinkRedirect(_PluginBase):
                     current_target = os.readlink(file_path)
                     if str(current_target).startswith(target_from):
                         new_target = current_target.replace(target_from, target_to)
-                        subprocess.run(['ln', '-sf', file_path, new_target])
-                        print(f"Updated symlink: {file_path} -> {new_target}")
+                        result = subprocess.run(['ln', '-sf', new_target, file_path])
+                        logger.info(
+                            f"Updated symlink: {file_path} -> {new_target} ({'success' if result.returncode == 0 else 'failed'})")
 
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
@@ -123,7 +124,6 @@ class SoftLinkRedirect(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
                                 },
                                 'content': [
                                     {
@@ -135,11 +135,15 @@ class SoftLinkRedirect(_PluginBase):
                                     }
                                 ]
                             },
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
                             {
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
                                 },
                                 'content': [
                                     {
@@ -151,11 +155,15 @@ class SoftLinkRedirect(_PluginBase):
                                     }
                                 ]
                             },
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
                             {
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
                                 },
                                 'content': [
                                     {
