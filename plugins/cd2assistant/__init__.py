@@ -32,7 +32,7 @@ class Cd2Assistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png"
     # 插件版本
-    plugin_version = "1.8.3"
+    plugin_version = "1.8.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -182,7 +182,10 @@ class Cd2Assistant(_PluginBase):
                         error_msg = f"云盘 {f} cookie过期"
                 except Exception as err:
                     logger.error(f"云盘 {f} cookie过期：{err}")
-                    error_msg = f"云盘 {f} cookie过期"
+                    if "429" in str(err):
+                        error_msg = f"云盘 {f} 访问频率过高，请稍后再试"
+                    else:
+                        error_msg = f"云盘 {f} cookie过期"
 
             # 发送通知
             if self._notify and error_msg:

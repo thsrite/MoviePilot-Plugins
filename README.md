@@ -52,7 +52,7 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 46. Sql执行器 v1.3 `自定义MoviePilot数据库Sql执行。`
 47. 命令执行器 v1.2 `自定义容器命令执行。`
 48. `-----------------------------`
-49. [CloudDrive2助手v1.8.3](docs%2FCd2Assistant.md) `监控上传任务，检测是否有异常，发送通知。`
+49. [CloudDrive2助手v1.8.4](docs%2FCd2Assistant.md) `监控上传任务，检测是否有异常，发送通知。`
 50. 软连接重定向 v1.2 `重定向软连接指向。`
 51. 云盘同步删除 v1.5.4 `媒体库删除软连接文件后，同步删除云盘文件。`
 52. 媒体库重复媒体检测 v1.9 `媒体库重复媒体检查，可选保留规则保留其一。`
