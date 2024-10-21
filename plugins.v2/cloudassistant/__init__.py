@@ -26,6 +26,7 @@ from app.core.config import settings
 from app.core.event import eventmanager, Event
 from app.db import db_query, db_update
 from app.db.models import TransferHistory, DownloadHistory, DownloadFiles
+from app.helper.mediaserver import MediaServerHelper
 from app.log import logger
 from app.modules.emby import Emby
 from app.plugins import _PluginBase
@@ -138,6 +139,7 @@ class CloudAssistant(_PluginBase):
     def init_plugin(self, config: dict = None):
         self.transferchian = TransferChain()
         self.tmdbchain = TmdbChain()
+        self.mediaserver_helper = MediaServerHelper()
         # 清空配置
         self._dirconf = {}
 
