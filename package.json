@@ -531,7 +531,6 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/homepage.png",
     "author": "thsrite",
     "level": 1,
-    "v2": true,
     "history": {
       "v1.2": "适配v1.9.1-beta（不生效就重启）",
       "v1.1": "支持更多返回值、插件展示数据",
