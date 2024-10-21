@@ -81,9 +81,9 @@ class WeChatForward(_PluginBase):
             self._history_days = config.get("history_days") or 7
 
             # 企业微信发送消息URL
-            _send_msg_url = self._wechat_proxy + "/cgi-bin/message/send?access_token=%s"
+            _send_msg_url = "%s/cgi-bin/message/send?access_token=%s"
             # 企业微信获取TokenURL
-            _token_url = self._wechat_proxy + "/cgi-bin/gettoken?corpid=%s&corpsecret=%s"
+            _token_url = "%s/cgi-bin/gettoken?corpid=%s&corpsecret=%s"
 
             # 兼容旧版本配置
             self.__sync_old_config()
@@ -973,7 +973,7 @@ class WeChatForward(_PluginBase):
 
     def __post_request(self, access_token: str, req_json: dict, appid: int, title: str, retry: int = 0,
                        text: str = None, userid: str = None) -> bool:
-        message_url = self._send_msg_url % access_token
+        message_url = self._send_msg_url % (self._wechat_proxy, access_token)
         """
         向微信发送请求
         """
@@ -1043,7 +1043,7 @@ class WeChatForward(_PluginBase):
         :return： 微信Token
         """
         try:
-            token_url = self._token_url % (corpid, appsecret)
+            token_url = self._token_url % (self._wechat_proxy, corpid, appsecret)
             res = RequestUtils().get_res(token_url)
             if res:
                 ret_json = res.json()
