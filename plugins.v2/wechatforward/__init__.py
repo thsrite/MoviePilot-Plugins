@@ -21,7 +21,7 @@ class WeChatForward(_PluginBase):
     # 插件图标
     plugin_icon = "Wechat_A.png"
     # 插件版本
-    plugin_version = "2.7"
+    plugin_version = "2.8"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -45,9 +45,9 @@ class WeChatForward(_PluginBase):
     _wechat_proxy = None
 
     # 企业微信发送消息URL
-    _send_msg_url = None
+    _send_msg_url = "%s/cgi-bin/message/send?access_token=%s"
     # 企业微信获取TokenURL
-    _token_url = None
+    _token_url = "%s/cgi-bin/gettoken?corpid=%s&corpsecret=%s"
 
     example = [
         {
@@ -80,84 +80,9 @@ class WeChatForward(_PluginBase):
             self._wechat_proxy = config.get("wechat_proxy")
             self._history_days = config.get("history_days") or 7
 
-            # 企业微信发送消息URL
-            _send_msg_url = "%s/cgi-bin/message/send?access_token=%s"
-            # 企业微信获取TokenURL
-            _token_url = "%s/cgi-bin/gettoken?corpid=%s&corpsecret=%s"
-
-            # 兼容旧版本配置
-            self.__sync_old_config()
-
             # 获取token存库
             if self._enabled and self._wechat_confs:
                 self.__save_wechat_token()
-
-    def __sync_old_config(self):
-        """
-        兼容旧版本配置
-        """
-        config = self.get_config()
-        if not config or not config.get("wechat") or not config.get("pattern"):
-            return
-
-        __extra_confs = {}
-        if config.get("extra_confs"):
-            for extra_conf in config.get("extra_confs").split("\n"):
-                if not extra_conf:
-                    continue
-                if str(extra_conf).startswith("#"):
-                    extra_conf = extra_conf.strip()[1:]
-                extras = str(extra_conf).split(" > ")
-                if len(extras) != 4:
-                    continue
-                extra_pattern = extras[0]
-                extra_userid = extras[1]
-                extra_title = extras[2]
-                extra_appid = extras[3]
-                __extra = __extra_confs.get(extra_appid, [])
-                __extra.append({
-                    "pattern": extra_pattern,
-                    "userid": extra_userid,
-                    "msg": extra_title,
-                })
-                __extra_confs[extra_appid] = __extra
-
-        wechat_confs = []
-        for index, wechat in enumerate(config.get("wechat").split("\n")):
-            remark = ""
-            if wechat.count("#") == 1:
-                remark = wechat.split("#")[1]
-                wechat = wechat.split("#")[0]
-            wechat_config = wechat.split(":")
-            if len(wechat_config) != 3:
-                continue
-            appid = wechat_config[0]
-            corpid = wechat_config[1]
-            appsecret = wechat_config[2]
-            if not remark:
-                remark = f"{appid}配置"
-
-            # 获取对应appid的正则
-            pattern = config.get("pattern").split("\n")[index] or ""
-            wechat_confs.append({
-                "remark": remark,
-                "appid": appid,
-                "corpid": corpid,
-                "appsecret": appsecret,
-                "pattern": pattern,
-                "extra_confs": __extra_confs.get(appid, []) if __extra_confs else []
-            })
-
-        if wechat_confs:
-            self._wechat_confs = json.dumps(wechat_confs, indent=4, ensure_ascii=False)
-            self.update_config({
-                "enabled": self._enabled,
-                "wechat_confs": self._wechat_confs,
-                "ignore_userid": self._ignore_userid,
-                "specify_confs": self._specify_confs,
-                "wechat_proxy": self._wechat_proxy,
-            })
-            logger.info("旧版本配置已转为新版本配置")
 
     def __save_wechat_token(self):
         """
@@ -167,13 +92,15 @@ class WeChatForward(_PluginBase):
         if self._rebuild:
             self.__parse_token()
         else:
-            # 从数据库获取token
-            wechat_confs = self.get_data('wechat_confs')
-
-            if not self._wechat_token_pattern_confs and wechat_confs:
-                self._wechat_token_pattern_confs = wechat_confs
-                logger.info(f"WeChat配置 从数据库获取成功：{len(self._wechat_token_pattern_confs.keys())}条配置")
-            else:
+            try:
+                # 从数据库获取token
+                wechat_confs = self.get_data('wechat_confs')
+                if not self._wechat_token_pattern_confs and wechat_confs:
+                    self._wechat_token_pattern_confs = wechat_confs
+                    logger.info(f"WeChat配置 从数据库获取成功：{len(self._wechat_token_pattern_confs.keys())}条配置")
+                else:
+                    self.__parse_token()
+            except Exception as e:
                 self.__parse_token()
 
     def __parse_token(self):

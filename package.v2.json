@@ -93,11 +93,12 @@
     "name": "微信消息转发",
     "description": "根据正则转发通知到其他WeChat应用。",
     "labels": "消息通知",
-    "version": "2.7",
+    "version": "2.8",
     "icon": "Wechat_A.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v2.8": "兼容v2",
       "v2.7": "特殊消息指定用户支持title匹配",
       "v2.6": "已完成订阅额外消息查询订阅历史订阅用户",
       "v2.5.1": "修复token过期重发未存储userid问题",

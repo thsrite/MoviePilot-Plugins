@@ -37,7 +37,7 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 31. [短剧刮削 v3.2](docs%2FShortPlayMonitor.md) `监控视频短剧创建，刮削。`
 32. 云盘实时监控 v2.4.6 `监控云盘目录文件变化，自动转移链接。`
 33. 源文件恢复 v1.2 `根据MoviePilot的转移记录中的硬链文件恢复源文件。`
-34. [微信消息转发 v2.7](docs%2FWeChatForward.md) `根据正则转发通知到其他WeChat应用。`
+34. [微信消息转发 v2.8](docs%2FWeChatForward.md) `根据正则转发通知到其他WeChat应用。`
 35. 订阅下载统计 v1.6 `统计指定时间内各站点订阅及下载情况。`
 36. [自定义命令 v1.7](docs%2FCustomCommand.md) `自定义执行周期执行命令并推送结果。`
 37. docker自定义任务 v1.3 `管理宿主机docker，自定义容器定时任务。`
