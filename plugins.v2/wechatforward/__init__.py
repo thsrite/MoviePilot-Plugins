@@ -227,7 +227,8 @@ class WeChatForward(_PluginBase):
             "wechat_confs": self._wechat_confs,
             "ignore_userid": self._ignore_userid,
             "specify_confs": self._specify_confs,
-            "history_days": self._history_days
+            "history_days": self._history_days,
+            "wechat_proxy": self._wechat_proxy
         })
 
     def __save_wechat_confs(self):
