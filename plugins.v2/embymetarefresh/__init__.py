@@ -87,7 +87,6 @@ class EmbyMetaRefresh(_PluginBase):
             self._ReplaceAllImages = config.get("ReplaceAllImages") or "true"
             self._mediaservers = config.get("mediaservers") or []
 
-
             # 加载模块
             if self._enabled or self._onlyonce:
                 # 定时服务
@@ -199,7 +198,8 @@ class EmbyMetaRefresh(_PluginBase):
                         if key not in handle_items.keys():
                             peoples = self.__update_people_chi(
                                 item_id=item.get("SeriesId") if str(item.get('Type')) == 'Episode' else item.get("Id"),
-                                title=item.get('SeriesName') if str(item.get('Type')) == 'Episode' else item.get('Name'),
+                                title=item.get('SeriesName') if str(item.get('Type')) == 'Episode' else item.get(
+                                    'Name'),
                                 type=MediaType('电视剧' if str(item.get('Type')) == 'Episode' else '电影'),
                                 season=item.get("ParentIndexNumber") if str(item.get('Type')) == 'Episode' else None
                             )
@@ -214,6 +214,9 @@ class EmbyMetaRefresh(_PluginBase):
                                 'itemIds': item_ids,
                                 'actors': peoples or item_actors
                             }
+
+                    time.sleep(5)
+                    
                 # 处理剧集
                 for key, value in handle_items.items():
                     if value:
@@ -1029,7 +1032,8 @@ class EmbyMetaRefresh(_PluginBase):
                                             'model': 'mediaservers',
                                             'label': '媒体服务器',
                                             'items': [{"title": config.name, "value": config.name}
-                                                      for config in self.mediaserver_helper.get_configs().values() if config.type == "emby"]
+                                                      for config in self.mediaserver_helper.get_configs().values() if
+                                                      config.type == "emby"]
                                         }
                                     }
                                 ]

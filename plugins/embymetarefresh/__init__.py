@@ -202,6 +202,9 @@ class EmbyMetaRefresh(_PluginBase):
                             'itemIds': item_ids,
                             'actors': peoples or item_actors
                         }
+
+                time.sleep(5)
+
             # 处理剧集
             for key, value in handle_items.items():
                 if value:
