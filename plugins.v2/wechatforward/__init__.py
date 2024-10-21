@@ -81,9 +81,9 @@ class WeChatForward(_PluginBase):
             self._history_days = config.get("history_days") or 7
 
             # 企业微信发送消息URL
-            _send_msg_url = f"{self._wechat_proxy}/cgi-bin/message/send?access_token=%s"
+            _send_msg_url = self._wechat_proxy + "/cgi-bin/message/send?access_token=%s"
             # 企业微信获取TokenURL
-            _token_url = f"{self._wechat_proxy}/cgi-bin/gettoken?corpid=%s&corpsecret=%s"
+            _token_url = self._wechat_proxy + "/cgi-bin/gettoken?corpid=%s&corpsecret=%s"
 
             # 兼容旧版本配置
             self.__sync_old_config()
