@@ -190,7 +190,7 @@ class CloudAssistant(_PluginBase):
                                         )
 
             if self._enabled or self._onlyonce:
-                if self._notify and (self._cron or self._monitor):
+                if self._notify:
                     # 追加入库消息统一发送服务
                     self._scheduler.add_job(self.send_msg, trigger='interval', seconds=15)
 
