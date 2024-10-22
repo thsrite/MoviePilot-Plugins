@@ -420,7 +420,6 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png",
     "author": "thsrite",
     "level": 1,
-    "v2": true,
     "history": {
       "v2.0.1": "不重要的更新",
       "v2.0": "修复交互命令",
@@ -626,7 +625,6 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png",
     "author": "thsrite",
     "level": 2,
-    "v2": true,
     "history": {
       "v1.8.4": "添加115 429消息通知",
       "v1.8.3": "添加异常处理，解决cd2上本地目录获取存储空间失败的问题",
@@ -751,7 +749,6 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/mediarelease.png",
     "author": "thsrite",
     "level": 1,
-    "v2": true,
     "history": {
       "v1.1": "bug修复",
       "v1.0": "监控未上线影视作品，自动添加订阅。"

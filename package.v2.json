@@ -293,5 +293,73 @@
       "v1.1": "支持更多返回值、插件展示数据",
       "v1.0": "HomePage自定义API"
     }
+  },
+  "FileSoftLink": {
+    "name": "实时软连接",
+    "description": "监控目录文件变化，媒体文件软连接，其他文件可选复制。",
+    "labels": "文件管理",
+    "version": "2.0.2",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png",
+    "author": "thsrite",
+    "level": 1,
+    "history": {
+      "v2.0.2": "兼容v2",
+      "v2.0.1": "不重要的更新",
+      "v2.0": "修复交互命令",
+      "v1.9.9": "交互命令更多玩法",
+      "v1.9.8": "新增模糊匹配交互命令",
+      "v1.9.7": "接收云盘实时监控处理单文件",
+      "v1.9.6": "优化log",
+      "v1.9.5": "增强交互命令",
+      "v1.9.4": "监控目录自定义监控模式",
+      "v1.9.3": "增强交互命令模糊匹配",
+      "v1.9.2": "增强交互命令模糊匹配",
+      "v1.9.1": "增强交互命令",
+      "v1.9": "交互命令定向软连接",
+      "v1.8": "修复bug",
+      "v1.6": "bug修复",
+      "v1.5": "优化性能，提高处理速度",
+      "v1.4": "支持自定义视频格式",
+      "v1.3": "异步启动"
+    }
+  },
+  "Cd2Assistant": {
+    "name": "CloudDrive2助手",
+    "description": "监控上传任务，检测是否有异常，发送通知。",
+    "labels": "云盘",
+    "version": "1.8.5",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png",
+    "author": "thsrite",
+    "level": 2,
+    "history": {
+      "v1.8.5": "兼容v2",
+      "v1.8.4": "添加115 429消息通知",
+      "v1.8.3": "添加异常处理，解决cd2上本地目录获取存储空间失败的问题",
+      "v1.8.2": "插件页面密码类型设置为pasword",
+      "v1.8.1": "云下载支持自定义路径 /cd /cd2路径 磁链",
+      "v1.8": "修复插件依赖安装问题",
+      "v1.7": "增加HomePage自定义API（详见插件说明）",
+      "v1.6": "支持交互命令云下载",
+      "v1.5": "增加云盘同步黑名单（排序挂载本地目录）",
+      "v1.4": "增加云盘存储空间展示",
+      "v1.3": "增加云盘Cookie失效检测",
+      "v1.2": "实时速率显示",
+      "v1.1": "交互命令重启cd2、获取cd2系统信息，支持仪表盘",
+      "v1.0": "监控上传任务，检测是否有异常，发送通知"
+    }
+  },
+  "MediaRelease": {
+    "name": "影视将映订阅",
+    "description": "监控未上线影视作品，自动添加订阅。",
+    "labels": "订阅",
+    "version": "1.2",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/mediarelease.png",
+    "author": "thsrite",
+    "level": 1,
+    "history": {
+      "v1.2": "兼容v2",
+      "v1.1": "bug修复",
+      "v1.0": "监控未上线影视作品，自动添加订阅。"
+    }
   }
 }
