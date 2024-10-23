@@ -209,7 +209,7 @@ class CloudSyncDel(_PluginBase):
 
             # 发送通知
             self.post_message(
-                mtype=NotificationType.MediaServer,
+                mtype=NotificationType.Plugin,
                 title="云盘同步删除任务完成",
                 image=backrop_image,
                 text=f"{msg}\n"

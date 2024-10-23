@@ -815,7 +815,7 @@ class MediaSyncDel(_PluginBase):
                 torrent_cnt_msg += f"删种失败{error_cnt}个\n"
             # 发送通知
             self.post_message(
-                mtype=NotificationType.MediaServer,
+                mtype=NotificationType.Plugin,
                 title="媒体库同步删除任务完成",
                 image=backrop_image,
                 text=f"{msg}\n"
