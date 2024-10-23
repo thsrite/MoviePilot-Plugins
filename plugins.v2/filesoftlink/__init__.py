@@ -320,6 +320,9 @@ class FileSoftLink(_PluginBase):
                     # 指定路径软连接
                     if not mon_path:
                         logger.error(f"未找到 {category} 对应的监控目录")
+                        self.post_message(channel=event.event_data.get("channel"),
+                                          title=f"未找到 {category} 对应的监控目录",
+                                          userid=event.event_data.get("user"))
                         return
 
                     self.__handle_limit(path=category, mon_path=mon_path, limit=limit, event=event)
@@ -335,9 +338,14 @@ class FileSoftLink(_PluginBase):
                                 self.__handle_limit(path=parent_path, mon_path=mon_path, limit=limit, event=event)
                             else:
                                 logger.info(f"获取到 {category} {args} 对应的监控目录 {parent_path}")
+                                target_path = os.path.join(str(parent_path), args)
+                                logger.info(f"开始处理 {target_path}")
                                 target_paths = self.__find_related_paths(os.path.join(str(parent_path), args))
                                 if not target_paths:
                                     logger.error(f"未查找到 {category} {args} 对应的具体目录")
+                                    self.post_message(channel=event.event_data.get("channel"),
+                                                      title=f"未查找到 {category} {args} 对应的具体目录",
+                                                      userid=event.event_data.get("user"))
                                     return
                                 for target_path in target_paths:
                                     logger.info(f"开始定向处理文件夹 ...{target_path}")
