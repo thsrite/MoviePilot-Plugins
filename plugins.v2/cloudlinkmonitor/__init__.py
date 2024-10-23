@@ -84,7 +84,6 @@ class CloudLinkMonitor(_PluginBase):
     _onlyonce = False
     _history = False
     _scrape = False
-    _category = False
     _refresh = False
     _softlink = False
     _cron = None
@@ -104,7 +103,6 @@ class CloudLinkMonitor(_PluginBase):
     _medias = {}
     # 退出事件
     _event = threading.Event()
-    _auto_category = False
 
     def init_plugin(self, config: dict = None):
         self.transferhis = TransferHistoryOper()
@@ -115,7 +113,6 @@ class CloudLinkMonitor(_PluginBase):
         # 清空配置
         self._dirconf = {}
         self._transferconf = {}
-        self._categoryconf = {}
 
         # 读取配置
         if config:
@@ -124,7 +121,6 @@ class CloudLinkMonitor(_PluginBase):
             self._onlyonce = config.get("onlyonce")
             self._history = config.get("history")
             self._scrape = config.get("scrape")
-            self._category = config.get("category")
             self._refresh = config.get("refresh")
             self._mode = config.get("mode")
             self._transfer_type = config.get("transfer_type")
@@ -133,7 +129,6 @@ class CloudLinkMonitor(_PluginBase):
             self._interval = config.get("interval") or 10
             self._cron = config.get("cron")
             self._size = config.get("size") or 0
-            self._auto_category = config.get("auto_category")
             self._softlink = config.get("softlink")
 
         # 停止现有任务
@@ -154,12 +149,6 @@ class CloudLinkMonitor(_PluginBase):
                 # 格式源目录:目的目录
                 if not mon_path:
                     continue
-
-                # 是否二级目录 默认False
-                _categroy = self._category
-                if mon_path.count("$") == 1:
-                    _categroy = True if mon_path.split("$")[1] == "True" else False
-                    mon_path = mon_path.split("$")[0]
 
                 # 自定义转移方式
                 _transfer_type = self._transfer_type
@@ -188,7 +177,6 @@ class CloudLinkMonitor(_PluginBase):
 
                 # 转移方式
                 self._transferconf[mon_path] = _transfer_type
-                self._categoryconf[mon_path] = _categroy
 
                 # 启用目录监控
                 if self._enabled:
@@ -260,12 +248,10 @@ class CloudLinkMonitor(_PluginBase):
             "exclude_keywords": self._exclude_keywords,
             "interval": self._interval,
             "history": self._history,
-            "category": self._category,
             "softlink": self._softlink,
             "scrape": self._scrape,
             "size": self._size,
             "refresh": self._refresh,
-            "auto_category": self._auto_category
         })
 
     @eventmanager.register(EventType.PluginAction)
@@ -387,7 +373,6 @@ class CloudLinkMonitor(_PluginBase):
                 target: Path = self._dirconf.get(mon_path)
                 # 查询转移方式
                 transfer_type = self._transferconf.get(mon_path)
-                category = self._categoryconf.get(mon_path)
 
                 file_item = FileItem()
                 file_item.path = file_path
@@ -424,27 +409,14 @@ class CloudLinkMonitor(_PluginBase):
                 else:
                     episodes_info = None
 
-                if self._auto_category:
-                    # 转移文件
-                    transferinfo: TransferInfo = self.filetransfer.transfer(fileitem=file_item,
-                                                                            meta=file_meta,
-                                                                            mediainfo=mediainfo,
-                                                                            transfer_type=transfer_type,
-                                                                            target_path=target,
-                                                                            episodes_info=episodes_info,
-                                                                            scrape=self._scrape)
-                else:
-                    if category and mediainfo.category:
-                        target = target / mediainfo.category
-
-                    # 转移文件
-                    transferinfo: TransferInfo = self.filetransfer.transfer_media(fileitem=file_item,
-                                                                                  in_meta=file_meta,
-                                                                                  mediainfo=mediainfo,
-                                                                                  transfer_type=transfer_type,
-                                                                                  target_path=target,
-                                                                                  episodes_info=episodes_info,
-                                                                                  need_scrape=self._scrape)
+                # 转移文件
+                transferinfo: TransferInfo = self.filetransfer.transfer(fileitem=file_item,
+                                                                        meta=file_meta,
+                                                                        mediainfo=mediainfo,
+                                                                        transfer_type=transfer_type,
+                                                                        target_storage="local",
+                                                                        episodes_info=episodes_info,
+                                                                        scrape=self._scrape)
 
                 if not transferinfo:
                     logger.error("文件转移模块运行失败")
@@ -806,9 +778,9 @@ class CloudLinkMonitor(_PluginBase):
                                             {
                                                 'component': 'VSwitch',
                                                 'props': {
-                                                    'model': 'category',
-                                                    'label': '二级目录',
-                                                }
+                                                    'model': 'softlink',
+                                                    'label': '联动实时软连接',
+                                                },
                                             }
                                         ]
                                     }
@@ -832,45 +804,12 @@ class CloudLinkMonitor(_PluginBase):
                                             {
                                                 'component': 'VSwitch',
                                                 'props': {
-                                                    'model': 'auto_category',
-                                                    'label': '启用媒体库目录',
-                                                },
-                                                'hint': '使用媒体库配置目录'
-                                            }
-                                        ]
-                                    },
-                                    {
-                                        'component': 'VCol',
-                                        'props': {
-                                            'cols': 12,
-                                            'md': 4
-                                        },
-                                        'content': [
-                                            {
-                                                'component': 'VSwitch',
-                                                'props': {
                                                     'model': 'refresh',
                                                     'label': '刷新媒体库',
                                                 },
                                             }
                                         ]
                                     },
-                                    {
-                                        'component': 'VCol',
-                                        'props': {
-                                            'cols': 12,
-                                            'md': 4
-                                        },
-                                        'content': [
-                                            {
-                                                'component': 'VSwitch',
-                                                'props': {
-                                                    'model': 'softlink',
-                                                    'label': '联动实时软连接',
-                                                },
-                                            }
-                                        ]
-                                    }
                                 ]
                             }
                         ]
@@ -1058,9 +997,7 @@ class CloudLinkMonitor(_PluginBase):
             "onlyonce": False,
             "history": False,
             "scrape": False,
-            "category": False,
             "refresh": True,
-            "auto_category": False,
             "softlink": False,
             "mode": "fast",
             "transfer_type": "filesoftlink",
