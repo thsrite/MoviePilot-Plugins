@@ -117,7 +117,7 @@ class PluginUnInstall(_PluginBase):
                                         'component': 'VSwitch',
                                         'props': {
                                             'model': 'clear_config',
-                                            'label': '清除配置',
+                                            'label': '清除配置(配置信息)',
                                         }
                                     }
                                 ]
@@ -133,7 +133,7 @@ class PluginUnInstall(_PluginBase):
                                         'component': 'VSwitch',
                                         'props': {
                                             'model': 'clear_data',
-                                            'label': '清除数据',
+                                            'label': '清除数据(运行数据)',
                                         }
                                     }
                                 ]
