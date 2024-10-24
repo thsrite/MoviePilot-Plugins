@@ -51,6 +51,8 @@ class PluginUnInstall(_PluginBase):
             new_install_plugins = []
             for install_plugin in install_plugins:
                 if install_plugin in self._plugin_ids:
+                    # 停止插件
+                    PluginManager().stop(install_plugin)
                     # 删除插件文件
                     plugin_dir = Path(settings.ROOT_PATH) / "app" / "plugins" / install_plugin.lower()
                     if plugin_dir.exists():
