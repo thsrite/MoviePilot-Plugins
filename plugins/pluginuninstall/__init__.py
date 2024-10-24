@@ -2,6 +2,7 @@ import shutil
 from pathlib import Path
 
 from app.core.config import settings
+from app.core.plugin import PluginManager
 from app.db.systemconfig_oper import SystemConfigOper
 from app.helper.plugin import PluginHelper
 from app.plugins import _PluginBase
@@ -19,7 +20,7 @@ class PluginUnInstall(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/uninstall.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -33,10 +34,14 @@ class PluginUnInstall(_PluginBase):
 
     # 私有属性
     _plugin_ids = []
+    _clear_config = False
+    _clear_data = False
 
     def init_plugin(self, config: dict = None):
         if config:
             self._plugin_ids = config.get("plugin_ids") or []
+            self._clear_config = config.get("clear_config")
+            self._clear_data = config.get("clear_data")
             if not self._plugin_ids:
                 return
 
@@ -50,6 +55,12 @@ class PluginUnInstall(_PluginBase):
                     plugin_dir = Path(settings.ROOT_PATH) / "app" / "plugins" / install_plugin.lower()
                     if plugin_dir.exists():
                         shutil.rmtree(plugin_dir, ignore_errors=True)
+                    if self._clear_config:
+                        # 删除配置
+                        PluginManager().delete_plugin_config(install_plugin)
+                    if self._clear_data:
+                        # 删除插件所有数据
+                        PluginManager().delete_plugin_data(install_plugin)
                     logger.info(f"插件 {install_plugin} 已卸载")
                 else:
                     new_install_plugins.append(install_plugin)
@@ -58,7 +69,9 @@ class PluginUnInstall(_PluginBase):
             SystemConfigOper().set(SystemConfigKey.UserInstalledPlugins, new_install_plugins)
 
             self.update_config({
-                "plugin_ids": ""
+                "plugin_ids": "",
+                "clear_config": self._clear_config,
+                "clear_data": self._clear_data
             })
 
     def get_state(self) -> bool:
@@ -97,6 +110,39 @@ class PluginUnInstall(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'clear_config',
+                                            'label': '清除配置',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'clear_data',
+                                            'label': '清除数据',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
                                 },
                                 'content': [
                                     {
@@ -137,7 +183,9 @@ class PluginUnInstall(_PluginBase):
                 ]
             }
         ], {
-            "plugin_ids": []
+            "plugin_ids": [],
+            "clear_config": False,
+            "clear_data": False
         }
 
     @staticmethod
