@@ -8,6 +8,7 @@ from app.helper.plugin import PluginHelper
 from app.plugins import _PluginBase
 from typing import Any, List, Dict, Tuple
 from app.log import logger
+from app.scheduler import Scheduler
 from app.schemas.types import SystemConfigKey
 from app.utils.string import StringUtils
 
@@ -51,8 +52,10 @@ class PluginUnInstall(_PluginBase):
             new_install_plugins = []
             for install_plugin in install_plugins:
                 if install_plugin in self._plugin_ids:
-                    # 停止插件
-                    PluginManager().stop(install_plugin)
+                    # 移除插件服务
+                    Scheduler().remove_plugin_job(install_plugin)
+                    # 移除插件
+                    PluginManager().remove_plugin(install_plugin)
                     # 删除插件文件
                     plugin_dir = Path(settings.ROOT_PATH) / "app" / "plugins" / install_plugin.lower()
                     if plugin_dir.exists():
