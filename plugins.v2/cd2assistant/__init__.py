@@ -3,14 +3,8 @@ from datetime import datetime, timedelta
 
 import pytz
 
-try:
-    from clouddrive import CloudDriveClient, Client
-    from clouddrive.proto import CloudDrive_pb2
-except ImportError:
-    from sys import executable
-    from subprocess import run
-
-    run([executable, "-m", "pip", "install", "-U", "clouddrive"], check=True)
+from clouddrive import CloudDriveClient, Client
+from clouddrive.proto import CloudDrive_pb2
 from app import schemas
 from app.core.config import settings
 from app.core.event import eventmanager, Event
