@@ -22,7 +22,6 @@ from app.core.config import settings
 from app.helper.mediaserver import MediaServerHelper
 from app.log import logger
 from app.plugins import _PluginBase
-from app.modules.emby import Emby
 from app.schemas.types import EventType, MediaType
 from app.utils.common import retry
 from app.utils.http import RequestUtils
@@ -37,7 +36,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "1.8"
+    plugin_version = "2.0"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -152,6 +151,7 @@ class EmbyMetaRefresh(_PluginBase):
 
         for emby_name, emby_server in emby_servers.items():
             logger.info(f"开始刷新媒体服务器 {emby_name} 的媒体库元数据")
+            emby = emby_server.instance
             self._EMBY_USER = emby_server.instance.get_user()
             self._EMBY_APIKEY = emby_server.config.config.get("apikey")
             self._EMBY_HOST = emby_server.config.config.get("host")
@@ -173,7 +173,7 @@ class EmbyMetaRefresh(_PluginBase):
                 logger.info(f"开始刷新媒体库元数据，最近 {self._num} 天内入库媒体：{len(transferhistorys)}个")
                 # 刷新媒体库
                 for transferinfo in transferhistorys:
-                    self.__refresh_emby(transferinfo)
+                    self.__refresh_emby(transferinfo, emby)
             else:
                 latest = self.__get_latest_media()
                 if not latest:
@@ -201,7 +201,8 @@ class EmbyMetaRefresh(_PluginBase):
                                 title=item.get('SeriesName') if str(item.get('Type')) == 'Episode' else item.get(
                                     'Name'),
                                 type=MediaType('电视剧' if str(item.get('Type')) == 'Episode' else '电影'),
-                                season=item.get("ParentIndexNumber") if str(item.get('Type')) == 'Episode' else None
+                                season=item.get("ParentIndexNumber") if str(item.get('Type')) == 'Episode' else None,
+                                emby=emby
                             )
 
                         # 是否有演员信息
@@ -216,7 +217,7 @@ class EmbyMetaRefresh(_PluginBase):
                             }
 
                     time.sleep(5)
-                    
+
                 # 处理剧集
                 for key, value in handle_items.items():
                     if value:
@@ -230,7 +231,7 @@ class EmbyMetaRefresh(_PluginBase):
                                 continue
                             item_info["People"] = item_actors
                             item_info["LockedFields"].append("Cast")
-                            flag = self.set_iteminfo(itemid=item_info.get("Id"), iteminfo=item_info)
+                            flag = self.set_iteminfo(itemid=item_info.get("Id"), iteminfo=item_info, emby=emby)
                             logger.info(
                                 f"最新媒体：{'电视剧' if str(item_info.get('Type')) == 'Episode' else '电影'} {'%s S%02dE%02d %s' % (item_info.get('SeriesName'), item_info.get('ParentIndexNumber'), item_info.get('IndexNumber'), item_info.get('Name')) if str(item_info.get('Type')) == 'Episode' else item_info.get('Name')} {item_info.get('Id')} 演员信息完成 {flag}")
 
@@ -261,7 +262,7 @@ class EmbyMetaRefresh(_PluginBase):
             logger.error(f"获取Emby中最新媒体失败：{str(err)}")
             return []
 
-    def __update_people_chi(self, item_id, title, type, season=None):
+    def __update_people_chi(self, item_id, title, type, season=None, emby=None):
         """
         刮削演员中文名
         """
@@ -287,14 +288,14 @@ class EmbyMetaRefresh(_PluginBase):
                 logger.debug(
                     f"获取 {title} ({item_info.get('ProductionYear')}) 的豆瓣演员信息 完成，演员：{douban_actors}")
                 peoples = self.__update_peoples(itemid=item_id, iteminfo=item_info,
-                                                douban_actors=douban_actors)
+                                                douban_actors=douban_actors, emby=emby)
 
                 return peoples
             else:
                 logger.info(f"媒体 {title} ({item_info.get('ProductionYear')}) 演员信息无需更新")
         return item_info.get("People")
 
-    def __update_peoples(self, itemid: str, iteminfo: dict, douban_actors):
+    def __update_peoples(self, itemid: str, iteminfo: dict, douban_actors, emby):
         # 处理媒体项中的人物信息
         """
         "People": [
@@ -321,7 +322,8 @@ class EmbyMetaRefresh(_PluginBase):
                 peoples.append(people)
                 continue
             info = self.__update_people(people=people,
-                                        douban_actors=douban_actors)
+                                        douban_actors=douban_actors,
+                                        emby=emby)
             if info:
                 logger.info(
                     f"更新演职人员 {people.get('Name')} ({people.get('Role')}) 信息：{info.get('Name')} ({info.get('Role')})")
@@ -337,7 +339,7 @@ class EmbyMetaRefresh(_PluginBase):
         if peoples and need_update_people:
             iteminfo["People"] = peoples
             iteminfo["LockedFields"].append("Cast")
-            flag = self.set_iteminfo(itemid=itemid, iteminfo=iteminfo)
+            flag = self.set_iteminfo(itemid=itemid, iteminfo=iteminfo, emby=emby)
             logger.info(
                 f"更新媒体 {item_name} 演员信息完成 {flag}")
         else:
@@ -345,7 +347,7 @@ class EmbyMetaRefresh(_PluginBase):
 
         return iteminfo["People"]
 
-    def __update_people(self, people: dict, douban_actors: list = None) -> Optional[dict]:
+    def __update_people(self, people: dict, douban_actors: list = None, emby=None) -> Optional[dict]:
         """
         更新人物信息，返回替换后的人物信息
         """
@@ -357,7 +359,7 @@ class EmbyMetaRefresh(_PluginBase):
             try:
                 url = f'[HOST]emby/Users/[USER]/Items/{people.get("Id")}?' \
                       f'Fields=ChannelMappingInfo&api_key=[APIKEY]'
-                res = Emby().get_data(url=url)
+                res = emby.get_data(url=url)
                 if res:
                     return res.json()
             except Exception as err:
@@ -491,7 +493,7 @@ class EmbyMetaRefresh(_PluginBase):
             # 更新人物图片
             if profile_path:
                 logger.debug(f"更新人物 {people.get('Name')} 的图片：{profile_path}")
-                self.set_item_image(itemid=people.get("Id"), imageurl=profile_path)
+                self.set_item_image(itemid=people.get("Id"), imageurl=profile_path, emby=emby)
 
             # 锁定人物信息
             if updated_name:
@@ -504,7 +506,7 @@ class EmbyMetaRefresh(_PluginBase):
             # 更新人物信息
             if updated_name or updated_overview or update_character:
                 logger.debug(f"更新人物 {people.get('Name')} 的信息：{personinfo}")
-                ret = self.set_iteminfo(itemid=people.get("Id"), iteminfo=personinfo)
+                ret = self.set_iteminfo(itemid=people.get("Id"), iteminfo=personinfo, emby=emby)
                 if ret:
                     return ret_people
             else:
@@ -515,7 +517,7 @@ class EmbyMetaRefresh(_PluginBase):
             return None
 
     @staticmethod
-    def set_iteminfo(itemid: str, iteminfo: dict):
+    def set_iteminfo(itemid: str, iteminfo: dict, emby):
         """
         更新媒体项详情
         """
@@ -525,7 +527,7 @@ class EmbyMetaRefresh(_PluginBase):
             更新Emby媒体项详情
             """
             try:
-                res = Emby().post_data(
+                res = emby.post_data(
                     url=f'[HOST]emby/Items/{itemid}?api_key=[APIKEY]&reqformat=json',
                     data=json.dumps(iteminfo),
                     headers={
@@ -545,7 +547,7 @@ class EmbyMetaRefresh(_PluginBase):
 
     @staticmethod
     @retry(RequestException, logger=logger)
-    def set_item_image(itemid: str, imageurl: str):
+    def set_item_image(itemid: str, imageurl: str, emby):
         """
         更新媒体项图片
         """
@@ -575,7 +577,7 @@ class EmbyMetaRefresh(_PluginBase):
             """
             try:
                 url = f'[HOST]emby/Items/{itemid}/Images/Primary?api_key=[APIKEY]'
-                res = Emby().post_data(
+                res = emby.post_data(
                     url=url,
                     data=_base64,
                     headers={
@@ -672,12 +674,12 @@ class EmbyMetaRefresh(_PluginBase):
             self.post_message(channel=event.event_data.get("channel"),
                               title="刷新Emby元数据完成！", userid=event.event_data.get("user"))
 
-    def __refresh_emby(self, transferinfo):
+    def __refresh_emby(self, transferinfo, emby):
         """
         刷新emby
         """
         if transferinfo.type == "电影":
-            movies = Emby().get_movies(title=transferinfo.title, year=transferinfo.year)
+            movies = emby.get_movies(title=transferinfo.title, year=transferinfo.year)
             if not movies:
                 logger.error(f"Emby中没有找到{transferinfo.title} ({transferinfo.year})")
                 return
@@ -693,7 +695,7 @@ class EmbyMetaRefresh(_PluginBase):
                 return
 
             # 验证tmdbid是否相同
-            item_info = Emby().get_iteminfo(item_id)
+            item_info = emby.get_iteminfo(item_id)
             if item_info:
                 if transferinfo.tmdbid and item_info.tmdbid:
                     if str(transferinfo.tmdbid) != str(item_info.tmdbid):
