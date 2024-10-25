@@ -450,7 +450,6 @@
     "icon": "teamwork.png",
     "author": "thsrite",
     "level": 2,
-    "v2": true,
     "history": {
       "v2.7": "下载填充判断当前站点是否在已选订阅站点范围内",
       "v2.6": "兼容属性值包含:号",
