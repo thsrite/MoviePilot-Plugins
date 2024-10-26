@@ -32,7 +32,7 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 26. 同步CookieCloud v1.3 `同步MoviePilot站点Cookie到本地CookieCloud。`
 27. 日程提醒 v1.0 `自定义提醒事项、提醒时间。`
 28. 订阅提醒 v1.1 `推送当天订阅更新内容。`
-29. [Emby观影报告 v1.8](docs%2FEmbyReporter.md) `推送Emby观影报告，需Emby安装Playback Report 插件。`
+29. [Emby观影报告 v2.0](docs%2FEmbyReporter.md) `推送Emby观影报告，需Emby安装Playback Report 插件。`
 30. 演员订阅 v2.1.1 `自动订阅指定演员热映电影、电视剧。`
 31. [短剧刮削 v3.2](docs%2FShortPlayMonitor.md) `监控视频短剧创建，刮削。`
 32. 云盘实时监控 v2.4.6 `监控云盘目录文件变化，自动转移链接。`
@@ -61,6 +61,6 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 55. Emby合集媒体排序 v1.1 `Emby保留按照加入时间倒序的前提下，把合集中的媒体按照发布日期排序，修改加入时间已到达顺序排列的目的。`
 56. 影视将映订阅 v1.1 `监控未上线影视作品，自动添加订阅。`
 57. Emby视频类型检查 v1.0 `定期检查Emby媒体库中是否包含指定的视频类型，发送通知。`
-58. Emby有声书整理 v1.1 `还在为Emby有声书整理烦恼吗？入库存在很多单集？`
-59. Emby弹幕下载 v1.2 `通知Emby Danmu插件下载弹幕。`
-60. Emby剧集演员同步 v1.3 `同步剧演员信息到集演员信息。`
+58. Emby有声书整理 v1.3 `还在为Emby有声书整理烦恼吗？入库存在很多单集？`
+59. Emby弹幕下载 v1.4 `通知Emby Danmu插件下载弹幕。`
+60. Emby剧集演员同步 v1.5 `同步剧演员信息到集演员信息。`

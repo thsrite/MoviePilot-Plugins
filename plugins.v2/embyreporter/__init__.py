@@ -34,7 +34,7 @@ class EmbyReporter(_PluginBase):
     # 插件图标
     plugin_icon = "Pydiocells_A.png"
     # 插件版本
-    plugin_version = "1.9"
+    plugin_version = "2.0"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -137,8 +137,8 @@ class EmbyReporter(_PluginBase):
 
         for emby_name, emby_server in emby_servers.items():
             logger.info(f"开始处理媒体服务器 {emby_name}")
-            self.host = emby_server.config.get("host")
-            self.api_key = emby_server.config.get("apikey")
+            self.host = emby_server.config.config.get("host")
+            self.api_key = emby_server.config.config.get("apikey")
             if not self.host.endswith("/"):
                 self.host += "/"
             if not self.host.startswith("http"):
