@@ -20,7 +20,7 @@ class EmbyDanmu(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/danmu.png"
     # 插件版本
-    plugin_version = "1.4"
+    plugin_version = "1.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -52,8 +52,6 @@ class EmbyDanmu(_PluginBase):
             self._enabled = config.get("enabled")
             self._mediaservers = config.get("mediaservers") or []
 
-            self._danmu_source = self.__get_danmu_source()
-
     @eventmanager.register(EventType.PluginAction)
     def danmu(self, event: Event = None):
         if not self._enabled:
@@ -76,14 +74,6 @@ class EmbyDanmu(_PluginBase):
                                   userid=event.event_data.get("user"))
                 return
 
-            # 检查插件是否正确配置
-            if not self._danmu_source:
-                logger.error(f"未配置弹幕源")
-                self.post_message(channel=event.event_data.get("channel"),
-                                  title=f"Emby未正确配置弹幕源",
-                                  userid=event.event_data.get("user"))
-                return
-
             emby_servers = self.mediaserver_helper.get_services(name_filters=self._mediaservers, type_filter="emby")
             if not emby_servers:
                 logger.error("未配置Emby媒体服务器")
@@ -98,6 +88,16 @@ class EmbyDanmu(_PluginBase):
                     self._EMBY_HOST += "/"
                 if not self._EMBY_HOST.startswith("http"):
                     self._EMBY_HOST = "http://" + self._EMBY_HOST
+
+                self._danmu_source = self.__get_danmu_source()
+
+                # 检查插件是否正确配置
+                if not self._danmu_source:
+                    logger.error(f"未配置弹幕源")
+                    self.post_message(channel=event.event_data.get("channel"),
+                                      title=f"Emby未正确配置弹幕源",
+                                      userid=event.event_data.get("user"))
+                    return
 
                 library_name = args_list[0]
                 library_item_name = args_list[1]
