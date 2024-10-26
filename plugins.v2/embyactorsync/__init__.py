@@ -23,7 +23,7 @@ class EmbyActorSync(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/embyactorsync.png"
     # 插件版本
-    plugin_version = "1.4"
+    plugin_version = "1.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -98,7 +98,7 @@ class EmbyActorSync(_PluginBase):
             if not event_data or event_data.get("action") != "actorsync":
                 return
 
-            args = event_data.get("args")
+            args = event_data.get("arg_str")
             if not args:
                 logger.error(f"缺少参数：{event_data}")
                 return
