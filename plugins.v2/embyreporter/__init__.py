@@ -34,7 +34,7 @@ class EmbyReporter(_PluginBase):
     # 插件图标
     plugin_icon = "Pydiocells_A.png"
     # 插件版本
-    plugin_version = "2.0"
+    plugin_version = "2.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -57,15 +57,17 @@ class EmbyReporter(_PluginBase):
     _mp_host = None
     _emby_host = None
     _emby_api_key = None
-    show_time = True
+    _show_time = True
     _mediaservers = None
+    _black_library = None
 
     _scheduler: Optional[BackgroundScheduler] = None
     mediaserver_helper = None
     PLAYBACK_REPORTING_TYPE_MOVIE = "ItemName"
     PLAYBACK_REPORTING_TYPE_TVSHOWS = "substr(ItemName,0, instr(ItemName, ' - '))"
-    host = None
-    api_key = None
+    _EMBY_HOST = None
+    _EMBY_APIKEY = None
+    _EMBY_USER = None
 
     def init_plugin(self, config: dict = None):
         # 停止现有任务
@@ -81,7 +83,8 @@ class EmbyReporter(_PluginBase):
             self._cnt = config.get("cnt") or 10
             self._type = config.get("type") or "tg"
             self._mp_host = config.get("mp_host")
-            self.show_time = config.get("show_time")
+            self._show_time = config.get("show_time")
+            self._black_library = config.get("black_library")
             self._emby_host = config.get("emby_host")
             self._emby_api_key = config.get("emby_api_key")
             self._mediaservers = config.get("mediaservers") or []
@@ -137,12 +140,13 @@ class EmbyReporter(_PluginBase):
 
         for emby_name, emby_server in emby_servers.items():
             logger.info(f"开始处理媒体服务器 {emby_name}")
-            self.host = emby_server.config.config.get("host")
-            self.api_key = emby_server.config.config.get("apikey")
-            if not self.host.endswith("/"):
-                self.host += "/"
-            if not self.host.startswith("http"):
-                self.host = "http://" + self.host
+            self._EMBY_HOST = emby_server.config.config.get("host")
+            self._EMBY_USER = emby_server.instance.get_user()
+            self._EMBY_APIKEY = emby_server.config.config.get("apikey")
+            if not self._EMBY_HOST.endswith("/"):
+                self._EMBY_HOST += "/"
+            if not self._EMBY_HOST.startswith("http"):
+                self._EMBY_HOST = "http://" + self._EMBY_HOST
 
             # 获取当前时间并格式化
             current_time = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -151,19 +155,20 @@ class EmbyReporter(_PluginBase):
             success, movies = self.get_report(types=self.PLAYBACK_REPORTING_TYPE_MOVIE, days=int(self._days),
                                               limit=int(self._cnt))
             if not success:
-                exit(movies)
+                logger.error("获取电影数据失败")
             logger.info(f"获取到电影 {movies}")
+
             success, tvshows = self.get_report(types=self.PLAYBACK_REPORTING_TYPE_TVSHOWS, days=int(self._days),
                                                limit=int(self._cnt))
             if not success:
-                exit(tvshows)
+                logger.error("获取电视剧数据失败")
             logger.info(f"获取到电视剧 {tvshows}")
 
             # 绘制海报
             report_path = self.draw(res_path=self._res_dir,
                                     movies=movies,
                                     tvshows=tvshows,
-                                    show_time=self.show_time,
+                                    show_time=self._show_time,
                                     emby_name=emby_name)
 
             if not report_path:
@@ -233,7 +238,8 @@ class EmbyReporter(_PluginBase):
             "cnt": self._cnt,
             "type": self._type,
             "mp_host": self._mp_host,
-            "show_time": self.show_time,
+            "show_time": self._show_time,
+            "black_library": self._black_library,
             "emby_host": self._emby_host,
             "emby_api_key": self._emby_api_key,
             "res_dir": self._res_dir,
@@ -444,6 +450,23 @@ class EmbyReporter(_PluginBase):
                                     }
                                 ]
                             },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'black_library',
+                                            'label': '黑名单媒体库Id',
+                                            'placeholder': '多个Id用英文逗号分隔'
+                                        }
+                                    }
+                                ]
+                            },
                         ]
                     },
                     {
@@ -564,6 +587,7 @@ class EmbyReporter(_PluginBase):
             "emby_host": "",
             "emby_api_key": "",
             "mp_host": "",
+            "black_library": "",
             "show_time": True,
             "type": "",
             "mediaservers": [],
@@ -614,8 +638,18 @@ class EmbyReporter(_PluginBase):
                 success, data = self.primary(item_id)
                 if not success:
                     continue
+
+                # 过滤电影
+                if self._black_library:
+                    success, info = self.items(user_id, item_id)
+                    if success and info:
+                        success, parent_info = self.items(user_id, info["ParentId"])
+                        if success and parent_info and parent_info["ParentId"] in self._black_library:
+                            logger.info(f"电影 {name} 已在媒体库黑名单 {self._black_library} 中，已过滤")
+                            continue
                 exists_movies.append(i)
-            except Exception:
+            except Exception as e:
+                logger.error(str(e))
                 continue
 
         logger.info(f"过滤后未删除电影 {len(exists_movies)} 部")
@@ -638,6 +672,12 @@ class EmbyReporter(_PluginBase):
                 if not success:
                     continue
                 item_id = data["SeriesId"]
+                # 过滤电视剧
+                if self._black_library:
+                    success, parent_info = self.items(user_id, item_id)
+                    if success and parent_info and parent_info["ParentId"] in self._black_library:
+                        logger.info(f"电视剧 {name} 已在媒体库黑名单 {self._black_library} 中，已过滤")
+                        continue
                 # 封面图像获取
                 success, data = self.primary(item_id)
                 if not success:
@@ -752,7 +792,7 @@ class EmbyReporter(_PluginBase):
     @cache.memoize(ttl=600)
     def primary(self, item_id, width=720, height=1440, quality=90, ret_url=False):
         try:
-            url = self.host + f"/emby/Items/{item_id}/Images/Primary?maxHeight={height}&maxWidth={width}&quality={quality}"
+            url = self._EMBY_HOST + f"/emby/Items/{item_id}/Images/Primary?maxHeight={height}&maxWidth={width}&quality={quality}"
             if ret_url:
                 return url
             resp = RequestUtils().get_res(url=url)
@@ -766,7 +806,7 @@ class EmbyReporter(_PluginBase):
     @cache.memoize(ttl=600)
     def backdrop(self, item_id, width=1920, quality=70, ret_url=False):
         try:
-            url = self.host + f"/emby/Items/{item_id}/Images/Backdrop/0?&maxWidth={width}&quality={quality}"
+            url = self._EMBY_HOST + f"/emby/Items/{item_id}/Images/Backdrop/0?&maxWidth={width}&quality={quality}"
             if ret_url:
                 return url
             resp = RequestUtils().get_res(url=url)
@@ -779,7 +819,7 @@ class EmbyReporter(_PluginBase):
 
     @cache.memoize(ttl=600)
     def logo(self, item_id, quality=70, ret_url=False):
-        url = self.host + f"/emby/Items/{item_id}/Images/Logo?quality={quality}"
+        url = self._EMBY_HOST + f"/emby/Items/{item_id}/Images/Logo?quality={quality}"
         if ret_url:
             return url
         resp = RequestUtils().get_res(url=url)
@@ -791,7 +831,7 @@ class EmbyReporter(_PluginBase):
     @cache.memoize(ttl=300)
     def items(self, user_id, item_id):
         try:
-            url = f"{self.host}/emby/Users/{user_id}/Items/{item_id}?api_key={self.api_key}"
+            url = f"{self._EMBY_HOST}/emby/Users/{user_id}/Items/{item_id}?api_key={self._EMBY_APIKEY}"
             resp = RequestUtils().get_res(url=url)
 
             if resp.status_code != 204 and resp.status_code != 200:
@@ -821,7 +861,7 @@ class EmbyReporter(_PluginBase):
         sql += "ORDER BY total_duration DESC "
         sql += "LIMIT " + str(limit)
 
-        url = f"{self.host}/emby/user_usage_stats/submit_custom_query?api_key={self.api_key}"
+        url = f"{self._EMBY_HOST}/emby/user_usage_stats/submit_custom_query?api_key={self._EMBY_APIKEY}"
 
         data = {
             "CustomQueryString": sql,
