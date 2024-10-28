@@ -23,7 +23,7 @@ class PopularSubscribe(_PluginBase):
     # 插件名称
     plugin_name = "热门媒体订阅"
     # 插件描述
-    plugin_desc = "自定添加热门电影、电视剧、动漫到订阅。"
+    plugin_desc = "自动添加热门电影、电视剧、动漫到订阅。"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/popular.png"
     # 插件版本
