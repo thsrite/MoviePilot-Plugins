@@ -559,7 +559,6 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/sqlite.png",
     "author": "thsrite",
     "level": 1,
-    "v2": true,
     "history": {
       "v1.3": "修复执行delete锁表失败的bug",
       "v1.2": "调整交互命令返回信息",
@@ -575,7 +574,6 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/command.png",
     "author": "thsrite",
     "level": 1,
-    "v2": true,
     "history": {
       "v1.2": "调整交互命令返回信息",
       "v1.1": "支持交互命令/cmd [sql]执行，需主程序1.9.4+",
