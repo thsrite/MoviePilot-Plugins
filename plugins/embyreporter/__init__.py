@@ -33,7 +33,7 @@ class EmbyReporter(_PluginBase):
     # 插件图标
     plugin_icon = "Pydiocells_A.png"
     # 插件版本
-    plugin_version = "1.8"
+    plugin_version = "1.9"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -57,6 +57,7 @@ class EmbyReporter(_PluginBase):
     _emby_host = None
     _emby_api_key = None
     show_time = True
+    _black_library = None
     _scheduler: Optional[BackgroundScheduler] = None
 
     PLAYBACK_REPORTING_TYPE_MOVIE = "ItemName"
@@ -83,6 +84,7 @@ class EmbyReporter(_PluginBase):
             self.show_time = config.get("show_time")
             self._emby_host = config.get("emby_host")
             self._emby_api_key = config.get("emby_api_key")
+            self._black_library = config.get("black_library")
             if self._emby_host and self._emby_api_key:
                 self.host = f"http://{self._emby_host}" if not str(self._emby_host).startswith(
                     "http") else self._emby_host
@@ -221,6 +223,7 @@ class EmbyReporter(_PluginBase):
             "type": self._type,
             "mp_host": self._mp_host,
             "show_time": self.show_time,
+            "black_library": self._black_library,
             "emby_host": self._emby_host,
             "emby_api_key": self._emby_api_key,
             "res_dir": self._res_dir
@@ -430,6 +433,23 @@ class EmbyReporter(_PluginBase):
                                     }
                                 ]
                             },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'black_library',
+                                            'label': '黑名单媒体库Id',
+                                            'placeholder': '多个Id用英文逗号分隔'
+                                        }
+                                    }
+                                ]
+                            },
                         ]
                     },
                     {
@@ -519,6 +539,7 @@ class EmbyReporter(_PluginBase):
             "onlyonce": False,
             "cron": "5 1 * * *",
             "res_dir": "",
+            "black_library": "",
             "days": 7,
             "cnt": 10,
             "emby_host": "",
@@ -573,6 +594,15 @@ class EmbyReporter(_PluginBase):
                 success, data = self.primary(item_id)
                 if not success:
                     continue
+
+                # 过滤电影
+                if self._black_library:
+                    success, info = self.items(user_id, item_id)
+                    if success and info:
+                        success, parent_info = self.items(user_id, info["ParentId"])
+                        if success and parent_info and parent_info["ParentId"] in self._black_library:
+                            logger.info(f"电影 {name} 已在媒体库黑名单 {self._black_library} 中，已过滤")
+                            continue
                 exists_movies.append(i)
             except Exception:
                 continue
@@ -597,6 +627,12 @@ class EmbyReporter(_PluginBase):
                 if not success:
                     continue
                 item_id = data["SeriesId"]
+                # 过滤电视剧
+                if self._black_library:
+                    success, parent_info = self.items(user_id, item_id)
+                    if success and parent_info and parent_info["ParentId"] in self._black_library:
+                        logger.info(f"电视剧 {name} 已在媒体库黑名单 {self._black_library} 中，已过滤")
+                        continue
                 # 封面图像获取
                 success, data = self.primary(item_id)
                 if not success:
