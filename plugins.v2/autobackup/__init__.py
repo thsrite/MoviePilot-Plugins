@@ -367,7 +367,7 @@ class AutoBackup(_PluginBase):
             "enabled": False,
             "request_method": "POST",
             "webhook_url": "",
-            "back_path": str(settings.CONFIG_PATH)
+            "back_path": str(self.get_data_path())
         }
 
     def get_page(self) -> List[dict]:
