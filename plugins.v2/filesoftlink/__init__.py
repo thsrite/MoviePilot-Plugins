@@ -53,7 +53,7 @@ class FileSoftLink(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png"
     # 插件版本
-    plugin_version = "2.0.2"
+    plugin_version = "2.0.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -73,6 +73,7 @@ class FileSoftLink(_PluginBase):
     _copy_files = False
     _cron = None
     _url = None
+    _force = None
     _size = 0
     # 模式 compatibility/fast
     _mode = "compatibility"
@@ -102,6 +103,7 @@ class FileSoftLink(_PluginBase):
             self._exclude_keywords = config.get("exclude_keywords") or ""
             self._cron = config.get("cron")
             self._url = config.get("url")
+            self._force = config.get("force")
             self._size = config.get("size") or 0
             self._rmt_mediaext = config.get(
                 "rmt_mediaext") or ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
@@ -238,6 +240,7 @@ class FileSoftLink(_PluginBase):
             "exclude_keywords": self._exclude_keywords,
             "cron": self._cron,
             "url": self._url,
+            "force": self._force,
             "size": self._size,
             "rmt_mediaext": self._rmt_mediaext
         })
@@ -555,8 +558,12 @@ class FileSoftLink(_PluginBase):
                 else:
                     # 文件
                     if Path(target_file).exists():
-                        logger.info(f"目标文件 {target_file} 已存在")
-                        return
+                        if not self._force:
+                            logger.info(f"目标文件 {target_file} 已存在")
+                            return
+                        else:
+                            logger.info(f"目标文件 {target_file} 已存在，强制覆盖")
+                            Path(target_file).unlink()
 
                     if not Path(target_file).parent.exists():
                         logger.info(f"创建目标文件夹 {Path(target_file).parent}")
@@ -712,6 +719,27 @@ class FileSoftLink(_PluginBase):
                                     }
                                 ]
                             }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'force',
+                                            'label': '强制覆盖',
+                                        }
+                                    }
+                                ]
+                            },
                         ]
                     },
                     {
@@ -888,6 +916,7 @@ class FileSoftLink(_PluginBase):
             "enabled": False,
             "onlyonce": False,
             "copy_files": True,
+            "force": False,
             "mode": "compatibility",
             "monitor_dirs": "",
             "exclude_keywords": "",
