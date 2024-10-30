@@ -357,5 +357,19 @@
       "v1.1": "支持交互命令/cmd [sql]执行，需主程序1.9.4+",
       "v1.0": "自定义容器命令执行"
     }
+  },
+  "AutoBackup": {
+    "name": "自动备份",
+    "description": "自动备份数据和配置文件。",
+    "labels": "系统设置",
+    "version": "2.0",
+    "icon": "Time_machine_B.png",
+    "author": "thsrite",
+    "level": 1,
+    "history": {
+      "v2.0": "支持备份app.env及cookies,支持自定义保存路径",
+      "v1.3": "去除已废弃的环境变量引用",
+      "v1.2": "增强API安全性"
+    }
   }
 }
