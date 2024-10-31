@@ -55,9 +55,9 @@ class FileMonitorHandler(FileSystemEventHandler):
 
 class CloudLinkMonitor(_PluginBase):
     # 插件名称
-    plugin_name = "云盘实时监控"
+    plugin_name = "目录实时监控"
     # 插件描述
-    plugin_desc = "监控云盘目录文件变化，自动转移链接。"
+    plugin_desc = "监控目录文件变化，自动转移媒体文件。"
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
@@ -956,27 +956,6 @@ class CloudLinkMonitor(_PluginBase):
                                             'type': 'info',
                                             'variant': 'tonal',
                                             'text': '入库消息延迟默认10s，如网络较慢可酌情调大，有助于发送统一入库消息。'
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VAlert',
-                                        'props': {
-                                            'type': 'info',
-                                            'variant': 'tonal',
-                                            'text': '可选使用媒体库目录进行分类或者自定义一级分类，开启二级分类。'
                                         }
                                     }
                                 ]
