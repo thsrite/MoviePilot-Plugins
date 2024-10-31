@@ -36,7 +36,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "2.0.1"
+    plugin_version = "2.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -187,12 +187,21 @@ class EmbyMetaRefresh(_PluginBase):
 
                 # 刷新媒体库
                 for item in latest:
-                    logger.info(
-                        f"开始刷新媒体库元数据，最新媒体：{'电视剧' if str(item.get('Type')) == 'Episode' else '电影'} {'%s S%02dE%02d %s' % (item.get('SeriesName'), item.get('ParentIndexNumber'), item.get('IndexNumber'), item.get('Name')) if str(item.get('Type')) == 'Episode' else item.get('Name')} {item.get('Id')}")
-                    self.__refresh_emby_library_by_id(item.get("Id"))
+                    # 信息不全再刷新
+                    if (str(item.get('Type')) == 'Episode' and str(
+                            item.get("Name")) == f"第 {item.get('IndexNumber')} 集") or not item.get(
+                            "ProviderIds", {}).get("Imdb") or not item.get("Overview") or not item.get("ImageTags"):
+                        logger.info(
+                            f"开始刷新媒体库元数据，最新媒体：{'电视剧' if str(item.get('Type')) == 'Episode' else '电影'} {'%s S%02dE%02d %s' % (item.get('SeriesName'), item.get('ParentIndexNumber'), item.get('IndexNumber'), item.get('Name')) if str(item.get('Type')) == 'Episode' else item.get('Name')} {item.get('Id')}")
+                        self.__refresh_emby_library_by_id(item.get("Id"))
+                    else:
+                        logger.info(
+                            f"最新媒体：{'电视剧' if str(item.get('Type')) == 'Episode' else '电影'} {'%s S%02dE%02d %s' % (item.get('SeriesName'), item.get('ParentIndexNumber'), item.get('IndexNumber'), item.get('Name')) if str(item.get('Type')) == 'Episode' else item.get('Name')} {item.get('Id')} 元数据完整，跳过处理")
 
                     # 刮演员中文
                     if self._actor_chi:
+                        logger.info(
+                            f"最新媒体：{'电视剧' if str(item.get('Type')) == 'Episode' else '电影'} {'%s S%02dE%02d %s' % (item.get('SeriesName'), item.get('ParentIndexNumber'), item.get('IndexNumber'), item.get('Name')) if str(item.get('Type')) == 'Episode' else item.get('Name')} {item.get('Id')} 开始处理演员中文名")
                         key = f"{item.get('Type')}-{item.get('SeriesName') if str(item.get('Type')) == 'Episode' else item.get('Name')}"
                         peoples = None
                         if key not in handle_items.keys():
@@ -774,7 +783,7 @@ class EmbyMetaRefresh(_PluginBase):
         """
         if not self._EMBY_HOST or not self._EMBY_APIKEY:
             return []
-        req_url = "%semby/Users/%s/Items?Limit=%s&api_key=%s&SortBy=DateCreated,SortName&SortOrder=Descending&IncludeItemTypes=Episode,Movie&Recursive=true&Fields=DateCreated" % (
+        req_url = "%semby/Users/%s/Items?Limit=%s&api_key=%s&SortBy=DateCreated,SortName&SortOrder=Descending&IncludeItemTypes=Episode,Movie&Recursive=true&Fields=DateCreated,Overview" % (
             self._EMBY_HOST, self._EMBY_USER, limit, self._EMBY_APIKEY)
         try:
             with RequestUtils().get_res(req_url) as res:
