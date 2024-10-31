@@ -23,7 +23,7 @@ class SubscribeReminder(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/subscribe_reminder.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -117,6 +117,10 @@ class SubscribeReminder(_PluginBase):
             # 当前日期
         current_date = datetime.now().date().strftime("%Y-%m-%d")
 
+        mtype = NotificationType.Plugin
+        if self._msgtype:
+            mtype = NotificationType.__getitem__(str(self._msgtype)) or NotificationType.Manual
+
         current_tv_subscribe = []
         current_movie_subscribe = []
         # 遍历订阅，查询tmdb
@@ -166,7 +170,7 @@ class SubscribeReminder(_PluginBase):
                 text += f"📺︎{sub.get('name')} {sub.get('season')}{sub.get('episode')}\n"
 
             if text:
-                self.post_message(mtype=NotificationType.Subscribe,
+                self.post_message(mtype=mtype,
                                   title="电视剧更新",
                                   text=text,
                                   image=random.choice(current_tv_subscribe)["image"])
@@ -175,7 +179,7 @@ class SubscribeReminder(_PluginBase):
             for sub in current_movie_subscribe:
                 text += f"📽︎{sub.get('name')}\n"
             if text:
-                self.post_message(mtype=NotificationType.Subscribe,
+                self.post_message(mtype=mtype,
                                   title="电影更新",
                                   text=text,
                                   image=random.choice(current_movie_subscribe)["image"])
