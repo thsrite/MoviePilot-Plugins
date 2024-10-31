@@ -36,7 +36,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "2.1"
+    plugin_version = "2.1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -190,7 +190,7 @@ class EmbyMetaRefresh(_PluginBase):
                     # 信息不全再刷新
                     if (str(item.get('Type')) == 'Episode' and str(
                             item.get("Name")) == f"第 {item.get('IndexNumber')} 集") or not item.get(
-                            "ProviderIds", {}).get("Imdb") or not item.get("Overview") or not item.get("ImageTags"):
+                        "Overview") or not item.get("ImageTags"):
                         logger.info(
                             f"开始刷新媒体库元数据，最新媒体：{'电视剧' if str(item.get('Type')) == 'Episode' else '电影'} {'%s S%02dE%02d %s' % (item.get('SeriesName'), item.get('ParentIndexNumber'), item.get('IndexNumber'), item.get('Name')) if str(item.get('Type')) == 'Episode' else item.get('Name')} {item.get('Id')}")
                         self.__refresh_emby_library_by_id(item.get("Id"))
