@@ -25,7 +25,7 @@ from app.db.transferhistory_oper import TransferHistoryOper
 from app.log import logger
 from app.modules.filemanager import FileManagerModule
 from app.plugins import _PluginBase
-from app.schemas import NotificationType, TransferInfo, FileItem
+from app.schemas import NotificationType, TransferInfo, FileItem, TransferDirectoryConf
 from app.schemas.types import EventType, MediaType, SystemConfigKey
 from app.utils.string import StringUtils
 from app.utils.system import SystemUtils
@@ -60,7 +60,7 @@ class CloudLinkMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
-    plugin_version = "2.4.6"
+    plugin_version = "2.4.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -409,12 +409,18 @@ class CloudLinkMonitor(_PluginBase):
                 else:
                     episodes_info = None
 
+                target_dir = TransferDirectoryConf()
+                target_dir.library_path = target
+                target_dir.transfer_type = transfer_type
+                target_dir.scraping = self._scrape
+                target_dir.renaming = True
+                target_dir.overwrite_mode = "never"
                 # 转移文件
                 transferinfo: TransferInfo = self.filetransfer.transfer(fileitem=file_item,
                                                                         meta=file_meta,
                                                                         mediainfo=mediainfo,
                                                                         transfer_type=transfer_type,
-                                                                        target_storage="local",
+                                                                        target_directory=target_dir,
                                                                         episodes_info=episodes_info,
                                                                         scrape=self._scrape)
 
