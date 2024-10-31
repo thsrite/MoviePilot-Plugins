@@ -28,7 +28,7 @@ class EmbyAudioBook(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/audiobook.png"
     # 插件版本
-    plugin_version = "1.3"
+    plugin_version = "1.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -208,59 +208,77 @@ class EmbyAudioBook(_PluginBase):
                 return
 
             args_list = args.split(" ")
-            if len(args_list) != 2:
+            if len(args_list) != 3:
                 logger.error(f"参数错误：{args_list}")
                 self.post_message(channel=event.event_data.get("channel"),
-                                  title=f"参数错误！ /ab 书名 正确信息集数",
+                                  title=f"参数错误！ /ab 媒体库 书名 正确信息集数",
                                   userid=event.event_data.get("user"))
                 return
 
-            book_name = args_list[0]
-            book_idx = args_list[1]
-            logger.info(f"有声书整理：{book_name} - 正确信息从集数 {book_idx} 获取")
+            library_name = args_list[0]
+            book_name = args_list[1]
+            book_idx = args_list[2]
+            logger.info(f"有声书整理：{library_name}:{book_name} - 正确信息从集数 {book_idx} 获取")
 
-            # 获取所有有声书
-            items = self.__get_items(self._library_id)
-            if not items:
-                logger.error(f"获取媒体库 {self._library_id} 有声书列表失败！")
+            emby_servers = self.mediaserver_helper.get_services(name_filters=self._mediaservers, type_filter="emby")
+            if not emby_servers:
+                logger.error("未配置Emby媒体服务器")
+                return
+
+            for emby_name, emby_server in emby_servers.items():
+                if str(library_name).lower() != str(emby_name).lower():
+                    continue
+                logger.info(f"开始处理媒体服务器 {emby_name}")
+                self._EMBY_USER = emby_server.instance.get_user()
+                self._EMBY_APIKEY = emby_server.config.config.get("apikey")
+                self._EMBY_HOST = emby_server.config.config.get("host")
+                if not self._EMBY_HOST.endswith("/"):
+                    self._EMBY_HOST += "/"
+                if not self._EMBY_HOST.startswith("http"):
+                    self._EMBY_HOST = "http://" + self._EMBY_HOST
+
+                # 获取所有有声书
+                items = self.__get_items(self._library_id)
+                if not items:
+                    logger.error(f"获取媒体库 {self._library_id} 有声书列表失败！")
+                    self.post_message(channel=event.event_data.get("channel"),
+                                      title=f"获取 {self._library_id} 有声书失败！",
+                                      userid=event.event_data.get("user"))
+                    return
+
+                # 获取指定有声书
+                book_id = None
+                book_info = None
+                for item in items:
+                    if book_name in item.get("Name"):
+                        book_id = item.get("Id")
+                        book_info = self.__get_item_info(book_id)
+                        break
+
+                if not book_id:
+                    logger.error(f"未找到 {book_name} 有声书！")
+                    self.post_message(channel=event.event_data.get("channel"),
+                                      title=f"未找到 {book_name} 有声书！",
+                                      userid=event.event_data.get("user"))
+                    return
+
+                items = self.__get_items(book_id)
+                if not items:
+                    logger.error(f"获取 {book_name} {book_id} 有声书失败！")
+                    self.post_message(channel=event.event_data.get("channel"),
+                                      title=f"获取 {book_name} {book_id} 有声书失败！",
+                                      userid=event.event_data.get("user"))
+                    return
+
+                self.__zl(items, int(book_idx))
+                if book_info:
+                    book_info.update({
+                        "LockData": True,
+                    })
+                    self.__update_item_info(book_id, book_info)
                 self.post_message(channel=event.event_data.get("channel"),
-                                  title=f"获取 {self._library_id} 有声书失败！",
+                                  title=f"{book_name} 有声书整理完成！",
                                   userid=event.event_data.get("user"))
-                return
-
-            # 获取指定有声书
-            book_id = None
-            book_info = None
-            for item in items:
-                if book_name in item.get("Name"):
-                    book_id = item.get("Id")
-                    book_info = self.__get_item_info(book_id)
-                    break
-
-            if not book_id:
-                logger.error(f"未找到 {book_name} 有声书！")
-                self.post_message(channel=event.event_data.get("channel"),
-                                  title=f"未找到 {book_name} 有声书！",
-                                  userid=event.event_data.get("user"))
-                return
-
-            items = self.__get_items(book_id)
-            if not items:
-                logger.error(f"获取 {book_name} {book_id} 有声书失败！")
-                self.post_message(channel=event.event_data.get("channel"),
-                                  title=f"获取 {book_name} {book_id} 有声书失败！",
-                                  userid=event.event_data.get("user"))
-                return
-
-            self.__zl(items, int(book_idx))
-            if book_info:
-                book_info.update({
-                    "LockData": True,
-                })
-                self.__update_item_info(book_id, book_info)
-            self.post_message(channel=event.event_data.get("channel"),
-                              title=f"{book_name} 有声书整理完成！",
-                              userid=event.event_data.get("user"))
 
     def __zl(self, items, book_idx):
         """
