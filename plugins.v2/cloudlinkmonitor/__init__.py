@@ -14,6 +14,7 @@ from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
 
 from app import schemas
+from app.chain.storage import StorageChain
 from app.chain.tmdb import TmdbChain
 from app.chain.transfer import TransferChain
 from app.core.config import settings
@@ -60,7 +61,7 @@ class CloudLinkMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
-    plugin_version = "2.4.7"
+    plugin_version = "2.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -78,6 +79,7 @@ class CloudLinkMonitor(_PluginBase):
     downloadhis = None
     transferchian = None
     tmdbchain = None
+    storagechain = None
     _observer = []
     _enabled = False
     _notify = False
@@ -109,6 +111,7 @@ class CloudLinkMonitor(_PluginBase):
         self.downloadhis = DownloadHistoryOper()
         self.transferchian = TransferChain()
         self.tmdbchain = TmdbChain()
+        self.storagechain = StorageChain()
         self.filetransfer = FileManagerModule()
         # 清空配置
         self._dirconf = {}
@@ -374,8 +377,11 @@ class CloudLinkMonitor(_PluginBase):
                 # 查询转移方式
                 transfer_type = self._transferconf.get(mon_path)
 
-                file_item = FileItem()
-                file_item.path = file_path
+                # 查找这个文件项
+                file_item = self.storagechain.get_file_item(storage="local", path=file_path)
+                if not file_item:
+                    logger.warn(f"{event_path.name} 未找到对应的文件")
+                    return
                 # 识别媒体信息
                 mediainfo: MediaInfo = self.chain.recognize_media(meta=file_meta)
                 if not mediainfo:
@@ -414,15 +420,18 @@ class CloudLinkMonitor(_PluginBase):
                 target_dir.transfer_type = transfer_type
                 target_dir.scraping = self._scrape
                 target_dir.renaming = True
+                target_dir.notify = False
                 target_dir.overwrite_mode = "never"
+                target_dir.library_storage = "local"
+                target_dir.library_category_folder = True
                 # 转移文件
-                transferinfo: TransferInfo = self.filetransfer.transfer(fileitem=file_item,
-                                                                        meta=file_meta,
-                                                                        mediainfo=mediainfo,
-                                                                        transfer_type=transfer_type,
-                                                                        target_directory=target_dir,
-                                                                        episodes_info=episodes_info,
-                                                                        scrape=self._scrape)
+                transferinfo: TransferInfo = self.chain.transfer(fileitem=file_item,
+                                                                 meta=file_meta,
+                                                                 mediainfo=mediainfo,
+                                                                 transfer_type=transfer_type,
+                                                                 target_directory=target_dir,
+                                                                 episodes_info=episodes_info,
+                                                                 scrape=self._scrape)
 
                 if not transferinfo:
                     logger.error("文件转移模块运行失败")
