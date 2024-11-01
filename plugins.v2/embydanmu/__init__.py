@@ -20,7 +20,7 @@ class EmbyDanmu(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/danmu.png"
     # 插件版本
-    plugin_version = "1.5.1"
+    plugin_version = "1.5.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -341,7 +341,7 @@ class EmbyDanmu(_PluginBase):
                                                                       userid=event.event_data.get("user"))
                             else:
                                 # 电影弹幕
-                                matches = re.findall(r'^(.+?)\s\(\d{4}\)', item.get("Name"), re.MULTILINE)
+                                matches = re.findall(r'^(.*?)(?= ?\(\d{4}\)?|$)', item.get("Name"), re.MULTILINE)
                                 if matches and str(matches[0]) == library_item_name:
                                     found_item = True
                                     movie_id = item.get("Id")
