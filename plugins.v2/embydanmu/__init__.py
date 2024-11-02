@@ -161,7 +161,7 @@ class EmbyDanmu(_PluginBase):
 
                 try:
                     # 获取媒体库媒体列表
-                    library_items = self.__get_items(library_id, NameStartsWith=library_item_name)
+                    library_items = self.__get_items(library_id, nameStartsWith=library_item_name)
                     if not library_items:
                         logger.error(f"{emby_name} 获取媒体库：{library_name}的媒体列表失败")
                         self.post_message(channel=event.event_data.get("channel"),
@@ -483,15 +483,15 @@ class EmbyDanmu(_PluginBase):
             return True
         return False
 
-    def __get_items(self, parent_id, NameStartsWith=None) -> list:
+    def __get_items(self, parent_id, nameStartsWith=None) -> list:
         """
         获取媒体库媒体列表
         """
         if not self._EMBY_HOST or not self._EMBY_APIKEY:
             return []
-        if NameStartsWith:
+        if nameStartsWith:
             req_url = f"%semby/Users/%s/Items?ParentId=%s&api_key=%s&NameStartsWith=%s" % (
-                self._EMBY_HOST, self._EMBY_USER, parent_id, self._EMBY_APIKEY, NameStartsWith)
+                self._EMBY_HOST, self._EMBY_USER, parent_id, self._EMBY_APIKEY, nameStartsWith)
         else:
             req_url = f"%semby/Users/%s/Items?ParentId=%s&api_key=%s" % (
                 self._EMBY_HOST, self._EMBY_USER, parent_id, self._EMBY_APIKEY)
@@ -501,25 +501,25 @@ class EmbyDanmu(_PluginBase):
                 if res:
                     if res.json().get("Items") and res.json().get("Items")[0].get("Type") == "Folder":
                         # emby 4.8.8版本api
-                        return self.__get_items_488(parent_id)
+                        return self.__get_items_488(parent_id, nameStartsWith)
                     else:
                         return res.json().get("Items")
                 else:
-                    return self.__get_items_488(parent_id)
+                    return self.__get_items_488(parent_id, nameStartsWith)
         except Exception as e:
             logger.error(f"连接媒体库媒体列表Items出错：" + str(e))
             return []
 
-    def __get_items_488(self, parent_id, NameStartsWith=None) -> list:
+    def __get_items_488(self, parent_id, nameStartsWith=None) -> list:
         """
         获取媒体库媒体列表
         emby 4.8.8版本
         """
         if not self._EMBY_HOST or not self._EMBY_APIKEY:
             return []
-        if NameStartsWith:
+        if nameStartsWith:
             req_url = f"%semby/Items?ParentId=%s&api_key=%s&NameStartsWith=%s" % (
-                self._EMBY_HOST, parent_id, self._EMBY_APIKEY, NameStartsWith)
+                self._EMBY_HOST, parent_id, self._EMBY_APIKEY, nameStartsWith)
         else:
             req_url = f"%semby/Items?ParentId=%s&api_key=%s" % (
                 self._EMBY_HOST, parent_id, self._EMBY_APIKEY)
