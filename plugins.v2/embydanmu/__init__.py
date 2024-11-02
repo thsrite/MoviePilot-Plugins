@@ -20,7 +20,7 @@ class EmbyDanmu(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/danmu.png"
     # 插件版本
-    plugin_version = "1.5.4"
+    plugin_version = "1.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -37,11 +37,13 @@ class EmbyDanmu(_PluginBase):
     _library_task = {}
     _danmu_source = []
     _mediaservers = None
+    _dirs = None
 
     mediaserver_helper = None
     _EMBY_HOST = None
     _EMBY_USER = None
     _EMBY_APIKEY = None
+    _paths = {}
 
     def init_plugin(self, config: dict = None):
         self._library_task = {}
@@ -50,7 +52,12 @@ class EmbyDanmu(_PluginBase):
         # 读取配置
         if config:
             self._enabled = config.get("enabled")
+            self._dirs = config.get("dirs")
             self._mediaservers = config.get("mediaservers") or []
+
+            if self._dirs:
+                for path in str(self._dirs).split("\n"):
+                    self._paths[path.split(":")[0]] = path.split(":")[1]
 
     @eventmanager.register(EventType.PluginAction)
     def danmu(self, event: Event = None):
@@ -171,7 +178,7 @@ class EmbyDanmu(_PluginBase):
                         found_item = False
                         # 遍历媒体列表，获取媒体的ID和名称
                         for item in library_items:
-                            logger.info(
+                            logger.debug(
                                 f"服务器：{emby_name} 媒体库：{library_name} 媒体库类型：{library_type} 媒体：{item}")
                             if library_type == "tvshows":
                                 if item.get("Name") == library_item_name:
@@ -348,73 +355,64 @@ class EmbyDanmu(_PluginBase):
                                     logger.info(f"{emby_name} 开始检查电影：{library_name} {library_item_name}")
                                     found_item = True
                                     movie_id = item.get("Id")
-                                    movie_items = self.__get_items(movie_id)
-                                    if not movie_items:
-                                        logger.error(
-                                            f"{emby_name} 获取 {library_name} {item.get('Name')}的媒体列表失败")
+                                    # 获取媒体详情
+                                    item_info = self.__get_item_info(movie_id)
+                                    item_path = item_info.get("Path")
+                                    parent_path = Path(self.__get_path(str(Path(item_path).parent)))
+                                    logger.info(f"{emby_name} 开始检查MoviePilot路径 {parent_path} 下是是否有弹幕文件")
+                                    # 检查是否有弹幕文件
+                                    danmu_path_pattern = Path(item_path).stem + "*.xml"
+
+                                    if len(list(parent_path.glob(danmu_path_pattern))) >= 1:
+                                        logger.info(
+                                            f"{emby_name} {parent_path} 下已存在弹幕文件：{danmu_path_pattern}")
                                         self.post_message(channel=event.event_data.get("channel"),
-                                                          title=f"{emby_name} 获取电影：{library_name} {item.get('Name')}的媒体列表失败",
+                                                          title=f"{emby_name} {library_name} {item.get('Name')} 弹幕已存在",
                                                           userid=event.event_data.get("user"))
                                     else:
-                                        movie_id = movie_items[0].get("Id")
-                                        # 获取媒体详情
-                                        item_info = self.__get_item_info(movie_id)
-                                        item_path = item_info.get("Path")
-                                        parent_path = Path(item_path).parent
-                                        logger.info(f"{emby_name} 开始检查路径 {parent_path} 下是是否有弹幕文件")
-                                        # 检查是否有弹幕文件
-                                        danmu_path_pattern = Path(item_path).stem + "*.xml"
-
-                                        if len(list(parent_path.glob(danmu_path_pattern))) >= 1:
+                                        # 通知Danmu插件获取弹幕
+                                        danmu_flag = self.__download_danmu(movie_id)
+                                        if danmu_flag:
                                             logger.info(
-                                                f"{emby_name} {parent_path} 下已存在弹幕文件：{danmu_path_pattern}")
+                                                f"{emby_name} 已通知弹幕插件获取 {library_name} {item.get('Name')} {movie_id} 的弹幕")
                                             self.post_message(channel=event.event_data.get("channel"),
-                                                              title=f"{emby_name} {library_name} {item.get('Name')} 弹幕已存在",
+                                                              title=f"{emby_name} 开始通知Emby下载 {library_name} {item.get('Name')} 弹幕，异步执行，请耐心等候执行完成消息",
                                                               userid=event.event_data.get("user"))
-                                        else:
-                                            # 通知Danmu插件获取弹幕
-                                            danmu_flag = self.__download_danmu(movie_id)
-                                            if danmu_flag:
-                                                logger.info(
-                                                    f"{emby_name} 已通知弹幕插件获取 {library_name} {item.get('Name')} {movie_id} 的弹幕")
-                                                self.post_message(channel=event.event_data.get("channel"),
-                                                                  title=f"{emby_name} 开始通知Emby下载 {library_name} {item.get('Name')} 弹幕，异步执行，请耐心等候执行完成消息",
-                                                                  userid=event.event_data.get("user"))
-                                                retry_cnt = 3
-                                                while len(
-                                                        list(parent_path.glob(
-                                                            danmu_path_pattern))) == 0 and retry_cnt > 0:
-                                                    # 解析日志判断是否全部失败
-                                                    if self.__check_all_failed_by_log(item_name=item_info.get("Name"),
-                                                                                      item_year=item_info.get(
-                                                                                          "ProductionYear")):
-                                                        logger.error(
-                                                            f"{emby_name} 解析日志判断已配置弹幕源全部匹配弹幕失败")
-                                                        retry_cnt = -1
-                                                    else:
-                                                        retry_cnt -= 1
-                                                        logger.warn(
-                                                            f"{emby_name} {parent_path} 下未找到弹幕文件：{danmu_path_pattern}，等待60秒后重试 ({retry_cnt}次)")
-                                                        time.sleep(60)
-
-                                                if len(list(parent_path.glob(danmu_path_pattern))) >= 1:
-                                                    logger.info(
-                                                        f"{emby_name} {parent_path} 下已找到弹幕文件：{danmu_path_pattern}")
-                                                    self.post_message(channel=event.event_data.get("channel"),
-                                                                      title=f"{emby_name} {library_name} {item.get('Name')} 下载弹幕文件成功",
-                                                                      userid=event.event_data.get("user"))
-                                                else:
+                                            retry_cnt = 3
+                                            while len(
+                                                    list(parent_path.glob(
+                                                        danmu_path_pattern))) == 0 and retry_cnt > 0:
+                                                # 解析日志判断是否全部失败
+                                                if self.__check_all_failed_by_log(item_name=item_info.get("Name"),
+                                                                                  item_year=item_info.get(
+                                                                                      "ProductionYear")):
                                                     logger.error(
-                                                        f"{emby_name} {parent_path} 下未找到弹幕文件：{danmu_path_pattern}")
-                                                    self.post_message(channel=event.event_data.get("channel"),
-                                                                      title=f"{emby_name} {library_name} {item.get('Name')} 已配置弹幕源全部匹配弹幕失败",
-                                                                      userid=event.event_data.get("user"))
+                                                        f"{emby_name} 解析日志判断已配置弹幕源全部匹配弹幕失败")
+                                                    retry_cnt = -1
+                                                else:
+                                                    retry_cnt -= 1
+                                                    logger.warn(
+                                                        f"{emby_name} {parent_path} 下未找到弹幕文件：{danmu_path_pattern}，等待60秒后重试 ({retry_cnt}次)")
+                                                    time.sleep(60)
+
+                                            if len(list(parent_path.glob(danmu_path_pattern))) >= 1:
+                                                logger.info(
+                                                    f"{emby_name} {parent_path} 下已找到弹幕文件：{danmu_path_pattern}")
+                                                self.post_message(channel=event.event_data.get("channel"),
+                                                                  title=f"{emby_name} {library_name} {item.get('Name')} 下载弹幕文件成功",
+                                                                  userid=event.event_data.get("user"))
                                             else:
                                                 logger.error(
-                                                    f"{emby_name} 通知弹幕插件获取 {library_name} {item.get('Name')} {movie_id} 的弹幕失败")
+                                                    f"{emby_name} {parent_path} 下未找到弹幕文件：{danmu_path_pattern}")
                                                 self.post_message(channel=event.event_data.get("channel"),
-                                                                  title=f"{emby_name} 通知弹幕插件获取 {library_name} 电影 {item.get('Name')} {movie_id} 的弹幕失败",
+                                                                  title=f"{emby_name} {library_name} {item.get('Name')} 已配置弹幕源全部匹配弹幕失败",
                                                                   userid=event.event_data.get("user"))
+                                        else:
+                                            logger.error(
+                                                f"{emby_name} 通知弹幕插件获取 {library_name} {item.get('Name')} {movie_id} 的弹幕失败")
+                                            self.post_message(channel=event.event_data.get("channel"),
+                                                              title=f"{emby_name} 通知弹幕插件获取 {library_name} 电影 {item.get('Name')} {movie_id} 的弹幕失败",
+                                                              userid=event.event_data.get("user"))
                         if not found_item:
                             logger.error(
                                 f"{emby_name} 未找到媒体：{library_name} {library_item_name} {f'第{library_item_season}季 ' if library_item_season else ''}")
@@ -465,6 +463,17 @@ class EmbyDanmu(_PluginBase):
             logger.error(f"连接媒体库emby/Library/VirtualFolders/Query出错：" + str(e))
             return []
 
+    def __get_path(self, file_path: str):
+        """
+        路径转换
+        """
+        if self._paths and self._paths.keys():
+            for library_path in self._paths.keys():
+                if str(file_path).startswith(str(library_path)):
+                    return str(file_path).replace(str(library_path), str(self._paths.get(str(library_path))))
+        # 未匹配到路径，返回原路径
+        return file_path
+
     def __update_library(self, library_id, library_options) -> bool:
         """
         获取媒体库信息
@@ -495,17 +504,17 @@ class EmbyDanmu(_PluginBase):
         else:
             req_url = f"%semby/Users/%s/Items?ParentId=%s&api_key=%s" % (
                 self._EMBY_HOST, self._EMBY_USER, parent_id, self._EMBY_APIKEY)
-        logger.info(f"开始获取媒体列表：{req_url}")
+        logger.debug(f"开始获取媒体列表：{req_url}")
         try:
             with RequestUtils().get_res(req_url) as res:
                 if res:
                     if res.json().get("Items") and res.json().get("Items")[0].get("Type") == "Folder":
                         # emby 4.8.8版本api
-                        return self.__get_items_488(parent_id, nameStartsWith)
+                        return self.__get_items_488(parent_id)
                     else:
                         return res.json().get("Items")
                 else:
-                    return self.__get_items_488(parent_id, nameStartsWith)
+                    return self.__get_items_488(parent_id)
         except Exception as e:
             logger.error(f"连接媒体库媒体列表Items出错：" + str(e))
             return []
@@ -523,7 +532,7 @@ class EmbyDanmu(_PluginBase):
         else:
             req_url = f"%semby/Items?ParentId=%s&api_key=%s" % (
                 self._EMBY_HOST, parent_id, self._EMBY_APIKEY)
-        logger.info(f"开始获取媒体列表488：{req_url}")
+        logger.debug(f"开始获取媒体列表488：{req_url}")
         try:
             with RequestUtils().get_res(req_url) as res:
                 if res:
@@ -576,7 +585,7 @@ class EmbyDanmu(_PluginBase):
         season_items = self.__get_items(season_id)
         item_info = self.__get_item_info(season_items[0].get("Id"))
         item_path = item_info.get("Path")
-        parent_path = Path(item_path).parent
+        parent_path = Path(self.__get_path(str(Path(item_path).parent)))
         logger.info(f"开始检查路径 {parent_path} 下是是否有弹幕文件")
         # 检查是否有弹幕文件
         danmu_path_pattern = "*.xml"
@@ -787,6 +796,28 @@ class EmbyDanmu(_PluginBase):
                             {
                                 'component': 'VCol',
                                 'props': {
+                                    'cols': 12
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextarea',
+                                        'props': {
+                                            'model': 'dirs',
+                                            'label': '目录映射关系',
+                                            'rows': 2,
+                                            'placeholder': 'emby目录:mp目录（一行一个）'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
                                     'cols': 12,
                                 },
                                 'content': [
@@ -827,6 +858,7 @@ class EmbyDanmu(_PluginBase):
             }
         ], {
             "enabled": False,
+            "dirs": "",
             "mediaservers": [],
         }
 
