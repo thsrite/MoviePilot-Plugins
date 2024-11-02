@@ -20,7 +20,7 @@ class EmbyDanmu(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/danmu.png"
     # 插件版本
-    plugin_version = "1.5.2"
+    plugin_version = "1.5.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -497,8 +497,7 @@ class EmbyDanmu(_PluginBase):
                     else:
                         return res.json().get("Items")
                 else:
-                    logger.info(f"获取媒体库媒体列表失败，无法连接Emby！")
-                    return []
+                    return self.__get_items_488(parent_id)
         except Exception as e:
             logger.error(f"连接媒体库媒体列表Items出错：" + str(e))
             return []
