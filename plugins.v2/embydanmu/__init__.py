@@ -20,7 +20,7 @@ class EmbyDanmu(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/danmu.png"
     # 插件版本
-    plugin_version = "1.5.3"
+    plugin_version = "1.5.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -161,7 +161,7 @@ class EmbyDanmu(_PluginBase):
 
                 try:
                     # 获取媒体库媒体列表
-                    library_items = self.__get_items(library_id)
+                    library_items = self.__get_items(library_id, NameStartsWith=library_item_name)
                     if not library_items:
                         logger.error(f"{emby_name} 获取媒体库：{library_name}的媒体列表失败")
                         self.post_message(channel=event.event_data.get("channel"),
@@ -171,6 +171,8 @@ class EmbyDanmu(_PluginBase):
                         found_item = False
                         # 遍历媒体列表，获取媒体的ID和名称
                         for item in library_items:
+                            logger.info(
+                                f"服务器：{emby_name} 媒体库：{library_name} 媒体库类型：{library_type} 媒体：{item}")
                             if library_type == "tvshows":
                                 if item.get("Name") == library_item_name:
                                     found_item = True
@@ -343,6 +345,7 @@ class EmbyDanmu(_PluginBase):
                                 # 电影弹幕
                                 matches = re.findall(r'^(.*?)(?= ?\(\d{4}\)?|$)', item.get("Name"), re.MULTILINE)
                                 if matches and str(matches[0]) == library_item_name:
+                                    logger.info(f"{emby_name} 开始检查电影：{library_name} {library_item_name}")
                                     found_item = True
                                     movie_id = item.get("Id")
                                     movie_items = self.__get_items(movie_id)
@@ -480,14 +483,19 @@ class EmbyDanmu(_PluginBase):
             return True
         return False
 
-    def __get_items(self, parent_id) -> list:
+    def __get_items(self, parent_id, NameStartsWith=None) -> list:
         """
         获取媒体库媒体列表
         """
         if not self._EMBY_HOST or not self._EMBY_APIKEY:
             return []
-        req_url = f"%semby/Users/%s/Items?ParentId=%s&api_key=%s" % (
-            self._EMBY_HOST, self._EMBY_USER, parent_id, self._EMBY_APIKEY)
+        if NameStartsWith:
+            req_url = f"%semby/Users/%s/Items?ParentId=%s&api_key=%s&NameStartsWith=%s" % (
+                self._EMBY_HOST, self._EMBY_USER, parent_id, self._EMBY_APIKEY, NameStartsWith)
+        else:
+            req_url = f"%semby/Users/%s/Items?ParentId=%s&api_key=%s" % (
+                self._EMBY_HOST, self._EMBY_USER, parent_id, self._EMBY_APIKEY)
+        logger.info(f"开始获取媒体列表：{req_url}")
         try:
             with RequestUtils().get_res(req_url) as res:
                 if res:
@@ -502,15 +510,20 @@ class EmbyDanmu(_PluginBase):
             logger.error(f"连接媒体库媒体列表Items出错：" + str(e))
             return []
 
-    def __get_items_488(self, parent_id) -> list:
+    def __get_items_488(self, parent_id, NameStartsWith=None) -> list:
         """
         获取媒体库媒体列表
         emby 4.8.8版本
         """
         if not self._EMBY_HOST or not self._EMBY_APIKEY:
             return []
-        req_url = f"%semby/Items?ParentId=%s&api_key=%s" % (
-            self._EMBY_HOST, parent_id, self._EMBY_APIKEY)
+        if NameStartsWith:
+            req_url = f"%semby/Items?ParentId=%s&api_key=%s&NameStartsWith=%s" % (
+                self._EMBY_HOST, parent_id, self._EMBY_APIKEY, NameStartsWith)
+        else:
+            req_url = f"%semby/Items?ParentId=%s&api_key=%s" % (
+                self._EMBY_HOST, parent_id, self._EMBY_APIKEY)
+        logger.info(f"开始获取媒体列表488：{req_url}")
         try:
             with RequestUtils().get_res(req_url) as res:
                 if res:
