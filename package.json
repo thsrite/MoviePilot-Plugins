@@ -218,11 +218,12 @@
     "name": "Emby观影报告",
     "description": "推送Emby观影报告，需Emby安装Playback Report 插件。",
     "labels": "Emby",
-    "version": "1.9",
+    "version": "1.9.1",
     "icon": "Pydiocells_A.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v1.9.1": "修复媒体库黑名单设置",
       "v1.9": "支持媒体库黑名单设置",
       "v1.8": "推送微信增加时间戳，防止使用缓存",
       "v1.7": "分块发送，兼容微信推送",

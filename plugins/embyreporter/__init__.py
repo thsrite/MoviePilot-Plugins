@@ -33,7 +33,7 @@ class EmbyReporter(_PluginBase):
     # 插件图标
     plugin_icon = "Pydiocells_A.png"
     # 插件版本
-    plugin_version = "1.9"
+    plugin_version = "1.9.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -600,7 +600,8 @@ class EmbyReporter(_PluginBase):
                     success, info = self.items(user_id, item_id)
                     if success and info:
                         success, parent_info = self.items(user_id, info["ParentId"])
-                        if success and parent_info and parent_info["ParentId"] in self._black_library:
+                        if (success and parent_info
+                                and str(parent_info["ParentId"]) in str(self._black_library).split(",")):
                             logger.info(f"电影 {name} 已在媒体库黑名单 {self._black_library} 中，已过滤")
                             continue
                 exists_movies.append(i)
@@ -630,7 +631,7 @@ class EmbyReporter(_PluginBase):
                 # 过滤电视剧
                 if self._black_library:
                     success, parent_info = self.items(user_id, item_id)
-                    if success and parent_info and parent_info["ParentId"] in self._black_library:
+                    if success and parent_info and str(parent_info["ParentId"]) in str(self._black_library).split(","):
                         logger.info(f"电视剧 {name} 已在媒体库黑名单 {self._black_library} 中，已过滤")
                         continue
                 # 封面图像获取
