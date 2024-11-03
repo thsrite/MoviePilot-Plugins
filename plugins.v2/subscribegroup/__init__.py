@@ -20,7 +20,7 @@ class SubscribeGroup(_PluginBase):
     # 插件图标
     plugin_icon = "teamwork.png"
     # 插件版本
-    plugin_version = "2.8"
+    plugin_version = "2.8.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -316,8 +316,7 @@ class SubscribeGroup(_PluginBase):
                     # 站点 判断是否在订阅站点范围内
                     rss_sites = self.systemconfig.get(SystemConfigKey.RssSites) or []
                     if _torrent and _torrent.site and int(_torrent.site) in rss_sites:
-                        sites = json.dumps([_torrent.site])
-                        update_dict['sites'] = sites
+                        update_dict['sites'] = [_torrent.site]
 
                 if len(update_dict.keys()) == 0:
                     logger.info(f"订阅记录:{subscribe.name} 无需填充")
