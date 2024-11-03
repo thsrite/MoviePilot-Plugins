@@ -24,7 +24,7 @@ class PluginReInstall(_PluginBase):
     # 插件图标
     plugin_icon = "refresh.png"
     # 插件版本
-    plugin_version = "1.7"
+    plugin_version = "1.8"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -139,15 +139,14 @@ class PluginReInstall(_PluginBase):
         拼装插件配置页面，需要返回两块数据：1、页面配置；2、数据结构
         """
         # 已安装插件
-        local_plugins = self.get_local_plugins()
+        local_plugins = PluginManager().get_local_plugins()
         # 编历 local_plugins，生成插件类型选项
         pluginOptions = []
 
-        for plugin_id in list(local_plugins.keys()):
-            local_plugin = local_plugins.get(plugin_id)
+        for plugin in local_plugins:
             pluginOptions.append({
-                "title": f"{local_plugin.get('plugin_name')} v{local_plugin.get('plugin_version')}",
-                "value": local_plugin.get("id")
+                "title": f"{plugin.plugin_name} v{plugin.plugin_version}",
+                "value": plugin.id
             })
         return [
             {
