@@ -36,7 +36,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "2.1.1"
+    plugin_version = "2.1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -62,6 +62,7 @@ class EmbyMetaRefresh(_PluginBase):
     _ReplaceAllImages = "true"
     _actor_path = None
     _mediaservers = None
+    _interval = None
     mediaserver_helper = None
     _EMBY_HOST = None
     _EMBY_USER = None
@@ -85,6 +86,7 @@ class EmbyMetaRefresh(_PluginBase):
             self._ReplaceAllMetadata = config.get("ReplaceAllMetadata") or "true"
             self._ReplaceAllImages = config.get("ReplaceAllImages") or "true"
             self._mediaservers = config.get("mediaservers") or []
+            self._interval = config.get("interval") or 0
 
             # 加载模块
             if self._enabled or self._onlyonce:
@@ -174,6 +176,9 @@ class EmbyMetaRefresh(_PluginBase):
                 # 刷新媒体库
                 for transferinfo in transferhistorys:
                     self.__refresh_emby(transferinfo, emby)
+                    if self._interval:
+                        logger.info(f"等待 {self._interval} 秒后继续刷新")
+                        time.sleep(self._interval)
             else:
                 latest = self.__get_latest_media()
                 if not latest:
@@ -194,6 +199,9 @@ class EmbyMetaRefresh(_PluginBase):
                         logger.info(
                             f"开始刷新媒体库元数据，最新媒体：{'电视剧' if str(item.get('Type')) == 'Episode' else '电影'} {'%s S%02dE%02d %s' % (item.get('SeriesName'), item.get('ParentIndexNumber'), item.get('IndexNumber'), item.get('Name')) if str(item.get('Type')) == 'Episode' else item.get('Name')} {item.get('Id')}")
                         self.__refresh_emby_library_by_id(item.get("Id"))
+                        if self._interval:
+                            logger.info(f"等待 {self._interval} 秒后继续刷新")
+                            time.sleep(self._interval)
                     else:
                         logger.info(
                             f"最新媒体：{'电视剧' if str(item.get('Type')) == 'Episode' else '电影'} {'%s S%02dE%02d %s' % (item.get('SeriesName'), item.get('ParentIndexNumber'), item.get('IndexNumber'), item.get('Name')) if str(item.get('Type')) == 'Episode' else item.get('Name')} {item.get('Id')} 元数据完整，跳过处理")
@@ -224,8 +232,6 @@ class EmbyMetaRefresh(_PluginBase):
                                 'itemIds': item_ids,
                                 'actors': peoples or item_actors
                             }
-
-                    time.sleep(5)
 
                 # 处理剧集
                 for key, value in handle_items.items():
@@ -1031,7 +1037,25 @@ class EmbyMetaRefresh(_PluginBase):
                             {
                                 'component': 'VCol',
                                 'props': {
-                                    'cols': 12
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'interval',
+                                            'label': '刷新间隔(秒)',
+                                            'placeholder': '留空默认0秒'
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
                                 },
                                 'content': [
                                     {
@@ -1084,7 +1108,8 @@ class EmbyMetaRefresh(_PluginBase):
             "refresh_type": "历史记录",
             "actor_path": "",
             "mediaservers": [],
-            "num": 5
+            "num": 5,
+            "interval": 0,
         }
 
     def get_page(self) -> List[dict]:

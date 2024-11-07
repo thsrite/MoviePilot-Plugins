@@ -24,7 +24,7 @@ class PluginReInstall(_PluginBase):
     # 插件图标
     plugin_icon = "refresh.png"
     # 插件版本
-    plugin_version = "1.7"
+    plugin_version = "1.8"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -72,28 +72,27 @@ class PluginReInstall(_PluginBase):
                 self.__update_conifg()
 
                 # 本地插件
-                local_plugins = self.get_local_plugins()
+                local_plugins = PluginManager().get_local_plugins()
 
                 # 开始重载插件
-                for plugin_id in list(local_plugins.keys()):
-                    local_plugin = local_plugins.get(plugin_id)
-                    if plugin_id in self._plugin_ids:
+                for plugin in local_plugins:
+                    if plugin.id in self._plugin_ids:
                         logger.info(
-                            f"开始重载插件 {local_plugin.get('plugin_name')} v{local_plugin.get('plugin_version')}")
+                            f"开始重载插件 {plugin.plugin_name} v{plugin.plugin_version}")
 
                         # 开始安装线上插件
-                        state, msg = PluginHelper().install(pid=plugin_id,
-                                                            repo_url=plugin_url or local_plugin.get("repo_url"))
+                        state, msg = PluginHelper().install(pid=plugin.id,
+                                                            repo_url=plugin_url or plugin.repo_url)
                         # 安装失败
                         if not state:
                             logger.error(
-                                f"插件 {local_plugin.get('plugin_name')} 重装失败，当前版本 v{local_plugin.get('plugin_version')}")
+                                f"插件 {plugin.plugin_name} 重装失败，当前版本 v{plugin.plugin_version}")
                             continue
 
                         logger.info(
-                            f"插件 {local_plugin.get('plugin_name')} 重装成功，当前版本 v{local_plugin.get('plugin_version')}")
+                            f"插件 {plugin.plugin_name} 重装成功，当前版本 v{plugin.plugin_version}")
 
-                        self.__reload_plugin(plugin_id)
+                        self.__reload_plugin(plugin.id)
 
     def __update_conifg(self):
         self.update_config({
@@ -139,15 +138,14 @@ class PluginReInstall(_PluginBase):
         拼装插件配置页面，需要返回两块数据：1、页面配置；2、数据结构
         """
         # 已安装插件
-        local_plugins = self.get_local_plugins()
+        local_plugins = PluginManager().get_local_plugins()
         # 编历 local_plugins，生成插件类型选项
         pluginOptions = []
 
-        for plugin_id in list(local_plugins.keys()):
-            local_plugin = local_plugins.get(plugin_id)
+        for plugin in local_plugins:
             pluginOptions.append({
-                "title": f"{local_plugin.get('plugin_name')} v{local_plugin.get('plugin_version')}",
-                "value": local_plugin.get("id")
+                "title": f"{plugin.plugin_name} v{plugin.plugin_version}",
+                "value": plugin.id
             })
         return [
             {

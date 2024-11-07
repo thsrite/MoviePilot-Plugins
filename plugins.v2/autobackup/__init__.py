@@ -25,7 +25,7 @@ class AutoBackup(_PluginBase):
     # 插件图标
     plugin_icon = "Time_machine_B.png"
     # 插件版本
-    plugin_version = "2.0"
+    plugin_version = "2.0.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -169,7 +169,7 @@ class AutoBackup(_PluginBase):
                 shutil.copy(app_file, backup_path)
             cookies_path = config_path / "cookies"
             if cookies_path.exists():
-                shutil.copytree(cookies_path, backup_path)
+                shutil.copytree(cookies_path, f'{backup_path}/cookies')
 
             zip_file = str(backup_path) + '.zip'
             if os.path.exists(zip_file):
