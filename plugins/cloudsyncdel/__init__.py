@@ -22,7 +22,7 @@ class CloudSyncDel(_PluginBase):
     # 插件图标
     plugin_icon = "clouddisk.png"
     # 插件版本
-    plugin_version = "1.5.4"
+    plugin_version = "1.5.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -98,15 +98,16 @@ class CloudSyncDel(_PluginBase):
         season_num = event_data.get("season_num")
         episode_num = event_data.get("episode_num")
 
+        # 本地路径替换
         local_path = self.__get_path(self._local_paths, media_path)
         logger.info(f"获取到 {self._local_paths} 替换后本地文件路径 {local_path}")
+
         if Path(local_path).exists() and (
                 Path(local_path).is_dir() or (Path(local_path).is_file() and not Path(local_path).is_symlink())):
             if Path(local_path).is_dir():
                 shutil.rmtree(local_path)
             elif Path(local_path).is_file():
                 Path(local_path).unlink()  # 删除文件
-
             logger.info(f"获取到本地路径 {local_path}, 通知媒体库同步删除插件删除")
             eventItem = schemas.WebhookEventInfo(event="media_del", channel="emby")
             eventItem.item_type = media_type
@@ -117,6 +118,35 @@ class CloudSyncDel(_PluginBase):
             eventItem.episode_id = episode_num
             eventItem.item_isvirtual = "False"
             self.eventmanager.send_event(EventType.WebhookMessage, eventItem)
+        else:
+            # 检索相同目录下同名的媒体文件
+            pattern = Path(local_path).stem.replace('[', '?').replace(']', '?')
+            logger.info(f"开始筛选 {Path(local_path).parent} 下同名文件 {pattern}")
+            files = Path(local_path).parent.glob(f"{pattern}.*")
+
+            if not files:
+                logger.info(f"未找到本地同名文件 {pattern}，开始删除云盘")
+            else:
+                for file in files:
+                    Path(file).unlink()
+                    logger.info(f"本地文件 {file} 已删除")
+                    if Path(file).suffix in settings.RMT_MEDIAEXT:
+                        logger.info(f"获取到本地路径 {local_path}, 通知媒体库同步删除插件删除")
+                        eventItem = schemas.WebhookEventInfo(event="media_del", channel="emby")
+                        eventItem.item_type = media_type
+                        eventItem.item_name = media_name
+                        eventItem.item_path = local_path
+                        eventItem.tmdb_id = tmdb_id
+                        eventItem.season_id = season_num
+                        eventItem.episode_id = episode_num
+                        eventItem.item_isvirtual = "False"
+                        self.eventmanager.send_event(EventType.WebhookMessage, eventItem)
+
+                # 删除thumb图片
+                thumb_file = Path(local_path).parent / (Path(local_path).stem + "-thumb.jpg")
+                if thumb_file.exists():
+                    thumb_file.unlink()
+                    logger.info(f"本地文件 {thumb_file} 已删除")
 
         media_path = self.__get_path(self._paths, media_path)
         if not media_path:
@@ -130,40 +160,38 @@ class CloudSyncDel(_PluginBase):
         if media_path.suffix:
             # 删除云盘文件
             cloud_file = self.__get_path(self._cloud_paths, str(media_path))
+            logger.info(f"获取到 {self._cloud_paths} 替换后云盘文件路径 {cloud_file}")
 
-            if Path(cloud_file).exists():
-                cloud_path = cloud_file
-                logger.info(f"获取到云盘文件 {cloud_file}")
-                cloud_file_path = Path(cloud_file)
-                # 删除文件、nfo、jpg等同名文件
-                pattern = cloud_file_path.stem.replace('[', '?').replace(']', '?')
-                logger.info(f"开始筛选 {cloud_file_path.parent} 下同名文件 {pattern}")
-                files = cloud_file_path.parent.glob(f"{pattern}.*")
-                for file in files:
-                    Path(file).unlink()
-                    logger.info(f"云盘文件 {file} 已删除")
-                    cloud_file_flag = True
+            cloud_file_path = Path(cloud_file)
+            # 删除文件、nfo、jpg等同名文件
+            pattern = cloud_file_path.stem.replace('[', '?').replace(']', '?')
+            logger.info(f"开始筛选 {cloud_file_path.parent} 下同名文件 {pattern}")
+            files = cloud_file_path.parent.glob(f"{pattern}.*")
+            for file in files:
+                Path(file).unlink()
+                logger.info(f"云盘文件 {file} 已删除")
+                if Path(file).suffix in settings.RMT_MEDIAEXT:
+                    cloud_path = cloud_file
+                cloud_file_flag = True
 
-                # 删除thumb图片
-                thumb_file = cloud_file_path.parent / (cloud_file_path.stem + "-thumb.jpg")
-                if thumb_file.exists():
-                    thumb_file.unlink()
-                    logger.info(f"云盘文件 {thumb_file} 已删除")
+            # 删除thumb图片
+            thumb_file = cloud_file_path.parent / (cloud_file_path.stem + "-thumb.jpg")
+            if thumb_file.exists():
+                thumb_file.unlink()
+                logger.info(f"云盘文件 {thumb_file} 已删除")
 
-                # 删除空目录
-                # 判断当前媒体父路径下是否有媒体文件，如有则无需遍历父级
-                if not SystemUtils.exits_files(cloud_file_path.parent, settings.RMT_MEDIAEXT):
-                    # 判断父目录是否为空, 为空则删除
-                    for parent_path in cloud_file_path.parents:
-                        if str(parent_path.parent) != str(cloud_file_path.root):
-                            # 父目录非根目录，才删除父目录
-                            if not SystemUtils.exits_files(parent_path, settings.RMT_MEDIAEXT):
-                                # 当前路径下没有媒体文件则删除
-                                shutil.rmtree(parent_path)
-                                logger.warn(f"云盘目录 {parent_path} 已删除")
-                                cloud_file_flag = True
-            else:
-                logger.warn(f"云盘文件 {cloud_file} 文件已被删除")
+            # 删除空目录
+            # 判断当前媒体父路径下是否有媒体文件，如有则无需遍历父级
+            if not SystemUtils.exits_files(cloud_file_path.parent, settings.RMT_MEDIAEXT):
+                # 判断父目录是否为空, 为空则删除
+                for parent_path in cloud_file_path.parents:
+                    if str(parent_path.parent) != str(cloud_file_path.root):
+                        # 父目录非根目录，才删除父目录
+                        if not SystemUtils.exits_files(parent_path, settings.RMT_MEDIAEXT):
+                            # 当前路径下没有媒体文件则删除
+                            shutil.rmtree(parent_path)
+                            logger.warn(f"云盘目录 {parent_path} 已删除")
+                            cloud_file_flag = True
         else:
             # 删除云盘文件
             cloud_path = self.__get_path(self._cloud_paths, str(media_path))
@@ -178,7 +206,7 @@ class CloudSyncDel(_PluginBase):
 
         if cloud_file_flag:
             if self._url:
-                if not media_path.suffix or media_path.suffix in settings.RMT_MEDIAEXT:
+                if not Path(cloud_path).suffix or Path(cloud_path).suffix in settings.RMT_MEDIAEXT:
                     RequestUtils(content_type="application/json").post(url=self._url, json={
                         "path": str(cloud_path),
                         "type": "del"
