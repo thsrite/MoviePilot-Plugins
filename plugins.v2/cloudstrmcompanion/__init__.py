@@ -310,6 +310,8 @@ class CloudStrmCompanion(_PluginBase):
         :param event_path: 事件文件路径
         """
         if not event.is_directory:
+            if '.fuse_hidden' in event_path:
+                return
             # 文件发生变化
             logger.debug("文件%s：%s" % (text, event_path))
             self.__handle_file(event_path=event_path, mon_path=mon_path)
