@@ -58,7 +58,7 @@ class CloudStrmCompanion(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png"
     # 插件版本
-    plugin_version = "1.0.2"
+    plugin_version = "1.0.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -126,6 +126,7 @@ class CloudStrmCompanion(_PluginBase):
         if self._rebuild:
             logger.info("开始清理旧数据索引")
             self._rebuild = False
+            self._cloud_files = []
             self.__update_config()
 
         # 停止现有任务
@@ -987,10 +988,10 @@ class CloudStrmCompanion(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': 'strm格式化方式：'
+                                            'text': 'strm格式化方式，自行把()替换为alist/cd2上路径，url编码格式：'
                                                     '1.本地源文件路径：{local_file}。'
-                                                    '2.alist路径：http://192.168.31.103:5244/d{cloud_file}。'
-                                                    '3.cd2路径：http://192.168.31.103:19798/static/http/192.168.31.103:19798/False/{cloud_file}。'
+                                                    '2.alist路径：http://192.168.31.103:5244/d(){cloud_file}。'
+                                                    '3.cd2路径：http://192.168.31.103:19798/static/http/192.168.31.103:19798/False/(){cloud_file}。'
                                                     '4.其他api路径：http://192.168.31.103:2001/{cloud_file}'
                                         }
                                     }
