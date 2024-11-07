@@ -58,7 +58,7 @@ class CloudStrmCompanion(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png"
     # 插件版本
-    plugin_version = "1.0.1"
+    plugin_version = "1.0.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -277,7 +277,7 @@ class CloudStrmCompanion(_PluginBase):
             # 遍历云盘树形结构文件
             for cloud_file in self.parse_tree_structure(tree_content):
                 try:
-                    if cloud_file.is_dir():
+                    if Path(cloud_file).is_dir():
                         continue
                     # 本地挂载路径
                     local_file = str(cloud_file).replace(cloud_dir, local_dir)
@@ -288,10 +288,10 @@ class CloudStrmCompanion(_PluginBase):
                                                                self._rmt_mediaext.split(",")]:
                         continue
 
-                    if cloud_file not in self._cloud_files:
+                    if str(cloud_file) not in self._cloud_files:
                         logger.info(f"扫描到新文件 {cloud_file}，正在开始处理")
                         # 云盘文件json新增
-                        self._cloud_files.append(cloud_file)
+                        self._cloud_files.append(str(cloud_file))
                         __save_flag = True
 
                         # 生成strm文件内容
