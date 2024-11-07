@@ -239,10 +239,6 @@ class CloudStrmCompanion(_PluginBase):
             logger.error("未获取到可用目录监控配置，请检查")
             return
 
-        if not self._115client:
-            logger.error("115_cookie 未配置或cookie已失效，请检查配置")
-            return
-
         if event:
             event_data = event.event_data
             if not event_data or event_data.get("action") != "cloudStrmCompanion":
@@ -251,6 +247,10 @@ class CloudStrmCompanion(_PluginBase):
             self.post_message(channel=event.event_data.get("channel"),
                               title="开始云盘Strm助手同步生成 ...",
                               userid=event.event_data.get("user"))
+
+        if not self._115client:
+            logger.error("115_cookie 未配置或cookie已失效，请检查配置")
+            return
 
         logger.info("云盘Strm助手同步生成任务开始")
         # 首次扫描或者重建索引
