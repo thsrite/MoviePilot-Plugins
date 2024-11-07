@@ -1,0 +1,808 @@
+import json
+import os
+import threading
+import time
+import traceback
+import urllib.parse
+from datetime import datetime, timedelta
+from io import BytesIO
+from pathlib import Path
+
+import requests
+from p115client import P115Client
+from posixpath import join as join_path
+from re import compile as re_compile
+from posixpatht import escape
+import pytz
+from typing import Any, List, Dict, Tuple, Optional
+
+from watchdog.events import FileSystemEventHandler
+from watchdog.observers.polling import PollingObserver
+
+from app.core.event import eventmanager, Event
+from app.schemas.types import EventType
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+
+from app.log import logger
+from app.plugins import _PluginBase
+from app.core.config import settings
+
+lock = threading.Lock()
+
+
+class FileMonitorHandler(FileSystemEventHandler):
+    """
+    目录监控响应类
+    """
+
+    def __init__(self, monpath: str, sync: Any, **kwargs):
+        super(FileMonitorHandler, self).__init__(**kwargs)
+        self._watch_path = monpath
+        self.sync = sync
+
+    def on_created(self, event):
+        self.sync.event_handler(event=event, text="创建",
+                                mon_path=self._watch_path, event_path=event.src_path)
+
+    def on_moved(self, event):
+        self.sync.event_handler(event=event, text="移动",
+                                mon_path=self._watch_path, event_path=event.dest_path)
+
+
+class CloudStrmCompanion(_PluginBase):
+    # 插件名称
+    plugin_name = "云盘Strm助手"
+    # 插件描述
+    plugin_desc = "实时监控、定时全量增量生成strm文件。"
+    # 插件图标
+    plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png"
+    # 插件版本
+    plugin_version = "1.0"
+    # 插件作者
+    plugin_author = "thsrite"
+    # 作者主页
+    author_url = "https://github.com/thsrite"
+    # 插件配置项ID前缀
+    plugin_config_prefix = "cloudstrmCompanion_"
+    # 加载顺序
+    plugin_order = 26
+    # 可使用的用户级别
+    auth_level = 1
+
+    # 私有属性
+    _enabled = False
+    _cron = None
+    _monitor_confs = None
+    _onlyonce = False
+    _rebuild = False
+    _cover = False
+    _monitor = False
+
+    _strm_dir_conf = {}
+    _cloud_dir_conf = {}
+    _format_conf = {}
+    _cloud_files = []
+    _observer = []
+    _115_cookie = None
+    _115client = None
+
+    _cloud_files_json = "cloud_files.json"
+    _headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_2_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.192 Safari/537.36",
+        "Cookie": "",
+    }
+
+    # 定时器
+    _scheduler: Optional[BackgroundScheduler] = None
+    # 退出事件
+    _event = threading.Event()
+
+    def init_plugin(self, config: dict = None):
+        # 清空配置
+        self._strm_dir_conf = {}
+        self._cloud_dir_conf = {}
+        self._format_conf = {}
+        self._cloud_files_json = os.path.join(self.get_data_path(), self._cloud_files_json)
+
+        if config:
+            self._enabled = config.get("enabled")
+            self._cron = config.get("cron")
+            self._onlyonce = config.get("onlyonce")
+            self._rebuild = config.get("rebuild")
+            self._monitor = config.get("monitor")
+            self._cover = config.get("cover")
+            self._monitor_confs = config.get("monitor_confs")
+            self._115_cookie = config.get("115_cookie")
+            if self._115_cookie:
+                self._headers["Cookie"] = self._115_cookie
+                self._115client = P115Client(self._115_cookie, check_for_relogin=True)
+
+        if self._rebuild:
+            logger.info("开始清理旧数据索引")
+            self._rebuild = False
+            self.__update_config()
+
+        # 停止现有任务
+        self.stop_service()
+
+        if self._enabled or self._onlyonce:
+            # 定时服务
+            self._scheduler = BackgroundScheduler(timezone=settings.TZ)
+
+            # 读取目录配置
+            monitor_confs = self._monitor_confs.split("\n")
+            if not monitor_confs:
+                return
+            for monitor_conf in monitor_confs:
+                # 格式 MoviePilot中云盘挂载本地的路径#MoviePilot中strm生成路径#alist/cd2上115路径#strm格式化
+                if not monitor_conf:
+                    continue
+                # 注释
+                if str(monitor_conf).startswith("#"):
+                    continue
+                # 软连接模式
+                if str(monitor_conf).count("#") == 3:
+                    local_dir = str(monitor_conf).split("#")[0]
+                    strm_dir = str(monitor_conf).split("#")[1]
+                    cloud_dir = str(monitor_conf).split("#")[2]
+                    format_str = str(monitor_conf).split("#")[3]
+                else:
+                    logger.error(f"{monitor_conf} 格式错误")
+                    continue
+                # 存储目录监控配置
+                self._strm_dir_conf[local_dir] = strm_dir
+                self._cloud_dir_conf[local_dir] = cloud_dir
+                self._format_conf[local_dir] = format_str
+
+                # 检查媒体库目录是不是下载目录的子目录
+                try:
+                    if strm_dir and Path(strm_dir).is_relative_to(Path(local_dir)):
+                        logger.warn(f"{strm_dir} 是 {local_dir} 的子目录，无法监控")
+                        self.systemmessage.put(f"{strm_dir} 是 {local_dir} 的子目录，无法监控")
+                        continue
+                except Exception as e:
+                    logger.debug(str(e))
+                    pass
+
+                try:
+                    if self._monitor:
+                        # 兼容模式，目录同步性能降低且NAS不能休眠，但可以兼容挂载的远程共享目录如SMB
+                        observer = PollingObserver(timeout=10)
+                        self._observer.append(observer)
+                        observer.schedule(FileMonitorHandler(local_dir, self), path=local_dir, recursive=True)
+                        observer.daemon = True
+                        observer.start()
+                        logger.info(f"{local_dir} 的Strm生成实时监控服务启动")
+                except Exception as e:
+                    err_msg = str(e)
+                    if "inotify" in err_msg and "reached" in err_msg:
+                        logger.warn(
+                            f"云盘实时监控服务启动出现异常：{err_msg}，请在宿主机上（不是docker容器内）执行以下命令并重启："
+                            + """
+                                                    echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
+                                                    echo fs.inotify.max_user_instances=524288 | sudo tee -a /etc/sysctl.conf
+                                                    sudo sysctl -p
+                                                    """)
+                    else:
+                        logger.error(f"{local_dir} 启动x实时监控失败：{err_msg}")
+                    self.systemmessage.put(f"{local_dir} 启动实时监控失败：{err_msg}")
+
+            # 运行一次定时服务
+            if self._onlyonce:
+                logger.info("云盘Strm助手全量执行服务启动，立即运行一次")
+                self._scheduler.add_job(func=self.scan, trigger='date',
+                                        run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
+                                        name="云盘Strm助手全量执行")
+                # 关闭一次性开关
+                self._onlyonce = False
+                # 保存配置
+                self.__update_config()
+
+            # 周期运行
+            if self._cron:
+                try:
+                    self._scheduler.add_job(func=self.scan,
+                                            trigger=CronTrigger.from_crontab(self._cron),
+                                            name="云盘Strm助手同步")
+                except Exception as err:
+                    logger.error(f"定时任务配置错误：{err}")
+                    # 推送实时消息
+                    self.systemmessage.put(f"执行周期配置错误：{err}")
+
+            # 启动任务
+            if self._scheduler.get_jobs():
+                self._scheduler.print_jobs()
+                self._scheduler.start()
+
+    @eventmanager.register(EventType.PluginAction)
+    def scan(self, event: Event = None):
+        """
+        扫描
+        """
+        if not self._strm_dir_conf or not self._strm_dir_conf.keys():
+            logger.error("未获取到可用目录监控配置，请检查")
+            return
+
+        if not self._115client:
+            logger.error("115_cookie 未配置或cookie已失效，请检查配置")
+            return
+
+        if event:
+            event_data = event.event_data
+            if not event_data or event_data.get("action") != "cloudStrmCompanion":
+                return
+            logger.info("收到命令，开始云盘Strm助手同步生成 ...")
+            self.post_message(channel=event.event_data.get("channel"),
+                              title="开始云盘Strm助手同步生成 ...",
+                              userid=event.event_data.get("user"))
+
+        logger.info("云盘Strm助手同步生成任务开始")
+        # 首次扫描或者重建索引
+        if Path(self._cloud_files_json).exists():
+            logger.info("尝试加载本地缓存")
+            # 尝试加载本地
+            with open(self._cloud_files_json, 'r') as file:
+                content = file.read()
+                if content:
+                    self._cloud_files = json.loads(content)
+
+        __save_flag = False
+        # 遍历云盘目录
+        for local_dir in self._cloud_dir_conf.keys():
+            # 云盘路径
+            cloud_dir = self._cloud_dir_conf.get(local_dir)
+            # 本地strm路径
+            strm_dir = self._strm_dir_conf.get(local_dir)
+            # 格式化配置
+            format_str = self._format_conf.get(local_dir)
+            # 获取云盘树形结构
+            tree_content = self.retrieve_directory_structure(cloud_dir)
+            if not tree_content:
+                continue
+            # 遍历云盘树形结构文件
+            for cloud_file in self.parse_tree_structure(tree_content):
+                try:
+                    if cloud_file.is_dir():
+                        continue
+                    # 本地挂载路径
+                    local_file = str(cloud_file).replace(cloud_dir, local_dir)
+                    # 本地strm路径
+                    target_file = str(cloud_file).replace(cloud_dir, strm_dir)
+                    # 只处理媒体文件
+                    if Path(local_file).suffix.lower() not in settings.RMT_MEDIAEXT:
+                        continue
+
+                    if cloud_file not in self._cloud_files:
+                        logger.info(f"扫描到新文件 {cloud_file}，正在开始处理")
+                        # 云盘文件json新增
+                        self._cloud_files.append(cloud_file)
+                        __save_flag = True
+
+                        # 生成strm文件内容
+                        strm_content = self.__format_content(format_str=format_str,
+                                                             local_file=local_file,
+                                                             cloud_file=str(cloud_file))
+                        # 生成strm文件
+                        self.__create_strm_file(strm_file=target_file,
+                                                strm_content=strm_content)
+                    else:
+                        logger.info(f"{cloud_file} 已在缓存中！跳过处理")
+                except Exception as e:
+                    logger.error(f"处理文件 {cloud_file} 失败：{str(e)}")
+
+            # 重新保存json文件
+            if __save_flag:
+                self.__sava_json()
+
+        logger.info("云盘Strm助手同步生成任务完成")
+        if event:
+            self.post_message(channel=event.event_data.get("channel"),
+                              title="云盘Strm助手同步生成任务完成！",
+                              userid=event.event_data.get("user"))
+
+    def event_handler(self, event, mon_path: str, text: str, event_path: str):
+        """
+        处理文件变化
+        :param event: 事件
+        :param mon_path: 监控目录
+        :param text: 事件描述
+        :param event_path: 事件文件路径
+        """
+        if not event.is_directory:
+            # 文件发生变化
+            logger.debug("文件%s：%s" % (text, event_path))
+            self.__handle_file(event_path=event_path, mon_path=mon_path)
+
+    def __handle_file(self, event_path: str, mon_path: str):
+        """
+        同步一个文件
+        :param event_path: 事件文件路径
+        :param mon_path: 监控目录
+        """
+        try:
+            if not Path(event_path).exists():
+                return
+            # 全程加锁
+            with lock:
+                # 云盘路径
+                cloud_dir = self._cloud_dir_conf.get(mon_path)
+                # 本地strm路径
+                strm_dir = self._strm_dir_conf.get(mon_path)
+                # 格式化配置
+                format_str = self._format_conf.get(mon_path)
+                # 本地strm路径
+                target_file = str(event_path).replace(mon_path, strm_dir)
+                # 云盘文件路径
+                cloud_file = str(event_path).replace(mon_path, cloud_dir)
+                # 生成strm文件内容
+                strm_content = self.__format_content(format_str=format_str,
+                                                     local_file=event_path,
+                                                     cloud_file=str(cloud_file))
+                # 生成strm文件
+                self.__create_strm_file(strm_file=target_file,
+                                        strm_content=strm_content)
+        except Exception as e:
+            logger.error("目录监控发生错误：%s - %s" % (str(e), traceback.format_exc()))
+
+    def __sava_json(self):
+        """
+        保存json文件
+        """
+        logger.info(f"开始写入本地文件 {self._cloud_files_json}")
+        file = open(self._cloud_files_json, 'w')
+        file.write(json.dumps(self._cloud_files))
+        file.close()
+
+    @staticmethod
+    def __format_content(format_str: str, local_file: str, cloud_file: str):
+        """
+        格式化strm内容
+        """
+        if "{local_file}" in format_str:
+            return format_str.replace("{local_file}", local_file)
+        elif "{cloud_file}" in format_str:
+            # 替换路径中的\为/
+            cloud_file = cloud_file.replace("\\", "/")
+            # 对盘符之后的所有内容进行url转码
+            cloud_file = urllib.parse.quote(cloud_file, safe='')
+            return format_str.replace("{cloud_file}", cloud_file)
+        else:
+            return None
+
+    def __create_strm_file(self, strm_file: str, strm_content: str):
+
+        """
+        生成strm文件
+        :param library_dir:
+        :param dest_dir:
+        :param dest_file:
+        """
+        try:
+            # 文件
+            if not Path(strm_file).parent.exists():
+                logger.info(f"创建目标文件夹 {Path(strm_file).parent}")
+                os.makedirs(Path(strm_file).parent)
+
+            # 构造.strm文件路径
+            strm_file = os.path.join(Path(strm_file).parent, f"{os.path.splitext(Path(strm_file).name)[0]}.strm")
+
+            # 媒体文件
+            if Path(strm_file).exists() and not self._cover:
+                logger.info(f"目标文件 {strm_file} 已存在")
+                return
+
+            # 写入.strm文件
+            with open(strm_file, 'w') as f:
+                f.write(strm_content)
+
+            logger.info(f"创建strm文件成功 {strm_file} -> {strm_content}")
+        except Exception as e:
+            logger.error(f"创建strm文件失败 {strm_file} -> {str(e)}")
+
+    def export_dir(self, fid, destination_id="0"):
+        """
+        获取目录导出id
+        """
+        export_api = "https://webapi.115.com/files/export_dir"
+        response = requests.post(url=export_api,
+                                 headers=self._headers,
+                                 data={"file_ids": fid, "target": f"U_1_{destination_id}"})
+        if response.status_code == 200:
+            result = response.json()
+            if result.get("state"):
+                export_id = result.get("data", {}).get("export_id")
+
+                retry_cnt = 60
+                while retry_cnt > 0:
+                    response = requests.get(url=export_api,
+                                            headers=self._headers,
+                                            data={"export_id": export_id})
+                    if response.status_code == 200:
+                        result = response.json()
+                        if result.get("state"):
+                            if str(export_id) == str(result.get("data", {}).get("export_id")):
+                                return result.get("data", {}).get("pick_code"), result.get("data", {}).get("file_id")
+                    retry_cnt -= 1
+                    logger.info(f"等待目录树生成完成，剩余重试 {retry_cnt} 次")
+                    time.sleep(3)
+        return None
+
+    def retrieve_directory_structure(self, directory_path):
+        """
+        获取目录树结构
+        """
+        file_id = None
+        try:
+            logger.info(f"开始生成 {directory_path} 目录树")
+            dir_info = self._115client.fs_dir_getid(directory_path)
+            if not dir_info:
+                logger.error(f"{directory_path} 目录不存在或路径错误")
+                return
+            fid = dir_info.get("id")
+            if not fid:
+                logger.error(f"{directory_path} 目录不存在或路径错误")
+                return
+            pick_code, file_id = self.export_dir(fid)
+            if not pick_code:
+                logger.error(f"{directory_path} 生成目录数失败")
+                return
+            # 获取目录树下载链接
+            download_url = self._115client.download_url(pick_code, headers=self._headers)
+            directory_content = self.fetch_content(download_url)
+            logger.info(f"{directory_path} 目录树下载成功")
+            return directory_content
+        except Exception as e:
+            logger.error(f"{directory_path} 目录树生成失败: {str(e)}")
+        finally:
+            if file_id:
+                try:
+                    self._115client.fs_delete(file_id)
+                except:
+                    pass
+
+    def fetch_content(self, url):
+        """
+        下载目录树文件内容
+        """
+        try:
+            with requests.get(url, headers=self._headers, stream=True, timeout=60) as response:
+                response.raise_for_status()
+                content = BytesIO()
+                for chunk in response.iter_content(chunk_size=8192):
+                    content.write(chunk)
+                return content.getvalue().decode("utf-16")
+        except:
+            logger.error(f"文件下载失败: {traceback.format_exc()}")
+            return None
+
+    @staticmethod
+    def parse_tree_structure(content: str):
+        """
+        解析目录树内容并生成每个路径
+        """
+        tree_pattern = re_compile(r"^(?:\| )+\|-")
+        current_path = ["/"]  # 初始化当前路径为根目录
+
+        for line in content.splitlines():
+            # 匹配目录树的每一行
+            match = tree_pattern.match(line)
+            if not match or "根目录" in line:
+                continue  # 跳过不符合格式的行
+
+            # 计算当前行的深度
+            level_indicator = match.group(0)
+            depth = (len(level_indicator) // 2) - 1
+            # 获取当前行的目录名称
+            item_name = escape(line.strip()[len(level_indicator):])
+
+            # 根据深度更新当前路径
+            if depth < len(current_path):
+                current_path[depth] = item_name  # 更新已有深度的名称
+            else:
+                current_path.append(item_name)  # 添加新的深度名称
+
+            # 生成并返回当前深度的完整路径
+            yield join_path(*current_path[:depth + 1])
+
+    def __update_config(self):
+        """
+        更新配置
+        """
+        self.update_config({
+            "enabled": self._enabled,
+            "onlyonce": self._onlyonce,
+            "cover": self._cover,
+            "rebuild": self._rebuild,
+            "monitor": self._monitor,
+            "cron": self._cron,
+            "monitor_confs": self._monitor_confs,
+            "115_cookie": self._115_cookie,
+        })
+
+    def get_state(self) -> bool:
+        return self._enabled
+
+    @staticmethod
+    def get_command() -> List[Dict[str, Any]]:
+        """
+        定义远程控制命令
+        :return: 命令关键字、事件、描述、附带数据
+        """
+        return [{
+            "cmd": "/CloudStrmCompanion",
+            "event": EventType.PluginAction,
+            "desc": "云盘Strm助手同步",
+            "category": "",
+            "data": {
+                "action": "CloudStrmCompanion"
+            }
+        }]
+
+    def get_service(self) -> List[Dict[str, Any]]:
+        """
+        注册插件公共服务
+        [{
+            "id": "服务ID",
+            "name": "服务名称",
+            "trigger": "触发器：cron/interval/date/CronTrigger.from_crontab()",
+            "func": self.xxx,
+            "kwargs": {} # 定时器参数
+        }]
+        """
+        if self._enabled and self._cron:
+            return [{
+                "id": "CloudStrmCompanion",
+                "name": "云盘Strm助手同步",
+                "trigger": CronTrigger.from_crontab(self._cron),
+                "func": self.scan,
+                "kwargs": {}
+            }]
+        return []
+
+    def get_api(self) -> List[Dict[str, Any]]:
+        pass
+
+    def get_form(self) -> Tuple[List[dict], Dict[str, Any]]:
+        """
+        拼装插件配置页面，需要返回两块数据：1、页面配置；2、数据结构
+        """
+        return [
+            {
+                'component': 'VForm',
+                'content': [
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'enabled',
+                                            'label': '启用插件',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'monitor',
+                                            'label': '实时监控',
+                                        }
+                                    }
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'onlyonce',
+                                            'label': '全量同步一次',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'rebuild',
+                                            'label': '重建缓存',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'cover',
+                                            'label': '覆盖已存在文件',
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'cron',
+                                            'label': '同步周期',
+                                            'placeholder': '0 0 * * *'
+                                        }
+                                    }
+                                ]
+                            },
+
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': '115_cookie',
+                                            'label': '115Cookie',
+                                        }
+                                    }
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextarea',
+                                        'props': {
+                                            'model': 'monitor_confs',
+                                            'label': '目录配置',
+                                            'rows': 5,
+                                            'placeholder': 'MoviePilot中云盘挂载本地的路径#MoviePilot中strm生成路径#alist/cd2上115路径#strm格式化'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': 'MoviePilot中云盘挂载本地的路径：/mnt/media/series/国产剧/雪迷宫 (2024)；'
+                                                    'MoviePilot中strm生成路径：/mnt/library/series/国产剧/雪迷宫 (2024)；'
+                                                    '云盘路径：/cloud/media/series/国产剧/雪迷宫 (2024)；'
+                                                    '则目录配置为：/mnt/media#/mnt/library#/cloud/media#{local_file}'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': 'strm格式化方式：'
+                                                    '1.本地源文件路径：{local_file}。'
+                                                    '2.alist路径：http://192.168.31.103:5244/d{cloud_file}。'
+                                                    '3.cd2路径：http://192.168.31.103:19798/static/http/192.168.31.103:19798/False/{cloud_file}。'
+                                                    '4.其他api路径：http://192.168.31.103:2001/{cloud_file}'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ], {
+            "enabled": False,
+            "cron": "",
+            "onlyonce": False,
+            "rebuild": False,
+            "monitor": False,
+            "cover": False,
+            "monitor_confs": "",
+            "115_cookie": "",
+        }
+
+    def get_page(self) -> List[dict]:
+        pass
+
+    def stop_service(self):
+        """
+        退出插件
+        """
+        if self._observer:
+            for observer in self._observer:
+                try:
+                    observer.stop()
+                    observer.join()
+                except Exception as e:
+                    print(str(e))
+        self._observer = []
+        if self._scheduler:
+            self._scheduler.remove_all_jobs()
+            if self._scheduler.running:
+                self._event.set()
+                self._scheduler.shutdown()
+                self._event.clear()
+            self._scheduler = None

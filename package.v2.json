@@ -405,5 +405,17 @@
       "v1.1": "自动转移链接（不刮削）",
       "v1.0": "监控云盘目录文件变化，按原文件名软连接"
     }
+  },
+  "CloudStrmCompanion": {
+    "name": "云盘Strm助手",
+    "description": "实时监控、定时全量增量生成strm文件。",
+    "labels": "云盘",
+    "version": "1.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png",
+    "author": "thsrite",
+    "level": 1,
+    "history": {
+      "v1.0": "实时监控、定时全量增量生成strm文件"
+    }
   }
 }
