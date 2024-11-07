@@ -58,7 +58,7 @@ class CloudStrmCompanion(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png"
     # 插件版本
-    plugin_version = "1.0.3"
+    plugin_version = "1.0.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -327,6 +327,10 @@ class CloudStrmCompanion(_PluginBase):
         """
         if not event.is_directory:
             if '.fuse_hidden' in event_path:
+                return
+            # 只处理媒体文件
+            if Path(event_path).suffix.lower() not in [ext.strip() for ext in
+                                                       self._rmt_mediaext.split(",")]:
                 return
             # 文件发生变化
             logger.debug("文件%s：%s" % (text, event_path))

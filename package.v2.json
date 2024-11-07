@@ -416,11 +416,12 @@
     "name": "云盘Strm助手",
     "description": "实时监控、定时全量增量生成strm文件。",
     "labels": "云盘",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v1.0.4": "修复实时监控，只处理指定类型的文件",
       "v1.0.3": "修复重建索引缓存",
       "v1.0.2": "增加可玩性交互命令",
       "v1.0": "实时监控、定时全量增量生成strm文件"
