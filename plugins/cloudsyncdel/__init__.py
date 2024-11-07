@@ -99,7 +99,7 @@ class CloudSyncDel(_PluginBase):
         episode_num = event_data.get("episode_num")
 
         local_path = self.__get_path(self._local_paths, media_path)
-        logger.info(f"获取到本地文件路径 {local_path}")
+        logger.info(f"获取到 {self._local_paths} 替换后本地文件路径 {local_path}")
         if Path(local_path).exists() and (
                 Path(local_path).is_dir() or (Path(local_path).is_file() and not Path(local_path).is_symlink())):
             if Path(local_path).is_dir():
@@ -121,7 +121,7 @@ class CloudSyncDel(_PluginBase):
         media_path = self.__get_path(self._paths, media_path)
         if not media_path:
             return
-        logger.info(f"获取到本地软连接路径 {media_path}")
+        logger.info(f"获取到 {self._paths} 替换后本地路径 {media_path}")
 
         # 判断文件是否存在
         cloud_file_flag = False
