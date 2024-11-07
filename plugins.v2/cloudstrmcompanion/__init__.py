@@ -85,6 +85,7 @@ class CloudStrmCompanion(_PluginBase):
     _format_conf = {}
     _cloud_files = []
     _observer = []
+    _rmt_mediaext = None
     _115_cookie = None
     _115client = None
 
@@ -115,6 +116,8 @@ class CloudStrmCompanion(_PluginBase):
             self._monitor = config.get("monitor")
             self._cover = config.get("cover")
             self._monitor_confs = config.get("monitor_confs")
+            self._rmt_mediaext = config.get(
+                "rmt_mediaext") or ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
             self._115_cookie = config.get("115_cookie")
             if self._115_cookie:
                 self._headers["Cookie"] = self._115_cookie
@@ -281,7 +284,8 @@ class CloudStrmCompanion(_PluginBase):
                     # 本地strm路径
                     target_file = str(cloud_file).replace(cloud_dir, strm_dir)
                     # 只处理媒体文件
-                    if Path(local_file).suffix.lower() not in settings.RMT_MEDIAEXT:
+                    if Path(local_file).suffix.lower() not in [ext.strip() for ext in
+                                                               self._rmt_mediaext.split(",")]:
                         continue
 
                     if cloud_file not in self._cloud_files:
@@ -707,6 +711,7 @@ class CloudStrmCompanion(_PluginBase):
             "cron": self._cron,
             "monitor_confs": self._monitor_confs,
             "115_cookie": self._115_cookie,
+            "rmt_mediaext": self._rmt_mediaext,
         })
 
     def get_state(self) -> bool:
@@ -928,6 +933,28 @@ class CloudStrmCompanion(_PluginBase):
                             {
                                 'component': 'VCol',
                                 'props': {
+                                    'cols': 12
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextarea',
+                                        'props': {
+                                            'model': 'rmt_mediaext',
+                                            'label': '视频格式',
+                                            'rows': 2,
+                                            'placeholder': ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
                                     'cols': 12,
                                 },
                                 'content': [
@@ -982,6 +1009,7 @@ class CloudStrmCompanion(_PluginBase):
             "cover": False,
             "monitor_confs": "",
             "115_cookie": "",
+            "rmt_mediaext": ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
         }
 
     def get_page(self) -> List[dict]:
