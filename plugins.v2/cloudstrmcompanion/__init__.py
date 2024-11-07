@@ -58,7 +58,7 @@ class CloudStrmCompanion(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.0.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -81,6 +81,7 @@ class CloudStrmCompanion(_PluginBase):
 
     _strm_dir_conf = {}
     _cloud_dir_conf = {}
+    _category_conf = {}
     _format_conf = {}
     _cloud_files = []
     _observer = []
@@ -103,6 +104,7 @@ class CloudStrmCompanion(_PluginBase):
         self._strm_dir_conf = {}
         self._cloud_dir_conf = {}
         self._format_conf = {}
+        self._category_conf = {}
         self._cloud_files_json = os.path.join(self.get_data_path(), self._cloud_files_json)
 
         if config:
@@ -141,7 +143,15 @@ class CloudStrmCompanion(_PluginBase):
                 # 注释
                 if str(monitor_conf).startswith("#"):
                     continue
-                # 软连接模式
+
+                monitor = None
+                if monitor_conf.count("$") == 1:
+                    monitor = str(monitor_conf.split("$")[1])
+                    monitor_conf = monitor_conf.split("$")[0]
+                category = None
+                if monitor_conf.count("@") == 1:
+                    category = str(monitor_conf.split("@")[1])
+                    monitor_conf = monitor_conf.split("@")[0]
                 if str(monitor_conf).count("#") == 3:
                     local_dir = str(monitor_conf).split("#")[0]
                     strm_dir = str(monitor_conf).split("#")[1]
@@ -154,7 +164,7 @@ class CloudStrmCompanion(_PluginBase):
                 self._strm_dir_conf[local_dir] = strm_dir
                 self._cloud_dir_conf[local_dir] = cloud_dir
                 self._format_conf[local_dir] = format_str
-
+                self._category_conf[local_dir] = category
                 # 检查媒体库目录是不是下载目录的子目录
                 try:
                     if strm_dir and Path(strm_dir).is_relative_to(Path(local_dir)):
@@ -165,28 +175,29 @@ class CloudStrmCompanion(_PluginBase):
                     logger.debug(str(e))
                     pass
 
-                try:
-                    if self._monitor:
-                        # 兼容模式，目录同步性能降低且NAS不能休眠，但可以兼容挂载的远程共享目录如SMB
-                        observer = PollingObserver(timeout=10)
-                        self._observer.append(observer)
-                        observer.schedule(FileMonitorHandler(local_dir, self), path=local_dir, recursive=True)
-                        observer.daemon = True
-                        observer.start()
-                        logger.info(f"{local_dir} 的Strm生成实时监控服务启动")
-                except Exception as e:
-                    err_msg = str(e)
-                    if "inotify" in err_msg and "reached" in err_msg:
-                        logger.warn(
-                            f"云盘实时监控服务启动出现异常：{err_msg}，请在宿主机上（不是docker容器内）执行以下命令并重启："
-                            + """
-                                                    echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
-                                                    echo fs.inotify.max_user_instances=524288 | sudo tee -a /etc/sysctl.conf
-                                                    sudo sysctl -p
-                                                    """)
-                    else:
-                        logger.error(f"{local_dir} 启动x实时监控失败：{err_msg}")
-                    self.systemmessage.put(f"{local_dir} 启动实时监控失败：{err_msg}")
+                if not monitor:
+                    try:
+                        if self._monitor:
+                            # 兼容模式，目录同步性能降低且NAS不能休眠，但可以兼容挂载的远程共享目录如SMB
+                            observer = PollingObserver(timeout=10)
+                            self._observer.append(observer)
+                            observer.schedule(FileMonitorHandler(local_dir, self), path=local_dir, recursive=True)
+                            observer.daemon = True
+                            observer.start()
+                            logger.info(f"{local_dir} 的Strm生成实时监控服务启动")
+                    except Exception as e:
+                        err_msg = str(e)
+                        if "inotify" in err_msg and "reached" in err_msg:
+                            logger.warn(
+                                f"云盘实时监控服务启动出现异常：{err_msg}，请在宿主机上（不是docker容器内）执行以下命令并重启："
+                                + """
+                                                        echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
+                                                        echo fs.inotify.max_user_instances=524288 | sudo tee -a /etc/sysctl.conf
+                                                        sudo sysctl -p
+                                                        """)
+                        else:
+                            logger.error(f"{local_dir} 启动x实时监控失败：{err_msg}")
+                        self.systemmessage.put(f"{local_dir} 启动实时监控失败：{err_msg}")
 
             # 运行一次定时服务
             if self._onlyonce:
@@ -507,6 +518,182 @@ class CloudStrmCompanion(_PluginBase):
             # 生成并返回当前深度的完整路径
             yield join_path(*current_path[:depth + 1])
 
+    @eventmanager.register(EventType.PluginAction)
+    def remote_sync_one(self, event: Event = None):
+        if event:
+            event_data = event.event_data
+            if not event_data or event_data.get("action") != "strm_one":
+                return
+            args = event_data.get("arg_str")
+            if not args:
+                logger.error(f"缺少参数：{event_data}")
+                return
+            all_args = args
+
+            # 使用正则表达式匹配
+            category = None
+            args_arr = args.split(maxsplit=1)
+            limit = None
+            if len(args_arr) == 2:
+                category = args_arr[0]
+                args = args_arr[1]
+                if str(args).isdigit():
+                    limit = int(args)
+
+            if category:
+                # 判断是不是目录
+                if Path(category).is_dir() and Path(category).exists() and limit is not None:
+                    # 遍历所有监控目录
+                    mon_path = None
+                    for mon in self._category_conf.keys():
+                        if str(category).startswith(mon):
+                            mon_path = mon
+                            break
+
+                    # 指定路径
+                    if not mon_path:
+                        logger.error(f"未找到 {category} 对应的监控目录")
+                        self.post_message(channel=event.event_data.get("channel"),
+                                          title=f"未找到 {category} 对应的监控目录",
+                                          userid=event.event_data.get("user"))
+                        return
+
+                    self.__handle_limit(path=category, mon_path=mon_path, limit=limit, event=event)
+                    return
+                else:
+                    for mon_path in self._category_conf.keys():
+                        mon_category = self._category_conf.get(mon_path)
+                        logger.info(f"开始检查 {mon_path} {mon_category}")
+                        if mon_category and str(category) in mon_category:
+                            parent_path = os.path.join(mon_path, category)
+                            if limit:
+                                logger.info(f"获取到 {category} 对应的监控目录 {parent_path}")
+                                self.__handle_limit(path=parent_path, mon_path=mon_path, limit=limit, event=event)
+                            else:
+                                logger.info(f"获取到 {category} {args} 对应的监控目录 {parent_path}")
+                                target_path = os.path.join(str(parent_path), args)
+                                logger.info(f"开始处理 {target_path}")
+                                target_paths = self.__find_related_paths(os.path.join(str(parent_path), args))
+                                if not target_paths:
+                                    logger.error(f"未查找到 {category} {args} 对应的具体目录")
+                                    self.post_message(channel=event.event_data.get("channel"),
+                                                      title=f"未查找到 {category} {args} 对应的具体目录",
+                                                      userid=event.event_data.get("user"))
+                                    return
+                                for target_path in target_paths:
+                                    logger.info(f"开始定向处理文件夹 ...{target_path}")
+                                    for sroot, sdirs, sfiles in os.walk(target_path):
+                                        for file_name in sdirs + sfiles:
+                                            src_file = os.path.join(sroot, file_name)
+                                            if Path(src_file).is_file():
+                                                self.__handle_file(event_path=str(src_file), mon_path=mon_path)
+
+                                    if event.event_data.get("user"):
+                                        self.post_message(channel=event.event_data.get("channel"),
+                                                          title=f"{target_path} Strm生成完成！",
+                                                          userid=event.event_data.get("user"))
+
+                                    if limit is None and event_data and event_data.get("action") == "strm_one":
+                                        return
+                            return
+            else:
+                # 遍历所有监控目录
+                mon_path = None
+                for mon in self._category_conf.keys():
+                    if str(args).startswith(mon):
+                        mon_path = mon
+                        break
+
+                # 指定路径
+                if mon_path:
+                    if not Path(args).exists():
+                        logger.info(f"同步路径 {args} 不存在")
+                        return
+                    # 处理单文件
+                    if Path(args).is_file():
+                        self.__handle_file(event_path=str(args), mon_path=mon_path)
+                        return
+                    else:
+                        # 处理指定目录
+                        logger.info(f"获取到 {args} 对应的监控目录 {mon_path}")
+
+                        logger.info(f"开始定向处理文件夹 ...{args}")
+                        for sroot, sdirs, sfiles in os.walk(args):
+                            for file_name in sdirs + sfiles:
+                                src_file = os.path.join(sroot, file_name)
+                                if Path(str(src_file)).is_file():
+                                    self.__handle_file(event_path=str(src_file), mon_path=mon_path)
+                        if event.event_data.get("user"):
+                            self.post_message(channel=event.event_data.get("channel"),
+                                              title=f"{all_args} Strm生成完成！", userid=event.event_data.get("user"))
+                        return
+                else:
+                    for mon_path in self._category_conf.keys():
+                        mon_category = self._category_conf.get(mon_path)
+                        logger.info(f"开始检查 {mon_path} {mon_category}")
+                        if mon_category and str(args) in mon_category:
+                            parent_path = os.path.join(mon_path, args)
+                            logger.info(f"获取到 {args} 对应的监控目录 {parent_path}")
+                            for sroot, sdirs, sfiles in os.walk(parent_path):
+                                for file_name in sdirs + sfiles:
+                                    src_file = os.path.join(sroot, file_name)
+                                    if Path(str(src_file)).is_file():
+                                        self.__handle_file(event_path=str(src_file), mon_path=mon_path)
+                            if event.event_data.get("user"):
+                                self.post_message(channel=event.event_data.get("channel"),
+                                                  title=f"{all_args} Strm生成完成！",
+                                                  userid=event.event_data.get("user"))
+                            return
+            if event.event_data.get("user"):
+                self.post_message(channel=event.event_data.get("channel"),
+                                  title=f"{all_args} 未检索到，请检查输入是否正确！",
+                                  userid=event.event_data.get("user"))
+
+    @staticmethod
+    def __find_related_paths(base_path):
+        related_paths = []
+        base_dir = os.path.dirname(base_path)
+        base_name = os.path.basename(base_path)
+
+        for entry in os.listdir(base_dir):
+            if entry.startswith(base_name):
+                full_path = os.path.join(base_dir, entry)
+                if os.path.isdir(full_path):
+                    related_paths.append(full_path)
+
+        # 按照修改时间倒序排列
+        related_paths.sort(key=lambda path: os.path.getmtime(path), reverse=True)
+
+        return related_paths
+
+    def __handle_limit(self, path, limit, mon_path, event):
+        """
+        处理文件数量限制
+        """
+        sub_paths = []
+        for entry in os.listdir(path):
+            full_path = os.path.join(path, entry)
+            if os.path.isdir(full_path):
+                sub_paths.append(full_path)
+
+        if not sub_paths:
+            logger.error(f"未找到 {path} 目录下的文件夹")
+            return
+
+        # 按照修改时间倒序排列
+        sub_paths.sort(key=lambda path: os.path.getmtime(path), reverse=True)
+        logger.info(f"开始定向处理文件夹 ...{path}, 最新 {limit} 个文件夹")
+        for sub_path in sub_paths[:limit]:
+            logger.info(f"开始定向处理文件夹 ...{sub_path}")
+            for sroot, sdirs, sfiles in os.walk(sub_path):
+                for file_name in sdirs + sfiles:
+                    src_file = os.path.join(sroot, file_name)
+                    if Path(src_file).is_file():
+                        self.__handle_file(event_path=str(src_file), mon_path=mon_path)
+            if event.event_data.get("user"):
+                self.post_message(channel=event.event_data.get("channel"),
+                                  title=f"{sub_path} Strm生成完成！", userid=event.event_data.get("user"))
+
     def __update_config(self):
         """
         更新配置
@@ -531,15 +718,26 @@ class CloudStrmCompanion(_PluginBase):
         定义远程控制命令
         :return: 命令关键字、事件、描述、附带数据
         """
-        return [{
-            "cmd": "/CloudStrmCompanion",
-            "event": EventType.PluginAction,
-            "desc": "云盘Strm助手同步",
-            "category": "",
-            "data": {
-                "action": "CloudStrmCompanion"
-            }
-        }]
+        return [
+            {
+                "cmd": "/cloud_strm_companion",
+                "event": EventType.PluginAction,
+                "desc": "云盘Strm助手同步",
+                "category": "",
+                "data": {
+                    "action": "CloudStrmCompanion"
+                }
+            },
+            {
+                "cmd": "/strm",
+                "event": EventType.PluginAction,
+                "desc": "定向云盘Strm同步",
+                "category": "",
+                "data": {
+                    "action": "strm_one"
+                }
+            },
+        ]
 
     def get_service(self) -> List[Dict[str, Any]]:
         """
