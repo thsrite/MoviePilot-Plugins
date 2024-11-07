@@ -333,7 +333,7 @@ class CloudStrmCompanion(_PluginBase):
                                                        self._rmt_mediaext.split(",")]:
                 return
             # 文件发生变化
-            logger.debug("文件%s：%s" % (text, event_path))
+            logger.debug("监控到文件%s：%s" % (text, event_path))
             self.__handle_file(event_path=event_path, mon_path=mon_path)
 
     def __handle_file(self, event_path: str, mon_path: str):
