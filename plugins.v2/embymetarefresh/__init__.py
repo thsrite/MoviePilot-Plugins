@@ -139,6 +139,7 @@ class EmbyMetaRefresh(_PluginBase):
                 "ReplaceAllImages": self._ReplaceAllImages,
                 "actor_path": self._actor_path,
                 "mediaservers": self._mediaservers,
+                "interval": self._interval,
             }
         )
 
