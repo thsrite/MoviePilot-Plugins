@@ -36,7 +36,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "2.1.2"
+    plugin_version = "2.1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -86,7 +86,7 @@ class EmbyMetaRefresh(_PluginBase):
             self._ReplaceAllMetadata = config.get("ReplaceAllMetadata") or "true"
             self._ReplaceAllImages = config.get("ReplaceAllImages") or "true"
             self._mediaservers = config.get("mediaservers") or []
-            self._interval = config.get("interval") or 0
+            self._interval = config.get("interval") or 5
 
             # 加载模块
             if self._enabled or self._onlyonce:
@@ -178,7 +178,7 @@ class EmbyMetaRefresh(_PluginBase):
                     self.__refresh_emby(transferinfo, emby)
                     if self._interval:
                         logger.info(f"等待 {self._interval} 秒后继续刷新")
-                        time.sleep(self._interval)
+                        time.sleep(int(self._interval))
             else:
                 latest = self.__get_latest_media()
                 if not latest:
@@ -201,7 +201,7 @@ class EmbyMetaRefresh(_PluginBase):
                         self.__refresh_emby_library_by_id(item.get("Id"))
                         if self._interval:
                             logger.info(f"等待 {self._interval} 秒后继续刷新")
-                            time.sleep(self._interval)
+                            time.sleep(int(self._interval))
                     else:
                         logger.info(
                             f"最新媒体：{'电视剧' if str(item.get('Type')) == 'Episode' else '电影'} {'%s S%02dE%02d %s' % (item.get('SeriesName'), item.get('ParentIndexNumber'), item.get('IndexNumber'), item.get('Name')) if str(item.get('Type')) == 'Episode' else item.get('Name')} {item.get('Id')} 元数据完整，跳过处理")
