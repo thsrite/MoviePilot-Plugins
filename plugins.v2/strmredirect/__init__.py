@@ -75,6 +75,10 @@ class StrmRedirect(_PluginBase):
                         encoded = strm_content.replace(no_encoded, "")
                         encoded = urllib.parse.quote(encoded)
                         strm_content = no_encoded + encoded
+
+                        # 如果不是url，不进行编码
+                        if not str(strm_content).startswith("http"):
+                            strm_content = urllib.parse.unquote(strm_content)
                         with open(str(file_path), 'w', encoding='utf-8') as file:
                             file.write(strm_content)
                         logger.info(
