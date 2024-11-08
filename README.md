@@ -64,3 +64,5 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 58. Emby有声书整理 v1.3 `还在为Emby有声书整理烦恼吗？入库存在很多单集？`
 59. Emby弹幕下载 v1.5 `通知Emby Danmu插件下载弹幕。`
 60. Emby剧集演员同步 v1.5 `同步剧演员信息到集演员信息。`
+61. 云盘Strm助手 v1.0.4 `实时监控、定时全量增量生成strm文件。`
+62. Strm重定向 v1.0 `重写Strm文件内容。`
