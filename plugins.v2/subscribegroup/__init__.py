@@ -20,7 +20,7 @@ class SubscribeGroup(_PluginBase):
     # 插件图标
     plugin_icon = "teamwork.png"
     # 插件版本
-    plugin_version = "2.8.1"
+    plugin_version = "2.8.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -68,6 +68,7 @@ class SubscribeGroup(_PluginBase):
                     exclude = None
                     savepath = None
                     sites = []
+                    filter_groups = []
                     for conf in str(confs).split("#"):
                         if ":" in conf:
                             k = conf.split(":")[0]
@@ -92,6 +93,9 @@ class SubscribeGroup(_PluginBase):
                                         if str(site_name) == str(active_site.name):
                                             sites.append(active_site.id)
                                             break
+                            if k == "filter_groups":
+                                filter_groups = [filter_group for filter_group in str(v).split(",")]
+
                     if category:
                         for c in str(category).split(","):
                             self._subscribe_confs[c] = {
@@ -101,7 +105,8 @@ class SubscribeGroup(_PluginBase):
                                 'include': include,
                                 'exclude': exclude,
                                 'savepath': savepath,
-                                'sites': sites
+                                'sites': sites,
+                                'filter_groups': filter_groups
                             }
                 logger.info(f"获取到二级分类自定义配置 {len(self._subscribe_confs.keys())} 个")
             else:
@@ -179,6 +184,8 @@ class SubscribeGroup(_PluginBase):
                 update_dict['exclude'] = category_conf.get('exclude')
             if category_conf.get('sites'):
                 update_dict['sites'] = category_conf.get('sites')
+            if category_conf.get('filter_groups'):
+                update_dict['filter_groups'] = category_conf.get('filter_groups')
             if category_conf.get('resolution'):
                 update_dict['resolution'] = self.__parse_pix(category_conf.get('resolution'))
             if category_conf.get('quality'):
@@ -615,7 +622,7 @@ class SubscribeGroup(_PluginBase):
                                             'type': 'info',
                                             'variant': 'tonal',
                                             'text': 'category:二级分类名称（多个分类名称逗号拼接）,resolution:分辨率,quality:质量,effect:特效,include:包含关键词,'
-                                                    'exclude:排除关键词,sites:站点名称（多个站点用逗号拼接）,savepath:保存路径/{name}（{name}为当前订阅的名称和年份）。'
+                                                    'exclude:排除关键词,sites:站点名称（多个站点用逗号拼接）,filter_groups:优先级规则组（多个规则组名称用逗号拼接）,savepath:保存路径/{name}（{name}为当前订阅的名称和年份）。'
                                                     'category必填，多组属性用#分割。例如category:动漫#resolution:1080p'
                                                     '（添加的动漫订阅，指定分辨率为1080p）。'
                                         }
