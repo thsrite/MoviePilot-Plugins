@@ -8,6 +8,7 @@ from pathlib import Path
 import pytz
 
 from app.core.config import settings
+from app.helper.mediaserver import MediaServerHelper
 from app.modules.emby import Emby
 from app.plugins import _PluginBase
 from typing import Any, List, Dict, Tuple, Optional
@@ -30,7 +31,7 @@ class LibraryDuplicateCheck(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/libraryduplicate.png"
     # 插件版本
-    plugin_version = "2.0"
+    plugin_version = "2.0.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -64,6 +65,7 @@ class LibraryDuplicateCheck(_PluginBase):
     _scheduler: Optional[BackgroundScheduler] = None
 
     def init_plugin(self, config: dict = None):
+        self.mediaserver_helper = MediaServerHelper()
         if config:
             self._enabled = config.get("enabled")
             self._notify = config.get("notify")
