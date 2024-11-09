@@ -26,7 +26,7 @@ class CloudStrmIncrement(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png"
     # 插件版本
-    plugin_version = "1.1.1"
+    plugin_version = "1.1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -45,6 +45,7 @@ class CloudStrmIncrement(_PluginBase):
     _onlyonce = False
     _copy_files = False
     _https = False
+    _del_source = False
     _no_del_dirs = None
     _rmt_mediaext = ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
     _observer = []
@@ -77,6 +78,7 @@ class CloudStrmIncrement(_PluginBase):
             self._copy_files = config.get("copy_files")
             self._monitor_confs = config.get("monitor_confs")
             self._no_del_dirs = config.get("no_del_dirs")
+            self._del_source = config.get("del_source")
             self._rmt_mediaext = config.get(
                 "rmt_mediaext") or ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
 
@@ -220,8 +222,12 @@ class CloudStrmIncrement(_PluginBase):
                     if not Path(source_file).parent.exists():
                         Path(source_file).parent.mkdir(parents=True, exist_ok=True)
 
-                    shutil.move(increment_file, source_file, copy_function=shutil.copy2)
-                    logger.info(f"移动增量文件 {increment_file} 到 {source_file}")
+                    if self._del_source:
+                        shutil.move(increment_file, source_file, copy_function=shutil.copy2)
+                        logger.info(f"移动增量文件 {increment_file} 到 {source_file}")
+                    else:
+                        shutil.copy2(increment_file, source_file)
+                        logger.info(f"复制增量文件 {increment_file} 到 {source_file}")
 
                     # 扫描云盘文件，判断是否有对应strm
                     self.__strm(source_file)
@@ -431,6 +437,7 @@ class CloudStrmIncrement(_PluginBase):
             "cron": self._cron,
             "monitor_confs": self._monitor_confs,
             "no_del_dirs": self._no_del_dirs,
+            "del_source": self._del_source,
             "rmt_mediaext": self._rmt_mediaext
         })
 
@@ -548,6 +555,27 @@ class CloudStrmIncrement(_PluginBase):
                                         'props': {
                                             'model': 'https',
                                             'label': '启用https',
+                                        }
+                                    }
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'del_source',
+                                            'label': '删除源文件',
                                         }
                                     }
                                 ]
@@ -723,6 +751,7 @@ class CloudStrmIncrement(_PluginBase):
             "cron": "",
             "onlyonce": False,
             "copy_files": False,
+            "del_source": True,
             "https": False,
             "monitor_confs": "",
             "no_del_dirs": "",
