@@ -8,10 +8,10 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from app.core.config import settings
 from app.db.downloadhistory_oper import DownloadHistoryOper
 from app.db.transferhistory_oper import TransferHistoryOper
+from app.helper.downloader import DownloaderHelper
 from app.log import logger
-from app.modules.qbittorrent import Qbittorrent
-from app.modules.transmission import Transmission
 from app.plugins import _PluginBase
+from app.schemas import ServiceInfo
 
 
 class SyncDownloadFiles(_PluginBase):
@@ -22,7 +22,7 @@ class SyncDownloadFiles(_PluginBase):
     # 插件图标
     plugin_icon = "Youtube-dl_A.png"
     # 插件版本
-    plugin_version = "1.1.2"
+    plugin_version = "1.1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -38,8 +38,6 @@ class SyncDownloadFiles(_PluginBase):
     _enabled = False
     # 任务执行间隔
     _time = None
-    qb = None
-    tr = None
     _onlyonce = False
     _history = False
     _clear = False
@@ -48,15 +46,15 @@ class SyncDownloadFiles(_PluginBase):
     downloadhis = None
     transferhis = None
 
+    downloader_helper = None
+
     # 定时器
     _scheduler: Optional[BackgroundScheduler] = None
 
     def init_plugin(self, config: dict = None):
         # 停止现有任务
         self.stop_service()
-
-        self.qb = Qbittorrent()
-        self.tr = Transmission()
+        self.downloader_helper = DownloaderHelper()
         self.downloadhis = DownloadHistoryOper()
         self.transferhis = TransferHistoryOper()
 
@@ -345,16 +343,44 @@ class SyncDownloadFiles(_PluginBase):
             print(str(e))
             return ""
 
-    def __get_downloader(self, dtype: str):
+    def __get_downloader(self, name: str):
         """
         根据类型返回下载器实例
         """
-        if dtype == "qbittorrent":
-            return self.qb
-        elif dtype == "transmission":
-            return self.tr
-        else:
+        return self.service_infos.get(name).instance
+
+    def __get_downloader_config(self, name: str):
+        """
+        根据类型返回下载器实例配置
+        """
+        return self.service_infos.get(name).config
+
+    @property
+    def service_infos(self) -> Optional[Dict[str, ServiceInfo]]:
+        """
+        服务信息
+        """
+        if not self._downloaders:
+            logger.warning("尚未配置下载器，请检查配置")
             return None
+
+        services = self.downloader_helper.get_services(name_filters=self._downloaders)
+        if not services:
+            logger.warning("获取下载器实例失败，请检查配置")
+            return None
+
+        active_services = {}
+        for service_name, service_info in services.items():
+            if service_info.instance.is_inactive():
+                logger.warning(f"下载器 {service_name} 未连接，请检查配置")
+            else:
+                active_services[service_name] = service_info
+
+        if not active_services:
+            logger.warning("没有已连接的下载器，请检查配置")
+            return None
+
+        return active_services
 
     def get_state(self) -> bool:
         return True if self._enabled and self._time else False
@@ -497,10 +523,8 @@ class SyncDownloadFiles(_PluginBase):
                                             'multiple': True,
                                             'model': 'downloaders',
                                             'label': '同步下载器',
-                                            'items': [
-                                                {'title': 'Qbittorrent', 'value': 'qbittorrent'},
-                                                {'title': 'Transmission', 'value': 'transmission'}
-                                            ]
+                                            'items': [{"title": config.name, "value": config.name}
+                                                      for config in self.downloader_helper.get_configs().values()]
                                         }
                                     }
                                 ]
