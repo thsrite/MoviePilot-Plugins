@@ -386,11 +386,12 @@
     "name": "目录实时监控",
     "description": "监控云盘目录文件变化，自动转移媒体文件。",
     "labels": "云盘,工具",
-    "version": "2.5",
+    "version": "2.5.1",
     "icon": "Linkease_A.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v2.5.1": "修复媒体刮削",
       "v2.5": "兼容v2",
       "v2.4.5": "联动实时软连接插件（近媒体文件）",
       "v2.4.4": "修复刷新媒体库",

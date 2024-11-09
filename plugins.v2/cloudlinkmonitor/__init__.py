@@ -14,6 +14,7 @@ from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
 
 from app import schemas
+from app.chain.media import MediaChain
 from app.chain.storage import StorageChain
 from app.chain.tmdb import TmdbChain
 from app.chain.transfer import TransferChain
@@ -26,7 +27,7 @@ from app.db.transferhistory_oper import TransferHistoryOper
 from app.log import logger
 from app.modules.filemanager import FileManagerModule
 from app.plugins import _PluginBase
-from app.schemas import NotificationType, TransferInfo, FileItem, TransferDirectoryConf
+from app.schemas import NotificationType, TransferInfo, TransferDirectoryConf
 from app.schemas.types import EventType, MediaType, SystemConfigKey
 from app.utils.string import StringUtils
 from app.utils.system import SystemUtils
@@ -61,7 +62,7 @@ class CloudLinkMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
-    plugin_version = "2.5"
+    plugin_version = "2.5.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -90,6 +91,7 @@ class CloudLinkMonitor(_PluginBase):
     _softlink = False
     _cron = None
     filetransfer = None
+    mediaChain = None
     _size = 0
     # 模式 compatibility/fast
     _mode = "compatibility"
@@ -111,6 +113,7 @@ class CloudLinkMonitor(_PluginBase):
         self.downloadhis = DownloadHistoryOper()
         self.transferchian = TransferChain()
         self.tmdbchain = TmdbChain()
+        self.mediaChain = MediaChain()
         self.storagechain = StorageChain()
         self.filetransfer = FileManagerModule()
         # 清空配置
@@ -471,13 +474,9 @@ class CloudLinkMonitor(_PluginBase):
 
                 # 刮削
                 if self._scrape:
-                    # 更新媒体图片
-                    self.chain.obtain_images(mediainfo=mediainfo)
-
-                    # 刮削单个文件
-                    self.chain.scrape_metadata(path=transferinfo.target_item.path,
-                                               mediainfo=mediainfo,
-                                               transfer_type=transfer_type)
+                    self.mediaChain.scrape_metadata(fileitem=transferinfo.target_diritem,
+                                                    meta=file_meta,
+                                                    mediainfo=mediainfo)
                 """
                 {
                     "title_year season": {
