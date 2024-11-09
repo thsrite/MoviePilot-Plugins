@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import threading
 import time
 import traceback
@@ -58,7 +59,7 @@ class CloudStrmCompanion(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png"
     # 插件版本
-    plugin_version = "1.0.4"
+    plugin_version = "1.0.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -78,6 +79,7 @@ class CloudStrmCompanion(_PluginBase):
     _rebuild = False
     _cover = False
     _monitor = False
+    _copy_files = False
 
     _strm_dir_conf = {}
     _cloud_dir_conf = {}
@@ -115,6 +117,7 @@ class CloudStrmCompanion(_PluginBase):
             self._rebuild = config.get("rebuild")
             self._monitor = config.get("monitor")
             self._cover = config.get("cover")
+            self._copy_files = config.get("copy_files")
             self._monitor_confs = config.get("monitor_confs")
             self._rmt_mediaext = config.get(
                 "rmt_mediaext") or ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
@@ -328,10 +331,7 @@ class CloudStrmCompanion(_PluginBase):
         if not event.is_directory:
             if '.fuse_hidden' in event_path:
                 return
-            # 只处理媒体文件
-            if Path(event_path).suffix.lower() not in [ext.strip() for ext in
-                                                       self._rmt_mediaext.split(",")]:
-                return
+
             # 文件发生变化
             logger.debug("监控到文件%s：%s" % (text, event_path))
             self.__handle_file(event_path=event_path, mon_path=mon_path)
@@ -357,13 +357,22 @@ class CloudStrmCompanion(_PluginBase):
                 target_file = str(event_path).replace(mon_path, strm_dir)
                 # 云盘文件路径
                 cloud_file = str(event_path).replace(mon_path, cloud_dir)
-                # 生成strm文件内容
-                strm_content = self.__format_content(format_str=format_str,
-                                                     local_file=event_path,
-                                                     cloud_file=str(cloud_file))
-                # 生成strm文件
-                self.__create_strm_file(strm_file=target_file,
-                                        strm_content=strm_content)
+
+                # 只处理媒体文件
+                if Path(event_path).suffix.lower() not in [ext.strip() for ext in
+                                                           self._rmt_mediaext.split(",")]:
+                    # 生成strm文件内容
+                    strm_content = self.__format_content(format_str=format_str,
+                                                         local_file=event_path,
+                                                         cloud_file=str(cloud_file))
+                    # 生成strm文件
+                    self.__create_strm_file(strm_file=target_file,
+                                            strm_content=strm_content)
+                else:
+                    if self._copy_files:
+                        # 其他nfo、jpg等复制文件
+                        shutil.copy2(str(event_path), target_file)
+                        logger.info(f"复制其他文件 {str(event_path)} 到 {target_file}")
         except Exception as e:
             logger.error("目录监控发生错误：%s - %s" % (str(e), traceback.format_exc()))
 
@@ -713,6 +722,7 @@ class CloudStrmCompanion(_PluginBase):
             "cover": self._cover,
             "rebuild": self._rebuild,
             "monitor": self._monitor,
+            "copy_files": self._copy_files,
             "cron": self._cron,
             "monitor_confs": self._monitor_confs,
             "115_cookie": self._115_cookie,
@@ -816,6 +826,22 @@ class CloudStrmCompanion(_PluginBase):
                                     }
                                 ]
                             },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'copy_files',
+                                            'label': '复制非媒体文件',
+                                        }
+                                    }
+                                ]
+                            }
                         ]
                     },
                     {
@@ -1012,6 +1038,7 @@ class CloudStrmCompanion(_PluginBase):
             "rebuild": False,
             "monitor": False,
             "cover": False,
+            "copy_files": False,
             "monitor_confs": "",
             "115_cookie": "",
             "rmt_mediaext": ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
