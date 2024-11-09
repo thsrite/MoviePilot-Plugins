@@ -415,7 +415,7 @@ class CloudStrmCompanion(_PluginBase):
                 return
 
             # 写入.strm文件
-            with open(strm_file, 'w') as f:
+            with open(strm_file, 'w', encoding='utf-8') as f:
                 f.write(strm_content)
 
             logger.info(f"创建strm文件成功 {strm_file} -> {strm_content}")

@@ -26,7 +26,7 @@ class CloudStrmIncrement(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -411,7 +411,7 @@ class CloudStrmIncrement(_PluginBase):
                 logger.info(f"替换后emby容器内路径:::{dest_file}")
 
             # 写入.strm文件
-            with open(strm_path, 'w') as f:
+            with open(strm_path, 'w', encoding='utf-8') as f:
                 f.write(dest_file)
 
             logger.info(f"创建strm文件 {strm_path}")

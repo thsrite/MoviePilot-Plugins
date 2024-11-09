@@ -414,7 +414,7 @@ class CloudStrm(_PluginBase):
                 logger.info(f"替换后emby容器内路径:::{dest_file}")
 
             # 写入.strm文件
-            with open(strm_path, 'w') as f:
+            with open(strm_path, 'w', encoding='utf-8') as f:
                 f.write(dest_file)
 
             logger.info(f"创建strm文件 {strm_path}")
