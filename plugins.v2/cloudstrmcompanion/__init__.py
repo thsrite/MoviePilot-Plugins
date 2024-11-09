@@ -359,8 +359,8 @@ class CloudStrmCompanion(_PluginBase):
                 cloud_file = str(event_path).replace(mon_path, cloud_dir)
 
                 # 只处理媒体文件
-                if Path(event_path).suffix.lower() not in [ext.strip() for ext in
-                                                           self._rmt_mediaext.split(",")]:
+                if Path(event_path).suffix.lower() in [ext.strip() for ext in
+                                                       self._rmt_mediaext.split(",")]:
                     # 生成strm文件内容
                     strm_content = self.__format_content(format_str=format_str,
                                                          local_file=event_path,
