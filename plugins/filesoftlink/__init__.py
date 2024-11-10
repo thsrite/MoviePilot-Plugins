@@ -4,6 +4,7 @@ import re
 import shutil
 import threading
 import traceback
+import time
 from pathlib import Path
 from typing import List, Tuple, Dict, Any, Optional
 
@@ -37,12 +38,20 @@ class FileMonitorHandler(FileSystemEventHandler):
         self.sync = sync
 
     def on_created(self, event):
-        self.sync.event_handler(event=event, text="创建",
-                                mon_path=self._watch_path, event_path=event.src_path)
+        self.sync.event_handler(
+            event=event,
+            text="创建",
+            mon_path=self._watch_path,
+            event_path=event.src_path,
+        )
 
     def on_moved(self, event):
-        self.sync.event_handler(event=event, text="移动",
-                                mon_path=self._watch_path, event_path=event.dest_path)
+        self.sync.event_handler(
+            event=event,
+            text="移动",
+            mon_path=self._watch_path,
+            event_path=event.dest_path,
+        )
 
 
 class FileSoftLink(_PluginBase):
@@ -53,7 +62,7 @@ class FileSoftLink(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png"
     # 插件版本
-    plugin_version = "2.0.1"
+    plugin_version = "2.0.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -71,6 +80,7 @@ class FileSoftLink(_PluginBase):
     _enabled = False
     _onlyonce = False
     _copy_files = False
+    _sync_interval = 0
     _cron = None
     _url = None
     _size = 0
@@ -97,14 +107,17 @@ class FileSoftLink(_PluginBase):
             self._enabled = config.get("enabled")
             self._onlyonce = config.get("onlyonce")
             self._copy_files = config.get("copy_files")
+            self._sync_interval = float(config.get("sync_interval"))
             self._mode = config.get("mode")
             self._monitor_dirs = config.get("monitor_dirs") or ""
             self._exclude_keywords = config.get("exclude_keywords") or ""
             self._cron = config.get("cron")
             self._url = config.get("url")
             self._size = config.get("size") or 0
-            self._rmt_mediaext = config.get(
-                "rmt_mediaext") or ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
+            self._rmt_mediaext = (
+                config.get("rmt_mediaext")
+                or ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
+            )
 
         # 停止现有任务
         self.stop_service()
@@ -135,8 +148,10 @@ class FileSoftLink(_PluginBase):
                 # 存储目的目录
                 if SystemUtils.is_windows():
                     if mon_path.count(":") > 1:
-                        paths = [mon_path.split(":")[0] + ":" + mon_path.split(":")[1],
-                                 mon_path.split(":")[2] + ":" + mon_path.split(":")[3]]
+                        paths = [
+                            mon_path.split(":")[0] + ":" + mon_path.split(":")[1],
+                            mon_path.split(":")[2] + ":" + mon_path.split(":")[3],
+                        ]
                     else:
                         paths = [mon_path]
                 else:
@@ -158,8 +173,12 @@ class FileSoftLink(_PluginBase):
                     # 检查媒体库目录是不是下载目录的子目录
                     try:
                         if target_path and target_path.is_relative_to(Path(mon_path)):
-                            logger.warn(f"{target_path} 是监控目录 {mon_path} 的子目录，无法监控")
-                            self.systemmessage.put(f"{target_path} 是下载目录 {mon_path} 的子目录，无法监控")
+                            logger.warn(
+                                f"{target_path} 是监控目录 {mon_path} 的子目录，无法监控"
+                            )
+                            self.systemmessage.put(
+                                f"{target_path} 是下载目录 {mon_path} 的子目录，无法监控"
+                            )
                             continue
                     except Exception as e:
                         logger.debug(str(e))
@@ -168,23 +187,31 @@ class FileSoftLink(_PluginBase):
                     # 异步开启云盘监控
                     self._mode = monitor or self._mode
                     if str(self._mode) != "nomonitor":
-                        logger.info(f"异步开启实时软连接链接 {mon_path} {self._mode}，延迟3s启动")
-                        self._scheduler.add_job(func=self.start_monitor, trigger='date',
-                                                run_date=datetime.datetime.now(
-                                                    tz=pytz.timezone(settings.TZ)) + datetime.timedelta(seconds=3),
-                                                name=f"实时软连接 {mon_path}",
-                                                kwargs={
-                                                    "source_dir": mon_path
-                                                })
+                        logger.info(
+                            f"异步开启实时软连接链接 {mon_path} {self._mode}，延迟3s启动"
+                        )
+                        self._scheduler.add_job(
+                            func=self.start_monitor,
+                            trigger="date",
+                            run_date=datetime.datetime.now(
+                                tz=pytz.timezone(settings.TZ)
+                            )
+                            + datetime.timedelta(seconds=3),
+                            name=f"实时软连接 {mon_path}",
+                            kwargs={"source_dir": mon_path},
+                        )
                     else:
                         logger.info(f"{mon_path} 实时软链接服务已关闭")
             # 运行一次定时服务
             if self._onlyonce:
                 logger.info("实时软连接服务启动，立即运行一次")
-                self._scheduler.add_job(name="实时软连接", func=self.sync_all, trigger='date',
-                                        run_date=datetime.datetime.now(
-                                            tz=pytz.timezone(settings.TZ)) + datetime.timedelta(seconds=3)
-                                        )
+                self._scheduler.add_job(
+                    name="实时软连接",
+                    func=self.sync_all,
+                    trigger="date",
+                    run_date=datetime.datetime.now(tz=pytz.timezone(settings.TZ))
+                    + datetime.timedelta(seconds=3),
+                )
                 # 关闭一次性开关
                 self._onlyonce = False
                 # 保存配置
@@ -207,7 +234,9 @@ class FileSoftLink(_PluginBase):
                 # 内部处理系统操作类型选择最优解
                 observer = Observer(timeout=10)
             self._observer.append(observer)
-            observer.schedule(FileMonitorHandler(source_dir, self), path=source_dir, recursive=True)
+            observer.schedule(
+                FileMonitorHandler(source_dir, self), path=source_dir, recursive=True
+            )
             observer.daemon = True
             observer.start()
             logger.info(f"{source_dir} 的实时软链接服务启动")
@@ -220,7 +249,8 @@ class FileSoftLink(_PluginBase):
                                            echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
                                            echo fs.inotify.max_user_instances=524288 | sudo tee -a /etc/sysctl.conf
                                            sudo sysctl -p
-                                           """)
+                                           """
+                )
             else:
                 logger.error(f"{source_dir} 启动云盘监控失败：{err_msg}")
             self.systemmessage.put(f"{source_dir} 启动云盘监控失败：{err_msg}")
@@ -229,18 +259,21 @@ class FileSoftLink(_PluginBase):
         """
         更新配置
         """
-        self.update_config({
-            "enabled": self._enabled,
-            "onlyonce": self._onlyonce,
-            "copy_files": self._copy_files,
-            "mode": self._mode,
-            "monitor_dirs": self._monitor_dirs,
-            "exclude_keywords": self._exclude_keywords,
-            "cron": self._cron,
-            "url": self._url,
-            "size": self._size,
-            "rmt_mediaext": self._rmt_mediaext
-        })
+        self.update_config(
+            {
+                "enabled": self._enabled,
+                "onlyonce": self._onlyonce,
+                "copy_files": self._copy_files,
+                "sync_interval": self._sync_interval,
+                "mode": self._mode,
+                "monitor_dirs": self._monitor_dirs,
+                "exclude_keywords": self._exclude_keywords,
+                "cron": self._cron,
+                "url": self._url,
+                "size": self._size,
+                "rmt_mediaext": self._rmt_mediaext,
+            }
+        )
 
     @eventmanager.register(EventType.PluginAction)
     def remote_sync(self, event: Event):
@@ -251,13 +284,18 @@ class FileSoftLink(_PluginBase):
             event_data = event.event_data
             if not event_data or event_data.get("action") != "softlink_sync":
                 return
-            self.post_message(channel=event.event_data.get("channel"),
-                              title="开始同步监控目录 ...",
-                              userid=event.event_data.get("user"))
+            self.post_message(
+                channel=event.event_data.get("channel"),
+                title="开始同步监控目录 ...",
+                userid=event.event_data.get("user"),
+            )
         self.sync_all()
         if event:
-            self.post_message(channel=event.event_data.get("channel"),
-                              title="监控目录同步完成！", userid=event.event_data.get("user"))
+            self.post_message(
+                channel=event.event_data.get("channel"),
+                title="监控目录同步完成！",
+                userid=event.event_data.get("user"),
+            )
 
     @eventmanager.register(EventType.PluginAction)
     def softlink_file(self, event: Event = None):
@@ -289,7 +327,9 @@ class FileSoftLink(_PluginBase):
         if event:
             event_data = event.event_data
             if not event_data or (
-                    event_data.get("action") != "softlink_one" and event_data.get("action") != "softlink_all"):
+                event_data.get("action") != "softlink_one"
+                and event_data.get("action") != "softlink_all"
+            ):
                 return
             args = event_data.get("args")
             if not args:
@@ -309,7 +349,11 @@ class FileSoftLink(_PluginBase):
 
             if category:
                 # 判断是不是目录
-                if Path(category).is_dir() and Path(category).exists() and limit is not None:
+                if (
+                    Path(category).is_dir()
+                    and Path(category).exists()
+                    and limit is not None
+                ):
                     # 遍历所有监控目录
                     mon_path = None
                     for mon in self._dirconf.keys():
@@ -322,7 +366,9 @@ class FileSoftLink(_PluginBase):
                         logger.error(f"未找到 {category} 对应的监控目录")
                         return
 
-                    self.__handle_limit(path=category, mon_path=mon_path, limit=limit, event=event)
+                    self.__handle_limit(
+                        path=category, mon_path=mon_path, limit=limit, event=event
+                    )
                     return
                 else:
                     for mon_path in self._categoryconf.keys():
@@ -331,13 +377,26 @@ class FileSoftLink(_PluginBase):
                         if mon_category and str(category) in mon_category:
                             parent_path = os.path.join(mon_path, category)
                             if limit:
-                                logger.info(f"获取到 {category} 对应的监控目录 {parent_path}")
-                                self.__handle_limit(path=parent_path, mon_path=mon_path, limit=limit, event=event)
+                                logger.info(
+                                    f"获取到 {category} 对应的监控目录 {parent_path}"
+                                )
+                                self.__handle_limit(
+                                    path=parent_path,
+                                    mon_path=mon_path,
+                                    limit=limit,
+                                    event=event,
+                                )
                             else:
-                                logger.info(f"获取到 {category} {args} 对应的监控目录 {parent_path}")
-                                target_paths = self.__find_related_paths(os.path.join(str(parent_path), args))
+                                logger.info(
+                                    f"获取到 {category} {args} 对应的监控目录 {parent_path}"
+                                )
+                                target_paths = self.__find_related_paths(
+                                    os.path.join(str(parent_path), args)
+                                )
                                 if not target_paths:
-                                    logger.error(f"未查找到 {category} {args} 对应的具体目录")
+                                    logger.error(
+                                        f"未查找到 {category} {args} 对应的具体目录"
+                                    )
                                     return
                                 for target_path in target_paths:
                                     logger.info(f"开始定向处理文件夹 ...{target_path}")
@@ -345,14 +404,27 @@ class FileSoftLink(_PluginBase):
                                         for file_name in sdirs + sfiles:
                                             src_file = os.path.join(sroot, file_name)
                                             if Path(src_file).is_file():
-                                                self.__handle_file(event_path=str(src_file), mon_path=mon_path)
+                                                self.__handle_file(
+                                                    event_path=str(src_file),
+                                                    mon_path=mon_path,
+                                                )
+                                            logger.info(
+                                                f"等待 {self._sync_interval} 秒"
+                                            )
+                                            time.sleep(self._sync_interval)
 
                                     if event.event_data.get("user"):
-                                        self.post_message(channel=event.event_data.get("channel"),
-                                                          title=f"{target_path} 软连接完成！",
-                                                          userid=event.event_data.get("user"))
+                                        self.post_message(
+                                            channel=event.event_data.get("channel"),
+                                            title=f"{target_path} 软连接完成！",
+                                            userid=event.event_data.get("user"),
+                                        )
 
-                                    if limit is None and event_data and event_data.get("action") == "softlink_one":
+                                    if (
+                                        limit is None
+                                        and event_data
+                                        and event_data.get("action") == "softlink_one"
+                                    ):
                                         return
                             return
             else:
@@ -381,10 +453,17 @@ class FileSoftLink(_PluginBase):
                             for file_name in sdirs + sfiles:
                                 src_file = os.path.join(sroot, file_name)
                                 if Path(str(src_file)).is_file():
-                                    self.__handle_file(event_path=str(src_file), mon_path=mon_path)
+                                    self.__handle_file(
+                                        event_path=str(src_file), mon_path=mon_path
+                                    )
+                                logger.info(f"等待 {self._sync_interval} 秒")
+                                time.sleep(self._sync_interval)
                         if event.event_data.get("user"):
-                            self.post_message(channel=event.event_data.get("channel"),
-                                              title=f"{all_args} 软连接完成！", userid=event.event_data.get("user"))
+                            self.post_message(
+                                channel=event.event_data.get("channel"),
+                                title=f"{all_args} 软连接完成！",
+                                userid=event.event_data.get("user"),
+                            )
                         return
                 else:
                     for mon_path in self._categoryconf.keys():
@@ -397,16 +476,24 @@ class FileSoftLink(_PluginBase):
                                 for file_name in sdirs + sfiles:
                                     src_file = os.path.join(sroot, file_name)
                                     if Path(str(src_file)).is_file():
-                                        self.__handle_file(event_path=str(src_file), mon_path=mon_path)
+                                        self.__handle_file(
+                                            event_path=str(src_file), mon_path=mon_path
+                                        )
+                                    logger.info(f"等待 {self._sync_interval} 秒")
+                                    time.sleep(self._sync_interval)
                             if event.event_data.get("user"):
-                                self.post_message(channel=event.event_data.get("channel"),
-                                                  title=f"{all_args} 软连接完成！",
-                                                  userid=event.event_data.get("user"))
+                                self.post_message(
+                                    channel=event.event_data.get("channel"),
+                                    title=f"{all_args} 软连接完成！",
+                                    userid=event.event_data.get("user"),
+                                )
                             return
             if event.event_data.get("user"):
-                self.post_message(channel=event.event_data.get("channel"),
-                                  title=f"{all_args} 未检索到，请检查输入是否正确！",
-                                  userid=event.event_data.get("user"))
+                self.post_message(
+                    channel=event.event_data.get("channel"),
+                    title=f"{all_args} 未检索到，请检查输入是否正确！",
+                    userid=event.event_data.get("user"),
+                )
 
     def __handle_limit(self, path, limit, mon_path, event):
         """
@@ -432,9 +519,14 @@ class FileSoftLink(_PluginBase):
                     src_file = os.path.join(sroot, file_name)
                     if Path(src_file).is_file():
                         self.__handle_file(event_path=str(src_file), mon_path=mon_path)
+                    logger.info(f"等待 {self._sync_interval} 秒")
+                    time.sleep(self._sync_interval)
             if event.event_data.get("user"):
-                self.post_message(channel=event.event_data.get("channel"),
-                                  title=f"{sub_path} 软连接完成！", userid=event.event_data.get("user"))
+                self.post_message(
+                    channel=event.event_data.get("channel"),
+                    title=f"{sub_path} 软连接完成！",
+                    userid=event.event_data.get("user"),
+                )
 
     @staticmethod
     def __find_related_paths(base_path):
@@ -466,6 +558,8 @@ class FileSoftLink(_PluginBase):
                     path = os.path.join(root, name)
                     if Path(path).is_file():
                         self.__handle_file(event_path=str(path), mon_path=mon_path)
+                    logger.info(f"等待 {self._sync_interval} 秒")
+                    time.sleep(self._sync_interval)
         logger.info("全量同步监控目录完成！")
 
     def event_handler(self, event, mon_path: str, text: str, event_path: str):
@@ -494,10 +588,12 @@ class FileSoftLink(_PluginBase):
             # 全程加锁
             with lock:
                 # 回收站及隐藏的文件不处理
-                if event_path.find('/@Recycle/') != -1 \
-                        or event_path.find('/#recycle/') != -1 \
-                        or event_path.find('/.') != -1 \
-                        or event_path.find('/@eaDir') != -1:
+                if (
+                    event_path.find("/@Recycle/") != -1
+                    or event_path.find("/#recycle/") != -1
+                    or event_path.find("/.") != -1
+                    or event_path.find("/@eaDir") != -1
+                ):
                     logger.debug(f"{event_path} 是回收站或隐藏的文件")
                     return
 
@@ -505,28 +601,42 @@ class FileSoftLink(_PluginBase):
                 if self._exclude_keywords:
                     for keyword in self._exclude_keywords.split("\n"):
                         if keyword and re.findall(keyword, event_path):
-                            logger.info(f"{event_path} 命中过滤关键字 {keyword}，不处理")
+                            logger.info(
+                                f"{event_path} 命中过滤关键字 {keyword}，不处理"
+                            )
                             return
 
                 # 整理屏蔽词不处理
-                transfer_exclude_words = self.systemconfig.get(SystemConfigKey.TransferExcludeWords)
+                transfer_exclude_words = self.systemconfig.get(
+                    SystemConfigKey.TransferExcludeWords
+                )
                 if transfer_exclude_words:
                     for keyword in transfer_exclude_words:
                         if not keyword:
                             continue
-                        if keyword and re.search(r"%s" % keyword, event_path, re.IGNORECASE):
-                            logger.info(f"{event_path} 命中整理屏蔽词 {keyword}，不处理")
+                        if keyword and re.search(
+                            r"%s" % keyword, event_path, re.IGNORECASE
+                        ):
+                            logger.info(
+                                f"{event_path} 命中整理屏蔽词 {keyword}，不处理"
+                            )
                             return
 
                 # 判断是不是蓝光目录
                 if re.search(r"BDMV[/\\]STREAM", event_path, re.IGNORECASE):
                     # 截取BDMV前面的路径
-                    blurray_dir = event_path[:event_path.find("BDMV")]
+                    blurray_dir = event_path[: event_path.find("BDMV")]
                     file_path = Path(blurray_dir)
-                    logger.info(f"{event_path} 是蓝光目录，更正文件路径为：{str(file_path)}")
+                    logger.info(
+                        f"{event_path} 是蓝光目录，更正文件路径为：{str(file_path)}"
+                    )
 
                 # 判断文件大小
-                if self._size and float(self._size) > 0 and file_path.stat().st_size < float(self._size) * 1024 ** 3:
+                if (
+                    self._size
+                    and float(self._size) > 0
+                    and file_path.stat().st_size < float(self._size) * 1024**3
+                ):
                     logger.info(f"{file_path} 文件大小小于监控文件大小，不处理")
                     return
 
@@ -555,20 +665,27 @@ class FileSoftLink(_PluginBase):
                         os.makedirs(Path(target_file).parent)
 
                     # 媒体文件软连接
-                    if Path(target_file).suffix.lower() in [ext.strip() for ext in
-                                                            self._rmt_mediaext.split(",")]:
-                        retcode, retmsg = SystemUtils.softlink(file_path, Path(target_file))
-                        logger.info(f"创建媒体文件软连接 {str(file_path)} 到 {target_file} {retcode} {retmsg}")
+                    if Path(target_file).suffix.lower() in [
+                        ext.strip() for ext in self._rmt_mediaext.split(",")
+                    ]:
+                        retcode, retmsg = SystemUtils.softlink(
+                            file_path, Path(target_file)
+                        )
+                        logger.info(
+                            f"创建媒体文件软连接 {str(file_path)} 到 {target_file} {retcode} {retmsg}"
+                        )
                         if self._url and file_path.suffix in settings.RMT_MEDIAEXT:
-                            RequestUtils(content_type="application/json").post(url=self._url, json={
-                                "path": str(file_path),
-                                "type": "add"
-                            })
+                            RequestUtils(content_type="application/json").post(
+                                url=self._url,
+                                json={"path": str(file_path), "type": "add"},
+                            )
                     else:
                         if self._copy_files:
                             # 其他nfo、jpg等复制文件
                             shutil.copy2(str(file_path), target_file)
-                            logger.info(f"复制其他文件 {str(file_path)} 到 {target_file}")
+                            logger.info(
+                                f"复制其他文件 {str(file_path)} 到 {target_file}"
+                            )
         except Exception as e:
             logger.error("软连接发生错误：%s - %s" % (str(e), traceback.format_exc()))
 
@@ -587,38 +704,34 @@ class FileSoftLink(_PluginBase):
                 "event": EventType.PluginAction,
                 "desc": "文件软连接同步",
                 "category": "",
-                "data": {
-                    "action": "softlink_sync"
-                }
+                "data": {"action": "softlink_sync"},
             },
             {
                 "cmd": "/soft",
                 "event": EventType.PluginAction,
                 "desc": "定向软连接处理",
                 "category": "",
-                "data": {
-                    "action": "softlink_one"
-                }
+                "data": {"action": "softlink_one"},
             },
             {
                 "cmd": "/softall",
                 "event": EventType.PluginAction,
                 "desc": "定向软连接处理",
                 "category": "",
-                "data": {
-                    "action": "softlink_all"
-                }
-            }
+                "data": {"action": "softlink_all"},
+            },
         ]
 
     def get_api(self) -> List[Dict[str, Any]]:
-        return [{
-            "path": "/softlink_sync",
-            "endpoint": self.sync,
-            "methods": ["GET"],
-            "summary": "实时软连接同步",
-            "description": "实时软连接同步",
-        }]
+        return [
+            {
+                "path": "/softlink_sync",
+                "endpoint": self.sync,
+                "methods": ["GET"],
+                "summary": "实时软连接同步",
+                "description": "实时软连接同步",
+            }
+        ]
 
     def get_service(self) -> List[Dict[str, Any]]:
         """
@@ -632,13 +745,15 @@ class FileSoftLink(_PluginBase):
         }]
         """
         if self._enabled and self._cron:
-            return [{
-                "id": "FileSoftLink",
-                "name": "实时软连接全量同步服务",
-                "trigger": CronTrigger.from_crontab(self._cron),
-                "func": self.sync_all,
-                "kwargs": {}
-            }]
+            return [
+                {
+                    "id": "FileSoftLink",
+                    "name": "实时软连接全量同步服务",
+                    "trigger": CronTrigger.from_crontab(self._cron),
+                    "func": self.sync_all,
+                    "kwargs": {},
+                }
+            ]
         return []
 
     def sync(self) -> schemas.Response:
@@ -651,242 +766,241 @@ class FileSoftLink(_PluginBase):
     def get_form(self) -> Tuple[List[dict], Dict[str, Any]]:
         return [
             {
-                'component': 'VForm',
-                'content': [
+                "component": "VForm",
+                "content": [
                     {
-                        'component': 'VRow',
-                        'content': [
+                        "component": "VRow",
+                        "content": [
                             {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
+                                "component": "VCol",
+                                "props": {"cols": 12, "md": 4},
+                                "content": [
                                     {
-                                        'component': 'VSwitch',
-                                        'props': {
-                                            'model': 'enabled',
-                                            'label': '启用插件',
-                                        }
+                                        "component": "VSwitch",
+                                        "props": {
+                                            "model": "enabled",
+                                            "label": "启用插件",
+                                        },
                                     }
-                                ]
+                                ],
                             },
                             {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
+                                "component": "VCol",
+                                "props": {"cols": 12, "md": 4},
+                                "content": [
                                     {
-                                        'component': 'VSwitch',
-                                        'props': {
-                                            'model': 'onlyonce',
-                                            'label': '立即运行一次',
-                                        }
+                                        "component": "VSwitch",
+                                        "props": {
+                                            "model": "onlyonce",
+                                            "label": "立即运行一次",
+                                        },
                                     }
-                                ]
+                                ],
                             },
                             {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
+                                "component": "VCol",
+                                "props": {"cols": 12, "md": 4},
+                                "content": [
                                     {
-                                        'component': 'VSwitch',
-                                        'props': {
-                                            'model': 'copy_files',
-                                            'label': '复制非媒体文件',
-                                        }
+                                        "component": "VSwitch",
+                                        "props": {
+                                            "model": "copy_files",
+                                            "label": "复制非媒体文件",
+                                        },
                                     }
-                                ]
-                            }
-                        ]
+                                ],
+                            },
+                        ],
                     },
                     {
-                        'component': 'VRow',
-                        'content': [
+                        "component": "VRow",
+                        "content": [
                             {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
+                                "component": "VCol",
+                                "props": {"cols": 12, "md": 4},
+                                "content": [
                                     {
-                                        'component': 'VSelect',
-                                        'props': {
-                                            'model': 'mode',
-                                            'label': '监控模式',
-                                            'items': [
-                                                {'title': '兼容模式', 'value': 'compatibility'},
-                                                {'title': '性能模式', 'value': 'fast'},
-                                                {'title': '不监控', 'value': 'nomonitor'},
-                                            ]
-                                        }
+                                        "component": "VSelect",
+                                        "props": {
+                                            "model": "mode",
+                                            "label": "监控模式",
+                                            "items": [
+                                                {
+                                                    "title": "兼容模式",
+                                                    "value": "compatibility",
+                                                },
+                                                {"title": "性能模式", "value": "fast"},
+                                                {
+                                                    "title": "不监控",
+                                                    "value": "nomonitor",
+                                                },
+                                            ],
+                                        },
                                     }
-                                ]
+                                ],
                             },
                             {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
+                                "component": "VCol",
+                                "props": {"cols": 12, "md": 4},
+                                "content": [
                                     {
-                                        'component': 'VTextField',
-                                        'props': {
-                                            'model': 'cron',
-                                            'label': '定时全量同步周期',
-                                            'placeholder': '5位cron表达式，留空关闭'
-                                        }
+                                        "component": "VTextField",
+                                        "props": {
+                                            "model": "cron",
+                                            "label": "定时全量同步周期",
+                                            "placeholder": "5位cron表达式，留空关闭",
+                                        },
                                     }
-                                ]
+                                ],
                             },
                             {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
+                                "component": "VCol",
+                                "props": {"cols": 12, "md": 4},
+                                "content": [
                                     {
-                                        'component': 'VTextField',
-                                        'props': {
-                                            'model': 'size',
-                                            'label': '监控文件大小（GB）',
-                                            'placeholder': '0'
-                                        }
+                                        "component": "VTextField",
+                                        "props": {
+                                            "model": "size",
+                                            "label": "监控文件大小（GB）",
+                                            "placeholder": "0",
+                                        },
                                     }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextarea',
-                                        'props': {
-                                            'model': 'monitor_dirs',
-                                            'label': '监控目录',
-                                            'rows': 5,
-                                            'placeholder': '监控目录:转移目的目录'
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextarea',
-                                        'props': {
-                                            'model': 'exclude_keywords',
-                                            'label': '排除关键词',
-                                            'rows': 2,
-                                            'placeholder': '每一行一个关键词'
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextarea',
-                                        'props': {
-                                            'model': 'rmt_mediaext',
-                                            'label': '视频格式',
-                                            'rows': 2,
-                                            'placeholder': ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextField',
-                                        'props': {
-                                            'model': 'url',
-                                            'label': '任务推送url',
-                                            'placeholder': 'post请求json方式推送path和type(add)字段'
-                                        }
-                                    }
-                                ]
+                                ],
                             },
-                        ]
+                            {
+                                "component": "VCol",
+                                "props": {"cols": 12, "md": 4},
+                                "content": [
+                                    {
+                                        "component": "VTextField",
+                                        "props": {
+                                            "model": "sync_interval",
+                                            "label": "同步间隔（秒）",
+                                            "placeholder": "0",
+                                        },
+                                    }
+                                ],
+                            },
+                        ],
                     },
                     {
-                        'component': 'VRow',
-                        'content': [
+                        "component": "VRow",
+                        "content": [
                             {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                },
-                                'content': [
+                                "component": "VCol",
+                                "props": {"cols": 12},
+                                "content": [
                                     {
-                                        'component': 'VAlert',
-                                        'props': {
-                                            'type': 'info',
-                                            'variant': 'tonal',
-                                            'text': '监控文件大小：单位GB，0为不开启，低于监控文件大小的文件不会被监控转移。'
-                                        }
+                                        "component": "VTextarea",
+                                        "props": {
+                                            "model": "monitor_dirs",
+                                            "label": "监控目录",
+                                            "rows": 5,
+                                            "placeholder": "监控目录:转移目的目录",
+                                        },
                                     }
-                                ]
+                                ],
                             }
-                        ]
-                    }
-                ]
+                        ],
+                    },
+                    {
+                        "component": "VRow",
+                        "content": [
+                            {
+                                "component": "VCol",
+                                "props": {
+                                    "cols": 12,
+                                },
+                                "content": [
+                                    {
+                                        "component": "VTextarea",
+                                        "props": {
+                                            "model": "exclude_keywords",
+                                            "label": "排除关键词",
+                                            "rows": 2,
+                                            "placeholder": "每一行一个关键词",
+                                        },
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                    {
+                        "component": "VRow",
+                        "content": [
+                            {
+                                "component": "VCol",
+                                "props": {"cols": 12},
+                                "content": [
+                                    {
+                                        "component": "VTextarea",
+                                        "props": {
+                                            "model": "rmt_mediaext",
+                                            "label": "视频格式",
+                                            "rows": 2,
+                                            "placeholder": ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v",
+                                        },
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                    {
+                        "component": "VRow",
+                        "content": [
+                            {
+                                "component": "VCol",
+                                "props": {
+                                    "cols": 12,
+                                },
+                                "content": [
+                                    {
+                                        "component": "VTextField",
+                                        "props": {
+                                            "model": "url",
+                                            "label": "任务推送url",
+                                            "placeholder": "post请求json方式推送path和type(add)字段",
+                                        },
+                                    }
+                                ],
+                            },
+                        ],
+                    },
+                    {
+                        "component": "VRow",
+                        "content": [
+                            {
+                                "component": "VCol",
+                                "props": {
+                                    "cols": 12,
+                                },
+                                "content": [
+                                    {
+                                        "component": "VAlert",
+                                        "props": {
+                                            "type": "info",
+                                            "variant": "tonal",
+                                            "text": "监控文件大小：单位GB，0为不开启，低于监控文件大小的文件不会被监控转移。",
+                                        },
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                ],
             }
         ], {
             "enabled": False,
             "onlyonce": False,
             "copy_files": True,
+            "sync_interval": 0,
             "mode": "compatibility",
             "monitor_dirs": "",
             "exclude_keywords": "",
             "cron": "",
             "size": 0,
             "url": "",
-            "rmt_mediaext": ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
+            "rmt_mediaext": ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v",
         }
 
     def get_page(self) -> List[dict]:
