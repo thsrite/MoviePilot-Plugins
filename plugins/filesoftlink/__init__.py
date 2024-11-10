@@ -408,6 +408,9 @@ class FileSoftLink(_PluginBase):
                                                     event_path=str(src_file),
                                                     mon_path=mon_path,
                                                 )
+                                            logger.info(
+                                                f"等待 {self._sync_interval} 秒"
+                                            )
                                             time.sleep(self._sync_interval)
 
                                     if event.event_data.get("user"):
@@ -453,6 +456,7 @@ class FileSoftLink(_PluginBase):
                                     self.__handle_file(
                                         event_path=str(src_file), mon_path=mon_path
                                     )
+                                logger.info(f"等待 {self._sync_interval} 秒")
                                 time.sleep(self._sync_interval)
                         if event.event_data.get("user"):
                             self.post_message(
@@ -475,6 +479,7 @@ class FileSoftLink(_PluginBase):
                                         self.__handle_file(
                                             event_path=str(src_file), mon_path=mon_path
                                         )
+                                    logger.info(f"等待 {self._sync_interval} 秒")
                                     time.sleep(self._sync_interval)
                             if event.event_data.get("user"):
                                 self.post_message(
@@ -514,6 +519,7 @@ class FileSoftLink(_PluginBase):
                     src_file = os.path.join(sroot, file_name)
                     if Path(src_file).is_file():
                         self.__handle_file(event_path=str(src_file), mon_path=mon_path)
+                    logger.info(f"等待 {self._sync_interval} 秒")
                     time.sleep(self._sync_interval)
             if event.event_data.get("user"):
                 self.post_message(
@@ -552,6 +558,7 @@ class FileSoftLink(_PluginBase):
                     path = os.path.join(root, name)
                     if Path(path).is_file():
                         self.__handle_file(event_path=str(path), mon_path=mon_path)
+                    logger.info(f"等待 {self._sync_interval} 秒")
                     time.sleep(self._sync_interval)
         logger.info("全量同步监控目录完成！")
 
