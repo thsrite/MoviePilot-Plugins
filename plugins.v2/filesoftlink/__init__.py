@@ -4,7 +4,7 @@ import re
 import shutil
 import threading
 import traceback
-import time
+import asyncio
 from pathlib import Path
 from typing import List, Tuple, Dict, Any, Optional
 
@@ -423,7 +423,7 @@ class FileSoftLink(_PluginBase):
                                                     event_path=str(src_file),
                                                     mon_path=mon_path,
                                                 )
-                                            time.sleep(self._sync_interval)
+                                            asyncio.sleep(self._sync_interval)
 
                                     if event.event_data.get("user"):
                                         self.post_message(
@@ -469,7 +469,7 @@ class FileSoftLink(_PluginBase):
                                         event_path=str(src_file), mon_path=mon_path
                                     )
                                 logger.info(f"等待 {self._sync_interval} 秒")
-                                time.sleep(self._sync_interval)
+                                asyncio.sleep(self._sync_interval)
                         if event.event_data.get("user"):
                             self.post_message(
                                 channel=event.event_data.get("channel"),
@@ -492,7 +492,7 @@ class FileSoftLink(_PluginBase):
                                             event_path=str(src_file), mon_path=mon_path
                                         )
                                     logger.info(f"等待 {self._sync_interval} 秒")
-                                    time.sleep(self._sync_interval)
+                                    asyncio.sleep(self._sync_interval)
                             if event.event_data.get("user"):
                                 self.post_message(
                                     channel=event.event_data.get("channel"),
@@ -532,7 +532,7 @@ class FileSoftLink(_PluginBase):
                     if Path(src_file).is_file():
                         self.__handle_file(event_path=str(src_file), mon_path=mon_path)
                     logger.info(f"等待 {self._sync_interval} 秒")
-                    time.sleep(self._sync_interval)
+                    asyncio.sleep(self._sync_interval)
             if event.event_data.get("user"):
                 self.post_message(
                     channel=event.event_data.get("channel"),
@@ -572,7 +572,7 @@ class FileSoftLink(_PluginBase):
                         if Path(path).is_file():
                             self.__handle_file(event_path=str(path), mon_path=mon_path)
                         logger.info(f"等待 {self._sync_interval} 秒")
-                        time.sleep(self._sync_interval)
+                        asyncio.sleep(self._sync_interval)
             logger.info("全量同步监控目录完成！")
         except Exception as result:
             logger.error(f"全量同步监控目录失败：{result}")
