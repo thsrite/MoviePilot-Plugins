@@ -468,6 +468,7 @@ class FileSoftLink(_PluginBase):
                                     self.__handle_file(
                                         event_path=str(src_file), mon_path=mon_path
                                     )
+                                logger.info(f"等待 {self._sync_interval} 秒")
                                 time.sleep(self._sync_interval)
                         if event.event_data.get("user"):
                             self.post_message(
@@ -490,6 +491,7 @@ class FileSoftLink(_PluginBase):
                                         self.__handle_file(
                                             event_path=str(src_file), mon_path=mon_path
                                         )
+                                    logger.info(f"等待 {self._sync_interval} 秒")
                                     time.sleep(self._sync_interval)
                             if event.event_data.get("user"):
                                 self.post_message(
@@ -529,6 +531,7 @@ class FileSoftLink(_PluginBase):
                     src_file = os.path.join(sroot, file_name)
                     if Path(src_file).is_file():
                         self.__handle_file(event_path=str(src_file), mon_path=mon_path)
+                    logger.info(f"等待 {self._sync_interval} 秒")
                     time.sleep(self._sync_interval)
             if event.event_data.get("user"):
                 self.post_message(
@@ -558,17 +561,22 @@ class FileSoftLink(_PluginBase):
         """
         立即运行一次，全量同步目录中所有文件
         """
-        logger.info("开始全量同步监控目录 ...")
-        # 遍历所有监控目录
-        for mon_path in self._dirconf.keys():
-            # 遍历目录下所有文件
-            for root, dirs, files in os.walk(mon_path):
-                for name in dirs + files:
-                    path = os.path.join(root, name)
-                    if Path(path).is_file():
-                        self.__handle_file(event_path=str(path), mon_path=mon_path)
-                    time.sleep(self._sync_interval)
-        logger.info("全量同步监控目录完成！")
+        try:
+            logger.info("开始全量同步监控目录 ...")
+            # 遍历所有监控目录
+            for mon_path in self._dirconf.keys():
+                # 遍历目录下所有文件
+                for root, dirs, files in os.walk(mon_path):
+                    for name in dirs + files:
+                        path = os.path.join(root, name)
+                        if Path(path).is_file():
+                            self.__handle_file(event_path=str(path), mon_path=mon_path)
+                        logger.info(f"等待 {self._sync_interval} 秒")
+                        time.sleep(self._sync_interval)
+            logger.info("全量同步监控目录完成！")
+        except Exception as result:
+            logger.error(f"全量同步监控目录失败：{result}")
+            self.systemmessage.put(f"全量同步监控目录失败：{result}")
 
     def event_handler(self, event, mon_path: str, text: str, event_path: str):
         """
