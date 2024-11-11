@@ -274,7 +274,6 @@
     "icon": "Amule_B.png",
     "author": "thsrite",
     "level": 1,
-    "v2": true,
     "history": {
       "v3.2": "支持消息发送",
       "v3.1": "支持自定义转移方式",
