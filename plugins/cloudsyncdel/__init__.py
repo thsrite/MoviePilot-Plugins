@@ -170,7 +170,7 @@ class CloudSyncDel(_PluginBase):
                 Path(file).unlink()
                 logger.info(f"云盘文件 {file} 已删除")
                 if Path(file).suffix in settings.RMT_MEDIAEXT:
-                    cloud_path = cloud_file
+                    cloud_path = file
                 cloud_file_flag = True
 
             # 删除thumb图片
