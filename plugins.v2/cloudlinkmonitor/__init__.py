@@ -62,7 +62,7 @@ class CloudLinkMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
-    plugin_version = "2.5.1"
+    plugin_version = "2.5.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -89,6 +89,7 @@ class CloudLinkMonitor(_PluginBase):
     _scrape = False
     _refresh = False
     _softlink = False
+    _strm = False
     _cron = None
     filetransfer = None
     mediaChain = None
@@ -136,6 +137,7 @@ class CloudLinkMonitor(_PluginBase):
             self._cron = config.get("cron")
             self._size = config.get("size") or 0
             self._softlink = config.get("softlink")
+            self._strm = config.get("strm")
 
         # 停止现有任务
         self.stop_service()
@@ -255,6 +257,7 @@ class CloudLinkMonitor(_PluginBase):
             "interval": self._interval,
             "history": self._history,
             "softlink": self._softlink,
+            "strm": self._strm,
             "scrape": self._scrape,
             "size": self._size,
             "refresh": self._refresh,
@@ -552,6 +555,13 @@ class CloudLinkMonitor(_PluginBase):
                         'action': 'softlink_file'
                     })
 
+                if self._strm:
+                    # 通知Strm助手生成
+                    self.eventmanager.send_event(EventType.PluginAction, {
+                        'file_path': str(transferinfo.target_item.path),
+                        'action': 'strm_file'
+                    })
+
                 # 移动模式删除空目录
                 if transfer_type == "move":
                     for file_dir in file_path.parents:
@@ -792,12 +802,12 @@ class CloudLinkMonitor(_PluginBase):
                                             {
                                                 'component': 'VSwitch',
                                                 'props': {
-                                                    'model': 'softlink',
-                                                    'label': '联动实时软连接',
+                                                    'model': 'refresh',
+                                                    'label': '刷新媒体库',
                                                 },
                                             }
                                         ]
-                                    }
+                                    },
                                 ]
                             }
                         ]
@@ -818,12 +828,28 @@ class CloudLinkMonitor(_PluginBase):
                                             {
                                                 'component': 'VSwitch',
                                                 'props': {
-                                                    'model': 'refresh',
-                                                    'label': '刷新媒体库',
+                                                    'model': 'softlink',
+                                                    'label': '联动实时软连接',
                                                 },
                                             }
                                         ]
                                     },
+                                    {
+                                        'component': 'VCol',
+                                        'props': {
+                                            'cols': 12,
+                                            'md': 4
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'VSwitch',
+                                                'props': {
+                                                    'model': 'strm',
+                                                    'label': '联动Strm助手',
+                                                },
+                                            }
+                                        ]
+                                    }
                                 ]
                             }
                         ]
@@ -992,6 +1018,7 @@ class CloudLinkMonitor(_PluginBase):
             "scrape": False,
             "refresh": True,
             "softlink": False,
+            "strm": False,
             "mode": "fast",
             "transfer_type": "filesoftlink",
             "monitor_dirs": "",

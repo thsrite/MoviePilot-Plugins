@@ -8,26 +8,24 @@ import urllib.parse
 from datetime import datetime, timedelta
 from io import BytesIO
 from pathlib import Path
-
-import requests
-from p115client import P115Client
 from posixpath import join as join_path
 from re import compile as re_compile
-from posixpatht import escape
-import pytz
 from typing import Any, List, Dict, Tuple, Optional
 
+import pytz
+import requests
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+from p115client import P115Client
+from posixpatht import escape
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers.polling import PollingObserver
 
+from app.core.config import settings
 from app.core.event import eventmanager, Event
-from app.schemas.types import EventType
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
-
 from app.log import logger
 from app.plugins import _PluginBase
-from app.core.config import settings
+from app.schemas.types import EventType
 
 lock = threading.Lock()
 
@@ -59,7 +57,7 @@ class CloudStrmCompanion(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png"
     # 插件版本
-    plugin_version = "1.0.5"
+    plugin_version = "1.0.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -232,6 +230,31 @@ class CloudStrmCompanion(_PluginBase):
             if self._scheduler.get_jobs():
                 self._scheduler.print_jobs()
                 self._scheduler.start()
+
+    @eventmanager.register(EventType.PluginAction)
+    def strm_one(self, event: Event = None):
+        if event:
+            event_data = event.event_data
+            if not event_data or event_data.get("action") != "strm_file":
+                return
+            file_path = event_data.get("file_path")
+            if not file_path:
+                logger.error(f"缺少参数：{event_data}")
+                return
+
+            # 遍历所有监控目录
+            mon_path = None
+            for mon in self._strm_dir_conf.keys():
+                if str(file_path).startswith(mon):
+                    mon_path = mon
+                    break
+
+            if not mon_path:
+                logger.error(f"未找到文件 {file_path} 对应的监控目录")
+                return
+
+            # 处理单文件
+            self.__handle_file(event_path=file_path, mon_path=mon_path)
 
     @eventmanager.register(EventType.PluginAction)
     def scan(self, event: Event = None):
