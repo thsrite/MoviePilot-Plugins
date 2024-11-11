@@ -235,7 +235,7 @@ class CloudStrmCompanion(_PluginBase):
     def strm_one(self, event: Event = None):
         if event:
             event_data = event.event_data
-            if not event_data or event_data.get("action") != "strm_file":
+            if not event_data or event_data.get("action") != "cloudstrm_file":
                 return
             file_path = event_data.get("file_path")
             if not file_path:

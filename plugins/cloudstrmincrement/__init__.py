@@ -3,18 +3,17 @@ import shutil
 import urllib.parse
 from datetime import datetime, timedelta
 from pathlib import Path
-
-import pytz
 from typing import Any, List, Dict, Tuple, Optional
 
-from app.core.event import eventmanager, Event
-from app.schemas.types import EventType
+import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
+from app.core.config import settings
+from app.core.event import eventmanager, Event
 from app.log import logger
 from app.plugins import _PluginBase
-from app.core.config import settings
+from app.schemas.types import EventType
 from app.utils.system import SystemUtils
 
 
@@ -26,7 +25,7 @@ class CloudStrmIncrement(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png"
     # 插件版本
-    plugin_version = "1.1.2"
+    plugin_version = "1.1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -163,6 +162,20 @@ class CloudStrmIncrement(_PluginBase):
             if self._scheduler.get_jobs():
                 self._scheduler.print_jobs()
                 self._scheduler.start()
+
+    @eventmanager.register(EventType.PluginAction)
+    def cloudstrm_file(self, event: Event = None):
+        if event:
+            event_data = event.event_data
+            if not event_data or event_data.get("action") != "cloudstrm_file":
+                return
+
+            file_path = event_data.get("file_path")
+            if not file_path:
+                logger.error(f"缺少参数：{event_data}")
+                return
+
+            self.__strm(source_file=file_path)
 
     @eventmanager.register(EventType.PluginAction)
     def scan(self, event: Event = None):

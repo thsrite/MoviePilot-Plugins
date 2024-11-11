@@ -559,7 +559,7 @@ class CloudLinkMonitor(_PluginBase):
                     # 通知Strm助手生成
                     self.eventmanager.send_event(EventType.PluginAction, {
                         'file_path': str(transferinfo.target_item.path),
-                        'action': 'strm_file'
+                        'action': 'cloudstrm_file'
                     })
 
                 # 移动模式删除空目录

@@ -26,7 +26,7 @@ class CloudStrm(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png"
     # 插件版本
-    plugin_version = "4.4"
+    plugin_version = "4.4.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -164,6 +164,20 @@ class CloudStrm(_PluginBase):
             if self._scheduler.get_jobs():
                 self._scheduler.print_jobs()
                 self._scheduler.start()
+
+    @eventmanager.register(EventType.PluginAction)
+    def cloudstrm_file(self, event: Event = None):
+        if event:
+            event_data = event.event_data
+            if not event_data or event_data.get("action") != "cloudstrm_file":
+                return
+
+            file_path = event_data.get("file_path")
+            if not file_path:
+                logger.error(f"缺少参数：{event_data}")
+                return
+
+            self.__strm(source_file=file_path)
 
     @eventmanager.register(EventType.PluginAction)
     def scan(self, event: Event = None):
