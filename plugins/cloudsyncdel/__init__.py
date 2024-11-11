@@ -1,14 +1,13 @@
 import shutil
 import time
 from pathlib import Path
+from typing import Any, List, Dict, Tuple
 
 from app import schemas
 from app.core.config import settings
 from app.core.event import eventmanager, Event
 from app.log import logger
 from app.plugins import _PluginBase
-from typing import Any, List, Dict, Tuple
-
 from app.schemas.types import EventType, MediaImageType, NotificationType, MediaType
 from app.utils.http import RequestUtils
 from app.utils.system import SystemUtils
@@ -18,11 +17,11 @@ class CloudSyncDel(_PluginBase):
     # 插件名称
     plugin_name = "云盘同步删除"
     # 插件描述
-    plugin_desc = "媒体库删除软连接文件后，同步删除云盘文件。"
+    plugin_desc = "媒体库删除软连接/strm文件后，同步删除云盘文件。"
     # 插件图标
     plugin_icon = "clouddisk.png"
     # 插件版本
-    plugin_version = "1.5.5"
+    plugin_version = "1.5.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -57,7 +56,7 @@ class CloudSyncDel(_PluginBase):
                     paths = path.split("#")[0]
                     cloud_path = path.split("#")[1]
                     self._paths[paths.split(":")[0]] = paths.split(":")[1]
-                    self._cloud_paths[paths.split(":")[0]] = cloud_path
+                    self._cloud_paths[paths.split(":")[1]] = cloud_path
             if config.get("local_path"):
                 for path in str(config.get("local_path")).split("\n"):
                     self._local_paths[path.split(":")[0]] = path.split(":")[1]
@@ -399,8 +398,8 @@ class CloudSyncDel(_PluginBase):
                                         'props': {
                                             'model': 'path',
                                             'rows': '2',
-                                            'label': '媒体库路径映射',
-                                            'placeholder': '媒体服务器软连接路径:MoviePilot软连接路径#MoviePilot云盘路径（一行一个）'
+                                            'label': '媒体库路径映射（删除云盘文件）',
+                                            'placeholder': '媒体服务器软连接/strm路径:MoviePilot软连接/strm路径#MoviePilot云盘路径（一行一个）'
                                         }
                                     }
                                 ]
@@ -421,8 +420,8 @@ class CloudSyncDel(_PluginBase):
                                         'props': {
                                             'model': 'local_path',
                                             'rows': '2',
-                                            'label': '本地路径映射',
-                                            'placeholder': '媒体服务器软连接路径:MoviePilot本地文件路径（一行一个）'
+                                            'label': '本地路径映射（回调【媒体文件同步删除】插件删除本地文件）',
+                                            'placeholder': '媒体服务器软连接/strm路径:MoviePilot本地文件路径（一行一个）'
                                         }
                                     }
                                 ]
