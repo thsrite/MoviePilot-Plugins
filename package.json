@@ -1,762 +1,763 @@
 {
-  "CloudStrm": {
-    "name": "云盘Strm生成",
-    "description": "监控文件创建，生成Strm文件。",
-    "labels": "云盘",
-    "version": "4.4",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png",
-    "author": "thsrite",
-    "level": 1,
-    "v2": true,
-    "history": {
-      "v4.4": "修复bug",
-      "v4.3": "回滚自定义媒体类型",
-      "v4.2": "扩展名转小写",
-      "v4.1": "支持自定义媒体类型",
-      "v4.0": "回归老版本",
-      "v3.8": "支持增量路径、支持自定义媒体类型（注：本次更新需修改配置使用）",
-      "v3.7": "api模式支持启用https",
-      "v3.6": "支持重建索引周期运行",
-      "v3.4": "交互命令",
-      "v3.1": "注册交互命令、注册公共服务",
-      "v3.0": "实现改为定时扫描"
+    "CloudStrm": {
+        "name": "云盘Strm生成",
+        "description": "监控文件创建，生成Strm文件。",
+        "labels": "云盘",
+        "version": "4.5",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png",
+        "author": "thsrite",
+        "level": 1,
+        "v2": true,
+        "history": {
+            "v4.5": "增加目录监控插件联动事件",
+            "v4.4": "修复bug",
+            "v4.3": "回滚自定义媒体类型",
+            "v4.2": "扩展名转小写",
+            "v4.1": "支持自定义媒体类型",
+            "v4.0": "回归老版本",
+            "v3.8": "支持增量路径、支持自定义媒体类型（注：本次更新需修改配置使用）",
+            "v3.7": "api模式支持启用https",
+            "v3.6": "支持重建索引周期运行",
+            "v3.4": "交互命令",
+            "v3.1": "注册交互命令、注册公共服务",
+            "v3.0": "实现改为定时扫描"
+        }
+    },
+    "CloudStrmIncrement": {
+        "name": "云盘Strm生成（增量版）",
+        "description": "监控文件创建，生成Strm文件（增量版）。",
+        "labels": "云盘",
+        "version": "1.1.2",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png",
+        "author": "thsrite",
+        "level": 1,
+        "v2": true,
+        "history": {
+            "v1.1.2": "增量文件可选择是否保留",
+            "v1.1.1": "写入strm使用utf-8编码",
+            "v1.1": "某种场景下可能出现卡死，修复bug",
+            "v1.0": "增量监控"
+        }
+    },
+    "StrmConvert": {
+        "name": "Strm文件模式转换",
+        "description": "Strm文件内容转为本地路径或者cd2/alist API路径。",
+        "labels": "云盘",
+        "version": "1.0",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/convert.png",
+        "author": "thsrite",
+        "level": 1,
+        "v2": true,
+        "history": {
+            "v1.0": "Strm文件内容转为本地路径或者cd2/alist API路径"
+        }
+    },
+    "SiteUnreadMsg": {
+        "name": "站点未读消息",
+        "description": "发送站点未读消息。",
+        "labels": "站点",
+        "version": "1.9",
+        "icon": "Synomail_A.png",
+        "author": "thsrite",
+        "level": 2,
+        "history": {
+            "v1.9": "同步主仓库",
+            "v1.8": "自定义保留消息天数",
+            "v1.7": "删除重复代码、依赖于[站点数据统计]插件",
+            "v1.6": "增加解析失败日志",
+            "v1.5": "修复馒头未读消息1",
+            "v1.4": "sync主仓库",
+            "v1.3": "feat mtorrent",
+            "v1.2": "站点消息历史存库",
+            "v1.1": "防止同一消息重复发送",
+            "v1.0": "定时获取站点消息"
+        }
+    },
+    "SubscribeClear": {
+        "name": "清理订阅缓存",
+        "description": "清理订阅已下载集数。",
+        "labels": "订阅",
+        "version": "1.0",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/broom.png",
+        "author": "thsrite",
+        "level": 2,
+        "v2": true,
+        "history": {
+            "v1.0": "清理订阅已下载集数"
+        }
+    },
+    "DownloadTorrent": {
+        "name": "添加种子下载",
+        "description": "选择下载器，添加种子任务。",
+        "labels": "站点",
+        "version": "1.1",
+        "icon": "download.png",
+        "author": "thsrite",
+        "level": 1,
+        "v2": true,
+        "history": {
+            "v1.1": "支持选择MoviePilot配置的下载路径",
+            "v1.0": "删除下载器中该站点辅种，保留该站点没有辅种的种子"
+        }
+    },
+    "RemoveTorrent": {
+        "name": "删除站点种子",
+        "description": "删除下载器中某站点种子。",
+        "labels": "站点",
+        "version": "1.2",
+        "icon": "delete.png",
+        "author": "thsrite",
+        "level": 1,
+        "v2": true,
+        "history": {
+            "v1.2": "修复删除种子bug",
+            "v1.1": "可选择删除有无辅种",
+            "v1.0": "选择下载器，添加种子任务"
+        }
+    },
+    "PluginAutoUpdate": {
+        "name": "插件更新管理",
+        "description": "监测已安装插件，推送更新提醒，可配置自动更新。",
+        "labels": "自动更新,插件管理",
+        "version": "2.0",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/pluginupdate.png",
+        "author": "thsrite",
+        "level": 1,
+        "v2": true,
+        "history": {
+            "v2.0": "修复插件显示版本问题",
+            "v1.9.2": "修复获取本地插件版本None，重新更新问题",
+            "v1.9.1": "修复bug",
+            "v1.9": "过滤相同ID插件，保留最新版本检查更新",
+            "v1.8": "修复已安装插件列表",
+            "v1.7": "插件API立即生效",
+            "v1.6": "插件重载，插件自动更新注册成为服务、命令",
+            "v1.5": "自动更新增加排除列表",
+            "v1.4": "正在运行的插件跳过更新，可选更新插件列表",
+            "v1.3": "配置更新提醒",
+            "v1.2": "重启后立即执行一遍更新插件",
+            "v1.1": "修复插件重载",
+            "v1.0": "监测已安装插件，自动更新最新版本"
+        }
+    },
+    "PluginReInstall": {
+        "name": "插件强制重装",
+        "description": "卸载当前插件，强制重装。",
+        "labels": "插件管理",
+        "version": "1.8",
+        "icon": "refresh.png",
+        "author": "thsrite",
+        "level": 1,
+        "v2": true,
+        "history": {
+            "v1.8": "修复插件显示版本问题",
+            "v1.7": "使用主程序GITHUB_PROXY代理",
+            "v1.6": "插件API立即生效",
+            "v1.5": "支持插件热重载",
+            "v1.4": "支持代理地址",
+            "v1.3": "插件重载",
+            "v1.2": "支持指定插件仓库地址",
+            "v1.1": "修复插件重载",
+            "v1.0": "卸载当前插件，强制重装"
+        }
+    },
+    "SynologyNotify": {
+        "name": "群辉Webhook通知",
+        "description": "接收群辉webhook通知并推送。",
+        "labels": "消息通知",
+        "version": "1.1",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/synology.png",
+        "author": "thsrite",
+        "level": 1,
+        "v2": true,
+        "history": {
+            "v1.1": "修复bug",
+            "v1.0": "接收群辉webhook通知并推送"
+        }
+    },
+    "SyncCookieCloud": {
+        "name": "同步CookieCloud",
+        "description": "同步MoviePilot站点Cookie到本地CookieCloud。",
+        "labels": "站点",
+        "version": "1.3",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cookiecloud.png",
+        "author": "thsrite",
+        "level": 1,
+        "history": {
+            "v1.3": "感谢MidnightShake共享代码（同步时保留MoviePilot不匹配站点的cookie）",
+            "v1.2": "同步到本地CookieCloud",
+            "v1.1": "修复CookieCloud覆盖到浏览器",
+            "v1.0": "同步MoviePilot站点Cookie到CookieCloud"
+        }
+    },
+    "ScheduleReminder": {
+        "name": "日程提醒",
+        "description": "自定义提醒事项、提醒时间。",
+        "labels": "消息通知",
+        "version": "1.0",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/reminder.png",
+        "author": "thsrite",
+        "level": 1,
+        "v2": true,
+        "history": {
+            "v1.0": "自定义提醒事项、提醒时间"
+        }
+    },
+    "SubscribeReminder": {
+        "name": "订阅提醒",
+        "description": "推送当天订阅更新内容。",
+        "labels": "订阅",
+        "version": "1.3",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/subscribe_reminder.png",
+        "author": "thsrite",
+        "level": 1,
+        "v2": true,
+        "history": {
+            "v1.3": "修复消息类型不生效",
+            "v1.2": "可选订阅类型、推送类型，随机获取订阅图片",
+            "v1.1": "fix icon",
+            "v1.0": "推送当天订阅更新内容"
+        }
+    },
+    "EmbyReporter": {
+        "name": "Emby观影报告",
+        "description": "推送Emby观影报告，需Emby安装Playback Report 插件。",
+        "labels": "Emby",
+        "version": "1.9.1",
+        "icon": "Pydiocells_A.png",
+        "author": "thsrite",
+        "level": 1,
+        "history": {
+            "v1.9.1": "修复媒体库黑名单设置",
+            "v1.9": "支持媒体库黑名单设置",
+            "v1.8": "推送微信增加时间戳，防止使用缓存",
+            "v1.7": "分块发送，兼容微信推送",
+            "v1.6": "fix #67",
+            "v1.5": "按观影市场排序",
+            "v1.4": "支持自定义emby && 支持每日一言",
+            "v1.3": "修复bug",
+            "v1.2": "过滤已删除媒体",
+            "v1.1": "修复推送",
+            "v1.0": "推送Emby观影报告"
+        }
+    },
+    "ActorSubscribe": {
+        "name": "演员订阅",
+        "description": "自动订阅指定演员热映电影、电视剧。",
+        "labels": "订阅",
+        "version": "2.1.1",
+        "icon": "Mdcng_A.png",
+        "author": "thsrite",
+        "level": 2,
+        "v2": true,
+        "history": {
+            "v2.1.1": "尝试修复未匹配到演员的bug",
+            "v2.1": "逻辑优化",
+            "v2.0": "修复订阅",
+            "v1.8": "支持自定义订阅username，默认`演员订阅`",
+            "v1.7": "修复bug",
+            "v1.6": "增加历史删除按钮",
+            "v1.5": "rename",
+            "v1.4": "支持多个订阅源",
+            "v1.3": "修复bug",
+            "v1.2": "修复订阅重复处理的bug",
+            "v1.1": "支持自定义分辨率、质量、特效",
+            "v1.0": "自动订阅豆瓣演员最新电影"
+        }
+    },
+    "ShortPlayMonitor": {
+        "name": "短剧刮削",
+        "description": "监控视频短剧创建，刮削。",
+        "labels": "刮削",
+        "version": "3.2",
+        "icon": "Amule_B.png",
+        "author": "thsrite",
+        "level": 1,
+        "v2": true,
+        "history": {
+            "v3.2": "支持消息发送",
+            "v3.1": "支持自定义转移方式",
+            "v3.0": "默认从tmdb刮削，刮削失败则从pt站刮削"
+        }
+    },
+    "CloudLinkMonitor": {
+        "name": "云盘实时监控",
+        "description": "监控云盘目录文件变化，自动转移链接。",
+        "labels": "云盘",
+        "version": "2.4.6",
+        "icon": "Linkease_A.png",
+        "author": "thsrite",
+        "level": 1,
+        "history": {
+            "v2.4.6": "修复bug",
+            "v2.4.5": "联动实时软连接插件（近媒体文件）",
+            "v2.4.4": "修复刷新媒体库",
+            "v2.4.3": "可选转移完刷新媒体库",
+            "v2.4.2": "fix #65",
+            "v2.4.1": "增加log",
+            "v2.4": "修复二级目录",
+            "v2.3": "去除无效变量",
+            "v2.2": "优化配置一二级分类流程",
+            "v2.1": "可配置是否存储转移记录",
+            "v2.0": "修复不刮削不生效bug",
+            "v1.8": "fix S00转移",
+            "v1.7": "fix 刮削",
+            "v1.6": "可配置是否刮削",
+            "v1.5": "fix 消息推送",
+            "v1.4": "fix 转移后路径",
+            "v1.3": "修复bug",
+            "v1.2": "修复订阅重复处理的bug",
+            "v1.1": "自动转移链接（不刮削）",
+            "v1.0": "监控云盘目录文件变化，按原文件名软连接"
+        }
+    },
+    "LinkToSrc": {
+        "name": "源文件恢复",
+        "description": "根据MoviePilot的转移记录中的硬链文件恢复源文件。",
+        "labels": "媒体库",
+        "version": "1.2",
+        "icon": "Time_machine_A.png",
+        "author": "thsrite",
+        "level": 1,
+        "v2": true,
+        "history": {
+            "v1.2": "fix 路径",
+            "v1.1": "支持指定需要恢复的硬链接目录",
+            "v1.0": "根据MoviePilot的转移记录中的硬链文件恢复源文件"
+        }
+    },
+    "WeChatForward": {
+        "name": "微信消息转发",
+        "description": "根据正则转发通知到其他WeChat应用。",
+        "labels": "消息通知",
+        "version": "2.7",
+        "icon": "Wechat_A.png",
+        "author": "thsrite",
+        "level": 1,
+        "history": {
+            "v2.7": "特殊消息指定用户支持title匹配",
+            "v2.6": "已完成订阅额外消息查询订阅历史订阅用户",
+            "v2.5.1": "修复token过期重发未存储userid问题",
+            "v2.5": "增强额外消息发送",
+            "v2.4": "修复配置修改后不重建缓存bug",
+            "v2.3": "增加重建缓存，丰富转发历史",
+            "v2.2": "增加消息发送历史",
+            "v2.1": "微信配置持久化存库",
+            "v2.0": "优化微信配置，兼容旧版本配置",
+            "v1.6": "修改获取指定用户订阅列表方法",
+            "v1.5": "丰富日志",
+            "v1.4": "特定消息强制指定userid",
+            "v1.3": "防重复发送额外消息",
+            "v1.2": "fix规则",
+            "v1.1": "自定义发送额外消息",
+            "v1.0": "根据正则转发通知到其他WeChat应用"
+        }
+    },
+    "SubscribeStatistic": {
+        "name": "订阅下载统计",
+        "description": "统计指定时间内各站点订阅及下载情况。",
+        "labels": "订阅",
+        "version": "1.6",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/subscribestatistic.png",
+        "author": "thsrite",
+        "level": 1,
+        "v2": true,
+        "history": {
+            "v1.6": "调整page页及消息",
+            "v1.5": "增加消息推送",
+            "v1.4": "无订阅站点也统计数量",
+            "v1.3": "fix 数据统计",
+            "v1.2": "fix 订阅数量",
+            "v1.1": "站点去重",
+            "v1.0": "统计指定时间内各站点订阅及下载情况"
+        }
+    },
+    "CustomCommand": {
+        "name": "自定义命令",
+        "description": "自定义执行周期执行命令并推送结果。",
+        "labels": "自定义命令",
+        "version": "1.7",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/code.png",
+        "author": "thsrite",
+        "level": 1,
+        "v2": true,
+        "history": {
+            "v1.7": "自定义通知关键词",
+            "v1.6": "自定义保留消息天数",
+            "v1.5": "修复多个任务立即运行一次",
+            "v1.4": "fix icon",
+            "v1.3": "清除历史记录",
+            "v1.2": "增加执行历史",
+            "v1.1": "打印命令日志",
+            "v1.0": "自定义执行周期执行命令并推送结果"
+        }
+    },
+    "DockerManager": {
+        "name": "docker自定义任务",
+        "description": "管理宿主机docker，自定义容器定时任务。",
+        "labels": "自定义命令",
+        "version": "1.3",
+        "icon": "Docker_F.png",
+        "author": "thsrite",
+        "level": 1,
+        "v2": true,
+        "history": {
+            "v1.3": "自定义保留消息天数",
+            "v1.2": "多个容器名,拼接",
+            "v1.1": "修复多个任务立即运行一次",
+            "v1.0": "init"
+        }
+    },
+    "PluginUnInstall": {
+        "name": "插件彻底卸载",
+        "description": "删除数据库中已安装插件记录、清理插件文件。",
+        "labels": "插件管理",
+        "version": "1.2",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/uninstall.png",
+        "author": "thsrite",
+        "level": 1,
+        "v2": true,
+        "history": {
+            "v1.2": "卸载时先停止注册服务",
+            "v1.1": "可选删除插件配置及数据",
+            "v1.0": "init"
+        }
+    },
+    "FileSoftLink": {
+        "name": "实时软连接",
+        "description": "监控目录文件变化，媒体文件软连接，其他文件可选复制。",
+        "labels": "文件管理",
+        "version": "2.0.2",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png",
+        "author": "thsrite",
+        "level": 1,
+        "history": {
+            "v2.0.2": "增加同步间隔",
+            "v2.0.1": "不重要的更新",
+            "v2.0": "修复交互命令",
+            "v1.9.9": "交互命令更多玩法",
+            "v1.9.8": "新增模糊匹配交互命令",
+            "v1.9.7": "接收云盘实时监控处理单文件",
+            "v1.9.6": "优化log",
+            "v1.9.5": "增强交互命令",
+            "v1.9.4": "监控目录自定义监控模式",
+            "v1.9.3": "增强交互命令模糊匹配",
+            "v1.9.2": "增强交互命令模糊匹配",
+            "v1.9.1": "增强交互命令",
+            "v1.9": "交互命令定向软连接",
+            "v1.8": "修复bug",
+            "v1.6": "bug修复",
+            "v1.5": "优化性能，提高处理速度",
+            "v1.4": "支持自定义视频格式",
+            "v1.3": "异步启动"
+        }
+    },
+    "SubscribeGroup": {
+        "name": "订阅规则自动填充",
+        "description": "电视剧下载后自动添加官组等信息到订阅；添加订阅后根据二级分类名称自定义订阅规则。",
+        "labels": "订阅",
+        "version": "2.7",
+        "icon": "teamwork.png",
+        "author": "thsrite",
+        "level": 2,
+        "history": {
+            "v2.7": "下载填充判断当前站点是否在已选订阅站点范围内",
+            "v2.6": "兼容属性值包含:号",
+            "v2.5": "操作历史Unicode编码转中文",
+            "v2.4": "保存路径支持变量{name} （订阅名称 (年份)）",
+            "v2.3": "二级分类自定义填充支持保存路径",
+            "v2.1": "站点与官组分开，修复质量无填充",
+            "v2.0": "种子下载自定义填充支持自定义占位符",
+            "v1.8": "修复种子下载不填充bug",
+            "v1.7": "操作历史Unicode编码转中文",
+            "v1.6": "支持一行配置多个二级分类名称",
+            "v1.5": "支持操作历史",
+            "v1.4": "支持根据二级分类名称自定义订阅规则",
+            "v1.3": "增加质量、分辨率、特效信息填充",
+            "v1.2": "修复订阅已存在包含关键词和订阅站点"
+        }
+    },
+    "EmbyMetaRefresh": {
+        "name": "Emby元数据刷新",
+        "description": "定时刷新Emby媒体库元数据，演职人员中文。",
+        "labels": "Emby",
+        "version": "1.7.4",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png",
+        "author": "thsrite",
+        "level": 1,
+        "history": {
+            "v1.7.4": "获取tmdb图片使用PROXY_HOST代理",
+            "v1.7.3": "优化剧集演员刮削",
+            "v1.7.2": "优化剧集演员刮削",
+            "v1.7.1": "修复演员刮削",
+            "v1.7": "精细化刷新，最新入库支持刷新单集演职人员中文",
+            "v1.6": "修复豆瓣查询bug，丰富日志",
+            "v1.5": "支持刷新演员中文路径关键词（多个英文逗号分隔）。建议覆盖元数据修改为False，防止演员中文被刷新覆盖",
+            "v1.4": "支持刷新演员中文",
+            "v1.3": "支持自定义覆盖元数据、图片",
+            "v1.2": "支持获取Emby最新媒体刷新",
+            "v1.1": "添加远程交互命令",
+            "v1.0": "定时刷新Emby媒体库元数据"
+        }
+    },
+    "EmbyMetaTag": {
+        "name": "Emby媒体标签",
+        "description": "自动给媒体库媒体添加标签。",
+        "labels": "Emby",
+        "version": "1.2",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/tag.png",
+        "author": "thsrite",
+        "level": 1,
+        "history": {
+            "v1.2": "支持指定特殊媒体名称添加标签",
+            "v1.1": "添加远程交互命令",
+            "v1.0": "自动给媒体库媒体添加标签"
+        }
+    },
+    "PopularSubscribe": {
+        "name": "热门媒体订阅",
+        "description": "自动添加热门电影、电视剧、动漫到订阅。",
+        "labels": "订阅",
+        "version": "1.7",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/popular.png",
+        "author": "thsrite",
+        "level": 1,
+        "v2": true,
+        "history": {
+            "v1.7": "调整订阅用户名，默认：热门订阅",
+            "v1.6": "调整历史unique唯一索引（可删除本次更新后的历史）",
+            "v1.5": "修复电视剧订阅、订阅历史展示",
+            "v1.4": "动漫单独订阅（本子佬启动！）",
+            "v1.3": "增加立即运行、历史删除按钮",
+            "v1.2": "增加历史删除按钮",
+            "v1.1": "修正流行度校验",
+            "v1.0": "自动添加热门媒体到订阅"
+        }
+    },
+    "HomePage": {
+        "name": "HomePage",
+        "description": "HomePage自定义API。",
+        "labels": "工具",
+        "version": "1.2",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/homepage.png",
+        "author": "thsrite",
+        "level": 1,
+        "history": {
+            "v1.2": "适配v1.9.1-beta（不生效就重启）",
+            "v1.1": "支持更多返回值、插件展示数据",
+            "v1.0": "HomePage自定义API"
+        }
+    },
+    "DirMonitorEnhanced": {
+        "name": "目录监控",
+        "description": "监控目录文件发生变化时实时整理到媒体库。(统一入库消息增强版)（测试中-.-）",
+        "labels": "文件整理",
+        "version": "1.0",
+        "icon": "directory.png",
+        "author": "thsrite",
+        "level": 1,
+        "history": {
+            "v1.0": "同步merge主仓库[目录监控]插件，增加统一发送消息逻辑（Testing…）"
+        }
+    },
+    "SqlExecute": {
+        "name": "Sql执行器",
+        "description": "自定义MoviePilot数据库Sql执行。",
+        "labels": "工具",
+        "version": "1.3",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/sqlite.png",
+        "author": "thsrite",
+        "level": 1,
+        "history": {
+            "v1.3": "修复执行delete锁表失败的bug",
+            "v1.2": "调整交互命令返回信息",
+            "v1.1": "支持交互命令/sql [command]执行，需主程序1.9.4+",
+            "v1.0": "自定义MoviePilot数据库Sql执行"
+        }
+    },
+    "CommandExecute": {
+        "name": "命令执行器",
+        "description": "自定义容器命令执行。",
+        "labels": "工具",
+        "version": "1.2",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/command.png",
+        "author": "thsrite",
+        "level": 1,
+        "history": {
+            "v1.2": "调整交互命令返回信息",
+            "v1.1": "支持交互命令/cmd [sql]执行，需主程序1.9.4+",
+            "v1.0": "自定义容器命令执行"
+        }
+    },
+    "Cd2Assistant": {
+        "name": "CloudDrive2助手",
+        "description": "监控上传任务，检测是否有异常，发送通知。",
+        "labels": "云盘",
+        "version": "1.8.4",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png",
+        "author": "thsrite",
+        "level": 2,
+        "history": {
+            "v1.8.4": "添加115 429消息通知",
+            "v1.8.3": "添加异常处理，解决cd2上本地目录获取存储空间失败的问题",
+            "v1.8.2": "插件页面密码类型设置为pasword",
+            "v1.8.1": "云下载支持自定义路径 /cd /cd2路径 磁链",
+            "v1.8": "修复插件依赖安装问题",
+            "v1.7": "增加HomePage自定义API（详见插件说明）",
+            "v1.6": "支持交互命令云下载",
+            "v1.5": "增加云盘同步黑名单（排序挂载本地目录）",
+            "v1.4": "增加云盘存储空间展示",
+            "v1.3": "增加云盘Cookie失效检测",
+            "v1.2": "实时速率显示",
+            "v1.1": "交互命令重启cd2、获取cd2系统信息，支持仪表盘",
+            "v1.0": "监控上传任务，检测是否有异常，发送通知"
+        }
+    },
+    "SoftLinkRedirect": {
+        "name": "软连接重定向",
+        "description": "重定向软连接指向。",
+        "labels": "云盘",
+        "version": "1.2",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlinkredirect.png",
+        "author": "thsrite",
+        "level": 2,
+        "v2": true,
+        "history": {
+            "v1.2": "修复重定向",
+            "v1.1": "不删除软连接，强制更新重定向",
+            "v1.0": "重定向软连接指向"
+        }
+    },
+    "CloudSyncDel": {
+        "name": "云盘同步删除",
+        "description": "媒体库删除软连接文件后，同步删除云盘文件。",
+        "labels": "云盘",
+        "version": "1.5.5",
+        "icon": "clouddisk.png",
+        "author": "thsrite",
+        "level": 2,
+        "v2": true,
+        "history": {
+            "v1.5.5": "兼容strm删除",
+            "v1.5.4": "fix插件历史ui",
+            "v1.5.3": "修复删除文件夹包含本地+云盘的场景",
+            "v1.5.2": "修复直接删除本地文件夹的场景",
+            "v1.5.1": "不重要的更新",
+            "v1.5": "支持软连接指向本地路径的同步删除",
+            "v1.4": "插件删除历史",
+            "v1.3.1": "添加log",
+            "v1.3": "同步删除thumb图片",
+            "v1.2": "修复删除bug",
+            "v1.1": "增加测试模式按钮（不删除文件）",
+            "v1.0": "媒体库删除软连接文件后，同步删除云盘文件"
+        }
+    },
+    "ActorSubscribePlus": {
+        "name": "演员作品订阅",
+        "description": "获取TMDB演员作品，并自动添加到订阅。",
+        "labels": "订阅",
+        "version": "1.1",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/actorsubscribeplus.png",
+        "author": "thsrite",
+        "level": 2,
+        "v2": true,
+        "history": {
+            "v1.1": "无评分默认评分0",
+            "v1.0": "获取TMDB演员作品，并自动添加到订阅"
+        }
+    },
+    "FileCopy": {
+        "name": "文件复制",
+        "description": "自定义文件类型从源目录复制到目的目录。",
+        "labels": "工具",
+        "version": "1.1",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/copy_files.png",
+        "author": "thsrite",
+        "level": 1,
+        "v2": true,
+        "history": {
+            "v1.1": "增加log显示",
+            "v1.0": "自定义文件类型从源目录复制到目的目录"
+        }
+    },
+    "EmbyCollectionSort": {
+        "name": "Emby合集媒体排序",
+        "description": "Emby保留按照加入时间倒序的前提下，把合集中的媒体按照发布日期排序，修改加入时间已到达顺序排列的目的。",
+        "labels": "媒体库",
+        "version": "1.1",
+        "icon": "Element_A.png",
+        "author": "thsrite",
+        "level": 1,
+        "history": {
+            "v1.1": "优化处理逻辑",
+            "v1.0": "保留按照加入时间倒序的前提下，把合集中的媒体放一块，不用到处找。"
+        }
+    },
+    "MediaRelease": {
+        "name": "影视将映订阅",
+        "description": "监控未上线影视作品，自动添加订阅。",
+        "labels": "订阅",
+        "version": "1.1",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/mediarelease.png",
+        "author": "thsrite",
+        "level": 1,
+        "history": {
+            "v1.1": "bug修复",
+            "v1.0": "监控未上线影视作品，自动添加订阅。"
+        }
+    },
+    "EmbyExtendType": {
+        "name": "Emby视频类型检查",
+        "description": "定期检查Emby媒体库中是否包含指定的视频类型，发送通知。",
+        "labels": "Emby,媒体库",
+        "version": "1.0",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/extendtype.png",
+        "author": "thsrite",
+        "level": 1,
+        "history": {
+            "v1.0": "定期检查Emby媒体库中是否包含指定的视频类型，发送通知。"
+        }
+    },
+    "EmbyAudioBook": {
+        "name": "Emby有声书整理",
+        "description": "还在为Emby有声书整理烦恼吗？入库存在很多单集？",
+        "labels": "Emby,媒体库",
+        "version": "1.1",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/audiobook.png",
+        "author": "thsrite",
+        "level": 1,
+        "history": {
+            "v1.1": "整理完锁定，防止数据被刷新",
+            "v1.0": "还在为Emby有声书整理烦恼吗？入库存在很多单集。"
+        }
+    },
+    "EmbyDanmu": {
+        "name": "Emby弹幕下载",
+        "description": "通知Emby Danmu插件下载弹幕。",
+        "labels": "Emby,媒体库",
+        "version": "1.2",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/danmu.png",
+        "author": "thsrite",
+        "level": 1,
+        "history": {
+            "v1.2": "检查本地弹幕文件是否已存在，避免重复下载。",
+            "v1.1": "解析Emby日志，判断已配置弹幕源是否全部匹配失败。",
+            "v1.0": "通知Emby Danmu插件下载弹幕。"
+        }
+    },
+    "EmbyActorSync": {
+        "name": "Emby剧集演员同步",
+        "description": "同步剧演员信息到集演员信息。",
+        "labels": "Emby,媒体库",
+        "version": "1.3",
+        "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/embyactorsync.png",
+        "author": "thsrite",
+        "level": 1,
+        "history": {
+            "v1.3": "剧集优先使用季演员。",
+            "v1.2": "交互命令返回处理完成信息。",
+            "v1.1": "支持交互命令手动同步单个剧集 /as 媒体库名 剧集名。",
+            "v1.0": "同步剧演员信息到集演员信息。"
+        }
     }
-  },
-  "CloudStrmIncrement": {
-    "name": "云盘Strm生成（增量版）",
-    "description": "监控文件创建，生成Strm文件（增量版）。",
-    "labels": "云盘",
-    "version": "1.1.2",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png",
-    "author": "thsrite",
-    "level": 1,
-    "v2": true,
-    "history": {
-      "v1.1.2": "增量文件可选择是否保留",
-      "v1.1.1": "写入strm使用utf-8编码",
-      "v1.1": "某种场景下可能出现卡死，修复bug",
-      "v1.0": "增量监控"
-    }
-  },
-  "StrmConvert": {
-    "name": "Strm文件模式转换",
-    "description": "Strm文件内容转为本地路径或者cd2/alist API路径。",
-    "labels": "云盘",
-    "version": "1.0",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/convert.png",
-    "author": "thsrite",
-    "level": 1,
-    "v2": true,
-    "history": {
-      "v1.0": "Strm文件内容转为本地路径或者cd2/alist API路径"
-    }
-  },
-  "SiteUnreadMsg": {
-    "name": "站点未读消息",
-    "description": "发送站点未读消息。",
-    "labels": "站点",
-    "version": "1.9",
-    "icon": "Synomail_A.png",
-    "author": "thsrite",
-    "level": 2,
-    "history": {
-      "v1.9": "同步主仓库",
-      "v1.8": "自定义保留消息天数",
-      "v1.7": "删除重复代码、依赖于[站点数据统计]插件",
-      "v1.6": "增加解析失败日志",
-      "v1.5": "修复馒头未读消息1",
-      "v1.4": "sync主仓库",
-      "v1.3": "feat mtorrent",
-      "v1.2": "站点消息历史存库",
-      "v1.1": "防止同一消息重复发送",
-      "v1.0": "定时获取站点消息"
-    }
-  },
-  "SubscribeClear": {
-    "name": "清理订阅缓存",
-    "description": "清理订阅已下载集数。",
-    "labels": "订阅",
-    "version": "1.0",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/broom.png",
-    "author": "thsrite",
-    "level": 2,
-    "v2": true,
-    "history": {
-      "v1.0": "清理订阅已下载集数"
-    }
-  },
-  "DownloadTorrent": {
-    "name": "添加种子下载",
-    "description": "选择下载器，添加种子任务。",
-    "labels": "站点",
-    "version": "1.1",
-    "icon": "download.png",
-    "author": "thsrite",
-    "level": 1,
-    "v2": true,
-    "history": {
-      "v1.1": "支持选择MoviePilot配置的下载路径",
-      "v1.0": "删除下载器中该站点辅种，保留该站点没有辅种的种子"
-    }
-  },
-  "RemoveTorrent": {
-    "name": "删除站点种子",
-    "description": "删除下载器中某站点种子。",
-    "labels": "站点",
-    "version": "1.2",
-    "icon": "delete.png",
-    "author": "thsrite",
-    "level": 1,
-    "v2": true,
-    "history": {
-      "v1.2": "修复删除种子bug",
-      "v1.1": "可选择删除有无辅种",
-      "v1.0": "选择下载器，添加种子任务"
-    }
-  },
-  "PluginAutoUpdate": {
-    "name": "插件更新管理",
-    "description": "监测已安装插件，推送更新提醒，可配置自动更新。",
-    "labels": "自动更新,插件管理",
-    "version": "2.0",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/pluginupdate.png",
-    "author": "thsrite",
-    "level": 1,
-    "v2": true,
-    "history": {
-      "v2.0": "修复插件显示版本问题",
-      "v1.9.2": "修复获取本地插件版本None，重新更新问题",
-      "v1.9.1": "修复bug",
-      "v1.9": "过滤相同ID插件，保留最新版本检查更新",
-      "v1.8": "修复已安装插件列表",
-      "v1.7": "插件API立即生效",
-      "v1.6": "插件重载，插件自动更新注册成为服务、命令",
-      "v1.5": "自动更新增加排除列表",
-      "v1.4": "正在运行的插件跳过更新，可选更新插件列表",
-      "v1.3": "配置更新提醒",
-      "v1.2": "重启后立即执行一遍更新插件",
-      "v1.1": "修复插件重载",
-      "v1.0": "监测已安装插件，自动更新最新版本"
-    }
-  },
-  "PluginReInstall": {
-    "name": "插件强制重装",
-    "description": "卸载当前插件，强制重装。",
-    "labels": "插件管理",
-    "version": "1.8",
-    "icon": "refresh.png",
-    "author": "thsrite",
-    "level": 1,
-    "v2": true,
-    "history": {
-      "v1.8": "修复插件显示版本问题",
-      "v1.7": "使用主程序GITHUB_PROXY代理",
-      "v1.6": "插件API立即生效",
-      "v1.5": "支持插件热重载",
-      "v1.4": "支持代理地址",
-      "v1.3": "插件重载",
-      "v1.2": "支持指定插件仓库地址",
-      "v1.1": "修复插件重载",
-      "v1.0": "卸载当前插件，强制重装"
-    }
-  },
-  "SynologyNotify": {
-    "name": "群辉Webhook通知",
-    "description": "接收群辉webhook通知并推送。",
-    "labels": "消息通知",
-    "version": "1.1",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/synology.png",
-    "author": "thsrite",
-    "level": 1,
-    "v2": true,
-    "history": {
-      "v1.1": "修复bug",
-      "v1.0": "接收群辉webhook通知并推送"
-    }
-  },
-  "SyncCookieCloud": {
-    "name": "同步CookieCloud",
-    "description": "同步MoviePilot站点Cookie到本地CookieCloud。",
-    "labels": "站点",
-    "version": "1.3",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cookiecloud.png",
-    "author": "thsrite",
-    "level": 1,
-    "history": {
-      "v1.3": "感谢MidnightShake共享代码（同步时保留MoviePilot不匹配站点的cookie）",
-      "v1.2": "同步到本地CookieCloud",
-      "v1.1": "修复CookieCloud覆盖到浏览器",
-      "v1.0": "同步MoviePilot站点Cookie到CookieCloud"
-    }
-  },
-  "ScheduleReminder": {
-    "name": "日程提醒",
-    "description": "自定义提醒事项、提醒时间。",
-    "labels": "消息通知",
-    "version": "1.0",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/reminder.png",
-    "author": "thsrite",
-    "level": 1,
-    "v2": true,
-    "history": {
-      "v1.0": "自定义提醒事项、提醒时间"
-    }
-  },
-  "SubscribeReminder": {
-    "name": "订阅提醒",
-    "description": "推送当天订阅更新内容。",
-    "labels": "订阅",
-    "version": "1.3",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/subscribe_reminder.png",
-    "author": "thsrite",
-    "level": 1,
-    "v2": true,
-    "history": {
-      "v1.3": "修复消息类型不生效",
-      "v1.2": "可选订阅类型、推送类型，随机获取订阅图片",
-      "v1.1": "fix icon",
-      "v1.0": "推送当天订阅更新内容"
-    }
-  },
-  "EmbyReporter": {
-    "name": "Emby观影报告",
-    "description": "推送Emby观影报告，需Emby安装Playback Report 插件。",
-    "labels": "Emby",
-    "version": "1.9.1",
-    "icon": "Pydiocells_A.png",
-    "author": "thsrite",
-    "level": 1,
-    "history": {
-      "v1.9.1": "修复媒体库黑名单设置",
-      "v1.9": "支持媒体库黑名单设置",
-      "v1.8": "推送微信增加时间戳，防止使用缓存",
-      "v1.7": "分块发送，兼容微信推送",
-      "v1.6": "fix #67",
-      "v1.5": "按观影市场排序",
-      "v1.4": "支持自定义emby && 支持每日一言",
-      "v1.3": "修复bug",
-      "v1.2": "过滤已删除媒体",
-      "v1.1": "修复推送",
-      "v1.0": "推送Emby观影报告"
-    }
-  },
-  "ActorSubscribe": {
-    "name": "演员订阅",
-    "description": "自动订阅指定演员热映电影、电视剧。",
-    "labels": "订阅",
-    "version": "2.1.1",
-    "icon": "Mdcng_A.png",
-    "author": "thsrite",
-    "level": 2,
-    "v2": true,
-    "history": {
-      "v2.1.1": "尝试修复未匹配到演员的bug",
-      "v2.1": "逻辑优化",
-      "v2.0": "修复订阅",
-      "v1.8": "支持自定义订阅username，默认`演员订阅`",
-      "v1.7": "修复bug",
-      "v1.6": "增加历史删除按钮",
-      "v1.5": "rename",
-      "v1.4": "支持多个订阅源",
-      "v1.3": "修复bug",
-      "v1.2": "修复订阅重复处理的bug",
-      "v1.1": "支持自定义分辨率、质量、特效",
-      "v1.0": "自动订阅豆瓣演员最新电影"
-    }
-  },
-  "ShortPlayMonitor": {
-    "name": "短剧刮削",
-    "description": "监控视频短剧创建，刮削。",
-    "labels": "刮削",
-    "version": "3.2",
-    "icon": "Amule_B.png",
-    "author": "thsrite",
-    "level": 1,
-    "v2": true,
-    "history": {
-      "v3.2": "支持消息发送",
-      "v3.1": "支持自定义转移方式",
-      "v3.0": "默认从tmdb刮削，刮削失败则从pt站刮削"
-    }
-  },
-  "CloudLinkMonitor": {
-    "name": "云盘实时监控",
-    "description": "监控云盘目录文件变化，自动转移链接。",
-    "labels": "云盘",
-    "version": "2.4.6",
-    "icon": "Linkease_A.png",
-    "author": "thsrite",
-    "level": 1,
-    "history": {
-      "v2.4.6": "修复bug",
-      "v2.4.5": "联动实时软连接插件（近媒体文件）",
-      "v2.4.4": "修复刷新媒体库",
-      "v2.4.3": "可选转移完刷新媒体库",
-      "v2.4.2": "fix #65",
-      "v2.4.1": "增加log",
-      "v2.4": "修复二级目录",
-      "v2.3": "去除无效变量",
-      "v2.2": "优化配置一二级分类流程",
-      "v2.1": "可配置是否存储转移记录",
-      "v2.0": "修复不刮削不生效bug",
-      "v1.8": "fix S00转移",
-      "v1.7": "fix 刮削",
-      "v1.6": "可配置是否刮削",
-      "v1.5": "fix 消息推送",
-      "v1.4": "fix 转移后路径",
-      "v1.3": "修复bug",
-      "v1.2": "修复订阅重复处理的bug",
-      "v1.1": "自动转移链接（不刮削）",
-      "v1.0": "监控云盘目录文件变化，按原文件名软连接"
-    }
-  },
-  "LinkToSrc": {
-    "name": "源文件恢复",
-    "description": "根据MoviePilot的转移记录中的硬链文件恢复源文件。",
-    "labels": "媒体库",
-    "version": "1.2",
-    "icon": "Time_machine_A.png",
-    "author": "thsrite",
-    "level": 1,
-    "v2": true,
-    "history": {
-      "v1.2": "fix 路径",
-      "v1.1": "支持指定需要恢复的硬链接目录",
-      "v1.0": "根据MoviePilot的转移记录中的硬链文件恢复源文件"
-    }
-  },
-  "WeChatForward": {
-    "name": "微信消息转发",
-    "description": "根据正则转发通知到其他WeChat应用。",
-    "labels": "消息通知",
-    "version": "2.7",
-    "icon": "Wechat_A.png",
-    "author": "thsrite",
-    "level": 1,
-    "history": {
-      "v2.7": "特殊消息指定用户支持title匹配",
-      "v2.6": "已完成订阅额外消息查询订阅历史订阅用户",
-      "v2.5.1": "修复token过期重发未存储userid问题",
-      "v2.5": "增强额外消息发送",
-      "v2.4": "修复配置修改后不重建缓存bug",
-      "v2.3": "增加重建缓存，丰富转发历史",
-      "v2.2": "增加消息发送历史",
-      "v2.1": "微信配置持久化存库",
-      "v2.0": "优化微信配置，兼容旧版本配置",
-      "v1.6": "修改获取指定用户订阅列表方法",
-      "v1.5": "丰富日志",
-      "v1.4": "特定消息强制指定userid",
-      "v1.3": "防重复发送额外消息",
-      "v1.2": "fix规则",
-      "v1.1": "自定义发送额外消息",
-      "v1.0": "根据正则转发通知到其他WeChat应用"
-    }
-  },
-  "SubscribeStatistic": {
-    "name": "订阅下载统计",
-    "description": "统计指定时间内各站点订阅及下载情况。",
-    "labels": "订阅",
-    "version": "1.6",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/subscribestatistic.png",
-    "author": "thsrite",
-    "level": 1,
-    "v2": true,
-    "history": {
-      "v1.6": "调整page页及消息",
-      "v1.5": "增加消息推送",
-      "v1.4": "无订阅站点也统计数量",
-      "v1.3": "fix 数据统计",
-      "v1.2": "fix 订阅数量",
-      "v1.1": "站点去重",
-      "v1.0": "统计指定时间内各站点订阅及下载情况"
-    }
-  },
-  "CustomCommand": {
-    "name": "自定义命令",
-    "description": "自定义执行周期执行命令并推送结果。",
-    "labels": "自定义命令",
-    "version": "1.7",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/code.png",
-    "author": "thsrite",
-    "level": 1,
-    "v2": true,
-    "history": {
-      "v1.7": "自定义通知关键词",
-      "v1.6": "自定义保留消息天数",
-      "v1.5": "修复多个任务立即运行一次",
-      "v1.4": "fix icon",
-      "v1.3": "清除历史记录",
-      "v1.2": "增加执行历史",
-      "v1.1": "打印命令日志",
-      "v1.0": "自定义执行周期执行命令并推送结果"
-    }
-  },
-  "DockerManager": {
-    "name": "docker自定义任务",
-    "description": "管理宿主机docker，自定义容器定时任务。",
-    "labels": "自定义命令",
-    "version": "1.3",
-    "icon": "Docker_F.png",
-    "author": "thsrite",
-    "level": 1,
-    "v2": true,
-    "history": {
-      "v1.3": "自定义保留消息天数",
-      "v1.2": "多个容器名,拼接",
-      "v1.1": "修复多个任务立即运行一次",
-      "v1.0": "init"
-    }
-  },
-  "PluginUnInstall": {
-    "name": "插件彻底卸载",
-    "description": "删除数据库中已安装插件记录、清理插件文件。",
-    "labels": "插件管理",
-    "version": "1.2",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/uninstall.png",
-    "author": "thsrite",
-    "level": 1,
-    "v2": true,
-    "history": {
-      "v1.2": "卸载时先停止注册服务",
-      "v1.1": "可选删除插件配置及数据",
-      "v1.0": "init"
-    }
-  },
-  "FileSoftLink": {
-    "name": "实时软连接",
-    "description": "监控目录文件变化，媒体文件软连接，其他文件可选复制。",
-    "labels": "文件管理",
-    "version": "2.0.2",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png",
-    "author": "thsrite",
-    "level": 1,
-    "history": {
-      "v2.0.2": "增加同步间隔",
-      "v2.0.1": "不重要的更新",
-      "v2.0": "修复交互命令",
-      "v1.9.9": "交互命令更多玩法",
-      "v1.9.8": "新增模糊匹配交互命令",
-      "v1.9.7": "接收云盘实时监控处理单文件",
-      "v1.9.6": "优化log",
-      "v1.9.5": "增强交互命令",
-      "v1.9.4": "监控目录自定义监控模式",
-      "v1.9.3": "增强交互命令模糊匹配",
-      "v1.9.2": "增强交互命令模糊匹配",
-      "v1.9.1": "增强交互命令",
-      "v1.9": "交互命令定向软连接",
-      "v1.8": "修复bug",
-      "v1.6": "bug修复",
-      "v1.5": "优化性能，提高处理速度",
-      "v1.4": "支持自定义视频格式",
-      "v1.3": "异步启动"
-    }
-  },
-  "SubscribeGroup": {
-    "name": "订阅规则自动填充",
-    "description": "电视剧下载后自动添加官组等信息到订阅；添加订阅后根据二级分类名称自定义订阅规则。",
-    "labels": "订阅",
-    "version": "2.7",
-    "icon": "teamwork.png",
-    "author": "thsrite",
-    "level": 2,
-    "history": {
-      "v2.7": "下载填充判断当前站点是否在已选订阅站点范围内",
-      "v2.6": "兼容属性值包含:号",
-      "v2.5": "操作历史Unicode编码转中文",
-      "v2.4": "保存路径支持变量{name} （订阅名称 (年份)）",
-      "v2.3": "二级分类自定义填充支持保存路径",
-      "v2.1": "站点与官组分开，修复质量无填充",
-      "v2.0": "种子下载自定义填充支持自定义占位符",
-      "v1.8": "修复种子下载不填充bug",
-      "v1.7": "操作历史Unicode编码转中文",
-      "v1.6": "支持一行配置多个二级分类名称",
-      "v1.5": "支持操作历史",
-      "v1.4": "支持根据二级分类名称自定义订阅规则",
-      "v1.3": "增加质量、分辨率、特效信息填充",
-      "v1.2": "修复订阅已存在包含关键词和订阅站点"
-    }
-  },
-  "EmbyMetaRefresh": {
-    "name": "Emby元数据刷新",
-    "description": "定时刷新Emby媒体库元数据，演职人员中文。",
-    "labels": "Emby",
-    "version": "1.7.4",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png",
-    "author": "thsrite",
-    "level": 1,
-    "history": {
-      "v1.7.4": "获取tmdb图片使用PROXY_HOST代理",
-      "v1.7.3": "优化剧集演员刮削",
-      "v1.7.2": "优化剧集演员刮削",
-      "v1.7.1": "修复演员刮削",
-      "v1.7": "精细化刷新，最新入库支持刷新单集演职人员中文",
-      "v1.6": "修复豆瓣查询bug，丰富日志",
-      "v1.5": "支持刷新演员中文路径关键词（多个英文逗号分隔）。建议覆盖元数据修改为False，防止演员中文被刷新覆盖",
-      "v1.4": "支持刷新演员中文",
-      "v1.3": "支持自定义覆盖元数据、图片",
-      "v1.2": "支持获取Emby最新媒体刷新",
-      "v1.1": "添加远程交互命令",
-      "v1.0": "定时刷新Emby媒体库元数据"
-    }
-  },
-  "EmbyMetaTag": {
-    "name": "Emby媒体标签",
-    "description": "自动给媒体库媒体添加标签。",
-    "labels": "Emby",
-    "version": "1.2",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/tag.png",
-    "author": "thsrite",
-    "level": 1,
-    "history": {
-      "v1.2": "支持指定特殊媒体名称添加标签",
-      "v1.1": "添加远程交互命令",
-      "v1.0": "自动给媒体库媒体添加标签"
-    }
-  },
-  "PopularSubscribe": {
-    "name": "热门媒体订阅",
-    "description": "自动添加热门电影、电视剧、动漫到订阅。",
-    "labels": "订阅",
-    "version": "1.7",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/popular.png",
-    "author": "thsrite",
-    "level": 1,
-    "v2": true,
-    "history": {
-      "v1.7": "调整订阅用户名，默认：热门订阅",
-      "v1.6": "调整历史unique唯一索引（可删除本次更新后的历史）",
-      "v1.5": "修复电视剧订阅、订阅历史展示",
-      "v1.4": "动漫单独订阅（本子佬启动！）",
-      "v1.3": "增加立即运行、历史删除按钮",
-      "v1.2": "增加历史删除按钮",
-      "v1.1": "修正流行度校验",
-      "v1.0": "自动添加热门媒体到订阅"
-    }
-  },
-  "HomePage": {
-    "name": "HomePage",
-    "description": "HomePage自定义API。",
-    "labels": "工具",
-    "version": "1.2",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/homepage.png",
-    "author": "thsrite",
-    "level": 1,
-    "history": {
-      "v1.2": "适配v1.9.1-beta（不生效就重启）",
-      "v1.1": "支持更多返回值、插件展示数据",
-      "v1.0": "HomePage自定义API"
-    }
-  },
-  "DirMonitorEnhanced": {
-    "name": "目录监控",
-    "description": "监控目录文件发生变化时实时整理到媒体库。(统一入库消息增强版)（测试中-.-）",
-    "labels": "文件整理",
-    "version": "1.0",
-    "icon": "directory.png",
-    "author": "thsrite",
-    "level": 1,
-    "history": {
-      "v1.0": "同步merge主仓库[目录监控]插件，增加统一发送消息逻辑（Testing…）"
-    }
-  },
-  "SqlExecute": {
-    "name": "Sql执行器",
-    "description": "自定义MoviePilot数据库Sql执行。",
-    "labels": "工具",
-    "version": "1.3",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/sqlite.png",
-    "author": "thsrite",
-    "level": 1,
-    "history": {
-      "v1.3": "修复执行delete锁表失败的bug",
-      "v1.2": "调整交互命令返回信息",
-      "v1.1": "支持交互命令/sql [command]执行，需主程序1.9.4+",
-      "v1.0": "自定义MoviePilot数据库Sql执行"
-    }
-  },
-  "CommandExecute": {
-    "name": "命令执行器",
-    "description": "自定义容器命令执行。",
-    "labels": "工具",
-    "version": "1.2",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/command.png",
-    "author": "thsrite",
-    "level": 1,
-    "history": {
-      "v1.2": "调整交互命令返回信息",
-      "v1.1": "支持交互命令/cmd [sql]执行，需主程序1.9.4+",
-      "v1.0": "自定义容器命令执行"
-    }
-  },
-  "Cd2Assistant": {
-    "name": "CloudDrive2助手",
-    "description": "监控上传任务，检测是否有异常，发送通知。",
-    "labels": "云盘",
-    "version": "1.8.4",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png",
-    "author": "thsrite",
-    "level": 2,
-    "history": {
-      "v1.8.4": "添加115 429消息通知",
-      "v1.8.3": "添加异常处理，解决cd2上本地目录获取存储空间失败的问题",
-      "v1.8.2": "插件页面密码类型设置为pasword",
-      "v1.8.1": "云下载支持自定义路径 /cd /cd2路径 磁链",
-      "v1.8": "修复插件依赖安装问题",
-      "v1.7": "增加HomePage自定义API（详见插件说明）",
-      "v1.6": "支持交互命令云下载",
-      "v1.5": "增加云盘同步黑名单（排序挂载本地目录）",
-      "v1.4": "增加云盘存储空间展示",
-      "v1.3": "增加云盘Cookie失效检测",
-      "v1.2": "实时速率显示",
-      "v1.1": "交互命令重启cd2、获取cd2系统信息，支持仪表盘",
-      "v1.0": "监控上传任务，检测是否有异常，发送通知"
-    }
-  },
-  "SoftLinkRedirect": {
-    "name": "软连接重定向",
-    "description": "重定向软连接指向。",
-    "labels": "云盘",
-    "version": "1.2",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlinkredirect.png",
-    "author": "thsrite",
-    "level": 2,
-    "v2": true,
-    "history": {
-      "v1.2": "修复重定向",
-      "v1.1": "不删除软连接，强制更新重定向",
-      "v1.0": "重定向软连接指向"
-    }
-  },
-  "CloudSyncDel": {
-    "name": "云盘同步删除",
-    "description": "媒体库删除软连接文件后，同步删除云盘文件。",
-    "labels": "云盘",
-    "version": "1.5.5",
-    "icon": "clouddisk.png",
-    "author": "thsrite",
-    "level": 2,
-    "v2": true,
-    "history": {
-      "v1.5.5": "兼容strm删除",
-      "v1.5.4": "fix插件历史ui",
-      "v1.5.3": "修复删除文件夹包含本地+云盘的场景",
-      "v1.5.2": "修复直接删除本地文件夹的场景",
-      "v1.5.1": "不重要的更新",
-      "v1.5": "支持软连接指向本地路径的同步删除",
-      "v1.4": "插件删除历史",
-      "v1.3.1": "添加log",
-      "v1.3": "同步删除thumb图片",
-      "v1.2": "修复删除bug",
-      "v1.1": "增加测试模式按钮（不删除文件）",
-      "v1.0": "媒体库删除软连接文件后，同步删除云盘文件"
-    }
-  },
-  "ActorSubscribePlus": {
-    "name": "演员作品订阅",
-    "description": "获取TMDB演员作品，并自动添加到订阅。",
-    "labels": "订阅",
-    "version": "1.1",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/actorsubscribeplus.png",
-    "author": "thsrite",
-    "level": 2,
-    "v2": true,
-    "history": {
-      "v1.1": "无评分默认评分0",
-      "v1.0": "获取TMDB演员作品，并自动添加到订阅"
-    }
-  },
-  "FileCopy": {
-    "name": "文件复制",
-    "description": "自定义文件类型从源目录复制到目的目录。",
-    "labels": "工具",
-    "version": "1.1",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/copy_files.png",
-    "author": "thsrite",
-    "level": 1,
-    "v2": true,
-    "history": {
-      "v1.1": "增加log显示",
-      "v1.0": "自定义文件类型从源目录复制到目的目录"
-    }
-  },
-  "EmbyCollectionSort": {
-    "name": "Emby合集媒体排序",
-    "description": "Emby保留按照加入时间倒序的前提下，把合集中的媒体按照发布日期排序，修改加入时间已到达顺序排列的目的。",
-    "labels": "媒体库",
-    "version": "1.1",
-    "icon": "Element_A.png",
-    "author": "thsrite",
-    "level": 1,
-    "history": {
-      "v1.1": "优化处理逻辑",
-      "v1.0": "保留按照加入时间倒序的前提下，把合集中的媒体放一块，不用到处找。"
-    }
-  },
-  "MediaRelease": {
-    "name": "影视将映订阅",
-    "description": "监控未上线影视作品，自动添加订阅。",
-    "labels": "订阅",
-    "version": "1.1",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/mediarelease.png",
-    "author": "thsrite",
-    "level": 1,
-    "history": {
-      "v1.1": "bug修复",
-      "v1.0": "监控未上线影视作品，自动添加订阅。"
-    }
-  },
-  "EmbyExtendType": {
-    "name": "Emby视频类型检查",
-    "description": "定期检查Emby媒体库中是否包含指定的视频类型，发送通知。",
-    "labels": "Emby,媒体库",
-    "version": "1.0",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/extendtype.png",
-    "author": "thsrite",
-    "level": 1,
-    "history": {
-      "v1.0": "定期检查Emby媒体库中是否包含指定的视频类型，发送通知。"
-    }
-  },
-  "EmbyAudioBook": {
-    "name": "Emby有声书整理",
-    "description": "还在为Emby有声书整理烦恼吗？入库存在很多单集？",
-    "labels": "Emby,媒体库",
-    "version": "1.1",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/audiobook.png",
-    "author": "thsrite",
-    "level": 1,
-    "history": {
-      "v1.1": "整理完锁定，防止数据被刷新",
-      "v1.0": "还在为Emby有声书整理烦恼吗？入库存在很多单集。"
-    }
-  },
-  "EmbyDanmu": {
-    "name": "Emby弹幕下载",
-    "description": "通知Emby Danmu插件下载弹幕。",
-    "labels": "Emby,媒体库",
-    "version": "1.2",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/danmu.png",
-    "author": "thsrite",
-    "level": 1,
-    "history": {
-      "v1.2": "检查本地弹幕文件是否已存在，避免重复下载。",
-      "v1.1": "解析Emby日志，判断已配置弹幕源是否全部匹配失败。",
-      "v1.0": "通知Emby Danmu插件下载弹幕。"
-    }
-  },
-  "EmbyActorSync": {
-    "name": "Emby剧集演员同步",
-    "description": "同步剧演员信息到集演员信息。",
-    "labels": "Emby,媒体库",
-    "version": "1.3",
-    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/embyactorsync.png",
-    "author": "thsrite",
-    "level": 1,
-    "history": {
-      "v1.3": "剧集优先使用季演员。",
-      "v1.2": "交互命令返回处理完成信息。",
-      "v1.1": "支持交互命令手动同步单个剧集 /as 媒体库名 剧集名。",
-      "v1.0": "同步剧演员信息到集演员信息。"
-    }
-  }
 }
