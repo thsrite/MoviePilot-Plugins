@@ -845,7 +845,7 @@ class CloudLinkMonitor(_PluginBase):
                                                 'component': 'VSwitch',
                                                 'props': {
                                                     'model': 'strm',
-                                                    'label': '联动Strm助手',
+                                                    'label': '联动Strm生成',
                                                 },
                                             }
                                         ]
