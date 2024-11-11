@@ -819,7 +819,7 @@ class CloudLinkMonitor(_PluginBase):
                                                 'component': 'VSwitch',
                                                 'props': {
                                                     'model': 'cloudstrm',
-                                                    'label': '联动实时生成Strm文件',
+                                                    'label': '联动云盘Strm',
                                                 },
                                             }
                                         ]
