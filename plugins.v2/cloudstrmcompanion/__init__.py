@@ -454,10 +454,10 @@ class CloudStrmCompanion(_PluginBase):
                 f.write(strm_content)
 
             logger.info(f"创建strm文件成功 {strm_file} -> {strm_content}")
-            if self._url and Path(strm_file).suffix in settings.RMT_MEDIAEXT:
+            if self._url and Path(strm_content).suffix in settings.RMT_MEDIAEXT:
                 RequestUtils(content_type="application/json").post(
                     url=self._url,
-                    json={"path": str(strm_file), "type": "add"},
+                    json={"path": str(strm_content), "type": "add"},
                 )
         except Exception as e:
             logger.error(f"创建strm文件失败 {strm_file} -> {str(e)}")
