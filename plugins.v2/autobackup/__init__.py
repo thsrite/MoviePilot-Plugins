@@ -25,7 +25,7 @@ class AutoBackup(_PluginBase):
     # 插件图标
     plugin_icon = "Time_machine_B.png"
     # 插件版本
-    plugin_version = "2.0.1"
+    plugin_version = "2.0.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -161,7 +161,7 @@ class AutoBackup(_PluginBase):
             category_file = config_path / "category.yaml"
             if category_file.exists():
                 shutil.copy(category_file, backup_path)
-            userdb_file = config_path / "user.db"
+            userdb_file = config_path / "user.db*"
             if userdb_file.exists():
                 shutil.copy(userdb_file, backup_path)
             app_file = config_path / "app.env"
