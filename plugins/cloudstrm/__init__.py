@@ -608,7 +608,7 @@ class CloudStrm(_PluginBase):
                                             'model': 'monitor_confs',
                                             'label': '监控目录',
                                             'rows': 5,
-                                            'placeholder': '监控方式#监控目录#目的目录#媒体服务器内源文件路径'
+                                            'placeholder': '监控目录#目的目录#媒体服务器内源文件路径'
                                         }
                                     }
                                 ]
