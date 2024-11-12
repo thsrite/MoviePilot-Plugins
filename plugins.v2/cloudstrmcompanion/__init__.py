@@ -26,6 +26,7 @@ from app.core.event import eventmanager, Event
 from app.log import logger
 from app.plugins import _PluginBase
 from app.schemas.types import EventType
+from app.utils.http import RequestUtils
 
 lock = threading.Lock()
 
@@ -78,6 +79,7 @@ class CloudStrmCompanion(_PluginBase):
     _cover = False
     _monitor = False
     _copy_files = False
+    _url = None
 
     _strm_dir_conf = {}
     _cloud_dir_conf = {}
@@ -117,6 +119,7 @@ class CloudStrmCompanion(_PluginBase):
             self._cover = config.get("cover")
             self._copy_files = config.get("copy_files")
             self._monitor_confs = config.get("monitor_confs")
+            self._url = config.get("url")
             self._rmt_mediaext = config.get(
                 "rmt_mediaext") or ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
             self._115_cookie = config.get("115_cookie")
@@ -451,6 +454,11 @@ class CloudStrmCompanion(_PluginBase):
                 f.write(strm_content)
 
             logger.info(f"创建strm文件成功 {strm_file} -> {strm_content}")
+            if self._url and Path(strm_file).suffix in settings.RMT_MEDIAEXT:
+                RequestUtils(content_type="application/json").post(
+                    url=self._url,
+                    json={"path": str(strm_file), "type": "add"},
+                )
         except Exception as e:
             logger.error(f"创建strm文件失败 {strm_file} -> {str(e)}")
 
@@ -747,6 +755,7 @@ class CloudStrmCompanion(_PluginBase):
             "monitor": self._monitor,
             "copy_files": self._copy_files,
             "cron": self._cron,
+            "url": self._url,
             "monitor_confs": self._monitor_confs,
             "115_cookie": self._115_cookie,
             "rmt_mediaext": self._rmt_mediaext,
@@ -1051,7 +1060,28 @@ class CloudStrmCompanion(_PluginBase):
                                 ]
                             }
                         ]
-                    }
+                    },
+                    {
+                        "component": "VRow",
+                        "content": [
+                            {
+                                "component": "VCol",
+                                "props": {
+                                    "cols": 12,
+                                },
+                                "content": [
+                                    {
+                                        "component": "VTextField",
+                                        "props": {
+                                            "model": "url",
+                                            "label": "任务推送url",
+                                            "placeholder": "post请求json方式推送path和type(add)字段",
+                                        },
+                                    }
+                                ],
+                            },
+                        ],
+                    },
                 ]
             }
         ], {
@@ -1064,6 +1094,7 @@ class CloudStrmCompanion(_PluginBase):
             "copy_files": False,
             "monitor_confs": "",
             "115_cookie": "",
+            "url": "",
             "rmt_mediaext": ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
         }
 
