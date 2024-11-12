@@ -62,7 +62,7 @@ class CloudLinkMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
-    plugin_version = "2.5.2"
+    plugin_version = "2.5.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -87,6 +87,7 @@ class CloudLinkMonitor(_PluginBase):
     _onlyonce = False
     _history = False
     _scrape = False
+    _category = False
     _refresh = False
     _softlink = False
     _strm = False
@@ -128,6 +129,7 @@ class CloudLinkMonitor(_PluginBase):
             self._onlyonce = config.get("onlyonce")
             self._history = config.get("history")
             self._scrape = config.get("scrape")
+            self._category = config.get("category")
             self._refresh = config.get("refresh")
             self._mode = config.get("mode")
             self._transfer_type = config.get("transfer_type")
@@ -259,6 +261,7 @@ class CloudLinkMonitor(_PluginBase):
             "softlink": self._softlink,
             "strm": self._strm,
             "scrape": self._scrape,
+            "category": self._category,
             "size": self._size,
             "refresh": self._refresh,
         })
@@ -429,7 +432,7 @@ class CloudLinkMonitor(_PluginBase):
                 target_dir.notify = False
                 target_dir.overwrite_mode = "never"
                 target_dir.library_storage = "local"
-                target_dir.library_category_folder = True
+                target_dir.library_category_folder = self._category
                 # 转移文件
                 transferinfo: TransferInfo = self.chain.transfer(fileitem=file_item,
                                                                  meta=file_meta,
@@ -802,9 +805,9 @@ class CloudLinkMonitor(_PluginBase):
                                             {
                                                 'component': 'VSwitch',
                                                 'props': {
-                                                    'model': 'refresh',
-                                                    'label': '刷新媒体库',
-                                                },
+                                                    'model': 'category',
+                                                    'label': '是否二级分类',
+                                                }
                                             }
                                         ]
                                     },
@@ -818,6 +821,22 @@ class CloudLinkMonitor(_PluginBase):
                             {
                                 'component': 'VRow',
                                 'content': [
+                                    {
+                                        'component': 'VCol',
+                                        'props': {
+                                            'cols': 12,
+                                            'md': 4
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'VSwitch',
+                                                'props': {
+                                                    'model': 'refresh',
+                                                    'label': '刷新媒体库',
+                                                },
+                                            }
+                                        ]
+                                    },
                                     {
                                         'component': 'VCol',
                                         'props': {
@@ -1016,6 +1035,7 @@ class CloudLinkMonitor(_PluginBase):
             "onlyonce": False,
             "history": False,
             "scrape": False,
+            "category": False,
             "refresh": True,
             "softlink": False,
             "strm": False,
