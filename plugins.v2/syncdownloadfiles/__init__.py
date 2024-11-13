@@ -22,7 +22,7 @@ class SyncDownloadFiles(_PluginBase):
     # 插件图标
     plugin_icon = "Youtube-dl_A.png"
     # 插件版本
-    plugin_version = "1.1.3"
+    plugin_version = "1.1.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -224,7 +224,7 @@ class SyncDownloadFiles(_PluginBase):
         grouped_data = {}
 
         # 排序种子，根据种子添加时间倒序
-        if dl_tpe == "qbittorrent":
+        if dl_tpe == "Qbittorrent":
             torrents = sorted(torrents, key=lambda x: x.get("added_on"), reverse=True)
             # 遍历原始数组，按照size和name进行分组
             for torrent in torrents:
@@ -262,7 +262,7 @@ class SyncDownloadFiles(_PluginBase):
     def __compare_time(torrent: Any, dl_tpe: str, last_sync_time: str = None):
         if last_sync_time:
             # 获取种子时间
-            if dl_tpe == "qbittorrent":
+            if dl_tpe == "Qbittorrent":
                 torrent_date = time.localtime(torrent.get("added_on"))  # 将时间戳转换为时间元组
                 torrent_date = time.strftime("%Y-%m-%d %H:%M:%S", torrent_date)  # 格式化时间
             else:
@@ -280,7 +280,7 @@ class SyncDownloadFiles(_PluginBase):
         判断文件是否被下载
         """
         try:
-            if dl_type == "qbittorrent":
+            if dl_type == "Qbittorrent":
                 return True
             else:
                 return file.completed and file.completed > 0
@@ -294,7 +294,7 @@ class SyncDownloadFiles(_PluginBase):
         获取文件路径
         """
         try:
-            return file.get("name") if dl_type == "qbittorrent" else file.name
+            return file.get("name") if dl_type == "Qbittorrent" else file.name
         except Exception as e:
             print(str(e))
             return ""
@@ -305,7 +305,7 @@ class SyncDownloadFiles(_PluginBase):
         获取种子文件
         """
         try:
-            return torrent.files if dl_type == "qbittorrent" else downloader_obj.get_files(tid=torrent.id)
+            return torrent.files if dl_type == "Qbittorrent" else downloader_obj.get_files(tid=torrent.id)
         except Exception as e:
             print(str(e))
             return ""
@@ -316,7 +316,7 @@ class SyncDownloadFiles(_PluginBase):
         获取种子name
         """
         try:
-            return torrent.get("name") if dl_type == "qbittorrent" else torrent.name
+            return torrent.get("name") if dl_type == "Qbittorrent" else torrent.name
         except Exception as e:
             print(str(e))
             return ""
@@ -327,7 +327,7 @@ class SyncDownloadFiles(_PluginBase):
         获取种子download_dir
         """
         try:
-            return torrent.get("save_path") if dl_type == "qbittorrent" else torrent.download_dir
+            return torrent.get("save_path") if dl_type == "Qbittorrent" else torrent.download_dir
         except Exception as e:
             print(str(e))
             return ""
@@ -338,7 +338,7 @@ class SyncDownloadFiles(_PluginBase):
         获取种子hash
         """
         try:
-            return torrent.get("hash") if dl_type == "qbittorrent" else torrent.hashString
+            return torrent.get("hash") if dl_type == "Qbittorrent" else torrent.hashString
         except Exception as e:
             print(str(e))
             return ""
