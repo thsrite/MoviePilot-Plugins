@@ -95,7 +95,6 @@
     "icon": "download.png",
     "author": "thsrite",
     "level": 1,
-    "v2": true,
     "history": {
       "v1.1": "支持选择MoviePilot配置的下载路径",
       "v1.0": "删除下载器中该站点辅种，保留该站点没有辅种的种子"
