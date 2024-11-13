@@ -351,11 +351,12 @@
     "name": "自动备份",
     "description": "自动备份数据和配置文件。",
     "labels": "系统设置",
-    "version": "2.0.1",
+    "version": "2.0.2",
     "icon": "Time_machine_B.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v2.0.2": "增加对MoviePilot V2 版本 SQLite WAL模式的支持",
       "v2.0.1": "修复cookies文件夹备份失败",
       "v2.0": "支持备份app.env及cookies,支持自定义保存路径",
       "v1.3": "去除已废弃的环境变量引用",
@@ -424,6 +425,20 @@
     "v2": true,
     "history": {
       "v1.0": "重写Strm文件内容"
+    }
+  },
+  "DownloadTorrent": {
+    "name": "添加种子下载",
+    "description": "选择下载器，添加种子任务。",
+    "labels": "站点",
+    "version": "2.0",
+    "icon": "download.png",
+    "author": "thsrite",
+    "level": 1,
+    "history": {
+      "v2.0": "兼容V2版本",
+      "v1.1": "支持选择MoviePilot配置的下载路径",
+      "v1.0": "删除下载器中该站点辅种，保留该站点没有辅种的种子"
     }
   }
 }
