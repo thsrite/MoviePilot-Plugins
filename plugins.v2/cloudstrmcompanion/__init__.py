@@ -58,7 +58,7 @@ class CloudStrmCompanion(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png"
     # 插件版本
-    plugin_version = "1.0.6"
+    plugin_version = "1.0.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -396,6 +396,8 @@ class CloudStrmCompanion(_PluginBase):
                                             strm_content=strm_content)
                 else:
                     if self._copy_files:
+                        # 确保目标文件的父目录存在
+                        os.makedirs(os.path.dirname(target_file), exist_ok=True)
                         # 其他nfo、jpg等复制文件
                         shutil.copy2(str(event_path), target_file)
                         logger.info(f"复制其他文件 {str(event_path)} 到 {target_file}")
