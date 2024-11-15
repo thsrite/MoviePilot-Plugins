@@ -1,4 +1,3 @@
-import json
 import os
 import time
 from pathlib import Path
@@ -767,7 +766,9 @@ class MediaSyncDel(_PluginBase):
                 # 1、直接删除源文件
                 if transferhis.src and Path(transferhis.src).suffix in settings.RMT_MEDIAEXT:
                     StorageChain().delete_file(schemas.FileItem(**transferhis.dest_fileitem))
-                    state = StorageChain().delete_file(schemas.FileItem(**transferhis.src_fileitem))
+                    src_fileitem = schemas.FileItem(**transferhis.src_fileitem)
+                    logger.info(f"开始删除源文件 {src_fileitem.path}")
+                    state = StorageChain().delete_file(src_fileitem)
                     if state and transferhis.download_hash:
                         try:
                             # 2、判断种子是否被删除完
