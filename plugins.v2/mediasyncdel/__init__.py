@@ -656,7 +656,6 @@ class MediaSyncDel(_PluginBase):
                 "exclude_path": self._exclude_path,
                 "library_path": self._library_path,
                 "notify": self._notify,
-                "cron": self._cron,
                 "sync_type": self._sync_type,
             })
             return
