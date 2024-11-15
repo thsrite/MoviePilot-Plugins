@@ -58,7 +58,7 @@ class CloudStrmCompanion(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png"
     # 插件版本
-    plugin_version = "1.0.7"
+    plugin_version = "1.0.8"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -131,6 +131,9 @@ class CloudStrmCompanion(_PluginBase):
             logger.info("开始清理旧数据索引")
             self._rebuild = False
             self._cloud_files = []
+            if Path(self._cloud_files_json).exists():
+                Path(self._cloud_files_json).unlink()
+            logger.info("旧数据索引清理完成")
             self.__update_config()
 
         # 停止现有任务
