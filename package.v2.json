@@ -401,11 +401,12 @@
     "name": "云盘Strm助手",
     "description": "实时监控、定时全量增量生成strm文件。",
     "labels": "云盘",
-    "version": "1.0.8",
+    "version": "1.0.9",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v1.0.9": "目录树支持多级结构",
       "v1.0.8": "修复重建缓存不生效",
       "v1.0.7": "修复复制非媒体文件时父目录不存在",
       "v1.0.6": "支持[目录实时监控]插件联动",
