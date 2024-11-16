@@ -24,6 +24,7 @@ from app.core.event import eventmanager, Event
 from app.core.metainfo import MetaInfoPath
 from app.db.downloadhistory_oper import DownloadHistoryOper
 from app.db.transferhistory_oper import TransferHistoryOper
+from app.helper.directory import DirectoryHelper
 from app.log import logger
 from app.modules.filemanager import FileManagerModule
 from app.plugins import _PluginBase
@@ -62,7 +63,7 @@ class CloudLinkMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
-    plugin_version = "2.5.3"
+    plugin_version = "2.5.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -106,6 +107,7 @@ class CloudLinkMonitor(_PluginBase):
     _dirconf: Dict[str, Optional[Path]] = {}
     # 存储源目录转移方式
     _transferconf: Dict[str, Optional[str]] = {}
+    _overwrite_mode: Dict[str, Optional[str]] = {}
     _medias = {}
     # 退出事件
     _event = threading.Event()
@@ -121,6 +123,7 @@ class CloudLinkMonitor(_PluginBase):
         # 清空配置
         self._dirconf = {}
         self._transferconf = {}
+        self._overwrite_mode = {}
 
         # 读取配置
         if config:
@@ -160,6 +163,12 @@ class CloudLinkMonitor(_PluginBase):
                 if not mon_path:
                     continue
 
+                # 自定义覆盖方式
+                _overwrite_mode = 'never'
+                if mon_path.count("@") == 1:
+                    _overwrite_mode = mon_path.split("@")[1]
+                    mon_path = mon_path.split("@")[0]
+
                 # 自定义转移方式
                 _transfer_type = self._transfer_type
                 if mon_path.count("#") == 1:
@@ -187,6 +196,7 @@ class CloudLinkMonitor(_PluginBase):
 
                 # 转移方式
                 self._transferconf[mon_path] = _transfer_type
+                self._overwrite_mode[mon_path] = _overwrite_mode
 
                 # 启用目录监控
                 if self._enabled:
@@ -424,15 +434,18 @@ class CloudLinkMonitor(_PluginBase):
                 else:
                     episodes_info = None
 
-                target_dir = TransferDirectoryConf()
-                target_dir.library_path = target
-                target_dir.transfer_type = transfer_type
-                target_dir.scraping = self._scrape
-                target_dir.renaming = True
-                target_dir.notify = False
-                target_dir.overwrite_mode = "never"
-                target_dir.library_storage = "local"
-                target_dir.library_category_folder = self._category
+                # 查询转移目的目录
+                target_dir = DirectoryHelper().get_dir(mediainfo, src_path=Path(mon_path))
+                if not target_dir:
+                    target_dir = TransferDirectoryConf()
+                    target_dir.library_path = target
+                    target_dir.transfer_type = transfer_type
+                    target_dir.scraping = self._scrape
+                    target_dir.renaming = True
+                    target_dir.notify = False
+                    target_dir.overwrite_mode = self._overwrite_mode.get(mon_path) or 'never'
+                    target_dir.library_storage = "local"
+                    target_dir.library_category_folder = self._category
                 # 转移文件
                 transferinfo: TransferInfo = self.chain.transfer(fileitem=file_item,
                                                                  meta=file_meta,
@@ -1020,7 +1033,28 @@ class CloudLinkMonitor(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '开启联动实时软连接会在监控转移后联动【实时软连接】插件生成软连接（只处理媒体文件，不处理刮削文件）。'
+                                            'text': '如果监控目录与目录设置一致，则使用目录设置配置。否则可在监控目录后拼接@覆盖方式，默认never覆盖。'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '开启联动实时软连接/Strm会在监控转移后联动【实时软连接】/【云盘Strm[助手]】插件生成软连接/Strm（只处理媒体文件，不处理刮削文件）。'
                                         }
                                     }
                                 ]
