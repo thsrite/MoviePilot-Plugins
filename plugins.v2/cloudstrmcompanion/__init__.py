@@ -23,10 +23,12 @@ from watchdog.observers.polling import PollingObserver
 
 from app.core.config import settings
 from app.core.event import eventmanager, Event
+from app.core.metainfo import MetaInfoPath
 from app.log import logger
 from app.plugins import _PluginBase
-from app.schemas.types import EventType
+from app.schemas.types import EventType, NotificationType
 from app.utils.http import RequestUtils
+from app.utils.string import StringUtils
 
 lock = threading.Lock()
 
@@ -58,7 +60,7 @@ class CloudStrmCompanion(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png"
     # 插件版本
-    plugin_version = "1.0.9"
+    plugin_version = "1.1.0"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -80,16 +82,18 @@ class CloudStrmCompanion(_PluginBase):
     _monitor = False
     _copy_files = False
     _url = None
-
+    _notify = False
     _strm_dir_conf = {}
     _cloud_dir_conf = {}
     _category_conf = {}
     _format_conf = {}
     _cloud_files = []
     _observer = []
+    _medias = {}
     _rmt_mediaext = None
     _115_cookie = None
     _115client = None
+    _interval: int = 10
 
     _cloud_files_json = "cloud_files.json"
     _headers = {
@@ -115,9 +119,11 @@ class CloudStrmCompanion(_PluginBase):
             self._cron = config.get("cron")
             self._onlyonce = config.get("onlyonce")
             self._rebuild = config.get("rebuild")
+            self._interval = config.get("interval") or 10
             self._monitor = config.get("monitor")
             self._cover = config.get("cover")
             self._copy_files = config.get("copy_files")
+            self._notify = config.get("notify")
             self._monitor_confs = config.get("monitor_confs")
             self._url = config.get("url")
             self._rmt_mediaext = config.get(
@@ -142,6 +148,10 @@ class CloudStrmCompanion(_PluginBase):
         if self._enabled or self._onlyonce:
             # 定时服务
             self._scheduler = BackgroundScheduler(timezone=settings.TZ)
+
+            if self._notify:
+                # 追加入库消息统一发送服务
+                self._scheduler.add_job(self.send_msg, trigger='interval', seconds=15)
 
             # 读取目录配置
             monitor_confs = self._monitor_confs.split("\n")
@@ -464,6 +474,33 @@ class CloudStrmCompanion(_PluginBase):
                     url=self._url,
                     json={"path": str(strm_content), "type": "add"},
                 )
+
+            if self._notify:
+                # 发送消息汇总
+                file_meta = MetaInfoPath(Path(strm_file))
+
+                key = f"{file_meta.cn_name} ({file_meta.year}){f' {file_meta.season}' if file_meta.season else ''}"
+                media_list = self._medias.get(key) or {}
+                if media_list:
+                    episodes = media_list.get("episodes") or []
+                    if file_meta.episode_list:
+                        if episodes:
+                            episodes = episodes + file_meta.episode_list
+                            episodes = set(episodes)
+                        else:
+                            episodes = file_meta.episode_list
+                    media_list = {
+                        "episodes": episodes,
+                        "type": "tv" if file_meta.season else "movie",
+                        "time": datetime.datetime.now()
+                    }
+                else:
+                    media_list = {
+                        "episodes": file_meta.episode_list,
+                        "type": "tv" if file_meta.season else "movie",
+                        "time": datetime.datetime.now()
+                    }
+                self._medias[key] = media_list
         except Exception as e:
             logger.error(f"创建strm文件失败 {strm_file} -> {str(e)}")
 
@@ -750,6 +787,59 @@ class CloudStrmCompanion(_PluginBase):
                 self.post_message(channel=event.event_data.get("channel"),
                                   title=f"{sub_path} Strm生成完成！", userid=event.event_data.get("user"))
 
+    def send_msg(self):
+        """
+        定时检查是否有媒体处理完，发送统一消息
+        """
+        if not self._medias or not self._medias.keys():
+            return
+
+        # 遍历检查是否已刮削完，发送消息
+        for medis_title_year_season in list(self._medias.keys()):
+            media_list = self._medias.get(medis_title_year_season)
+            logger.info(f"开始处理媒体 {medis_title_year_season} 消息")
+
+            if not media_list:
+                continue
+
+            # 获取最后更新时间
+            last_update_time = media_list.get("time")
+            mtype = media_list.get("type")
+            episodes = media_list.get("episodes")
+            if not last_update_time or not episodes:
+                continue
+
+            # 判断剧集最后更新时间距现在是已超过10秒或者电影，发送消息
+            if (datetime.datetime.now() - last_update_time).total_seconds() > int(self._interval) \
+                    or str(mtype) == "movie":
+                # 发送通知
+                if self._notify:
+                    file_count = len(episodes)
+
+                    # 剧集季集信息 S01 E01-E04 || S01 E01、E02、E04
+                    # 处理文件多，说明是剧集，显示季入库消息
+                    if str(mtype) == "tv":
+                        # 季集文本
+                        season_episode = f"{medis_title_year_season} {StringUtils.format_ep(episodes)}"
+                    else:
+                        # 电影文本
+                        season_episode = f"{medis_title_year_season}"
+                    # 发送消息
+                    self.send_transfer_message(msg_title=season_episode, file_count=file_count)
+                # 发送完消息，移出key
+                del self._medias[medis_title_year_season]
+                continue
+
+    def send_transfer_message(self, msg_title, file_count):
+        """
+        发送消息
+        """
+        # 发送
+        self.post_message(
+            mtype=NotificationType.Plugin,
+            title=f"{msg_title} Strm已生成", text=f"共{file_count}个文件",
+            link=settings.MP_DOMAIN('#/history'))
+
     def __update_config(self):
         """
         更新配置
@@ -758,8 +848,10 @@ class CloudStrmCompanion(_PluginBase):
             "enabled": self._enabled,
             "onlyonce": self._onlyonce,
             "cover": self._cover,
+            "notify": self._notify,
             "rebuild": self._rebuild,
             "monitor": self._monitor,
+            "interval": self._interval,
             "copy_files": self._copy_files,
             "cron": self._cron,
             "url": self._url,
@@ -947,6 +1039,27 @@ class CloudStrmCompanion(_PluginBase):
                                 },
                                 'content': [
                                     {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'notify',
+                                            'label': '发送通知',
+                                        }
+                                    }
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
                                         'component': 'VTextField',
                                         'props': {
                                             'model': 'cron',
@@ -956,7 +1069,6 @@ class CloudStrmCompanion(_PluginBase):
                                     }
                                 ]
                             },
-
                             {
                                 'component': 'VCol',
                                 'props': {
@@ -973,6 +1085,23 @@ class CloudStrmCompanion(_PluginBase):
                                     }
                                 ]
                             },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'interval',
+                                            'label': '消息延迟',
+                                            'placeholder': '10'
+                                        }
+                                    }
+                                ]
+                            }
                         ]
                     },
                     {
@@ -1096,10 +1225,12 @@ class CloudStrmCompanion(_PluginBase):
             "cron": "",
             "onlyonce": False,
             "rebuild": False,
+            "notify": False,
             "monitor": False,
             "cover": False,
             "copy_files": False,
             "monitor_confs": "",
+            "interval": 10,
             "115_cookie": "",
             "url": "",
             "rmt_mediaext": ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
