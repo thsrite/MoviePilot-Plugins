@@ -60,7 +60,7 @@ class CloudStrmCompanion(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png"
     # 插件版本
-    plugin_version = "1.1.0"
+    plugin_version = "1.1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -492,13 +492,13 @@ class CloudStrmCompanion(_PluginBase):
                     media_list = {
                         "episodes": episodes,
                         "type": "tv" if file_meta.season else "movie",
-                        "time": datetime.datetime.now()
+                        "time": datetime.now()
                     }
                 else:
                     media_list = {
                         "episodes": file_meta.episode_list,
                         "type": "tv" if file_meta.season else "movie",
-                        "time": datetime.datetime.now()
+                        "time": datetime.now()
                     }
                 self._medias[key] = media_list
         except Exception as e:
@@ -810,7 +810,7 @@ class CloudStrmCompanion(_PluginBase):
                 continue
 
             # 判断剧集最后更新时间距现在是已超过10秒或者电影，发送消息
-            if (datetime.datetime.now() - last_update_time).total_seconds() > int(self._interval) \
+            if (datetime.now() - last_update_time).total_seconds() > int(self._interval) \
                     or str(mtype) == "movie":
                 # 发送通知
                 if self._notify:
