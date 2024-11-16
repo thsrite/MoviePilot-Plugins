@@ -22,7 +22,7 @@ class SyncDownloadFiles(_PluginBase):
     # 插件图标
     plugin_icon = "Youtube-dl_A.png"
     # 插件版本
-    plugin_version = "1.1.3"
+    plugin_version = "1.1.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -113,19 +113,20 @@ class SyncDownloadFiles(_PluginBase):
                 continue
 
             # 把种子按照名称和种子大小分组，获取添加时间最早的一个，认定为是源种子，其余为辅种
-            torrents = self.__get_origin_torrents(torrents, downloader)
+            downloader_config = self.__get_downloader_config(downloader)
+            torrents = self.__get_origin_torrents(torrents, downloader_config.type)
             logger.info(f"下载器 {downloader} 去除辅种，获取到源种子数：{len(torrents)}")
 
             for torrent in torrents:
                 # 返回false，标识后续种子已被同步
-                sync_flag = self.__compare_time(torrent, downloader, last_sync_time)
+                sync_flag = self.__compare_time(torrent, downloader_config.type, last_sync_time)
 
                 if not sync_flag:
                     logger.info(f"最后同步时间{last_sync_time}, 之前种子已被同步，结束当前下载器 {downloader} 任务")
                     break
 
                 # 获取种子hash
-                hash_str = self.__get_hash(torrent, downloader)
+                hash_str = self.__get_hash(torrent, downloader_config.type)
 
                 # 判断是否是mp下载，判断download_hash是否在downloadhistory表中，是则不处理
                 downloadhis = self.downloadhis.get_by_hash(hash_str)
@@ -136,7 +137,7 @@ class SyncDownloadFiles(_PluginBase):
                         continue
 
                 # 获取种子download_dir
-                download_dir = self.__get_download_dir(torrent, downloader)
+                download_dir = self.__get_download_dir(torrent, downloader_config.type)
 
                 # 处理路径映射
                 if self._dirs:
@@ -146,20 +147,20 @@ class SyncDownloadFiles(_PluginBase):
                         download_dir = download_dir.replace(sub_paths[0], sub_paths[1]).replace('\\', '/')
 
                 # 获取种子name
-                torrent_name = self.__get_torrent_name(torrent, downloader)
+                torrent_name = self.__get_torrent_name(torrent, downloader_config.type)
                 # 种子保存目录
                 save_path = Path(download_dir).joinpath(torrent_name)
                 # 获取种子文件
-                torrent_files = self.__get_torrent_files(torrent, downloader, downloader_obj)
+                torrent_files = self.__get_torrent_files(torrent, downloader_config.type, downloader_obj)
                 logger.info(f"开始同步种子 {hash_str}, 文件数 {len(torrent_files)}")
 
                 download_files = []
                 for file in torrent_files:
                     # 过滤掉没下载的文件
-                    if not self.__is_download(file, downloader):
+                    if not self.__is_download(file, downloader_config.type):
                         continue
                     # 种子文件路径
-                    file_path_str = self.__get_file_path(file, downloader)
+                    file_path_str = self.__get_file_path(file, downloader_config.type)
                     file_path = Path(file_path_str)
                     # 只处理视频格式
                     if not file_path.suffix \
@@ -190,6 +191,7 @@ class SyncDownloadFiles(_PluginBase):
                             "savepath": str(save_path),
                             "filepath": rel_path,
                             "torrentname": torrent_name,
+                            "state": 1
                         }
                     )
 

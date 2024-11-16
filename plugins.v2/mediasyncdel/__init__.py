@@ -1,4 +1,3 @@
-import json
 import os
 import time
 from pathlib import Path
@@ -26,7 +25,7 @@ class MediaSyncDel(_PluginBase):
     # 插件图标
     plugin_icon = "mediasyncdel.png"
     # 插件版本
-    plugin_version = "1.8.4"
+    plugin_version = "1.8.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -51,12 +50,14 @@ class MediaSyncDel(_PluginBase):
     _transferhis = None
     _downloadhis = None
     _default_downloader = None
+    _storagechain = None
 
     def init_plugin(self, config: dict = None):
         self._transferchain = TransferChain()
         self._downloader_helper = DownloaderHelper()
         self._transferhis = self._transferchain.transferhis
         self._downloadhis = self._transferchain.downloadhis
+        self._storagechain = StorageChain()
 
         # 读取配置
         if config:
@@ -656,7 +657,6 @@ class MediaSyncDel(_PluginBase):
                 "exclude_path": self._exclude_path,
                 "library_path": self._library_path,
                 "notify": self._notify,
-                "cron": self._cron,
                 "sync_type": self._sync_type,
             })
             return
@@ -767,24 +767,32 @@ class MediaSyncDel(_PluginBase):
             if self._del_source:
                 # 1、直接删除源文件
                 if transferhis.src and Path(transferhis.src).suffix in settings.RMT_MEDIAEXT:
-                    dest_fileitem = schemas.FileItem(**transferhis.dest_fileitem)
-                    state = StorageChain().delete_file(dest_fileitem)
-                    if state and transferhis.download_hash:
-                        try:
-                            # 2、判断种子是否被删除完
-                            delete_flag, success_flag, handle_torrent_hashs = self.handle_torrent(
-                                type=transferhis.type,
-                                src=transferhis.src,
-                                torrent_hash=transferhis.download_hash)
-                            if not success_flag:
-                                error_cnt += 1
-                            else:
-                                if delete_flag:
-                                    del_torrent_hashs += handle_torrent_hashs
+                    self._storagechain.delete_file(schemas.FileItem(**transferhis.dest_fileitem))
+                    src_fileitem = schemas.FileItem(**transferhis.src_fileitem)
+                    logger.info(f"开始删除源文件 {src_fileitem.path}")
+                    state = self._storagechain.delete_file(src_fileitem)
+                    if state:
+                        folder_item = self._storagechain.get_parent_item(src_fileitem)
+                        if folder_item and not self._storagechain.any_files(folder_item,
+                                                                            extensions=settings.RMT_MEDIAEXT):
+                            logger.warn(f"删除残留空文件夹：【{folder_item.storage}】{folder_item.path}")
+                            self._storagechain.delete_file(folder_item)
+                        if transferhis.download_hash:
+                            try:
+                                # 2、判断种子是否被删除完
+                                delete_flag, success_flag, handle_torrent_hashs = self.handle_torrent(
+                                    type=transferhis.type,
+                                    src=transferhis.src,
+                                    torrent_hash=transferhis.download_hash)
+                                if not success_flag:
+                                    error_cnt += 1
                                 else:
-                                    stop_torrent_hashs += handle_torrent_hashs
-                        except Exception as e:
-                            logger.error("删除种子失败：%s" % str(e))
+                                    if delete_flag:
+                                        del_torrent_hashs += handle_torrent_hashs
+                                    else:
+                                        stop_torrent_hashs += handle_torrent_hashs
+                            except Exception as e:
+                                logger.error("删除种子失败：%s" % str(e))
 
         logger.info(f"同步删除 {msg} 完成！")
 

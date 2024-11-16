@@ -58,7 +58,7 @@ class CloudStrmCompanion(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png"
     # 插件版本
-    plugin_version = "1.0.6"
+    plugin_version = "1.0.9"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -131,6 +131,9 @@ class CloudStrmCompanion(_PluginBase):
             logger.info("开始清理旧数据索引")
             self._rebuild = False
             self._cloud_files = []
+            if Path(self._cloud_files_json).exists():
+                Path(self._cloud_files_json).unlink()
+            logger.info("旧数据索引清理完成")
             self.__update_config()
 
         # 停止现有任务
@@ -305,9 +308,9 @@ class CloudStrmCompanion(_PluginBase):
             if not tree_content:
                 continue
             # 遍历云盘树形结构文件
-            for cloud_file in self.parse_tree_structure(tree_content):
+            for cloud_file in self.parse_tree_structure(content=tree_content, dir_path=cloud_dir):
                 try:
-                    if Path(cloud_file).is_dir():
+                    if Path(str(cloud_file)).is_dir():
                         continue
                     # 本地挂载路径
                     local_file = str(cloud_file).replace(cloud_dir, local_dir)
@@ -396,6 +399,8 @@ class CloudStrmCompanion(_PluginBase):
                                             strm_content=strm_content)
                 else:
                     if self._copy_files:
+                        # 确保目标文件的父目录存在
+                        os.makedirs(os.path.dirname(target_file), exist_ok=True)
                         # 其他nfo、jpg等复制文件
                         shutil.copy2(str(event_path), target_file)
                         logger.info(f"复制其他文件 {str(event_path)} 到 {target_file}")
@@ -539,24 +544,26 @@ class CloudStrmCompanion(_PluginBase):
             return None
 
     @staticmethod
-    def parse_tree_structure(content: str):
+    def parse_tree_structure(content: str, dir_path: str):
         """
         解析目录树内容并生成每个路径
         """
         tree_pattern = re_compile(r"^(?:\| )+\|-")
-        current_path = ["/"]  # 初始化当前路径为根目录
+        dir_path = Path(dir_path)
+        current_path = [str(dir_path.parent)] if dir_path.parent != Path("/") or (dir_path.parent == dir_path and (
+                dir_path.is_absolute() or ':' in dir_path.name)) else ["/"]  # 初始化当前路径为根目录
 
         for line in content.splitlines():
             # 匹配目录树的每一行
             match = tree_pattern.match(line)
-            if not match or "根目录" in line:
+            if not match:
                 continue  # 跳过不符合格式的行
 
             # 计算当前行的深度
             level_indicator = match.group(0)
             depth = (len(level_indicator) // 2) - 1
-            # 获取当前行的目录名称
-            item_name = escape(line.strip()[len(level_indicator):])
+            # 获取当前行的目录名称，去掉前面的 '| ' 或 '- '
+            item_name = escape(line.strip()[len(level_indicator):].strip())
 
             # 根据深度更新当前路径
             if depth < len(current_path):
@@ -565,7 +572,7 @@ class CloudStrmCompanion(_PluginBase):
                 current_path.append(item_name)  # 添加新的深度名称
 
             # 生成并返回当前深度的完整路径
-            yield join_path(*current_path[:depth + 1])
+            yield join_path(*current_path[:depth + 1]).replace('\\', '/')
 
     @eventmanager.register(EventType.PluginAction)
     def remote_sync_one(self, event: Event = None):
