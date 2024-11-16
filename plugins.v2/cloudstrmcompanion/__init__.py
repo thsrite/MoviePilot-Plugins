@@ -60,7 +60,7 @@ class CloudStrmCompanion(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png"
     # 插件版本
-    plugin_version = "1.1.1"
+    plugin_version = "1.1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -483,12 +483,12 @@ class CloudStrmCompanion(_PluginBase):
                 media_list = self._medias.get(key) or {}
                 if media_list:
                     episodes = media_list.get("episodes") or []
-                    if file_meta.episode_list:
+                    if file_meta.begin_episode:
                         if episodes:
-                            episodes = episodes + file_meta.episode_list
-                            episodes = set(episodes)
+                            if int(file_meta.begin_episode) not in episodes:
+                                episodes = episodes.append(int(file_meta.begin_episode))
                         else:
-                            episodes = file_meta.episode_list
+                            episodes = [int(file_meta.begin_episode)]
                     media_list = {
                         "episodes": episodes,
                         "type": "tv" if file_meta.season else "movie",
@@ -496,7 +496,7 @@ class CloudStrmCompanion(_PluginBase):
                     }
                 else:
                     media_list = {
-                        "episodes": file_meta.episode_list,
+                        "episodes": [int(file_meta.begin_episode)],
                         "type": "tv" if file_meta.season else "movie",
                         "time": datetime.now()
                     }
