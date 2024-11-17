@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import shutil
 import threading
 import time
@@ -26,6 +27,7 @@ from app.core.event import eventmanager, Event
 from app.core.metainfo import MetaInfoPath
 from app.log import logger
 from app.plugins import _PluginBase
+from app.schemas import MediaInfo
 from app.schemas.types import EventType, NotificationType
 from app.utils.http import RequestUtils
 from app.utils.string import StringUtils
@@ -60,7 +62,7 @@ class CloudStrmCompanion(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png"
     # 插件版本
-    plugin_version = "1.1.3"
+    plugin_version = "1.1.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -479,6 +481,13 @@ class CloudStrmCompanion(_PluginBase):
                 # 发送消息汇总
                 file_meta = MetaInfoPath(Path(strm_file))
 
+                pattern = r'tmdbid=(\d+)'
+                # 提取 tmdbid
+                match = re.search(pattern, strm_file)
+                if match:
+                    tmdbid = match.group(1)
+                    file_meta.tmdbid = tmdbid
+
                 key = f"{file_meta.cn_name} ({file_meta.year}){f' {file_meta.season}' if file_meta.season else ''}"
                 media_list = self._medias.get(key) or {}
                 if media_list:
@@ -491,12 +500,14 @@ class CloudStrmCompanion(_PluginBase):
                             episodes = [int(file_meta.begin_episode)]
                     media_list = {
                         "episodes": episodes,
+                        "file_meta": file_meta,
                         "type": "tv" if file_meta.season else "movie",
                         "time": datetime.now()
                     }
                 else:
                     media_list = {
                         "episodes": [int(file_meta.begin_episode)] if file_meta.begin_episode else [],
+                        "file_meta": file_meta,
                         "type": "tv" if file_meta.season else "movie",
                         "time": datetime.now()
                     }
@@ -804,6 +815,7 @@ class CloudStrmCompanion(_PluginBase):
 
             # 获取最后更新时间
             last_update_time = media_list.get("time")
+            file_meta = media_list.get("file_meta")
             mtype = media_list.get("type")
             episodes = media_list.get("episodes")
             if not last_update_time or not episodes:
@@ -824,13 +836,19 @@ class CloudStrmCompanion(_PluginBase):
                     else:
                         # 电影文本
                         season_episode = f"{medis_title_year_season}"
+
+                    # 获取封面图片
+                    mediainfo: MediaInfo = self.chain.recognize_by_meta(file_meta)
+
                     # 发送消息
-                    self.send_transfer_message(msg_title=season_episode, file_count=file_count)
+                    self.send_transfer_message(msg_title=season_episode,
+                                               file_count=file_count,
+                                               image=mediainfo.backdrop_path if mediainfo.backdrop_path else mediainfo.poster_path if mediainfo else None)
                 # 发送完消息，移出key
                 del self._medias[medis_title_year_season]
                 continue
 
-    def send_transfer_message(self, msg_title, file_count):
+    def send_transfer_message(self, msg_title, file_count, image):
         """
         发送消息
         """
@@ -838,6 +856,7 @@ class CloudStrmCompanion(_PluginBase):
         self.post_message(
             mtype=NotificationType.Plugin,
             title=f"{msg_title} Strm已生成", text=f"共{file_count}个文件",
+            image=image,
             link=settings.MP_DOMAIN('#/history'))
 
     def __update_config(self):
