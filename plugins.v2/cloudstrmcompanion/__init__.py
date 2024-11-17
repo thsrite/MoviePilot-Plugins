@@ -25,6 +25,7 @@ from watchdog.observers.polling import PollingObserver
 from app.core.config import settings
 from app.core.event import eventmanager, Event
 from app.core.metainfo import MetaInfoPath
+from app.helper.mediaserver import MediaServerHelper
 from app.log import logger
 from app.plugins import _PluginBase
 from app.schemas import MediaInfo
@@ -62,7 +63,7 @@ class CloudStrmCompanion(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png"
     # 插件版本
-    plugin_version = "1.1.4"
+    plugin_version = "1.1.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -85,6 +86,7 @@ class CloudStrmCompanion(_PluginBase):
     _copy_files = False
     _url = None
     _notify = False
+    _refresh_emby = False
     _strm_dir_conf = {}
     _cloud_dir_conf = {}
     _category_conf = {}
@@ -96,6 +98,9 @@ class CloudStrmCompanion(_PluginBase):
     _115_cookie = None
     _115client = None
     _interval: int = 10
+    _mediaservers = None
+    mediaserver_helper = None
+    _emby_paths = {}
 
     _cloud_files_json = "cloud_files.json"
     _headers = {
@@ -115,6 +120,7 @@ class CloudStrmCompanion(_PluginBase):
         self._format_conf = {}
         self._category_conf = {}
         self._cloud_files_json = os.path.join(self.get_data_path(), self._cloud_files_json)
+        self.mediaserver_helper = MediaServerHelper()
 
         if config:
             self._enabled = config.get("enabled")
@@ -125,15 +131,20 @@ class CloudStrmCompanion(_PluginBase):
             self._monitor = config.get("monitor")
             self._cover = config.get("cover")
             self._copy_files = config.get("copy_files")
+            self._refresh_emby = config.get("refresh_emby")
             self._notify = config.get("notify")
             self._monitor_confs = config.get("monitor_confs")
             self._url = config.get("url")
+            self._mediaservers = config.get("mediaservers") or []
             self._rmt_mediaext = config.get(
                 "rmt_mediaext") or ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
             self._115_cookie = config.get("115_cookie")
             if self._115_cookie:
                 self._headers["Cookie"] = self._115_cookie
                 self._115client = P115Client(self._115_cookie, check_for_relogin=True)
+            if config.get("emby_path"):
+                for path in str(config.get("emby_path")).split(","):
+                    self._emby_paths[path.split(":")[0]] = path.split(":")[1]
 
         if self._rebuild:
             logger.info("开始清理旧数据索引")
@@ -512,8 +523,65 @@ class CloudStrmCompanion(_PluginBase):
                         "time": datetime.now()
                     }
                 self._medias[key] = media_list
+
+            # 通知emby刷新
+            if self._refresh_emby and self._mediaservers:
+                self.__refresh_emby_file(strm_file)
         except Exception as e:
             logger.error(f"创建strm文件失败 {strm_file} -> {str(e)}")
+
+    def __refresh_emby_file(self, strm_file: str):
+        """
+        通知emby刷新文件
+        """
+        emby_servers = self.mediaserver_helper.get_services(name_filters=self._mediaservers, type_filter="emby")
+        if not emby_servers:
+            logger.error("未配置Emby媒体服务器")
+            return
+
+        strm_file = self.__get_path(paths=self._emby_paths, file_path=strm_file)
+        for emby_name, emby_server in emby_servers.items():
+            emby = emby_server.instance
+            self._EMBY_USER = emby_server.instance.get_user()
+            self._EMBY_APIKEY = emby_server.config.config.get("apikey")
+            self._EMBY_HOST = emby_server.config.config.get("host")
+
+            logger.info(f"开始通知媒体服务器 {emby_name} 刷新新增文件 {strm_file}")
+            try:
+                res = emby.post_data(
+                    url=f'[HOST]emby/Library/Media/Updated?api_key=[APIKEY]&reqformat=json',
+                    data=json.dumps({
+                        "Updates": [
+                            {
+                                "Path": strm_file,
+                                "UpdateType": "Created",
+                            }
+                        ]
+                    }),
+                    headers={
+                        "Content-Type": "application/json"
+                    }
+                )
+                if res and res.status_code in [200, 204]:
+                    return True
+                else:
+                    logger.error(f"通知媒体服务器 {emby_name} 刷新新增文件 {strm_file} 失败，错误码：{res.status_code}")
+                    return False
+            except Exception as err:
+                logger.error(f"通知媒体服务器刷新新增文件失败：{str(err)}")
+            return False
+
+    def __get_path(self, paths, file_path: str):
+        """
+        路径转换
+        """
+        if paths and paths.keys():
+            for library_path in paths.keys():
+                if str(file_path).startswith(str(library_path)):
+                    # 替换网盘路径
+                    return str(file_path).replace(str(library_path), str(paths.get(str(library_path))))
+        # 未匹配到路径，返回原路径
+        return file_path
 
     def export_dir(self, fid, destination_id="0"):
         """
@@ -872,11 +940,13 @@ class CloudStrmCompanion(_PluginBase):
             "monitor": self._monitor,
             "interval": self._interval,
             "copy_files": self._copy_files,
+            "refresh_emby": self._refresh_emby,
             "cron": self._cron,
             "url": self._url,
             "monitor_confs": self._monitor_confs,
             "115_cookie": self._115_cookie,
             "rmt_mediaext": self._rmt_mediaext,
+            "mediaservers": self._mediaservers,
         })
 
     def get_state(self) -> bool:
@@ -1066,6 +1136,22 @@ class CloudStrmCompanion(_PluginBase):
                                     }
                                 ]
                             },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'refresh_emby',
+                                            'label': '刷新媒体库（Emby）',
+                                        }
+                                    }
+                                ]
+                            },
                         ]
                     },
                     {
@@ -1174,6 +1260,51 @@ class CloudStrmCompanion(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
+                                    'md': 8
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextarea',
+                                        'props': {
+                                            'model': 'emby_path',
+                                            'rows': '1',
+                                            'label': '媒体库路径映射',
+                                            'placeholder': 'MoviePilot本地文件路径:Emby文件路径（多组路径英文逗号拼接）'
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSelect',
+                                        'props': {
+                                            'multiple': True,
+                                            'chips': True,
+                                            'clearable': True,
+                                            'model': 'mediaservers',
+                                            'label': '媒体服务器',
+                                            'items': [{"title": config.name, "value": config.name}
+                                                      for config in self.mediaserver_helper.get_configs().values() if
+                                                      config.type == "emby"]
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
                                 },
                                 'content': [
                                     {
@@ -1248,7 +1379,10 @@ class CloudStrmCompanion(_PluginBase):
             "monitor": False,
             "cover": False,
             "copy_files": False,
+            "refresh_emby": False,
+            "mediaservers": [],
             "monitor_confs": "",
+            "emby_path": "",
             "interval": 10,
             "115_cookie": "",
             "url": "",
