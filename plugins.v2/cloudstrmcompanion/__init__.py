@@ -1260,24 +1260,6 @@ class CloudStrmCompanion(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 8
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextarea',
-                                        'props': {
-                                            'model': 'emby_path',
-                                            'rows': '1',
-                                            'label': '媒体库路径映射',
-                                            'placeholder': 'MoviePilot本地文件路径:Emby文件路径（多组路径英文逗号拼接）'
-                                        }
-                                    }
-                                ]
-                            },
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
                                     'md': 4
                                 },
                                 'content': [
@@ -1292,6 +1274,24 @@ class CloudStrmCompanion(_PluginBase):
                                             'items': [{"title": config.name, "value": config.name}
                                                       for config in self.mediaserver_helper.get_configs().values() if
                                                       config.type == "emby"]
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 8
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextarea',
+                                        'props': {
+                                            'model': 'emby_path',
+                                            'rows': '1',
+                                            'label': '媒体库路径映射',
+                                            'placeholder': 'MoviePilot本地文件路径:Emby文件路径（多组路径英文逗号拼接）'
                                         }
                                     }
                                 ]
