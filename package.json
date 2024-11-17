@@ -148,7 +148,6 @@
     "icon": "refresh.png",
     "author": "thsrite",
     "level": 1,
-    "v2": true,
     "history": {
       "v1.8": "修复插件显示版本问题",
       "v1.7": "使用主程序GITHUB_PROXY代理",
