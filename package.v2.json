@@ -429,13 +429,13 @@
     "name": "Strm重定向",
     "description": "重写Strm文件内容。",
     "labels": "云盘",
-    "version": "1.1",
+    "version": "1.2",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlinkredirect.png",
     "author": "thsrite",
     "level": 1,
     "v2": true,
     "history": {
-      "v1.1": "支持解码URL重新写入Strm",
+      "v1.2": "支持解码URL重新写入Strm",
       "v1.0": "重写Strm文件内容"
     }
   },
