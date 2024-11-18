@@ -3,6 +3,7 @@ import re
 import urllib.parse
 from pathlib import Path
 from typing import List, Tuple, Dict, Any
+
 from app.log import logger
 from app.plugins import _PluginBase
 
@@ -15,7 +16,7 @@ class StrmRedirect(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlinkredirect.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -29,6 +30,7 @@ class StrmRedirect(_PluginBase):
 
     # 私有属性
     _onlyonce = False
+    _unquote = False
     _strm_path = None
     _origin_path = None
     _redirect_path = None
@@ -37,6 +39,7 @@ class StrmRedirect(_PluginBase):
         # 读取配置
         if config:
             self._onlyonce = config.get("onlyonce")
+            self._unquote = config.get("unquote")
             self._strm_path = config.get("strm_path")
             self._origin_path = config.get("origin_path")
             self._redirect_path = config.get("redirect_path")
@@ -48,6 +51,7 @@ class StrmRedirect(_PluginBase):
                 self._onlyonce = False
                 self.update_config({
                     "onlyonce": self._onlyonce,
+                    "unquote": self._unquote,
                     "strm_path": self._strm_path,
                     "origin_path": self._origin_path,
                     "redirect_path": self._redirect_path
@@ -69,20 +73,28 @@ class StrmRedirect(_PluginBase):
                     unencoded = self.find_unencoded_parts(strm_content)
                     # 解码url
                     unercoded_strm_content = urllib.parse.unquote(strm_content)
-                    if str(unercoded_strm_content).startswith(target_from):
-                        strm_content = unercoded_strm_content.replace(target_from, target_to)
-                        no_encoded = unencoded[0]
-                        encoded = strm_content.replace(no_encoded, "")
-                        encoded = urllib.parse.quote(encoded)
-                        strm_content = no_encoded + encoded
+                    if target_from and target_to:
+                        if str(unercoded_strm_content).startswith(target_from):
+                            strm_content = unercoded_strm_content.replace(target_from, target_to)
+                            no_encoded = unencoded[0]
+                            encoded = strm_content.replace(no_encoded, "")
+                            # encoded = urllib.parse.quote(encoded)
+                            strm_content = no_encoded + encoded
 
-                        # 如果不是url，不进行编码
-                        if not str(strm_content).startswith("http"):
-                            strm_content = urllib.parse.unquote(strm_content)
+                            # 如果不是url，不进行编码
+                            if not str(strm_content).startswith("http"):
+                                strm_content = urllib.parse.unquote(strm_content)
+                            with open(str(file_path), 'w', encoding='utf-8') as file:
+                                file.write(strm_content)
+                            logger.info(
+                                f"Updated Strm: {unercoded_strm_content} -> {strm_content} success")
+                    elif self._unquote:
                         with open(str(file_path), 'w', encoding='utf-8') as file:
-                            file.write(strm_content)
-                        logger.info(
-                            f"Updated Strm: {unercoded_strm_content} -> {strm_content} success")
+                            file.write(unercoded_strm_content)
+                            logger.info(f"Unquote Strm: {strm_content} -> {unercoded_strm_content} success")
+                    else:
+                        logger.info(f"No target_from or target_to or unquote, stop update")
+                        return
 
     @staticmethod
     def find_unencoded_parts(input_string: str):
@@ -154,6 +166,22 @@ class StrmRedirect(_PluginBase):
                                         'props': {
                                             'model': 'onlyonce',
                                             'label': '立即运行',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'unquote',
+                                            'label': '解码URL',
                                         }
                                     }
                                 ]
@@ -240,11 +268,33 @@ class StrmRedirect(_PluginBase):
                                 ]
                             }
                         ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '如想解码Strm中的url路径，仅需勾选解码URL和填写strm路径即可。'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
                     }
                 ]
             }
         ], {
             "onlyonce": False,
+            "unquote": False,
             "strm_path": "",
             "origin_path": "",
             "redirect_path": "",
