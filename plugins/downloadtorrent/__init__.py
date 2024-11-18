@@ -6,8 +6,8 @@ from typing import Any, List, Dict, Tuple
 from app.log import logger
 from app.schemas.types import SystemConfigKey
 from app.utils.string import StringUtils
-
-
+from app.core.event import eventmanager
+from app.schemas.types import EventType,MessageChannel,NotificationType
 class DownloadTorrent(_PluginBase):
     # 插件名称
     plugin_name = "添加种子下载"
@@ -30,7 +30,9 @@ class DownloadTorrent(_PluginBase):
 
     # 私有属性
     _downloader = None
+    _enabled = False
     _is_paused = False
+    _interaction = False
     _save_path = None
     _mp_path = None
     _torrent_urls = None
@@ -45,52 +47,95 @@ class DownloadTorrent(_PluginBase):
 
         if config:
             self._downloader = config.get("downloader")
+            self._enabled = config.get("enabled")
             self._is_paused = config.get("is_paused")
             self._save_path = config.get("save_path")
             self._mp_path = config.get("mp_path")
             self._torrent_urls = config.get("torrent_urls")
+            self._interaction = config.get("interaction")
 
             # 下载种子
             if self._torrent_urls:
                 for torrent_url in str(self._torrent_urls).split("\n"):
-                    # 获取种子对应站点cookie
-                    domain = StringUtils.get_url_domain(torrent_url)
-                    if not domain:
-                        logger.error(f"种子 {torrent_url} 获取站点域名失败，跳过处理")
-                        continue
-
-                    # 查询站点
-                    site = self.site.get_by_domain(domain)
-                    if not site or not site.cookie:
-                        logger.error(f"种子 {torrent_url} 获取站点cookie失败，跳过处理")
-                        continue
-
-                    # 添加下载
-                    if str(self._downloader) == "qb":
-                        torrent = self.qb.add_torrent(content=torrent_url,
-                                                      is_paused=self._is_paused,
-                                                      download_dir=self._save_path or self._mp_path,
-                                                      cookie=site.cookie)
-                    else:
-                        torrent = self.tr.add_torrent(content=torrent_url,
-                                                      is_paused=self._is_paused,
-                                                      download_dir=self._save_path or self._mp_path,
-                                                      cookie=site.cookie)
-
-                    if torrent:
-                        logger.info(f"种子添加下载成功 {torrent_url} 保存位置 {self._save_path or self._mp_path}")
-                    else:
-                        logger.error(f"种子添加下载失败 {torrent_url} 保存位置 {self._save_path or self._mp_path}")
+                    self.process_torrent(torrent_url)
 
             self.update_config({
                 "downloader": self._downloader,
                 "save_path": self._save_path,
                 "mp_path": self._mp_path,
-                "is_paused": self._is_paused
+                "is_paused": self._is_paused,
+                "interaction": self._interaction,
+                "enabled": self._enabled
             })
 
+    def process_torrent(self, torrent_url):
+        msg = None
+        # 获取种子对应站点cookie
+        domain = StringUtils.get_url_domain(torrent_url)
+        if not domain:
+            logger.error(f"种子 {torrent_url} 获取站点域名失败，跳过处理")
+            msg=f"种子 {torrent_url} 获取站点域名失败，跳过处理"
+            return msg
+
+        # 查询站点
+        site = self.site.get_by_domain(domain)
+        if not site or not site.cookie:
+            logger.error(f"种子 {torrent_url} 获取站点cookie失败，跳过处理")
+            msg = f"种子 {torrent_url} 获取站点cookie失败，跳过处理"
+            return msg
+
+        # 添加下载
+        download_dir = self._save_path or self._mp_path
+        if str(self._downloader) == "qb":
+            torrent = self.qb.add_torrent(content=torrent_url,
+                                          is_paused=self._is_paused,
+                                          download_dir=download_dir,
+                                          cookie=site.cookie)
+        else:
+            torrent = self.tr.add_torrent(content=torrent_url,
+                                          is_paused=self._is_paused,
+                                          download_dir=download_dir,
+                                          cookie=site.cookie)
+
+        if torrent:
+            logger.info(f"种子添加下载成功 {torrent_url} 保存位置 {download_dir}")
+            msg = f"种子添加下载成功 {torrent_url} 保存位置 {download_dir}"
+            return msg
+        else:
+            logger.error(f"种子添加下载失败 {torrent_url} 保存位置 {download_dir}")
+            msg = f"种子添加下载失败 {torrent_url} 保存位置 {download_dir}"
+            return msg
     def get_state(self) -> bool:
-        return False
+        return self._enabled
+
+    @eventmanager.register(EventType.UserMessage)
+    def msgLink(self, event):
+        """
+        远端交互种子连接
+        """
+        msg = None
+        if not self._interaction:
+            logger.error("插件未启用或未开启交互")
+            return
+            # 消息体
+        data = event.event_data
+        channel = data.get("channel")
+        text = data.get("text")
+        logger.info(f"添加种子下载收到用户消息{text}")
+        if channel and channel != MessageChannel.Wechat:
+            logger.error("非微信渠道")
+            return
+        # 使用PT插件逻辑 # 作为标识 绕过MP识别，接收广播通知
+        if not text and not text.startswith("# "):
+            logger.error("无需处理的消息")
+            return
+        text = text[2:]
+        msg = self.process_torrent(text)
+        self.post_message(
+            mtype=NotificationType.Plugin,
+            title="【添加种子下载】",
+            text=msg)
+
 
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
@@ -109,6 +154,48 @@ class DownloadTorrent(_PluginBase):
             {
                 'component': 'VForm',
                 'content': [
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'enabled',
+                                            'label': '启用插件',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VRow',
+                                'content': [
+                                    {
+                                        'component': 'VCol',
+                                        'props': {
+                                            'cols': 12,
+                                            'md': 4
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'VSwitch',
+                                                'props': {
+                                                    'model': 'interaction',
+                                                    'label': '监听交互',
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
                     {
                         'component': 'VRow',
                         'content': [
@@ -257,6 +344,7 @@ class DownloadTorrent(_PluginBase):
         ], {
             "downloader": "qb",
             "is_paused": False,
+            "interaction": False,
             "save_path": "",
             "mp_path": "",
             "torrent_urls": ""
