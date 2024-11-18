@@ -22,6 +22,7 @@ from posixpatht import escape
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers.polling import PollingObserver
 
+from app.chain.media import MediaChain
 from app.core.config import settings
 from app.core.event import eventmanager, Event
 from app.core.metainfo import MetaInfoPath
@@ -63,7 +64,7 @@ class CloudStrmCompanion(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png"
     # 插件版本
-    plugin_version = "1.1.5"
+    plugin_version = "1.1.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -444,6 +445,11 @@ class CloudStrmCompanion(_PluginBase):
         """
         格式化strm内容
         """
+        # 正则表达式匹配括号内的内容
+        pattern = r"\((.*?)\)"
+        # 替换括号及内容url编码
+        format_str = re.sub(pattern, lambda m: urllib.parse.quote(m.group(1)), format_str)
+
         if "{local_file}" in format_str:
             return format_str.replace("{local_file}", local_file)
         elif "{cloud_file}" in format_str:
@@ -506,7 +512,7 @@ class CloudStrmCompanion(_PluginBase):
                     if file_meta.begin_episode:
                         if episodes:
                             if int(file_meta.begin_episode) not in episodes:
-                                episodes = episodes.append(int(file_meta.begin_episode))
+                                episodes.append(int(file_meta.begin_episode))
                         else:
                             episodes = [int(file_meta.begin_episode)]
                     media_list = {
@@ -886,7 +892,7 @@ class CloudStrmCompanion(_PluginBase):
             file_meta = media_list.get("file_meta")
             mtype = media_list.get("type")
             episodes = media_list.get("episodes")
-            if not last_update_time or not episodes:
+            if not last_update_time:
                 continue
 
             # 判断剧集最后更新时间距现在是已超过10秒或者电影，发送消息
@@ -906,7 +912,7 @@ class CloudStrmCompanion(_PluginBase):
                         season_episode = f"{medis_title_year_season}"
 
                     # 获取封面图片
-                    mediainfo: MediaInfo = self.chain.recognize_by_meta(file_meta)
+                    mediainfo: MediaInfo = MediaChain().recognize_by_meta(file_meta)
 
                     # 发送消息
                     self.send_transfer_message(msg_title=season_episode,
@@ -1336,10 +1342,10 @@ class CloudStrmCompanion(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': 'strm格式化方式，自行把()替换为alist/cd2上路径，url编码格式：'
+                                            'text': 'strm格式化方式，自行在()填充alist/cd2上路径：'
                                                     '1.本地源文件路径：{local_file}。'
-                                                    '2.alist路径：http://192.168.31.103:5244/d(){cloud_file}。'
-                                                    '3.cd2路径：http://192.168.31.103:19798/static/http/192.168.31.103:19798/False/(){cloud_file}。'
+                                                    '2.alist路径：http://192.168.31.103:5244/d(/115){cloud_file}。'
+                                                    '3.cd2路径：http://192.168.31.103:19798/static/http/192.168.31.103:19798/False/(/115){cloud_file}。'
                                                     '4.其他api路径：http://192.168.31.103:2001/{cloud_file}'
                                         }
                                     }
