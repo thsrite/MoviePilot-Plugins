@@ -900,7 +900,7 @@ class CloudStrmCompanion(_PluginBase):
                     or str(mtype) == "movie":
                 # 发送通知
                 if self._notify:
-                    file_count = len(episodes)
+                    file_count = len(episodes) if episodes else 1
 
                     # 剧集季集信息 S01 E01-E04 || S01 E01、E02、E04
                     # 处理文件多，说明是剧集，显示季入库消息
