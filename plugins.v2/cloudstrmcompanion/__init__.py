@@ -5,7 +5,6 @@ import shutil
 import threading
 import time
 import traceback
-import urllib.parse
 from datetime import datetime, timedelta
 from io import BytesIO
 from pathlib import Path
@@ -64,7 +63,7 @@ class CloudStrmCompanion(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png"
     # 插件版本
-    plugin_version = "1.1.6"
+    plugin_version = "1.1.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -445,18 +444,13 @@ class CloudStrmCompanion(_PluginBase):
         """
         格式化strm内容
         """
-        # 正则表达式匹配括号内的内容
-        pattern = r"\((.*?)\)"
-        # 替换括号及内容url编码
-        format_str = re.sub(pattern, lambda m: urllib.parse.quote(m.group(1)), format_str)
-
         if "{local_file}" in format_str:
             return format_str.replace("{local_file}", local_file)
         elif "{cloud_file}" in format_str:
             # 替换路径中的\为/
             cloud_file = cloud_file.replace("\\", "/")
             # 对盘符之后的所有内容进行url转码
-            cloud_file = urllib.parse.quote(cloud_file, safe='')
+            # cloud_file = urllib.parse.quote(cloud_file, safe='')
             return format_str.replace("{cloud_file}", cloud_file)
         else:
             return None
@@ -1342,10 +1336,10 @@ class CloudStrmCompanion(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': 'strm格式化方式，自行在()填充alist/cd2上路径：'
+                                            'text': 'strm格式化方式，自行把()替换为alist/cd2上路径：'
                                                     '1.本地源文件路径：{local_file}。'
-                                                    '2.alist路径：http://192.168.31.103:5244/d(/115){cloud_file}。'
-                                                    '3.cd2路径：http://192.168.31.103:19798/static/http/192.168.31.103:19798/False/(/115){cloud_file}。'
+                                                    '2.alist路径：http://192.168.31.103:5244/d/115{cloud_file}。'
+                                                    '3.cd2路径：http://192.168.31.103:19798/static/http/192.168.31.103:19798/False/115{cloud_file}。'
                                                     '4.其他api路径：http://192.168.31.103:2001/{cloud_file}'
                                         }
                                     }
