@@ -1,10 +1,11 @@
+from app.core.event import eventmanager, Event
 from app.db.site_oper import SiteOper
 from app.modules.qbittorrent import Qbittorrent
 from app.modules.transmission import Transmission
 from app.plugins import _PluginBase
 from typing import Any, List, Dict, Tuple
 from app.log import logger
-from app.schemas.types import SystemConfigKey
+from app.schemas.types import SystemConfigKey, EventType
 from app.utils.string import StringUtils
 
 
@@ -16,7 +17,7 @@ class DownloadTorrent(_PluginBase):
     # 插件图标
     plugin_icon = "download.png"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -31,6 +32,7 @@ class DownloadTorrent(_PluginBase):
     # 私有属性
     _downloader = None
     _is_paused = False
+    _enabled = False
     _save_path = None
     _mp_path = None
     _torrent_urls = None
@@ -44,6 +46,7 @@ class DownloadTorrent(_PluginBase):
         self.site = SiteOper()
 
         if config:
+            self._enabled = config.get("enabled")
             self._downloader = config.get("downloader")
             self._is_paused = config.get("is_paused")
             self._save_path = config.get("save_path")
@@ -53,48 +56,88 @@ class DownloadTorrent(_PluginBase):
             # 下载种子
             if self._torrent_urls:
                 for torrent_url in str(self._torrent_urls).split("\n"):
-                    # 获取种子对应站点cookie
-                    domain = StringUtils.get_url_domain(torrent_url)
-                    if not domain:
-                        logger.error(f"种子 {torrent_url} 获取站点域名失败，跳过处理")
-                        continue
-
-                    # 查询站点
-                    site = self.site.get_by_domain(domain)
-                    if not site or not site.cookie:
-                        logger.error(f"种子 {torrent_url} 获取站点cookie失败，跳过处理")
-                        continue
-
-                    # 添加下载
-                    if str(self._downloader) == "qb":
-                        torrent = self.qb.add_torrent(content=torrent_url,
-                                                      is_paused=self._is_paused,
-                                                      download_dir=self._save_path or self._mp_path,
-                                                      cookie=site.cookie)
-                    else:
-                        torrent = self.tr.add_torrent(content=torrent_url,
-                                                      is_paused=self._is_paused,
-                                                      download_dir=self._save_path or self._mp_path,
-                                                      cookie=site.cookie)
-
-                    if torrent:
-                        logger.info(f"种子添加下载成功 {torrent_url} 保存位置 {self._save_path or self._mp_path}")
-                    else:
-                        logger.error(f"种子添加下载失败 {torrent_url} 保存位置 {self._save_path or self._mp_path}")
+                    self.__download_torrent(torrent_url)
 
             self.update_config({
                 "downloader": self._downloader,
+                "enabled": self._enabled,
                 "save_path": self._save_path,
                 "mp_path": self._mp_path,
                 "is_paused": self._is_paused
             })
 
+    def __download_torrent(self, torrent_url: str):
+        """
+        下载种子
+        """
+        # 获取种子对应站点cookie
+        domain = StringUtils.get_url_domain(torrent_url)
+        if not domain:
+            logger.error(f"种子 {torrent_url} 获取站点域名失败，跳过处理")
+            return None, None
+
+            # 查询站点
+        site = self.site.get_by_domain(domain)
+        if not site or not site.cookie:
+            logger.error(f"种子 {torrent_url} 获取站点cookie失败，跳过处理")
+            return None, None
+
+        # 添加下载
+        if str(self._downloader) == "qb":
+            torrent = self.qb.add_torrent(content=torrent_url,
+                                          is_paused=self._is_paused,
+                                          download_dir=self._save_path or self._mp_path,
+                                          cookie=site.cookie)
+        else:
+            torrent = self.tr.add_torrent(content=torrent_url,
+                                          is_paused=self._is_paused,
+                                          download_dir=self._save_path or self._mp_path,
+                                          cookie=site.cookie)
+
+        if torrent:
+            logger.info(f"种子添加下载成功 {torrent_url} 保存位置 {self._save_path or self._mp_path}")
+            return site.name, f"种子添加下载成功, 保存位置 {self._save_path or self._mp_path}"
+        else:
+            logger.error(f"种子添加下载失败 {torrent_url} 保存位置 {self._save_path or self._mp_path}")
+            return site.name, f"种子添加下载失败, 保存位置 {self._save_path or self._mp_path}"
+
+    @eventmanager.register(EventType.PluginAction)
+    def remote_sync_one(self, event: Event = None):
+        if event:
+            event_data = event.event_data
+            if not event_data or event_data.get("action") != "download_torrent":
+                return
+            args = event_data.get("args")
+            if not args:
+                logger.error(f"缺少参数：{event_data}")
+                return
+
+            site_name, result = self.__download_torrent(args)
+            if not result:
+                self.post_message(channel=event.event_data.get("channel"),
+                                  title="添加种子下载失败",
+                                  userid=event.event_data.get("user"))
+            else:
+                self.post_message(channel=event.event_data.get("channel"),
+                                  title=f"{site_name} {result}",
+                                  userid=event.event_data.get("user"))
+
     def get_state(self) -> bool:
-        return False
+        return self._enabled
 
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
-        pass
+        return [
+            {
+                "cmd": "/dt",
+                "event": EventType.PluginAction,
+                "desc": "种子下载",
+                "category": "",
+                "data": {
+                    "action": "download_torrent"
+                }
+            }
+        ]
 
     def get_api(self) -> List[Dict[str, Any]]:
         pass
@@ -109,6 +152,27 @@ class DownloadTorrent(_PluginBase):
             {
                 'component': 'VForm',
                 'content': [
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'enabled',
+                                            'label': '启用插件',
+                                        }
+                                    }
+                                ]
+                            },
+                        ]
+                    },
                     {
                         'component': 'VRow',
                         'content': [
@@ -257,6 +321,7 @@ class DownloadTorrent(_PluginBase):
         ], {
             "downloader": "qb",
             "is_paused": False,
+            "enabled": False,
             "save_path": "",
             "mp_path": "",
             "torrent_urls": ""
