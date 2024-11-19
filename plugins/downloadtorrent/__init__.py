@@ -353,7 +353,7 @@ class DownloadTorrent(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '监听交互：向企业应用发送种子地址,添加下载（如果同时启用ChatGPT插件则会同时触发GPT回复）'
+                                            'text': '监听交互：向企业微信应用发送种子地址,添加下载（如果同时启用ChatGPT插件则会同时触发GPT回复）'
                                                     '消息格式：#+空格+种子地址'
                                         }
                                     }
