@@ -444,11 +444,12 @@
     "name": "添加种子下载",
     "description": "选择下载器，添加种子任务。",
     "labels": "站点",
-    "version": "2.0",
+    "version": "2.1",
     "icon": "download.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v2.1": "交互命令下载 /dt 种子url",
       "v2.0": "兼容V2版本",
       "v1.1": "支持选择MoviePilot配置的下载路径",
       "v1.0": "删除下载器中该站点辅种，保留该站点没有辅种的种子"
