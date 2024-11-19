@@ -338,6 +338,28 @@ class DownloadTorrent(_PluginBase):
                                 ]
                             }
                         ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '监听交互：像企业应用发送种子地址,添加下载'
+                                                    '消息格式：#+空格+种子地址'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
                     }
                 ]
             }
