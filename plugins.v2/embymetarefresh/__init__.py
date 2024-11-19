@@ -16,9 +16,9 @@ from zhconv import zhconv
 
 from app import schemas
 from app.chain.tmdb import TmdbChain
+from app.core.config import settings
 from app.core.event import eventmanager, Event
 from app.db.transferhistory_oper import TransferHistoryOper
-from app.core.config import settings
 from app.helper.mediaserver import MediaServerHelper
 from app.log import logger
 from app.plugins import _PluginBase
@@ -36,7 +36,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "2.1.3"
+    plugin_version = "2.1.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -694,44 +694,49 @@ class EmbyMetaRefresh(_PluginBase):
         """
         刷新emby
         """
-        if transferinfo.type == "电影":
-            movies = emby.get_movies(title=transferinfo.title, year=transferinfo.year)
-            if not movies:
-                logger.error(f"Emby中没有找到{transferinfo.title} ({transferinfo.year})")
-                return
-            for movie in movies:
-                self.__refresh_emby_library_by_id(item_id=movie.item_id)
-                logger.info(f"已通知刷新Emby电影：{movie.title} ({movie.year}) item_id:{movie.item_id}")
+        try:
+            if transferinfo.type == "电影":
+                movies = emby.get_movies(title=transferinfo.title, year=transferinfo.year)
+                if not movies:
+                    logger.error(f"Emby中没有找到{transferinfo.title} ({transferinfo.year})")
+                    return
+                for movie in movies:
+                    self.__refresh_emby_library_by_id(item_id=movie.item_id)
+                    logger.info(f"已通知刷新Emby电影：{movie.title} ({movie.year}) item_id:{movie.item_id}")
+                    if self._actor_chi:
+                        self.__update_people_chi(item_id=movie.item_id, title=movie.title, type=MediaType.MOVIE)
+            else:
+                item_id = self.__get_emby_series_id_by_name(name=transferinfo.title, year=transferinfo.year)
+                if not item_id or item_id is None:
+                    logger.error(f"Emby中没有找到{transferinfo.title} ({transferinfo.year})")
+                    return
+
+                # 验证tmdbid是否相同
+                item_info = emby.get_iteminfo(item_id)
+                if item_info:
+                    if transferinfo.tmdbid and item_info.tmdbid:
+                        if str(transferinfo.tmdbid) != str(item_info.tmdbid):
+                            logger.error(f"Emby中{transferinfo.title} ({transferinfo.year})的tmdbId与入库记录不一致")
+                            return
+
+                # 查询集的item_id
+                season = int(transferinfo.seasons.replace("S", ""))
+                episode = int(transferinfo.episodes.replace("E", "")) if "-" not in transferinfo.episodes else int(
+                    transferinfo.episodes.replace("E", "").split("-")[0])
+                episode_item_id = self.__get_emby_episode_item_id(item_id=item_id, season=season, episode=episode)
+                if not episode_item_id or episode_item_id is None:
+                    logger.error(
+                        f"Emby中没有找到{transferinfo.title} ({transferinfo.year}) {transferinfo.seasons}{transferinfo.episodes}")
+                    return
+
+                self.__refresh_emby_library_by_id(item_id=episode_item_id)
+                logger.info(
+                    f"已通知刷新Emby电视剧：{transferinfo.title} ({transferinfo.year}) {transferinfo.seasons}{transferinfo.episodes} item_id:{episode_item_id}")
                 if self._actor_chi:
-                    self.__update_people_chi(item_id=movie.item_id, title=movie.title, type=MediaType.MOVIE)
-        else:
-            item_id = self.__get_emby_series_id_by_name(name=transferinfo.title, year=transferinfo.year)
-            if not item_id or item_id is None:
-                logger.error(f"Emby中没有找到{transferinfo.title} ({transferinfo.year})")
-                return
-
-            # 验证tmdbid是否相同
-            item_info = emby.get_iteminfo(item_id)
-            if item_info:
-                if transferinfo.tmdbid and item_info.tmdbid:
-                    if str(transferinfo.tmdbid) != str(item_info.tmdbid):
-                        logger.error(f"Emby中{transferinfo.title} ({transferinfo.year})的tmdbId与入库记录不一致")
-                        return
-
-            # 查询集的item_id
-            season = int(transferinfo.seasons.replace("S", ""))
-            episode = int(transferinfo.episodes.replace("E", ""))
-            episode_item_id = self.__get_emby_episode_item_id(item_id=item_id, season=season, episode=episode)
-            if not episode_item_id or episode_item_id is None:
-                logger.error(
-                    f"Emby中没有找到{transferinfo.title} ({transferinfo.year}) {transferinfo.seasons}{transferinfo.episodes}")
-                return
-
-            self.__refresh_emby_library_by_id(item_id=episode_item_id)
-            logger.info(
-                f"已通知刷新Emby电视剧：{transferinfo.title} ({transferinfo.year}) {transferinfo.seasons}{transferinfo.episodes} item_id:{episode_item_id}")
-            if self._actor_chi:
-                self.__update_people_chi(item_id=item_id, title=transferinfo.title, type=MediaType.TV, season=season)
+                    self.__update_people_chi(item_id=item_id, title=transferinfo.title, type=MediaType.TV,
+                                             season=season)
+        except Exception as e:
+            logger.error(f"刷新Emby出错：{e}")
 
     def __get_emby_episode_item_id(self, item_id: str, season: int, episode: int) -> Optional[str]:
         """
