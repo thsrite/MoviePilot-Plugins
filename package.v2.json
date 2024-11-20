@@ -45,7 +45,7 @@
   },
   "EmbyReporter": {
     "name": "Emby观影报告",
-    "description": "推送Emby观影报告，需Emby安装Playback Report 插件。",
+    "description": "推送Emby观影报告，需Emby安装Playback Report插件。",
     "labels": "Emby",
     "version": "2.1.1",
     "icon": "Pydiocells_A.png",
