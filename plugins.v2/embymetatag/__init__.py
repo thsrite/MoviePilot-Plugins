@@ -7,6 +7,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from requests import Session
 
+from app.chain.mediaserver import MediaServerChain
 from app.core.config import settings
 from app.core.event import eventmanager, Event
 from app.db import db_query
@@ -233,6 +234,7 @@ class EmbyMetaTag(_PluginBase):
 
             # 媒体音频标签
             if self._acc_tags and len(self._acc_tags) > 0:
+                MediaServerChain().sync()
                 media_items = self.__get_media_items(db=None)
                 logger.info(f"获取到同步媒体数据：{len(media_items)} 个")
 
