@@ -21,7 +21,7 @@ class CloudSyncDel(_PluginBase):
     # 插件图标
     plugin_icon = "clouddisk.png"
     # 插件版本
-    plugin_version = "1.5.6"
+    plugin_version = "1.5.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -101,6 +101,7 @@ class CloudSyncDel(_PluginBase):
         local_path = self.__get_path(self._local_paths, media_path)
         logger.info(f"获取到 {self._local_paths} 替换后本地文件路径 {local_path}")
 
+        is_local = False
         if Path(local_path).exists() and (
                 Path(local_path).is_dir() or (Path(local_path).is_file() and not Path(local_path).is_symlink())):
             if Path(local_path).is_dir():
@@ -117,6 +118,7 @@ class CloudSyncDel(_PluginBase):
             eventItem.episode_id = episode_num
             eventItem.item_isvirtual = "False"
             self.eventmanager.send_event(EventType.WebhookMessage, eventItem)
+            is_local = True
         else:
             # 检索相同目录下同名的媒体文件
             pattern = Path(local_path).stem.replace('[', '?').replace(']', '?')
@@ -126,15 +128,16 @@ class CloudSyncDel(_PluginBase):
             if not files:
                 logger.info(f"未找到本地同名文件 {pattern}，开始删除云盘")
             else:
+                is_local = True
                 for file in files:
                     Path(file).unlink()
                     logger.info(f"本地文件 {file} 已删除")
                     if Path(file).suffix in settings.RMT_MEDIAEXT:
-                        logger.info(f"获取到本地路径 {local_path}, 通知媒体库同步删除插件删除")
+                        logger.info(f"获取到本地路径 {file}, 通知媒体库同步删除插件删除")
                         eventItem = schemas.WebhookEventInfo(event="media_del", channel="emby")
                         eventItem.item_type = media_type
                         eventItem.item_name = media_name
-                        eventItem.item_path = local_path
+                        eventItem.item_path = file
                         eventItem.tmdb_id = tmdb_id
                         eventItem.season_id = season_num
                         eventItem.episode_id = episode_num
@@ -146,6 +149,22 @@ class CloudSyncDel(_PluginBase):
                 if thumb_file.exists():
                     thumb_file.unlink()
                     logger.info(f"本地文件 {thumb_file} 已删除")
+
+                # 删除空目录
+                # 判断当前媒体父路径下是否有媒体文件，如有则无需遍历父级
+                if not SystemUtils.exits_files(local_path.parent, settings.RMT_MEDIAEXT):
+                    # 判断父目录是否为空, 为空则删除
+                    for parent_path in local_path.parents:
+                        if str(parent_path.parent) != str(local_path.root):
+                            # 父目录非根目录，才删除父目录
+                            if not SystemUtils.exits_files(parent_path, settings.RMT_MEDIAEXT):
+                                # 当前路径下没有媒体文件则删除
+                                shutil.rmtree(parent_path)
+                                logger.warn(f"本地目录 {parent_path} 已删除")
+
+        # 本地文件不继续处理
+        if is_local:
+            return
 
         media_path = self.__get_path(self._paths, media_path)
         if not media_path:
