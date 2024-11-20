@@ -1,16 +1,19 @@
+import re
 from datetime import datetime, timedelta
 from typing import Optional, Any, List, Dict, Tuple
 
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from requests import Session
 
 from app.core.config import settings
 from app.core.event import eventmanager, Event
+from app.db import db_query
+from app.db.models import MediaServerItem
 from app.helper.mediaserver import MediaServerHelper
 from app.log import logger
 from app.plugins import _PluginBase
-from app.modules.emby import Emby
 from app.schemas.types import EventType
 from app.utils.http import RequestUtils
 
@@ -23,7 +26,7 @@ class EmbyMetaTag(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/tag.png"
     # 插件版本
-    plugin_version = "1.3"
+    plugin_version = "1.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -40,6 +43,7 @@ class EmbyMetaTag(_PluginBase):
     _onlyonce = False
     _cron = None
     _tag_confs = None
+    _aac_confs = None
     _name_tag_confs = None
     _mediaservers = None
 
@@ -50,6 +54,7 @@ class EmbyMetaTag(_PluginBase):
     _scheduler: Optional[BackgroundScheduler] = None
 
     _tags = {}
+    _acc_tags = []
     _media_tags = {}
     _media_type = {}
 
@@ -63,10 +68,11 @@ class EmbyMetaTag(_PluginBase):
             self._onlyonce = config.get("onlyonce")
             self._cron = config.get("cron")
             self._tag_confs = config.get("tag_confs")
+            self._aac_confs = config.get("aac_confs")
             self._name_tag_confs = config.get("name_tag_confs")
             self._mediaservers = config.get("mediaservers") or []
 
-            _tags = {}
+            self._tags = {}
             if self._tag_confs:
                 tag_confs = self._tag_confs.split("\n")
                 for tag_conf in tag_confs:
@@ -78,8 +84,18 @@ class EmbyMetaTag(_PluginBase):
                                 library_tags = self._tags.get(library) or []
                                 self._tags[library] = library_tags + tag_conf[1].split(',')
 
-            _media_tags = {}
-            _media_type = {}
+            self._acc_tags = []
+            if self._aac_confs:
+                aac_confs = self._aac_confs.split("\n")
+                for acc_conf in aac_confs:
+                    if acc_conf:
+                        acc_conf = acc_conf.split("#")
+                        if len(acc_conf) == 2:
+                            acc_regex = acc_conf[0]
+                            self._acc_tags.append({"regex": acc_regex, "tags": acc_conf[1].split(',')})
+
+            self._media_tags = {}
+            self._media_type = {}
             if self._name_tag_confs:
                 name_tag_confs = self._name_tag_confs.split("\n")
                 for name_tag_conf in name_tag_confs:
@@ -136,6 +152,7 @@ class EmbyMetaTag(_PluginBase):
                 "cron": self._cron,
                 "enabled": self._enabled,
                 "tag_confs": self._tag_confs,
+                "aac_confs": self._aac_confs,
                 "name_tag_confs": self._name_tag_confs,
                 "mediaservers": self._mediaservers,
             }
@@ -146,6 +163,7 @@ class EmbyMetaTag(_PluginBase):
         给设定媒体库打标签
         """
         if (not self._tags or len(self._tags.keys()) == 0) and (
+                not self._acc_tags or len(self._acc_tags) == 0) and (
                 not self._media_tags or len(self._media_tags.keys()) == 0):
             logger.error("未配置Emby媒体标签")
             return
@@ -188,26 +206,16 @@ class EmbyMetaTag(_PluginBase):
                     for library_item in library_items:
                         if not library_item:
                             continue
-                        # 获取item的tag
-                        item_tags = self.__get_item_tags(library_item.item_id) or []
 
-                        # 获取缺少的tag
-                        add_tags = []
-                        for library_tag in library_tags:
-                            if not item_tags or library_tag not in item_tags:
-                                add_tags.append(library_tag)
-
-                        # 添加标签
-                        if add_tags:
-                            tags = [{"Name": str(add_tag)} for add_tag in add_tags]
-                            tags = {"Tags": tags}
-                            add_flag = self.__add_tag(library_item.item_id, tags)
-                            logger.info(f"{library.name} 添加标签成功：{library_item.title} {tags} {add_flag}")
+                        # 给媒体添加tag
+                        self.__add_tags(item_name=library_item.title,
+                                        item_id=library_item.item_id,
+                                        media_tags=library_tags,
+                                        type=library.name)
 
             # 特殊媒体名标签
             if self._media_tags and len(self._media_tags.keys()) > 0:
                 for media_name, media_tags in self._media_tags.items():
-
                     match_medias = []
                     # 根据Series/Movie搜索媒体
                     for media_type in self._media_type.get(media_name):
@@ -217,24 +225,82 @@ class EmbyMetaTag(_PluginBase):
                     for media in match_medias:
                         if not media:
                             continue
+                        # 给媒体添加tag
+                        self.__add_tags(item_name=media.get("Name"),
+                                        item_id=media.get("Id"),
+                                        media_tags=media_tags,
+                                        type="特殊媒体")
 
-                        # 获取item的tag
-                        item_tags = self.__get_item_tags(media.get("Id")) or []
+            # 媒体音频标签
+            if self._acc_tags and len(self._acc_tags) > 0:
+                media_items = self.__get_media_items(db=None)
+                logger.info(f"获取到同步媒体数据：{len(media_items)} 个")
 
-                        # 获取缺少的tag
-                        add_tags = []
-                        for media_tag in media_tags:
-                            if not item_tags or media_tag not in item_tags:
-                                add_tags.append(media_tag)
+                for media_item in media_items:
+                    if not media_item:
+                        continue
 
-                        # 添加标签
-                        if add_tags:
-                            tags = [{"Name": str(add_tag)} for add_tag in add_tags]
-                            tags = {"Tags": tags}
-                            add_flag = self.__add_tag(media.get("Id"), tags)
-                            logger.info(f"特殊媒体添加标签成功：{media.get('Name')} {tags} {add_flag}")
+                    if media_item.item_type == "电影":
+                        item_id = media_item.item_id
+                    else:
+                        # 获取电视剧的媒体信息
+                        __media_items = self.__get_items(media_item.item_id)
+                        if not __media_items:
+                            continue
+                        item_id = __media_items[0].get("Id")
+
+                    # 获取item的媒体信息
+                    media_accs = self.__get_item_info(item_id)
+                    if not media_accs:
+                        continue
+
+                    logger.info(f"获取到媒体音频数据：{media_item.item_type} {media_item.title} {media_accs}")
+
+                    # 遍历媒体音频 匹配正则
+                    add_tags = []
+                    for acc_tag in self._acc_tags:
+                        acc_regex = acc_tag.get("regex")
+                        acc_tags = acc_tag.get("tags")
+
+                        match_flag = False
+                        for media_acc in media_accs:
+                            if re.search(acc_regex, media_acc):
+                                match_flag = True
+                                break
+                        if not match_flag:
+                            continue
+
+                        logger.info(f"匹配到媒体音频：{media_item.item_type} {media_item.title} {acc_tags}")
+                        add_tags += acc_tags
+
+                    # 给媒体添加tag
+                    logger.info(f"开始给媒体添加标签：{media_item.item_type} {media_item.title} {add_tags}")
+                    self.__add_tags(item_name=media_item.title,
+                                    item_id=media_item.item_id,
+                                    media_tags=add_tags,
+                                    type="媒体音频")
 
             logger.info(f"{emby_name} 媒体标签任务完成")
+
+    def __add_tags(self, item_name, item_id, media_tags, type):
+        """
+        给单个项目添加标签
+        """
+        # 获取item的tag
+        item_tags = self.__get_item_tags(item_id) or []
+
+        # 获取缺少的tag
+        add_tags = []
+        for media_tag in media_tags:
+            if not item_tags or media_tag not in item_tags:
+                add_tags.append(media_tag)
+
+        # 添加标签
+        if add_tags:
+            tags = [{"Name": str(add_tag)} for add_tag in add_tags]
+            tags = {"Tags": tags}
+            add_flag = self.__add_tag(item_id, tags)
+            logger.info(f"{type} 添加标签成功：{item_name} {tags} {add_flag}")
 
     @eventmanager.register(EventType.PluginAction)
     def remote_sync(self, event: Event):
@@ -279,6 +345,46 @@ class EmbyMetaTag(_PluginBase):
                     return [tag.get('Name') for tag in item.get("TagItems")]
         except Exception as e:
             logger.error(f"连接Items/Id出错：" + str(e))
+        return []
+
+    def __get_items(self, itemid: str):
+        """
+        获取剧集媒体信息
+        """
+        if not itemid:
+            return None
+        if not self._EMBY_HOST or not self._EMBY_APIKEY:
+            return None
+        req_url = "%semby/Users/%s/Items?api_key=%s&Limit=1&Recursive=true&ParentId=%s&IsFolder=false" % (
+            self._EMBY_HOST, self._EMBY_USER, self._EMBY_APIKEY, itemid)
+        try:
+            with RequestUtils().get_res(req_url) as res:
+                if res and res.status_code == 200:
+                    item = res.json()
+                    return item.get("Items", {})
+        except Exception as e:
+            logger.error(f"连接Items/Id出错：" + str(e))
+        return []
+
+    def __get_item_info(self, itemid: str):
+        """
+        获取单个项目media信息
+        """
+        if not itemid:
+            return None
+        if not self._EMBY_HOST or not self._EMBY_APIKEY:
+            return None
+        req_url = "%semby/Items/%s/PlaybackInfo?UserId=%s&api_key=%s" % (
+            self._EMBY_HOST, itemid, self._EMBY_USER, self._EMBY_APIKEY)
+        try:
+            with RequestUtils().get_res(req_url) as res:
+                if res and res.status_code == 200:
+                    item = res.json()
+                    return [media_stream.get('Title') for media_stream in
+                            item.get("MediaSources", {})[0].get("MediaStreams", []) if
+                            media_stream.get('Type') == 'Audio' and media_stream.get('Title')]
+        except Exception as e:
+            logger.error(f"连接Items/Id/PlaybackInfo出错：" + str(e))
         return []
 
     def __get_medias_by_name(self, media_name: str, media_type: str):
@@ -393,6 +499,28 @@ class EmbyMetaTag(_PluginBase):
                                     {
                                         'component': 'VTextarea',
                                         'props': {
+                                            'model': 'aac_confs',
+                                            'label': '媒体音频标签配置',
+                                            'rows': 3,
+                                            'placeholder': 'cantonese|粤语|粤语Cantonese|Cantonese#标签名,标签名'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextarea',
+                                        'props': {
                                             'model': 'tag_confs',
                                             'label': '媒体库标签配置',
                                             'rows': 3,
@@ -480,6 +608,7 @@ class EmbyMetaTag(_PluginBase):
             "cron": "5 1 * * *",
             "tag_confs": "",
             "name_tag_confs": "",
+            "aac_confs": "",
             "mediaservers": [],
         }
 
@@ -498,3 +627,11 @@ class EmbyMetaTag(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error("退出插件失败：%s" % str(e))
+
+    @staticmethod
+    @db_query
+    def __get_media_items(db: Optional[Session]) -> List[MediaServerItem]:
+        """
+        根据下载记录hash查询下载记录
+        """
+        return MediaServerItem.list(db)
