@@ -526,6 +526,7 @@ class CloudStrmCompanion(_PluginBase):
 
             # 通知emby刷新
             if self._refresh_emby and self._mediaservers:
+                time.sleep(0.1)
                 self.__refresh_emby_file(strm_file)
         except Exception as e:
             logger.error(f"创建strm文件失败 {strm_file} -> {str(e)}")
