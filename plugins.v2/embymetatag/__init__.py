@@ -380,9 +380,10 @@ class EmbyMetaTag(_PluginBase):
             with RequestUtils().get_res(req_url) as res:
                 if res and res.status_code == 200:
                     item = res.json()
-                    return [media_stream.get('Title') for media_stream in
+                    return [media_stream.get('Title') or media_stream.get('Language') for media_stream in
                             item.get("MediaSources", {})[0].get("MediaStreams", []) if
-                            media_stream.get('Type') == 'Audio' and media_stream.get('Title')]
+                            media_stream.get('Type') == 'Audio' and (
+                                    media_stream.get('Title') or media_stream.get('Language'))]
         except Exception as e:
             logger.error(f"连接Items/Id/PlaybackInfo出错：" + str(e))
         return []
