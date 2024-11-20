@@ -546,7 +546,7 @@ class CloudStrmCompanion(_PluginBase):
             self._EMBY_APIKEY = emby_server.config.config.get("apikey")
             self._EMBY_HOST = emby_server.config.config.get("host")
 
-            logger.info(f"开始通知媒体服务器 {emby_name} 刷新新增文件 {strm_file}")
+            logger.info(f"开始通知媒体服务器 {emby_name} 刷新增量文件 {strm_file}")
             try:
                 res = emby.post_data(
                     url=f'[HOST]emby/Library/Media/Updated?api_key=[APIKEY]&reqformat=json',
