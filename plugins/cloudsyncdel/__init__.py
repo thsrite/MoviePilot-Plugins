@@ -21,7 +21,7 @@ class CloudSyncDel(_PluginBase):
     # 插件图标
     plugin_icon = "clouddisk.png"
     # 插件版本
-    plugin_version = "1.5.7"
+    plugin_version = "1.5.8"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -120,47 +120,48 @@ class CloudSyncDel(_PluginBase):
             self.eventmanager.send_event(EventType.WebhookMessage, eventItem)
             is_local = True
         else:
-            # 检索相同目录下同名的媒体文件
-            pattern = Path(local_path).stem.replace('[', '?').replace(']', '?')
-            logger.info(f"开始筛选 {Path(local_path).parent} 下同名文件 {pattern}")
-            files = Path(local_path).parent.glob(f"{pattern}.*")
+            if Path(local_path).parent.exists():
+                # 检索相同目录下同名的媒体文件
+                pattern = Path(local_path).stem.replace('[', '?').replace(']', '?')
+                logger.info(f"开始筛选 {Path(local_path).parent} 下同名文件 {pattern}")
+                files = Path(local_path).parent.glob(f"{pattern}.*")
 
-            if not files:
-                logger.info(f"未找到本地同名文件 {pattern}，开始删除云盘")
-            else:
-                is_local = True
-                for file in files:
-                    Path(file).unlink()
-                    logger.info(f"本地文件 {file} 已删除")
-                    if Path(file).suffix in settings.RMT_MEDIAEXT:
-                        logger.info(f"获取到本地路径 {file}, 通知媒体库同步删除插件删除")
-                        eventItem = schemas.WebhookEventInfo(event="media_del", channel="emby")
-                        eventItem.item_type = media_type
-                        eventItem.item_name = media_name
-                        eventItem.item_path = file
-                        eventItem.tmdb_id = tmdb_id
-                        eventItem.season_id = season_num
-                        eventItem.episode_id = episode_num
-                        eventItem.item_isvirtual = "False"
-                        self.eventmanager.send_event(EventType.WebhookMessage, eventItem)
+                if not files:
+                    logger.info(f"未找到本地同名文件 {pattern}，开始删除云盘")
+                else:
+                    for file in files:
+                        is_local = True
+                        Path(file).unlink()
+                        logger.info(f"本地文件 {file} 已删除")
+                        if Path(file).suffix in settings.RMT_MEDIAEXT:
+                            logger.info(f"获取到本地路径 {file}, 通知媒体库同步删除插件删除")
+                            eventItem = schemas.WebhookEventInfo(event="media_del", channel="emby")
+                            eventItem.item_type = media_type
+                            eventItem.item_name = media_name
+                            eventItem.item_path = file
+                            eventItem.tmdb_id = tmdb_id
+                            eventItem.season_id = season_num
+                            eventItem.episode_id = episode_num
+                            eventItem.item_isvirtual = "False"
+                            self.eventmanager.send_event(EventType.WebhookMessage, eventItem)
 
-                # 删除thumb图片
-                thumb_file = Path(local_path).parent / (Path(local_path).stem + "-thumb.jpg")
-                if thumb_file.exists():
-                    thumb_file.unlink()
-                    logger.info(f"本地文件 {thumb_file} 已删除")
+                    # 删除thumb图片
+                    thumb_file = Path(local_path).parent / (Path(local_path).stem + "-thumb.jpg")
+                    if thumb_file.exists():
+                        thumb_file.unlink()
+                        logger.info(f"本地文件 {thumb_file} 已删除")
 
-                # 删除空目录
-                # 判断当前媒体父路径下是否有媒体文件，如有则无需遍历父级
-                if not SystemUtils.exits_files(local_path.parent, settings.RMT_MEDIAEXT):
-                    # 判断父目录是否为空, 为空则删除
-                    for parent_path in local_path.parents:
-                        if str(parent_path.parent) != str(local_path.root):
-                            # 父目录非根目录，才删除父目录
-                            if not SystemUtils.exits_files(parent_path, settings.RMT_MEDIAEXT):
-                                # 当前路径下没有媒体文件则删除
-                                shutil.rmtree(parent_path)
-                                logger.warn(f"本地目录 {parent_path} 已删除")
+                    # 删除空目录
+                    # 判断当前媒体父路径下是否有媒体文件，如有则无需遍历父级
+                    if not SystemUtils.exits_files(local_path.parent, settings.RMT_MEDIAEXT):
+                        # 判断父目录是否为空, 为空则删除
+                        for parent_path in local_path.parents:
+                            if str(parent_path.parent) != str(local_path.root):
+                                # 父目录非根目录，才删除父目录
+                                if not SystemUtils.exits_files(parent_path, settings.RMT_MEDIAEXT):
+                                    # 当前路径下没有媒体文件则删除
+                                    shutil.rmtree(parent_path)
+                                    logger.warn(f"本地目录 {parent_path} 已删除")
 
         # 本地文件不继续处理
         if is_local:
