@@ -23,7 +23,7 @@ class MoviePilotUpdateNotify(_PluginBase):
     # 插件图标
     plugin_icon = "Moviepilot_A.png"
     # 插件版本
-    plugin_version = "1.5"
+    plugin_version = "1.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -152,8 +152,7 @@ class MoviePilotUpdateNotify(_PluginBase):
             headers=settings.GITHUB_HEADERS
         ).get_res("https://api.github.com/repos/jxxghp/MoviePilot/releases")
         if version_res:
-            ver_json = version_res.json()
-            releases = [release['tag_name'] for release in ver_json]
+            releases = [release['tag_name'] for release in version_res.json()]
             v2_releases = [tag for tag in releases if re.match(r"^v2\.", tag)]
             if not v2_releases:
                 logger.warn("获取v2后端最新版本版本出错！")
@@ -162,11 +161,12 @@ class MoviePilotUpdateNotify(_PluginBase):
                 # 找到最新的v2版本
                 latest_v2 = sorted(v2_releases, key=lambda s: list(map(int, re.findall(r'\d+', s))))[-1]
                 logger.info(f"获取到后端最新版本：{latest_v2}")
-                description = f"{ver_json['body']}"
-                update_time = f"{ver_json['published_at']}"
-                return latest_v2, description, update_time
-        else:
-            return None, None, None
+                for release in version_res.json():
+                    if release['tag_name'] == latest_v2:
+                        description = f"{release['body']}"
+                        update_time = f"{release['published_at']}"
+                        return latest_v2, description, update_time
+        return None, None, None
 
     @staticmethod
     def __get_front_release_version():
@@ -178,8 +178,7 @@ class MoviePilotUpdateNotify(_PluginBase):
             headers=settings.GITHUB_HEADERS
         ).get_res("https://api.github.com/repos/jxxghp/MoviePilot-Frontend/releases")
         if version_res:
-            ver_json = version_res.json()
-            releases = [release['tag_name'] for release in ver_json]
+            releases = [release['tag_name'] for release in version_res.json()]
             v2_releases = [tag for tag in releases if re.match(r"^v2\.", tag)]
             if not v2_releases:
                 logger.warn("获取v2前端最新版本版本出错！")
@@ -188,11 +187,12 @@ class MoviePilotUpdateNotify(_PluginBase):
                 # 找到最新的v2版本
                 latest_v2 = sorted(v2_releases, key=lambda s: list(map(int, re.findall(r'\d+', s))))[-1]
                 logger.info(f"获取到前端最新版本：{latest_v2}")
-                description = f"{ver_json['body']}"
-                update_time = f"{ver_json['published_at']}"
-                return latest_v2, description, update_time
-        else:
-            return None, None, None
+                for release in version_res.json():
+                    if release['tag_name'] == latest_v2:
+                        description = f"{release['body']}"
+                        update_time = f"{release['published_at']}"
+                        return latest_v2, description, update_time
+        return None, None, None
 
     def get_state(self) -> bool:
         return self._enabled
