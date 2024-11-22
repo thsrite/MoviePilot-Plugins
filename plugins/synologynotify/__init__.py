@@ -13,7 +13,7 @@ class SynologyNotify(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/synology.png"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -168,7 +168,7 @@ class SynologyNotify(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '群辉webhook配置http://ip:3001/api/v1/plugin/SynologyNotify/webhook?text=hello world。'
+                                            'text': '群辉webhook配置http://ip:3001/api/v1/plugin/SynologyNotify/webhook?apikey=*****&text=hello world。'
                                                     'text参数类型是消息内容。此插件安装完需要重启生效api。消息类型默认为手动处理通知。'
                                         }
                                     }
