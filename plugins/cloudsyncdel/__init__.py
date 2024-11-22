@@ -134,6 +134,7 @@ class CloudSyncDel(_PluginBase):
                         'episode_num': episode_num,
                         'action': 'media_sync_del'
                     })
+                    is_local = True
                 else:
                     if Path(local_path).is_file():
                         # 检索相同目录下同名的媒体文件
