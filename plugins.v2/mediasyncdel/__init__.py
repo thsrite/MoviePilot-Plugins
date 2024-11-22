@@ -25,7 +25,7 @@ class MediaSyncDel(_PluginBase):
     # 插件图标
     plugin_icon = "mediasyncdel.png"
     # 插件版本
-    plugin_version = "1.8.6"
+    plugin_version = "1.8.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -701,6 +701,39 @@ class MediaSyncDel(_PluginBase):
         if not tmdb_id or not str(tmdb_id).isdigit():
             logger.error(f"{media_name} 同步删除失败，未获取到TMDB ID，请检查媒体库媒体是否刮削")
             return
+
+        self.__sync_del(media_type=media_type,
+                        media_name=media_name,
+                        media_path=media_path,
+                        tmdb_id=tmdb_id,
+                        season_num=season_num,
+                        episode_num=episode_num)
+
+    @eventmanager.register(EventType.PluginAction)
+    def sync_del(self, event: Event = None):
+        """
+        扫描
+        """
+        if not self._enabled or not event:
+            return
+
+        event_data = event.event_data
+        if not event_data or event_data.get("action") != "media_sync_del":
+            return
+
+        logger.info(f"收到媒体同步删除请求：{event_data}")
+        # 媒体类型
+        media_type = event_data.get("media_type")
+        # 媒体名称
+        media_name = event_data.get("media_name")
+        # 媒体路径
+        media_path = event_data.get("media_path")
+        # tmdb_id
+        tmdb_id = event_data.get("tmdb_id")
+        # 季数
+        season_num = event_data.get("season_num")
+        # 集数
+        episode_num = event_data.get("episode_num")
 
         self.__sync_del(media_type=media_type,
                         media_name=media_name,

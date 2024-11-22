@@ -21,7 +21,7 @@ class CloudSyncDel(_PluginBase):
     # 插件图标
     plugin_icon = "clouddisk.png"
     # 插件版本
-    plugin_version = "1.5.8"
+    plugin_version = "1.5.9"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -109,15 +109,15 @@ class CloudSyncDel(_PluginBase):
             elif Path(local_path).is_file():
                 Path(local_path).unlink()  # 删除文件
             logger.info(f"获取到本地路径 {local_path}, 通知媒体库同步删除插件删除")
-            eventItem = schemas.WebhookEventInfo(event="media_del", channel="emby")
-            eventItem.item_type = media_type
-            eventItem.item_name = media_name
-            eventItem.item_path = local_path
-            eventItem.tmdb_id = tmdb_id
-            eventItem.season_id = season_num
-            eventItem.episode_id = episode_num
-            eventItem.item_isvirtual = "False"
-            self.eventmanager.send_event(EventType.WebhookMessage, eventItem)
+            self.eventmanager.send_event(EventType.PluginAction, {
+                'media_type': media_type,
+                'media_name': media_name,
+                'media_path': local_path,
+                'tmdb_id': tmdb_id,
+                'season_num': season_num,
+                'episode_num': episode_num,
+                'action': 'media_sync_del'
+            })
             is_local = True
         else:
             if Path(local_path).parent.exists():
@@ -135,15 +135,15 @@ class CloudSyncDel(_PluginBase):
                         logger.info(f"本地文件 {file} 已删除")
                         if Path(file).suffix in settings.RMT_MEDIAEXT:
                             logger.info(f"获取到本地路径 {file}, 通知媒体库同步删除插件删除")
-                            eventItem = schemas.WebhookEventInfo(event="media_del", channel="emby")
-                            eventItem.item_type = media_type
-                            eventItem.item_name = media_name
-                            eventItem.item_path = file
-                            eventItem.tmdb_id = tmdb_id
-                            eventItem.season_id = season_num
-                            eventItem.episode_id = episode_num
-                            eventItem.item_isvirtual = "False"
-                            self.eventmanager.send_event(EventType.WebhookMessage, eventItem)
+                            self.eventmanager.send_event(EventType.PluginAction, {
+                                'media_type': media_type,
+                                'media_name': media_name,
+                                'media_path': str(file),
+                                'tmdb_id': tmdb_id,
+                                'season_num': season_num,
+                                'episode_num': episode_num,
+                                'action': 'media_sync_del'
+                            })
 
                     # 删除thumb图片
                     thumb_file = Path(local_path).parent / (Path(local_path).stem + "-thumb.jpg")
