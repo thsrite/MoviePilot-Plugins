@@ -488,7 +488,7 @@ class CloudStrmCompanion(_PluginBase):
                     json={"path": str(strm_content), "type": "add"},
                 )
 
-            if self._notify:
+            if self._notify and Path(strm_content).suffix in settings.RMT_MEDIAEXT:
                 # 发送消息汇总
                 file_meta = MetaInfoPath(Path(strm_file))
 
