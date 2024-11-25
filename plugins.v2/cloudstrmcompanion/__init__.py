@@ -63,7 +63,7 @@ class CloudStrmCompanion(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png"
     # 插件版本
-    plugin_version = "1.1.7"
+    plugin_version = "1.1.8"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -912,7 +912,7 @@ class CloudStrmCompanion(_PluginBase):
                     # 发送消息
                     self.send_transfer_message(msg_title=season_episode,
                                                file_count=file_count,
-                                               image=mediainfo.backdrop_path if mediainfo.backdrop_path else mediainfo.poster_path if mediainfo else None)
+                                               image=(mediainfo.backdrop_path if mediainfo.backdrop_path else mediainfo.poster_path) if mediainfo else None)
                 # 发送完消息，移出key
                 del self._medias[medis_title_year_season]
                 continue

@@ -407,11 +407,12 @@
     "name": "云盘Strm助手",
     "description": "实时监控、定时全量增量生成strm文件。",
     "labels": "云盘",
-    "version": "1.1.7",
+    "version": "1.1.8",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v1.1.8": "修复消息发送图片",
       "v1.1.7": "取消Strm url方式URL编码",
       "v1.1.6": "修复消息发送 && Strm格式友好化",
       "v1.1.5": "生成Strm通知Emby刷新",
@@ -476,20 +477,6 @@
       "v1.2": "支持指定插件仓库地址",
       "v1.1": "修复插件重载",
       "v1.0": "卸载当前插件，强制重装"
-    }
-  },
-  "MoviePilotUpdateNotify": {
-    "name": "MoviePilot更新推送",
-    "description": "MoviePilot推送release更新通知、自动重启。",
-    "labels": "消息通知,自动更新",
-    "version": "1.6",
-    "icon": "Moviepilot_A.png",
-    "author": "thsrite",
-    "level": 1,
-    "history": {
-      "v1.6": "修复V2最新版本号获取",
-      "v1.4": "兼容更新内容带版本号的情况",
-      "v1.3": "增加前端版本更新检查，需要主程序升级至v1.8.4+版本"
     }
   }
 }
