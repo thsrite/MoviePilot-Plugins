@@ -131,11 +131,12 @@
     "name": "Emby有声书整理",
     "description": "还在为Emby有声书整理烦恼吗？入库存在很多单集？",
     "labels": "Emby,媒体库",
-    "version": "1.4",
+    "version": "1.4.1",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/audiobook.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v1.4.1": "修复交互命令消息类型",
       "v1.4": "交互命令支持多媒体库",
       "v1.3": "修复自定义参数",
       "v1.2": "适配v2多媒体服务器",

@@ -28,7 +28,7 @@ class EmbyAudioBook(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/audiobook.png"
     # 插件版本
-    plugin_version = "1.4"
+    plugin_version = "1.4.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -194,10 +194,13 @@ class EmbyAudioBook(_PluginBase):
             event_data = event.event_data
             if not event_data or event_data.get("action") != "audiobook":
                 return
-
+            mtype = NotificationType.Manual
+            if self._msgtype:
+                mtype = NotificationType.__getitem__(str(self._msgtype)) or NotificationType.Manual
             if not self._library_id:
                 logger.error("请设置有声书文件夹ID！")
                 self.post_message(channel=event.event_data.get("channel"),
+                                  mtype=mtype,
                                   title="请设置有声书文件夹ID！",
                                   userid=event.event_data.get("user"))
                 return
@@ -211,6 +214,7 @@ class EmbyAudioBook(_PluginBase):
             if len(args_list) != 3:
                 logger.error(f"参数错误：{args_list}")
                 self.post_message(channel=event.event_data.get("channel"),
+                                  mtype=mtype,
                                   title=f"参数错误！ /ab 媒体库 书名 正确信息集数",
                                   userid=event.event_data.get("user"))
                 return
@@ -242,6 +246,7 @@ class EmbyAudioBook(_PluginBase):
                 if not items:
                     logger.error(f"获取媒体库 {self._library_id} 有声书列表失败！")
                     self.post_message(channel=event.event_data.get("channel"),
+                                      mtype=mtype,
                                       title=f"获取 {self._library_id} 有声书失败！",
                                       userid=event.event_data.get("user"))
                     return
@@ -258,6 +263,7 @@ class EmbyAudioBook(_PluginBase):
                 if not book_id:
                     logger.error(f"未找到 {book_name} 有声书！")
                     self.post_message(channel=event.event_data.get("channel"),
+                                      mtype=mtype,
                                       title=f"未找到 {book_name} 有声书！",
                                       userid=event.event_data.get("user"))
                     return
@@ -266,6 +272,7 @@ class EmbyAudioBook(_PluginBase):
                 if not items:
                     logger.error(f"获取 {book_name} {book_id} 有声书失败！")
                     self.post_message(channel=event.event_data.get("channel"),
+                                      mtype=mtype,
                                       title=f"获取 {book_name} {book_id} 有声书失败！",
                                       userid=event.event_data.get("user"))
                     return
@@ -277,6 +284,7 @@ class EmbyAudioBook(_PluginBase):
                     })
                     self.__update_item_info(book_id, book_info)
                 self.post_message(channel=event.event_data.get("channel"),
+                                  mtype=mtype,
                                   title=f"{book_name} 有声书整理完成！",
                                   userid=event.event_data.get("user"))
 
