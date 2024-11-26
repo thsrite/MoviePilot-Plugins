@@ -33,7 +33,7 @@ class EmbyReporter(_PluginBase):
     # 插件图标
     plugin_icon = "Pydiocells_A.png"
     # 插件版本
-    plugin_version = "1.9.1"
+    plugin_version = "1.9.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -444,8 +444,8 @@ class EmbyReporter(_PluginBase):
                                         'component': 'VTextField',
                                         'props': {
                                             'model': 'black_library',
-                                            'label': '黑名单媒体库Id',
-                                            'placeholder': '多个Id用英文逗号分隔'
+                                            'label': '黑名单媒体库名称',
+                                            'placeholder': '多个名称用英文逗号分隔'
                                         }
                                     }
                                 ]
@@ -599,9 +599,8 @@ class EmbyReporter(_PluginBase):
                 if self._black_library:
                     success, info = self.items(user_id, item_id)
                     if success and info:
-                        success, parent_info = self.items(user_id, info["ParentId"])
-                        if (success and parent_info
-                                and str(parent_info["ParentId"]) in str(self._black_library).split(",")):
+                        if (success and any(black_name for black_name in self._black_library.split(",") if
+                                            black_name in info.get("Path", ""))):
                             logger.info(f"电影 {name} 已在媒体库黑名单 {self._black_library} 中，已过滤")
                             continue
                 exists_movies.append(i)
@@ -627,11 +626,11 @@ class EmbyReporter(_PluginBase):
                 success, data = self.items(user_id, item_id)
                 if not success:
                     continue
-                item_id = data["SeriesId"]
                 # 过滤电视剧
                 if self._black_library:
-                    success, parent_info = self.items(user_id, item_id)
-                    if success and parent_info and str(parent_info["ParentId"]) in str(self._black_library).split(","):
+                    logger.error(f"data: {data.get('Path')}")
+                    if success and any(black_name for black_name in self._black_library.split(",") if
+                                       black_name in data.get("Path", "")):
                         logger.info(f"电视剧 {name} 已在媒体库黑名单 {self._black_library} 中，已过滤")
                         continue
                 # 封面图像获取
