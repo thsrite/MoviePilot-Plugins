@@ -36,7 +36,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "2.1.4"
+    plugin_version = "2.1.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -155,6 +155,9 @@ class EmbyMetaRefresh(_PluginBase):
         for emby_name, emby_server in emby_servers.items():
             logger.info(f"开始刷新媒体服务器 {emby_name} 的媒体库元数据")
             emby = emby_server.instance
+            if not emby:
+                logger.error(f"Emby媒体服务器 {emby_name} 未连接")
+                continue
             self._EMBY_USER = emby_server.instance.get_user()
             self._EMBY_APIKEY = emby_server.config.config.get("apikey")
             self._EMBY_HOST = emby_server.config.config.get("host")
