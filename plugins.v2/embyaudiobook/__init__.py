@@ -28,7 +28,7 @@ class EmbyAudioBook(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/audiobook.png"
     # 插件版本
-    plugin_version = "1.4.1"
+    plugin_version = "1.4.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -185,6 +185,170 @@ class EmbyAudioBook(_PluginBase):
                     logger.info(f"有声书 {item.get('Name')} 不需要整理，已锁定")
 
             logger.info(f"{emby_name} 有声书整理服务执行完毕")
+
+    @eventmanager.register(EventType.PluginAction)
+    def audiobook(self, event: Event = None):
+        if not self._enabled:
+            return
+        if event:
+            event_data = event.event_data
+            if not event_data or event_data.get("action") != "audiobook_artist":
+                return
+            mtype = NotificationType.Manual
+            if self._msgtype:
+                mtype = NotificationType.__getitem__(str(self._msgtype)) or NotificationType.Manual
+            if not self._library_id:
+                logger.error("请设置有声书文件夹ID！")
+                self.post_message(channel=event.event_data.get("channel"),
+                                  mtype=mtype,
+                                  title="请设置有声书文件夹ID！",
+                                  userid=event.event_data.get("user"))
+                return
+
+            args = event_data.get("arg_str")
+            if not args:
+                logger.error(f"缺少参数：{event_data}")
+                return
+
+            args_list = args.split(" ")
+            if len(args_list) != 3:
+                logger.error(f"参数错误：{args_list}")
+                self.post_message(channel=event.event_data.get("channel"),
+                                  mtype=mtype,
+                                  title=f"参数错误！ /aba 媒体库 书名 正确的演播作者名称",
+                                  userid=event.event_data.get("user"))
+                return
+
+            library_name = args_list[0]
+            book_name = args_list[1]
+            book_art = args_list[2]
+            logger.info(f"有声书整理：{library_name}:{book_name} - 正确演播作者 {book_art}")
+
+            emby_servers = self.mediaserver_helper.get_services(name_filters=self._mediaservers, type_filter="emby")
+            if not emby_servers:
+                logger.error("未配置Emby媒体服务器")
+                return
+
+            for emby_name, emby_server in emby_servers.items():
+                if str(library_name).lower() != str(emby_name).lower():
+                    continue
+                logger.info(f"开始处理媒体服务器 {emby_name}")
+                self._EMBY_USER = emby_server.instance.get_user()
+                self._EMBY_APIKEY = emby_server.config.config.get("apikey")
+                self._EMBY_HOST = emby_server.config.config.get("host")
+                if not self._EMBY_HOST.endswith("/"):
+                    self._EMBY_HOST += "/"
+                if not self._EMBY_HOST.startswith("http"):
+                    self._EMBY_HOST = "http://" + self._EMBY_HOST
+
+                # 获取所有有声书
+                items = self.__get_items(self._library_id)
+                if not items:
+                    logger.error(f"获取媒体库 {self._library_id} 有声书列表失败！")
+                    self.post_message(channel=event.event_data.get("channel"),
+                                      mtype=mtype,
+                                      title=f"获取 {self._library_id} 有声书失败！",
+                                      userid=event.event_data.get("user"))
+                    return
+                # 获取指定有声书
+                book_id = None
+                book_info = None
+                for item in items:
+                    if book_name in item.get("Name"):
+                        book_id = item.get("Id")
+                        book_info = self.__get_item_info(book_id)
+                        break
+
+                if not book_id or not book_info:
+                    logger.error(f"未找到 {book_name} 有声书！")
+                    self.post_message(channel=event.event_data.get("channel"),
+                                      mtype=mtype,
+                                      title=f"未找到 {book_name} 有声书！",
+                                      userid=event.event_data.get("user"))
+                    return
+
+                art_id = None
+                artists = self.__get_artists()
+                if not artists:
+                    logger.error("获取有声书作者列表失败！")
+                    self.post_message(channel=event.event_data.get("channel"),
+                                      mtype=mtype,
+                                      title=f"获取有声书作者列表失败！",
+                                      userid=event.event_data.get("user"))
+                    return
+
+                for artist in artists:
+                    if artist["Name"] == book_art:
+                        art_id = artist["Id"]
+                        break
+
+                if not art_id:
+                    logger.error(f"未找到 {book_art} 作者！")
+                    self.post_message(channel=event.event_data.get("channel"),
+                                      mtype=mtype,
+                                      title=f"未找到 {book_art} 作者！",
+                                      userid=event.event_data.get("user"))
+                    return
+
+                # 原作者信息
+                ori_art = book_info.get("ArtistItems", []) or book_info.get("Composers", []) or book_info.get(
+                    "AlbumArtists", [])
+                ori_art = [art for art in ori_art if art["Name"] != book_art]
+
+                # 新作者信息
+                book_info["Artists"] = [book_art]
+                book_info["AlbumArtist"] = book_art
+                book_info["ArtistItems"] = {'Id': art_id, 'Name': book_art}
+                book_info["Composers"] = {'Id': art_id, 'Name': book_art}
+                book_info["AlbumArtists"] = {'Id': art_id, 'Name': book_art}
+                book_info["LockData"] = True
+                update_flag = self.__update_item_info(item_id=book_info["Id"], data=book_info)
+                if update_flag:
+                    logger.info(f"更新 {book_name} 作者信息-> {book_art} 成功！")
+
+                    items = self.__get_items(parent_id=book_id)
+                    if not items:
+                        logger.error(f"获取有声书 {book_name} 剧集失败！")
+                        self.post_message(channel=event.event_data.get("channel"),
+                                          mtype=mtype,
+                                          title=f"获取有声书 {book_name} 剧集失败！",
+                                          userid=event.event_data.get("user"))
+                        return
+
+                    for item in items:
+                        item_info = self.__get_item_info(item["Id"])
+                        if not item_info:
+                            logger.error(f"获取有声书 {book_name} 剧集 {item['Id']} 详情失败！")
+                            continue
+                        item_info["Artists"] = [book_art]
+                        item_info["AlbumArtist"] = book_art
+                        item_info["ArtistItems"] = {'Id': art_id, 'Name': book_art}
+                        item_info["Composers"] = {'Id': art_id, 'Name': book_art}
+                        item_info["AlbumArtists"] = {'Id': art_id, 'Name': book_art}
+                        item_info["LockData"] = True
+                        update_flag = self.__update_item_info(item_id=item_info["Id"], data=item_info)
+                        if update_flag:
+                            logger.info(f"更新 {book_name} 剧集 {item['Name']} 作者信息-> {book_art} 成功！")
+                        else:
+                            logger.error(f"更新 {book_name} 剧集 {item['Name']} 作者信息-> {book_art} 失败！")
+
+                    if ori_art:
+                        for art in ori_art:
+                            flag = self.__delete_by_id(art["Id"])
+                            logger.info(f"删除 {book_name} 原作者信息-> {art['Name']} {'成功' if flag else '失败'}！")
+
+                    self.post_message(channel=event.event_data.get("channel"),
+                                      mtype=mtype,
+                                      title=f"更新 {book_name} 作者信息-> {book_art} 成功！",
+                                      userid=event.event_data.get("user"))
+                    return
+                else:
+                    logger.error(f"更新 {book_name} 作者信息-> {book_art} 失败！")
+                    self.post_message(channel=event.event_data.get("channel"),
+                                      mtype=mtype,
+                                      title=f"更新 {book_name} 作者信息-> {book_art} 失败！",
+                                      userid=event.event_data.get("user"))
+                    return
 
     @eventmanager.register(EventType.PluginAction)
     def audiobook(self, event: Event = None):
@@ -399,6 +563,28 @@ class EmbyAudioBook(_PluginBase):
     def get_state(self) -> bool:
         return self._enabled
 
+    def __delete_by_id(self, item_id):
+        res = RequestUtils().post(
+            f"{self._EMBY_HOST}/emby/Items/Delete?Ids={item_id}&api_key={self._EMBY_APIKEY}")
+        if res and res.status_code == 204:
+            return True
+        return False
+
+    def __get_artists(self) -> dict:
+        """
+        获取作者列表
+        """
+        if not self._EMBY_HOST or not self._EMBY_APIKEY:
+            return {}
+        req_url = f"%semby/Artists?api_key=%s" % (
+            self._EMBY_HOST, self._EMBY_APIKEY)
+        with RequestUtils().get_res(req_url) as res:
+            if res:
+                return res.json().get("Items", [])
+            else:
+                logger.info(f"获取有声书作者列表失败，无法连接Emby！")
+                return {}
+
     def __get_items(self, parent_id) -> list:
         """
         获取有声书剧集
@@ -455,6 +641,15 @@ class EmbyAudioBook(_PluginBase):
                 "category": "",
                 "data": {
                     "action": "audiobook"
+                }
+            },
+            {
+                "cmd": "/aba",
+                "event": EventType.PluginAction,
+                "desc": "emby有声书演播者整理",
+                "category": "",
+                "data": {
+                    "action": "audiobook_artist"
                 }
             }
         ]
