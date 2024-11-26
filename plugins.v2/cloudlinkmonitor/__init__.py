@@ -63,7 +63,7 @@ class CloudLinkMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
-    plugin_version = "2.5.4"
+    plugin_version = "2.5.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -436,7 +436,7 @@ class CloudLinkMonitor(_PluginBase):
 
                 # 查询转移目的目录
                 target_dir = DirectoryHelper().get_dir(mediainfo, src_path=Path(mon_path))
-                if not target_dir:
+                if not target_dir or not target_dir.library_path:
                     target_dir = TransferDirectoryConf()
                     target_dir.library_path = target
                     target_dir.transfer_type = transfer_type
@@ -446,6 +446,11 @@ class CloudLinkMonitor(_PluginBase):
                     target_dir.overwrite_mode = self._overwrite_mode.get(mon_path) or 'never'
                     target_dir.library_storage = "local"
                     target_dir.library_category_folder = self._category
+
+                if not target_dir.library_path:
+                    logger.error(f"未配置监控目录 {mon_path} 的目的目录")
+                    return
+
                 # 转移文件
                 transferinfo: TransferInfo = self.chain.transfer(fileitem=file_item,
                                                                  meta=file_meta,
