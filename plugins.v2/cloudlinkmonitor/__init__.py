@@ -63,7 +63,7 @@ class CloudLinkMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
-    plugin_version = "2.5.5"
+    plugin_version = "2.5.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -930,7 +930,7 @@ class CloudLinkMonitor(_PluginBase):
                                                 {'title': '移动', 'value': 'move'},
                                                 {'title': '复制', 'value': 'copy'},
                                                 {'title': '硬链接', 'value': 'link'},
-                                                {'title': '软链接', 'value': 'filesoftlink'},
+                                                {'title': '软链接', 'value': 'softlink'},
                                                 {'title': 'Rclone复制', 'value': 'rclone_copy'},
                                                 {'title': 'Rclone移动', 'value': 'rclone_move'}
                                             ]
