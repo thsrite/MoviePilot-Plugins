@@ -21,7 +21,7 @@ class CloudSyncDel(_PluginBase):
     # 插件图标
     plugin_icon = "clouddisk.png"
     # 插件版本
-    plugin_version = "1.6.1"
+    plugin_version = "1.6.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -129,11 +129,11 @@ class CloudSyncDel(_PluginBase):
                     'episode_num': episode_num,
                     'action': 'media_sync_del'
                 })
-            if Path(local_path).suffix:
+            if Path(local_path).suffix and Path(local_path).parent.exists():
                 # 检索相同目录下同名的媒体文件
                 pattern = Path(local_path).stem.replace('[', '?').replace(']', '?')
-                logger.info(f"开始筛选 {Path(local_path).parent} 下同名文件 {pattern}")
-                files = Path(local_path).parent.glob(f"{pattern}.*")
+                files = list(Path(local_path).parent.glob(f"{pattern}.*"))
+                logger.info(f"筛选到 {Path(local_path).parent} 下同名文件 {pattern} {files}")
 
                 if not files:
                     logger.info(f"未找到本地同名文件 {pattern}，开始删除云盘")
@@ -189,8 +189,8 @@ class CloudSyncDel(_PluginBase):
             cloud_file_path = Path(cloud_file)
             # 删除文件、nfo、jpg等同名文件
             pattern = cloud_file_path.stem.replace('[', '?').replace(']', '?')
-            logger.info(f"开始筛选 {cloud_file_path.parent} 下同名文件 {pattern}")
-            files = cloud_file_path.parent.glob(f"{pattern}.*")
+            files = list(cloud_file_path.parent.glob(f"{pattern}.*"))
+            logger.info(f"筛选到 {cloud_file_path.parent} 下同名文件 {pattern} {files}")
             for file in files:
                 Path(file).unlink()
                 logger.info(f"云盘文件 {file} 已删除")
@@ -208,7 +208,12 @@ class CloudSyncDel(_PluginBase):
             # 判断当前媒体父路径下是否有媒体文件，如有则无需遍历父级
             if not SystemUtils.exits_files(cloud_file_path.parent, settings.RMT_MEDIAEXT):
                 # 判断父目录是否为空, 为空则删除
+                i = 0
                 for parent_path in cloud_file_path.parents:
+                    i += 1
+                    if i > 3:
+                        break
+                    logger.debug(f"开始检查父目录 {parent_path} 是否可删除")
                     if str(parent_path.parent) != str(cloud_file_path.root):
                         # 父目录非根目录，才删除父目录
                         if not SystemUtils.exits_files(parent_path, settings.RMT_MEDIAEXT):
