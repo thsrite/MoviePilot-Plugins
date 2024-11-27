@@ -21,7 +21,7 @@ class CloudSyncDel(_PluginBase):
     # 插件图标
     plugin_icon = "clouddisk.png"
     # 插件版本
-    plugin_version = "1.6.0"
+    plugin_version = "1.6.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -36,7 +36,6 @@ class CloudSyncDel(_PluginBase):
     # 私有属性
     _enabled = False
     # 任务执行间隔
-    _paths = {}
     _cloud_paths = {}
     _local_paths = {}
     _notify = False
@@ -53,10 +52,7 @@ class CloudSyncDel(_PluginBase):
             self._del_history = config.get("del_history")
             if config.get("path"):
                 for path in str(config.get("path")).split("\n"):
-                    paths = path.split("#")[0]
-                    cloud_path = path.split("#")[1]
-                    self._paths[paths.split(":")[0]] = paths.split(":")[1]
-                    self._cloud_paths[paths.split(":")[1]] = cloud_path
+                    self._cloud_paths[path.split(":")[0]] = path.split(":")[1]
             if config.get("local_path"):
                 for path in str(config.get("local_path")).split("\n"):
                     self._local_paths[path.split(":")[0]] = path.split(":")[1]
@@ -180,20 +176,16 @@ class CloudSyncDel(_PluginBase):
         if is_local:
             return
 
-        media_path = self.__get_path(self._paths, media_path)
-        if not media_path:
+        # 删除云盘文件
+        cloud_file = self.__get_path(self._cloud_paths, str(media_path))
+        if not cloud_file:
             return
-        logger.info(f"获取到 {self._paths} 替换后本地路径 {media_path}")
+        logger.info(f"获取到 {self._cloud_paths} 替换后云盘文件路径 {cloud_file}")
 
         # 判断文件是否存在
         cloud_file_flag = False
-        media_path = Path(media_path)
         cloud_path = None
-        if media_path.suffix:
-            # 删除云盘文件
-            cloud_file = self.__get_path(self._cloud_paths, str(media_path))
-            logger.info(f"获取到 {self._cloud_paths} 替换后云盘文件路径 {cloud_file}")
-
+        if Path(cloud_file).suffix:
             cloud_file_path = Path(cloud_file)
             # 删除文件、nfo、jpg等同名文件
             pattern = cloud_file_path.stem.replace('[', '?').replace(']', '?')
@@ -225,12 +217,11 @@ class CloudSyncDel(_PluginBase):
                             logger.warn(f"云盘目录 {parent_path} 已删除")
                             cloud_file_flag = True
         else:
-            # 删除云盘文件
-            cloud_path = self.__get_path(self._cloud_paths, str(media_path))
-            if Path(cloud_path).exists():
-                shutil.rmtree(cloud_path)
-                logger.warn(f"云盘目录 {cloud_path} 已删除")
+            if Path(cloud_file).exists():
+                shutil.rmtree(cloud_file)
+                logger.warn(f"云盘目录 {cloud_file} 已删除")
                 cloud_file_flag = True
+                cloud_path = cloud_file
 
         # 发送消息
         image = 'https://emby.media/notificationicon.png'
@@ -432,7 +423,7 @@ class CloudSyncDel(_PluginBase):
                                             'model': 'path',
                                             'rows': '2',
                                             'label': '媒体库路径映射（删除云盘文件）',
-                                            'placeholder': '媒体服务器软连接/strm路径:MoviePilot软连接/strm路径#MoviePilot云盘路径（一行一个）'
+                                            'placeholder': '媒体服务器软连接/strm路径:MoviePilot云盘路径（一行一个）'
                                         }
                                     }
                                 ]
@@ -519,9 +510,8 @@ class CloudSyncDel(_PluginBase):
                                             'variant': 'tonal',
                                             'text': '关于路径映射：'
                                                     'emby软连接路径:/data/series/A.mp4,'
-                                                    'MoviePilot软连接路径:/mnt/link/series/A.mp4。'
                                                     'MoviePilot云盘路径:/mnt/cloud/series/A.mp4。'
-                                                    '路径映射填/data:/mnt/link#/mnt/cloud'
+                                                    '路径映射填/data:/mnt/cloud'
                                         }
                                     }
                                 ]
