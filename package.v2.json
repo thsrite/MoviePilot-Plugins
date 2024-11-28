@@ -262,11 +262,12 @@
     "name": "CloudDrive2助手",
     "description": "监控上传任务，检测是否有异常，发送通知。",
     "labels": "云盘",
-    "version": "2.0",
+    "version": "2.0.1",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png",
     "author": "thsrite",
     "level": 2,
     "history": {
+      "v2.0.1": "修复HomePage API",
       "v2.0": "支持配置多个cd2实例",
       "v1.8.5": "兼容v2",
       "v1.8.4": "添加115 429消息通知",

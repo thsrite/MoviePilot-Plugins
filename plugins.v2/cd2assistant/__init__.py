@@ -25,7 +25,7 @@ class Cd2Assistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png"
     # 插件版本
-    plugin_version = "2.0"
+    plugin_version = "2.0.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -310,7 +310,13 @@ class Cd2Assistant(_PluginBase):
 
             logger.info(f"获取到离线云盘路径：{_cloud_path}")
             logger.info(f"开始离线下载：{args}")
-            result = self._clients.values()[0].AddOfflineFiles(
+
+            client = None
+            for cd2_name, client in self._clients.items():
+                if client:
+                    break
+
+            result = client.AddOfflineFiles(
                 CloudDrive_pb2.AddOfflineFileRequest(urls=args, toFolder=_cloud_path))
             if result and result.success:
                 logger.info(f"离线下载成功")
@@ -423,9 +429,14 @@ class Cd2Assistant(_PluginBase):
         if apikey != settings.API_TOKEN:
             return schemas.Response(success=False, message="API密钥错误")
 
-        _client = self._clients.values()[0]
-        _cd2_client = self._cd2_clients.values()[0]
-        return self.__get_cd2_info(client=_client, cd2_client=_cd2_client)
+        client = None
+        cd2_client = None
+        for cd2_name, client in self._clients.items():
+            cd2_client = self._cd2_clients[cd2_name]
+            if client and cd2_client:
+                break
+
+        return self.__get_cd2_info(client=client, cd2_client=cd2_client)
 
     @staticmethod
     def __convert_bytes(size_in_bytes):
