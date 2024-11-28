@@ -422,7 +422,7 @@ class Cd2Assistant(_PluginBase):
 
         return system_info_dict
 
-    def homepage(self, apikey: str, name: str) -> Any:
+    def homepage(self, apikey: str, name: str = None) -> Any:
         """
         homepage自定义api
         """
