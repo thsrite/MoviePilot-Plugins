@@ -25,7 +25,7 @@ class Cd2Assistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png"
     # 插件版本
-    plugin_version = "2.0.1"
+    plugin_version = "2.0.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -422,7 +422,7 @@ class Cd2Assistant(_PluginBase):
 
         return system_info_dict
 
-    def homepage(self, apikey: str) -> Any:
+    def homepage(self, apikey: str, name: str) -> Any:
         """
         homepage自定义api
         """
@@ -432,6 +432,8 @@ class Cd2Assistant(_PluginBase):
         client = None
         cd2_client = None
         for cd2_name, client in self._clients.items():
+            if name and str(cd2_name) != name:
+                continue
             cd2_client = self._cd2_clients[cd2_name]
             if client and cd2_client:
                 break
