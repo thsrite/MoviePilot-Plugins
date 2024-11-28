@@ -1,19 +1,18 @@
 import re
 from datetime import datetime, timedelta
+from typing import Any, List, Dict, Tuple, Optional
 
 import pytz
-
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 from clouddrive import CloudDriveClient, Client
 from clouddrive.proto import CloudDrive_pb2
+
 from app import schemas
 from app.core.config import settings
 from app.core.event import eventmanager, Event
-from app.plugins import _PluginBase
-from typing import Any, List, Dict, Tuple, Optional
 from app.log import logger
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
-
+from app.plugins import _PluginBase
 from app.schemas import NotificationType
 from app.schemas.types import EventType
 
@@ -26,7 +25,7 @@ class Cd2Assistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png"
     # 插件版本
-    plugin_version = "1.8.5"
+    plugin_version = "2.0"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -48,15 +47,17 @@ class Cd2Assistant(_PluginBase):
     _keyword = None
     _black_dir = None
     _cloud_path = None
-    _cd2_url = None
-    _cd2_username = None
-    _cd2_password = None
-    _cd2_client = None
-    _client = None
+    _cd2_confs = None
+    _cd2_clients = {}
+    _clients = {}
+    _cd2_url = {}
 
     _scheduler: Optional[BackgroundScheduler] = None
 
     def init_plugin(self, config: dict = None):
+        self._cd2_clients = {}
+        self._clients = {}
+        self._cd2_url = {}
         if config:
             self._enabled = config.get("enabled")
             self._notify = config.get("notify")
@@ -65,29 +66,36 @@ class Cd2Assistant(_PluginBase):
             self._cd2_restart = config.get("cd2_restart")
             self._cron = config.get("cron")
             self._keyword = config.get("keyword")
-            self._cd2_url = config.get("cd2_url")
-            self._cd2_username = config.get("cd2_username")
-            self._cd2_password = config.get("cd2_password")
+            self._cd2_confs = config.get("cd2_confs")
             self._black_dir = config.get("black_dir") or ""
             self._cloud_path = config.get("cloud_path") or ""
+
+            # 兼容旧版本配置
+            self.__sync_old_config()
 
         # 停止现有任务
         self.stop_service()
 
         if self._enabled or self._onlyonce or self._cd2_restart:
-            if not self._cd2_url or not self._cd2_username or not self._cd2_password:
+            if not self._cd2_confs:
                 logger.error("CloudDrive2助手配置错误，请检查配置")
                 return
 
-            self._cd2_client = CloudDriveClient(self._cd2_url, self._cd2_username, self._cd2_password)
-            if not self._cd2_client:
-                logger.error("CloudDrive2助手连接失败，请检查配置")
-                return
-
-            self._client = Client(self._cd2_url, self._cd2_username, self._cd2_password)
-            if not self._client:
-                logger.error("CloudDrive2助手连接失败，请检查配置")
-                return
+            for cd2_conf in self._cd2_confs.split("\n"):
+                _cd2_client = CloudDriveClient(str(cd2_conf).split("#")[1], str(cd2_conf).split("#")[2],
+                                               str(cd2_conf).split("#")[3])
+                _cd2_name = str(cd2_conf).split("#")[0]
+                if not _cd2_client:
+                    logger.error(f"CloudDrive2助手连接失败，请检查配置：{_cd2_name}")
+                    continue
+                _client = Client(str(cd2_conf).split("#")[1], str(cd2_conf).split("#")[2],
+                                 str(cd2_conf).split("#")[3])
+                if not _client:
+                    logger.error("CloudDrive2助手连接失败，请检查配置")
+                    continue
+                self._cd2_clients[_cd2_name] = _cd2_client
+                self._clients[_cd2_name] = _client
+                self._cd2_url[_cd2_name] = str(cd2_conf).split("#")[1]
 
             # 周期运行
             self._scheduler = BackgroundScheduler(timezone=settings.TZ)
@@ -133,6 +141,17 @@ class Cd2Assistant(_PluginBase):
                 self._scheduler.print_jobs()
                 self._scheduler.start()
 
+    def __sync_old_config(self):
+        """
+        兼容旧版本配置
+        """
+        config = self.get_config()
+        if not config or not config.get("cd2_url") or not config.get("cd2_username") or not config.get("cd2_password"):
+            return
+
+        self._cd2_confs = f"默认配置1#{config.get('cd2_url')}#{config.get('cd2_username')}#{config.get('cd2_password')}"
+        self.__update_config()
+
     def __update_config(self):
         self.update_config({
             "enabled": self._enabled,
@@ -142,9 +161,7 @@ class Cd2Assistant(_PluginBase):
             "msgtype": self._msgtype,
             "keyword": self._keyword,
             "notify": self._notify,
-            "cd2_url": self._cd2_url,
-            "cd2_username": self._cd2_username,
-            "cd2_password": self._cd2_password,
+            "cd2_confs": self._cd2_confs,
             "black_dir": self._black_dir,
             "cloud_path": self._cloud_path,
         })
@@ -153,15 +170,20 @@ class Cd2Assistant(_PluginBase):
         """
         检查
         """
-        self.__check_cookie()
-        self.__check_task()
+        for cd2_name in self._cd2_clients.keys():
+            _cd2_client = self._cd2_clients.get(cd2_name)
+            self.__check_cookie(cd2_name, _cd2_client)
+            self.__check_task(cd2_name, _cd2_client)
 
-    def __check_cookie(self):
+    def __check_cookie(self, cd2_name, cd2_client):
         """
         检查cookie是否过期
         """
-        logger.info("开始检查CloudDrive2 cookie")
-        fs = self._cd2_client.fs
+        logger.info(f"开始检查 {cd2_name} cookie")
+        if not cd2_client:
+            logger.error("CloudDrive2助手连接失败，请检查配置")
+            return
+        fs = cd2_client.fs
         if not fs:
             logger.error("CloudDrive2连接失败，请检查配置")
             return
@@ -185,13 +207,13 @@ class Cd2Assistant(_PluginBase):
             if self._notify and error_msg:
                 self.__send_notify(error_msg)
 
-    def __check_task(self):
+    def __check_task(self, cd2_name, cd2_client):
         """
         检查上传任务
         """
-        logger.info("开始检查CloudDrive2上传任务")
+        logger.info(f"开始检查 {cd2_name} 上传任务")
         # 获取上传任务列表
-        upload_tasklist = self._cd2_client.upload_tasklist.list(page=0, page_size=10, filter="")
+        upload_tasklist = cd2_client.upload_tasklist.list(page=0, page_size=10, filter="")
         if not upload_tasklist:
             logger.info("没有发现上传任务")
             return
@@ -214,19 +236,31 @@ class Cd2Assistant(_PluginBase):
             event_data = event.event_data
             if not event_data or event_data.get("action") != "cd2_restart":
                 return
+            args = event_data.get("arg_str")
+            found = False
+            for cd2_name, client in self._clients.items():
+                if args and str(args).lower() != str(cd2_name):
+                    continue
+                found = True
+                self.post_message(channel=event.event_data.get("channel"),
+                                  title=f"{cd2_name} CloudDrive2重启成功！", userid=event.event_data.get("user"))
+                client.RestartService()
 
-        logger.info("CloudDrive2重启成功")
-        if event:
-            self.post_message(channel=event.event_data.get("channel"),
-                              title="CloudDrive2重启成功！", userid=event.event_data.get("user"))
+            if args and not found:
+                self.post_message(channel=event.event_data.get("channel"),
+                                  title=f"未找到 {args} 配置！", userid=event.event_data.get("user"))
+                return
+        else:
+            for cd2_name in self._clients.keys():
+                _client = self._clients.get(cd2_name)
+                logger.info(f"{cd2_name} CloudDrive2重启成功")
+                _client.RestartService()
 
-        self._client.RestartService()
-
-    def __get_cloud_space(self):
+    def __get_cloud_space(self, cd2_client):
         """
         获取云盘空间
         """
-        fs = self._cd2_client.fs
+        fs = cd2_client.fs
         if not fs:
             logger.error("CloudDrive2连接失败，请检查配置")
             return
@@ -235,7 +269,7 @@ class Cd2Assistant(_PluginBase):
         for f in fs.listdir():
             try:
                 if f and f not in self._black_dir.split(","):
-                    space_info = self._cd2_client.GetSpaceInfo(CloudDrive_pb2.FileRequest(path=f))
+                    space_info = cd2_client.GetSpaceInfo(CloudDrive_pb2.FileRequest(path=f))
                     space_info = self.__str_to_dict(space_info)
                     total = self.__convert_bytes(space_info.get("totalSpace"))
                     used = self.__convert_bytes(space_info.get("usedSpace"))
@@ -276,7 +310,7 @@ class Cd2Assistant(_PluginBase):
 
             logger.info(f"获取到离线云盘路径：{_cloud_path}")
             logger.info(f"开始离线下载：{args}")
-            result = self._client.AddOfflineFiles(
+            result = self._clients.values()[0].AddOfflineFiles(
                 CloudDrive_pb2.AddOfflineFileRequest(urls=args, toFolder=_cloud_path))
             if result and result.success:
                 logger.info(f"离线下载成功")
@@ -305,22 +339,40 @@ class Cd2Assistant(_PluginBase):
             if not event_data or event_data.get("action") != "cd2_info":
                 return
 
+            args = event_data.get("arg_str")
+            found = False
+            for cd2_name, client in self._clients.items():
+                if args and str(args).lower() != str(cd2_name):
+                    continue
+                found = True
+                cd2_client = self._cd2_clients[cd2_name]
+                self.__get_cd2_info(event=event, client=client, cd2_client=cd2_client)
+
+            if args and not found:
+                self.post_message(channel=event.event_data.get("channel"),
+                                  title=f"未找到 {args} 配置！", userid=event.event_data.get("user"))
+                return
+
+    def __get_cd2_info(self, event: Event = None, client: Client = None, cd2_client: CloudDriveClient = None):
+        """
+        获取CloudDrive2信息
+        """
         # 运行信息
-        system_info = self._client.GetRunningInfo()
+        system_info = client.GetRunningInfo()
         system_info = self.__str_to_dict(system_info) if system_info else {}
 
         # 任务数量
-        task_count = self._client.GetAllTasksCount()
+        task_count = client.GetAllTasksCount()
         task_count = self.__str_to_dict(task_count) if task_count else {}
 
         # 速度
-        downloadFileList = self._client.GetDownloadFileList()
+        downloadFileList = client.GetDownloadFileList()
         downloadFileList = self.__str_to_dict(downloadFileList) if downloadFileList else {}
-        uploadFileList = self._client.GetUploadFileList(CloudDrive_pb2.GetUploadFileListRequest(getAll=True))
+        uploadFileList = client.GetUploadFileList(CloudDrive_pb2.GetUploadFileListRequest(getAll=True))
         uploadFileList = self.__str_to_dict(uploadFileList) if uploadFileList else {}
 
         # 云盘空间
-        cloud_space = self.__get_cloud_space()
+        cloud_space = self.__get_cloud_space(cd2_client)
 
         system_info_dict = {
             "cpuUsage": f"{system_info.get('cpuUsage'):.2f}%" if system_info.get(
@@ -371,7 +423,9 @@ class Cd2Assistant(_PluginBase):
         if apikey != settings.API_TOKEN:
             return schemas.Response(success=False, message="API密钥错误")
 
-        return self.cd2_info()
+        _client = self._clients.values()[0]
+        _cd2_client = self._cd2_clients.values()[0]
+        return self.__get_cd2_info(client=_client, cd2_client=_cd2_client)
 
     @staticmethod
     def __convert_bytes(size_in_bytes):
@@ -558,48 +612,15 @@ class Cd2Assistant(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 4
                                 },
                                 'content': [
                                     {
-                                        'component': 'VTextField',
+                                        'component': 'VTextarea',
                                         'props': {
-                                            'model': 'cd2_url',
-                                            'label': 'cd2地址',
-                                            'placeholder': 'http://127.0.0.1:19798'
-                                        }
-                                    }
-                                ]
-                            },
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextField',
-                                        'props': {
-                                            'model': 'cd2_username',
-                                            'label': 'cd2用户名'
-                                        }
-                                    }
-                                ]
-                            },
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextField',
-                                        'props': {
-                                            'type': 'password',
-                                            'model': 'cd2_password',
-                                            'label': 'cd2密码'
+                                            'model': 'cd2_confs',
+                                            'label': 'cd2配置',
+                                            'rows': 2,
+                                            'placeholder': 'cd2配置1#http://127.0.0.1:19798#admin#123456（一行一个配置）'
                                         }
                                     }
                                 ]
@@ -807,22 +828,76 @@ class Cd2Assistant(_PluginBase):
             "cd2_restart": False,
             "cron": "*/10 * * * *",
             "keyword": "账号异常",
-            "cd2_url": "",
-            "cd2_username": "",
-            "cd2_password": "",
+            "cd2_confs": "",
             "msgtype": "Manual",
             "black_dir": "",
             "cloud_path": "",
         }
 
     def get_page(self) -> List[dict]:
-        cd2_info = self.cd2_info()
-
-        # 拼装页面
-        return [
-            {
+        page_form = []
+        for cd2_name, client in self._clients.items():
+            cd2_client = self._cd2_clients[cd2_name]
+            cd2_url = self._cd2_url[cd2_name]
+            cd2_info = self.__get_cd2_info(client=client, cd2_client=cd2_client)
+            page_form.append({
                 'component': 'VRow',
                 'content': [
+                    {
+                        'component': 'VCol',
+                        'props': {
+                            'cols': 12,
+                            'md': 4,
+                            'sm': 6
+                        },
+                        'content': [
+                            {
+                                'component': 'VCard',
+                                'props': {
+                                    'variant': 'tonal',
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VCardText',
+                                        'props': {
+                                            'class': 'd-flex align-center',
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'div',
+                                                'content': [
+                                                    {
+                                                        'component': 'span',
+                                                        'props': {
+                                                            'class': 'text-h6'
+                                                        },
+                                                        'text': cd2_name
+                                                    },
+                                                    {
+                                                        'component': 'div',
+                                                        'props': {
+                                                            'class': 'd-flex align-center flex-wrap'
+                                                        },
+                                                        'content': [
+                                                            {
+                                                                'component': 'a',
+                                                                'props': {
+                                                                    'class': 'text-caption',
+                                                                    'href': cd2_url,
+                                                                    'target': '_blank',
+                                                                },
+                                                                'text': cd2_url
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                        ]
+                    },
                     {
                         'component': 'VCol',
                         'props': {
@@ -1354,7 +1429,8 @@ class Cd2Assistant(_PluginBase):
                         ]
                     }
                 ]
-            }]
+            }, )
+        return page_form
 
     def get_dashboard(self) -> Optional[Tuple[Dict[str, Any], Dict[str, Any], List[dict]]]:
         """
@@ -1378,7 +1454,7 @@ class Cd2Assistant(_PluginBase):
         attrs = {
             "refresh": 10, "border": False
         }
-        if not self._client:
+        if not self._clients:
             logger.warn(f"请求CloudDrive2服务失败")
             elements = [
                 {
@@ -1390,589 +1466,646 @@ class Cd2Assistant(_PluginBase):
                 }
             ]
         else:
-            cd2_info = self.cd2_info()
-            elements = [
-                {
-                    'component': 'VRow',
-                    'content': [
-                        {
-                            'component': 'VCol',
-                            'props': {
-                                'cols': 6,
-                                'md': 3
-                            },
-                            'content': [
-                                {
-                                    'component': 'VCard',
-                                    'props': {
-                                        'variant': 'tonal',
-                                    },
-                                    'content': [
-                                        {
-                                            'component': 'VCardText',
-                                            'props': {
-                                                'class': 'd-flex align-center',
-                                            },
-                                            'content': [
-                                                {
-                                                    'component': 'div',
-                                                    'content': [
-                                                        {
-                                                            'component': 'a',
-                                                            'props': {
-                                                                'class': 'text-caption',
-                                                                'href': self._cd2_url,
-                                                                'target': '_blank',
-                                                            },
-                                                            'text': 'CPU占用'
-                                                        },
-                                                        {
-                                                            'component': 'div',
-                                                            'props': {
-                                                                'class': 'd-flex align-center flex-wrap'
-                                                            },
-                                                            'content': [
-                                                                {
-                                                                    'component': 'span',
-                                                                    'props': {
-                                                                        'class': 'text-h6'
-                                                                    },
-                                                                    'text': cd2_info.get('cpuUsage')
-                                                                }
-                                                            ]
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        }
-                                    ]
-                                },
-                            ]
-                        },
-                        {
-                            'component': 'VCol',
-                            'props': {
-                                'cols': 6,
-                                'md': 3
-                            },
-                            'content': [
-                                {
-                                    'component': 'VCard',
-                                    'props': {
-                                        'variant': 'tonal',
-                                    },
-                                    'content': [
-                                        {
-                                            'component': 'VCardText',
-                                            'props': {
-                                                'class': 'd-flex align-center',
-                                            },
-                                            'content': [
-                                                {
-                                                    'component': 'div',
-                                                    'content': [
-                                                        {
-                                                            'component': 'span',
-                                                            'props': {
-                                                                'class': 'text-caption'
-                                                            },
-                                                            'text': '内存占用'
-                                                        },
-                                                        {
-                                                            'component': 'div',
-                                                            'props': {
-                                                                'class': 'd-flex align-center flex-wrap'
-                                                            },
-                                                            'content': [
-                                                                {
-                                                                    'component': 'span',
-                                                                    'props': {
-                                                                        'class': 'text-h6'
-                                                                    },
-                                                                    'text': cd2_info.get('memUsageKB')
-                                                                }
-                                                            ]
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        }
-                                    ]
-                                },
-                            ]
-                        },
-                        {
-                            'component': 'VCol',
-                            'props': {
-                                'cols': 6,
-                                'md': 3
-                            },
-                            'content': [
-                                {
-                                    'component': 'VCard',
-                                    'props': {
-                                        'variant': 'tonal',
-                                    },
-                                    'content': [
-                                        {
-                                            'component': 'VCardText',
-                                            'props': {
-                                                'class': 'd-flex align-center',
-                                            },
-                                            'content': [
-                                                {
-                                                    'component': 'div',
-                                                    'content': [
-                                                        {
-                                                            'component': 'span',
-                                                            'props': {
-                                                                'class': 'text-caption'
-                                                            },
-                                                            'text': '运行时间'
-                                                        },
-                                                        {
-                                                            'component': 'div',
-                                                            'props': {
-                                                                'class': 'd-flex align-center flex-wrap'
-                                                            },
-                                                            'content': [
-                                                                {
-                                                                    'component': 'span',
-                                                                    'props': {
-                                                                        'class': 'text-h6'
-                                                                    },
-                                                                    'text': cd2_info.get('uptime')
-                                                                }
-                                                            ]
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        }
-                                    ]
-                                },
-                            ]
-                        },
-                        {
-                            'component': 'VCol',
-                            'props': {
-                                'cols': 6,
-                                'md': 3
-                            },
-                            'content': [
-                                {
-                                    'component': 'VCard',
-                                    'props': {
-                                        'variant': 'tonal',
-                                    },
-                                    'content': [
-                                        {
-                                            'component': 'VCardText',
-                                            'props': {
-                                                'class': 'd-flex align-center',
-                                            },
-                                            'content': [
-                                                {
-                                                    'component': 'div',
-                                                    'content': [
-                                                        {
-                                                            'component': 'span',
-                                                            'props': {
-                                                                'class': 'text-caption'
-                                                            },
-                                                            'text': '存储空间'
-                                                        },
-                                                        {
-                                                            'component': 'div',
-                                                            'props': {
-                                                                'class': 'd-flex align-center flex-wrap'
-                                                            },
-                                                            'content': [
-                                                                {
-                                                                    'component': 'span',
-                                                                    'props': {
-                                                                        'class': 'text-h6'
-                                                                    },
-                                                                    'text': cd2_info.get('cloud_space')
-                                                                }
-                                                            ]
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        }
-                                    ]
-                                },
-                            ]
-                        },
-                        {
-                            'component': 'VCol',
-                            'props': {
-                                'cols': 6,
-                                'md': 3
-                            },
-                            'content': [
-                                {
-                                    'component': 'VCard',
-                                    'props': {
-                                        'variant': 'tonal',
-                                    },
-                                    'content': [
-                                        {
-                                            'component': 'VCardText',
-                                            'props': {
-                                                'class': 'd-flex align-center',
-                                            },
-                                            'content': [
-                                                {
-                                                    'component': 'div',
-                                                    'content': [
-                                                        {
-                                                            'component': 'span',
-                                                            'props': {
-                                                                'class': 'text-caption'
-                                                            },
-                                                            'text': '打开文件数'
-                                                        },
-                                                        {
-                                                            'component': 'div',
-                                                            'props': {
-                                                                'class': 'd-flex align-center flex-wrap'
-                                                            },
-                                                            'content': [
-                                                                {
-                                                                    'component': 'span',
-                                                                    'props': {
-                                                                        'class': 'text-h6'
-                                                                    },
-                                                                    'text': cd2_info.get('fhTableCount')
-                                                                }
-                                                            ]
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        }
-                                    ]
-                                },
-                            ]
-                        },
+            elements = []
+            for cd2_name, client in self._clients.items():
+                cd2_client = self._cd2_clients[cd2_name]
+                cd2_url = self._cd2_url[cd2_name]
+                cd2_info = self.__get_cd2_info(client=client, cd2_client=cd2_client)
 
-                        {
-                            'component': 'VCol',
-                            'props': {
-                                'cols': 6,
-                                'md': 3
-                            },
-                            'content': [
-                                {
-                                    'component': 'VCard',
-                                    'props': {
-                                        'variant': 'tonal',
-                                    },
-                                    'content': [
-                                        {
-                                            'component': 'VCardText',
-                                            'props': {
-                                                'class': 'd-flex align-center',
-                                            },
-                                            'content': [
-                                                {
-                                                    'component': 'div',
-                                                    'content': [
-                                                        {
-                                                            'component': 'span',
-                                                            'props': {
-                                                                'class': 'text-caption'
-                                                            },
-                                                            'text': '临时文件数'
-                                                        },
-                                                        {
-                                                            'component': 'div',
-                                                            'props': {
-                                                                'class': 'd-flex align-center flex-wrap'
-                                                            },
-                                                            'content': [
-                                                                {
-                                                                    'component': 'span',
-                                                                    'props': {
-                                                                        'class': 'text-h6'
-                                                                    },
-                                                                    'text': cd2_info.get('tempFileCount')
-                                                                }
-                                                            ]
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        }
-                                    ]
+                elements.append(
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 6,
+                                    'md': 3
                                 },
-                            ]
-                        },
-                        {
-                            'component': 'VCol',
-                            'props': {
-                                'cols': 6,
-                                'md': 3
-                            },
-                            'content': [
-                                {
-                                    'component': 'VCard',
-                                    'props': {
-                                        'variant': 'tonal',
+                                'content': [
+                                    {
+                                        'component': 'VCard',
+                                        'props': {
+                                            'variant': 'tonal',
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'VCardText',
+                                                'props': {
+                                                    'class': 'd-flex align-center',
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'div',
+                                                        'content': [
+                                                            {
+                                                                'component': 'span',
+                                                                'props': {
+                                                                    'class': 'text-h6'
+                                                                },
+                                                                'text': cd2_name
+                                                            },
+                                                            {
+                                                                'component': 'div',
+                                                                'props': {
+                                                                    'class': 'd-flex align-center flex-wrap'
+                                                                },
+                                                                'content': [
+                                                                    {
+                                                                        'component': 'a',
+                                                                        'props': {
+                                                                            'class': 'text-caption',
+                                                                            'href': cd2_url,
+                                                                            'target': '_blank',
+                                                                        },
+                                                                        'text': cd2_url
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
                                     },
-                                    'content': [
-                                        {
-                                            'component': 'VCardText',
-                                            'props': {
-                                                'class': 'd-flex align-center',
-                                            },
-                                            'content': [
-                                                {
-                                                    'component': 'div',
-                                                    'content': [
-                                                        {
-                                                            'component': 'span',
-                                                            'props': {
-                                                                'class': 'text-caption'
-                                                            },
-                                                            'text': '下载任务数'
-                                                        },
-                                                        {
-                                                            'component': 'div',
-                                                            'props': {
-                                                                'class': 'd-flex align-center flex-wrap'
-                                                            },
-                                                            'content': [
-                                                                {
-                                                                    'component': 'span',
-                                                                    'props': {
-                                                                        'class': 'text-h6'
-                                                                    },
-                                                                    'text': cd2_info.get('download_count')
-                                                                }
-                                                            ]
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        }
-                                    ]
-                                },
-                            ]
-                        },
-                        {
-                            'component': 'VCol',
-                            'props': {
-                                'cols': 6,
-                                'md': 3
+                                ]
                             },
-                            'content': [
-                                {
-                                    'component': 'VCard',
-                                    'props': {
-                                        'variant': 'tonal',
-                                    },
-                                    'content': [
-                                        {
-                                            'component': 'VCardText',
-                                            'props': {
-                                                'class': 'd-flex align-center',
-                                            },
-                                            'content': [
-                                                {
-                                                    'component': 'div',
-                                                    'content': [
-                                                        {
-                                                            'component': 'span',
-                                                            'props': {
-                                                                'class': 'text-caption'
-                                                            },
-                                                            'text': '上传任务数'
-                                                        },
-                                                        {
-                                                            'component': 'div',
-                                                            'props': {
-                                                                'class': 'd-flex align-center flex-wrap'
-                                                            },
-                                                            'content': [
-                                                                {
-                                                                    'component': 'span',
-                                                                    'props': {
-                                                                        'class': 'text-h6'
-                                                                    },
-                                                                    'text': cd2_info.get('upload_count')
-                                                                }
-                                                            ]
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        }
-                                    ]
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 6,
+                                    'md': 3
                                 },
-                            ]
-                        },
-                        {
-                            'component': 'VCol',
-                            'props': {
-                                'cols': 6,
-                                'md': 3
+                                'content': [
+                                    {
+                                        'component': 'VCard',
+                                        'props': {
+                                            'variant': 'tonal',
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'VCardText',
+                                                'props': {
+                                                    'class': 'd-flex align-center',
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'div',
+                                                        'content': [
+                                                            {
+                                                                'component': 'span',
+                                                                'props': {
+                                                                    'class': 'text-h6'
+                                                                },
+                                                                'text': 'CPU占用'
+                                                            },
+                                                            {
+                                                                'component': 'div',
+                                                                'props': {
+                                                                    'class': 'd-flex align-center flex-wrap'
+                                                                },
+                                                                'content': [
+                                                                    {
+                                                                        'component': 'span',
+                                                                        'props': {
+                                                                            'class': 'text-h6'
+                                                                        },
+                                                                        'text': cd2_info.get('cpuUsage')
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                ]
                             },
-                            'content': [
-                                {
-                                    'component': 'VCard',
-                                    'props': {
-                                        'variant': 'tonal',
-                                    },
-                                    'content': [
-                                        {
-                                            'component': 'VCardText',
-                                            'props': {
-                                                'class': 'd-flex align-center',
-                                            },
-                                            'content': [
-                                                {
-                                                    'component': 'div',
-                                                    'content': [
-                                                        {
-                                                            'component': 'span',
-                                                            'props': {
-                                                                'class': 'text-caption'
-                                                            },
-                                                            'text': '缓存目录数'
-                                                        },
-                                                        {
-                                                            'component': 'div',
-                                                            'props': {
-                                                                'class': 'd-flex align-center flex-wrap'
-                                                            },
-                                                            'content': [
-                                                                {
-                                                                    'component': 'span',
-                                                                    'props': {
-                                                                        'class': 'text-h6'
-                                                                    },
-                                                                    'text': cd2_info.get('dirCacheCount')
-                                                                }
-                                                            ]
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        }
-                                    ]
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 6,
+                                    'md': 3
                                 },
-                            ]
-                        },
-                        {
-                            'component': 'VCol',
-                            'props': {
-                                'cols': 6,
-                                'md': 3
+                                'content': [
+                                    {
+                                        'component': 'VCard',
+                                        'props': {
+                                            'variant': 'tonal',
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'VCardText',
+                                                'props': {
+                                                    'class': 'd-flex align-center',
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'div',
+                                                        'content': [
+                                                            {
+                                                                'component': 'span',
+                                                                'props': {
+                                                                    'class': 'text-caption'
+                                                                },
+                                                                'text': '内存占用'
+                                                            },
+                                                            {
+                                                                'component': 'div',
+                                                                'props': {
+                                                                    'class': 'd-flex align-center flex-wrap'
+                                                                },
+                                                                'content': [
+                                                                    {
+                                                                        'component': 'span',
+                                                                        'props': {
+                                                                            'class': 'text-h6'
+                                                                        },
+                                                                        'text': cd2_info.get('memUsageKB')
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                ]
                             },
-                            'content': [
-                                {
-                                    'component': 'VCard',
-                                    'props': {
-                                        'variant': 'tonal',
-                                    },
-                                    'content': [
-                                        {
-                                            'component': 'VCardText',
-                                            'props': {
-                                                'class': 'd-flex align-center',
-                                            },
-                                            'content': [
-                                                {
-                                                    'component': 'div',
-                                                    'content': [
-                                                        {
-                                                            'component': 'span',
-                                                            'props': {
-                                                                'class': 'text-caption'
-                                                            },
-                                                            'text': '下载速率'
-                                                        },
-                                                        {
-                                                            'component': 'div',
-                                                            'props': {
-                                                                'class': 'd-flex align-center flex-wrap'
-                                                            },
-                                                            'content': [
-                                                                {
-                                                                    'component': 'span',
-                                                                    'props': {
-                                                                        'class': 'text-h6'
-                                                                    },
-                                                                    'text': cd2_info.get('download_speed')
-                                                                }
-                                                            ]
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        }
-                                    ]
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 6,
+                                    'md': 3
                                 },
-                            ]
-                        },
-                        {
-                            'component': 'VCol',
-                            'props': {
-                                'cols': 6,
-                                'md': 3
+                                'content': [
+                                    {
+                                        'component': 'VCard',
+                                        'props': {
+                                            'variant': 'tonal',
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'VCardText',
+                                                'props': {
+                                                    'class': 'd-flex align-center',
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'div',
+                                                        'content': [
+                                                            {
+                                                                'component': 'span',
+                                                                'props': {
+                                                                    'class': 'text-caption'
+                                                                },
+                                                                'text': '运行时间'
+                                                            },
+                                                            {
+                                                                'component': 'div',
+                                                                'props': {
+                                                                    'class': 'd-flex align-center flex-wrap'
+                                                                },
+                                                                'content': [
+                                                                    {
+                                                                        'component': 'span',
+                                                                        'props': {
+                                                                            'class': 'text-h6'
+                                                                        },
+                                                                        'text': cd2_info.get('uptime')
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                ]
                             },
-                            'content': [
-                                {
-                                    'component': 'VCard',
-                                    'props': {
-                                        'variant': 'tonal',
-                                    },
-                                    'content': [
-                                        {
-                                            'component': 'VCardText',
-                                            'props': {
-                                                'class': 'd-flex align-center',
-                                            },
-                                            'content': [
-                                                {
-                                                    'component': 'div',
-                                                    'content': [
-                                                        {
-                                                            'component': 'span',
-                                                            'props': {
-                                                                'class': 'text-caption'
-                                                            },
-                                                            'text': '上传速率'
-                                                        },
-                                                        {
-                                                            'component': 'div',
-                                                            'props': {
-                                                                'class': 'd-flex align-center flex-wrap'
-                                                            },
-                                                            'content': [
-                                                                {
-                                                                    'component': 'span',
-                                                                    'props': {
-                                                                        'class': 'text-h6'
-                                                                    },
-                                                                    'text': cd2_info.get('upload_speed')
-                                                                }
-                                                            ]
-                                                        }
-                                                    ]
-                                                }
-                                            ]
-                                        }
-                                    ]
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 6,
+                                    'md': 3
                                 },
-                            ]
-                        },
+                                'content': [
+                                    {
+                                        'component': 'VCard',
+                                        'props': {
+                                            'variant': 'tonal',
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'VCardText',
+                                                'props': {
+                                                    'class': 'd-flex align-center',
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'div',
+                                                        'content': [
+                                                            {
+                                                                'component': 'span',
+                                                                'props': {
+                                                                    'class': 'text-caption'
+                                                                },
+                                                                'text': '存储空间'
+                                                            },
+                                                            {
+                                                                'component': 'div',
+                                                                'props': {
+                                                                    'class': 'd-flex align-center flex-wrap'
+                                                                },
+                                                                'content': [
+                                                                    {
+                                                                        'component': 'span',
+                                                                        'props': {
+                                                                            'class': 'text-h6'
+                                                                        },
+                                                                        'text': cd2_info.get('cloud_space')
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 6,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VCard',
+                                        'props': {
+                                            'variant': 'tonal',
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'VCardText',
+                                                'props': {
+                                                    'class': 'd-flex align-center',
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'div',
+                                                        'content': [
+                                                            {
+                                                                'component': 'span',
+                                                                'props': {
+                                                                    'class': 'text-caption'
+                                                                },
+                                                                'text': '打开文件数'
+                                                            },
+                                                            {
+                                                                'component': 'div',
+                                                                'props': {
+                                                                    'class': 'd-flex align-center flex-wrap'
+                                                                },
+                                                                'content': [
+                                                                    {
+                                                                        'component': 'span',
+                                                                        'props': {
+                                                                            'class': 'text-h6'
+                                                                        },
+                                                                        'text': cd2_info.get('fhTableCount')
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                ]
+                            },
 
-                    ]
-                }]
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 6,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VCard',
+                                        'props': {
+                                            'variant': 'tonal',
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'VCardText',
+                                                'props': {
+                                                    'class': 'd-flex align-center',
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'div',
+                                                        'content': [
+                                                            {
+                                                                'component': 'span',
+                                                                'props': {
+                                                                    'class': 'text-caption'
+                                                                },
+                                                                'text': '临时文件数'
+                                                            },
+                                                            {
+                                                                'component': 'div',
+                                                                'props': {
+                                                                    'class': 'd-flex align-center flex-wrap'
+                                                                },
+                                                                'content': [
+                                                                    {
+                                                                        'component': 'span',
+                                                                        'props': {
+                                                                            'class': 'text-h6'
+                                                                        },
+                                                                        'text': cd2_info.get('tempFileCount')
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 6,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VCard',
+                                        'props': {
+                                            'variant': 'tonal',
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'VCardText',
+                                                'props': {
+                                                    'class': 'd-flex align-center',
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'div',
+                                                        'content': [
+                                                            {
+                                                                'component': 'span',
+                                                                'props': {
+                                                                    'class': 'text-caption'
+                                                                },
+                                                                'text': '下载任务数'
+                                                            },
+                                                            {
+                                                                'component': 'div',
+                                                                'props': {
+                                                                    'class': 'd-flex align-center flex-wrap'
+                                                                },
+                                                                'content': [
+                                                                    {
+                                                                        'component': 'span',
+                                                                        'props': {
+                                                                            'class': 'text-h6'
+                                                                        },
+                                                                        'text': cd2_info.get('download_count')
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 6,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VCard',
+                                        'props': {
+                                            'variant': 'tonal',
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'VCardText',
+                                                'props': {
+                                                    'class': 'd-flex align-center',
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'div',
+                                                        'content': [
+                                                            {
+                                                                'component': 'span',
+                                                                'props': {
+                                                                    'class': 'text-caption'
+                                                                },
+                                                                'text': '上传任务数'
+                                                            },
+                                                            {
+                                                                'component': 'div',
+                                                                'props': {
+                                                                    'class': 'd-flex align-center flex-wrap'
+                                                                },
+                                                                'content': [
+                                                                    {
+                                                                        'component': 'span',
+                                                                        'props': {
+                                                                            'class': 'text-h6'
+                                                                        },
+                                                                        'text': cd2_info.get('upload_count')
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 6,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VCard',
+                                        'props': {
+                                            'variant': 'tonal',
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'VCardText',
+                                                'props': {
+                                                    'class': 'd-flex align-center',
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'div',
+                                                        'content': [
+                                                            {
+                                                                'component': 'span',
+                                                                'props': {
+                                                                    'class': 'text-caption'
+                                                                },
+                                                                'text': '缓存目录数'
+                                                            },
+                                                            {
+                                                                'component': 'div',
+                                                                'props': {
+                                                                    'class': 'd-flex align-center flex-wrap'
+                                                                },
+                                                                'content': [
+                                                                    {
+                                                                        'component': 'span',
+                                                                        'props': {
+                                                                            'class': 'text-h6'
+                                                                        },
+                                                                        'text': cd2_info.get('dirCacheCount')
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 6,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VCard',
+                                        'props': {
+                                            'variant': 'tonal',
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'VCardText',
+                                                'props': {
+                                                    'class': 'd-flex align-center',
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'div',
+                                                        'content': [
+                                                            {
+                                                                'component': 'span',
+                                                                'props': {
+                                                                    'class': 'text-caption'
+                                                                },
+                                                                'text': '下载速率'
+                                                            },
+                                                            {
+                                                                'component': 'div',
+                                                                'props': {
+                                                                    'class': 'd-flex align-center flex-wrap'
+                                                                },
+                                                                'content': [
+                                                                    {
+                                                                        'component': 'span',
+                                                                        'props': {
+                                                                            'class': 'text-h6'
+                                                                        },
+                                                                        'text': cd2_info.get('download_speed')
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 6,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VCard',
+                                        'props': {
+                                            'variant': 'tonal',
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'VCardText',
+                                                'props': {
+                                                    'class': 'd-flex align-center',
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'div',
+                                                        'content': [
+                                                            {
+                                                                'component': 'span',
+                                                                'props': {
+                                                                    'class': 'text-caption'
+                                                                },
+                                                                'text': '上传速率'
+                                                            },
+                                                            {
+                                                                'component': 'div',
+                                                                'props': {
+                                                                    'class': 'd-flex align-center flex-wrap'
+                                                                },
+                                                                'content': [
+                                                                    {
+                                                                        'component': 'span',
+                                                                        'props': {
+                                                                            'class': 'text-h6'
+                                                                        },
+                                                                        'text': cd2_info.get('upload_speed')
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
+                                ]
+                            },
+
+                        ]
+                    })
 
         return cols, attrs, elements
 
