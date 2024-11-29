@@ -63,7 +63,7 @@ class CloudStrmCompanion(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png"
     # 插件版本
-    plugin_version = "1.1.8"
+    plugin_version = "1.1.9"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -95,6 +95,7 @@ class CloudStrmCompanion(_PluginBase):
     _observer = []
     _medias = {}
     _rmt_mediaext = None
+    _other_mediaext = None
     _115_cookie = None
     _115client = None
     _interval: int = 10
@@ -136,6 +137,7 @@ class CloudStrmCompanion(_PluginBase):
             self._monitor_confs = config.get("monitor_confs")
             self._url = config.get("url")
             self._mediaservers = config.get("mediaservers") or []
+            self._other_mediaext = config.get("other_mediaext")
             self._rmt_mediaext = config.get(
                 "rmt_mediaext") or ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
             self._115_cookie = config.get("115_cookie")
@@ -422,6 +424,10 @@ class CloudStrmCompanion(_PluginBase):
                                             strm_content=strm_content)
                 else:
                     if self._copy_files:
+                        if self._other_mediaext:
+                            if Path(event_path).suffix.lower() not in [ext.strip() for ext in
+                                                                       self._other_mediaext.split(",")]:
+                                return
                         # 确保目标文件的父目录存在
                         os.makedirs(os.path.dirname(target_file), exist_ok=True)
                         # 其他nfo、jpg等复制文件
@@ -912,7 +918,8 @@ class CloudStrmCompanion(_PluginBase):
                     # 发送消息
                     self.send_transfer_message(msg_title=season_episode,
                                                file_count=file_count,
-                                               image=(mediainfo.backdrop_path if mediainfo.backdrop_path else mediainfo.poster_path) if mediainfo else None)
+                                               image=(
+                                                   mediainfo.backdrop_path if mediainfo.backdrop_path else mediainfo.poster_path) if mediainfo else None)
                 # 发送完消息，移出key
                 del self._medias[medis_title_year_season]
                 continue
@@ -947,6 +954,7 @@ class CloudStrmCompanion(_PluginBase):
             "monitor_confs": self._monitor_confs,
             "115_cookie": self._115_cookie,
             "rmt_mediaext": self._rmt_mediaext,
+            "other_mediaext": self._other_mediaext,
             "mediaservers": self._mediaservers,
         })
 
@@ -1260,6 +1268,28 @@ class CloudStrmCompanion(_PluginBase):
                             {
                                 'component': 'VCol',
                                 'props': {
+                                    'cols': 12
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextarea',
+                                        'props': {
+                                            'model': 'other_mediaext',
+                                            'label': '非媒体文件格式',
+                                            'rows': 2,
+                                            'placeholder': ".nfo, .jpg"
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
                                     'cols': 12,
                                     'md': 4
                                 },
@@ -1387,6 +1417,7 @@ class CloudStrmCompanion(_PluginBase):
             "interval": 10,
             "115_cookie": "",
             "url": "",
+            "other_mediaext": ".nfo, .jpg, .png, .json",
             "rmt_mediaext": ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
         }
 

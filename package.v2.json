@@ -416,11 +416,12 @@
     "name": "云盘Strm助手",
     "description": "实时监控、定时全量增量生成strm文件。",
     "labels": "云盘",
-    "version": "1.1.8",
+    "version": "1.1.9",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v1.1.9": "支持指定非媒体文件类型",
       "v1.1.8": "修复消息发送图片",
       "v1.1.7": "取消Strm url方式URL编码",
       "v1.1.6": "修复消息发送 && Strm格式友好化",
