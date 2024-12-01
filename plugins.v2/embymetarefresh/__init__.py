@@ -1261,7 +1261,7 @@ class EmbyMetaRefresh(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '联动独占模式：Emby安装Strm Assistant插件的前提下，为保留Emby Strm文件的媒体信息，可开启该模式，当刷新元数据前打开独占模式，刷新完后关闭独占模式（一直开着独占模式的话，新媒体入库会卡好久，一关闭独占模式立马入库。）'
+                                            'text': '联动独占模式：Emby安装Strm Assistant插件的前提下，为保留Emby Strm文件的媒体信息，可开启该模式，当刷新元数据前打开独占模式，刷新完后关闭独占模式（一直开着独占模式的话，新媒体入库会卡好久，一关闭独占模式立马入库。）媒体服务器API密钥要改为X-Emby-Token的值'
                                         }
                                     }
                                 ]
