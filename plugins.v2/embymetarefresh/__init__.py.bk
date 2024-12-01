@@ -21,6 +21,7 @@ from app.core.event import eventmanager, Event
 from app.db.transferhistory_oper import TransferHistoryOper
 from app.helper.mediaserver import MediaServerHelper
 from app.log import logger
+from app.modules.themoviedb import TmdbApi
 from app.plugins import _PluginBase
 from app.schemas.types import EventType, MediaType
 from app.utils.common import retry
@@ -36,7 +37,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "2.1.6"
+    plugin_version = "2.1.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -54,7 +55,6 @@ class EmbyMetaRefresh(_PluginBase):
     _enabled = False
     tmdbchain = None
     _onlyonce = False
-    _ExclusiveExtract = False
     _cron = None
     _actor_chi = False
     _num = None
@@ -81,7 +81,6 @@ class EmbyMetaRefresh(_PluginBase):
             self._onlyonce = config.get("onlyonce")
             self._cron = config.get("cron")
             self._actor_chi = config.get("actor_chi")
-            self._ExclusiveExtract = config.get("ExclusiveExtract")
             self._num = config.get("num") or 5
             self._actor_path = config.get("actor_path")
             self._refresh_type = config.get("refresh_type") or "历史记录"
@@ -142,7 +141,6 @@ class EmbyMetaRefresh(_PluginBase):
                 "actor_path": self._actor_path,
                 "mediaservers": self._mediaservers,
                 "interval": self._interval,
-                "ExclusiveExtract": self._ExclusiveExtract,
             }
         )
 
@@ -168,21 +166,6 @@ class EmbyMetaRefresh(_PluginBase):
                 self._EMBY_HOST += "/"
             if not self._EMBY_HOST.startswith("http"):
                 self._EMBY_HOST = "http://" + self._EMBY_HOST
-
-            # 判断有无安装strm assistant插件
-            plugin_config, plugin_id = None, None
-            if self._ExclusiveExtract:
-                try:
-                    plugin_config, plugin_id = self.__get_strm_assistant_config()
-                    if plugin_id:
-                        # 打开独占模式（方式元数据刷新导致媒体数据丢失）
-                        flag = self.__set_strm_assistant_exclusive_mode(emby, plugin_config, plugin_id, True)
-                        if not flag:
-                            logger.error(f"打开 Strm Assistant 独占模式失败")
-                        else:
-                            logger.info(f"Strm Assistant 独占模式已打开")
-                except Exception as e:
-                    logger.error(f"获取 Strm Assistant 配置失败：{str(e)}")
 
             if str(self._refresh_type) == "历史记录":
                 # 获取days内入库的媒体
@@ -220,7 +203,17 @@ class EmbyMetaRefresh(_PluginBase):
                         "Overview") or not item.get("ImageTags"):
                         logger.info(
                             f"开始刷新媒体库元数据，最新媒体：{'电视剧' if str(item.get('Type')) == 'Episode' else '电影'} {'%s S%02dE%02d %s' % (item.get('SeriesName'), item.get('ParentIndexNumber'), item.get('IndexNumber'), item.get('Name')) if str(item.get('Type')) == 'Episode' else item.get('Name')} {item.get('Id')}")
-                        self.__refresh_emby_library_by_id(item.get("Id"))
+
+                        # 获取路径中的tmdbid
+                        matches = re.findall("r'[${](\d+)[$}]'", item.get("Path"))
+                        self.__refresh_emby_library_by_id(item_id=item.get("Id"), mtype='电视剧' if str(
+                            item.get('Type')) == 'Episode' else '电影',
+                                                          tmdb_id=matches[0] if matches else item.get("ProviderIds",
+                                                                                                      {}).get("Tmdb"),
+                                                          season=item.get("ParentIndexNumber") if str(
+                                                              item.get('Type')) == 'Episode' else None,
+                                                          episode=item.get("IndexNumber") if str(
+                                                              item.get('Type')) == 'Episode' else None)
                         if self._interval:
                             logger.info(f"等待 {self._interval} 秒后继续刷新")
                             time.sleep(int(self._interval))
@@ -271,17 +264,7 @@ class EmbyMetaRefresh(_PluginBase):
                             flag = self.set_iteminfo(itemid=item_info.get("Id"), iteminfo=item_info, emby=emby)
                             logger.info(
                                 f"最新媒体：{'电视剧' if str(item_info.get('Type')) == 'Episode' else '电影'} {'%s S%02dE%02d %s' % (item_info.get('SeriesName'), item_info.get('ParentIndexNumber'), item_info.get('IndexNumber'), item_info.get('Name')) if str(item_info.get('Type')) == 'Episode' else item_info.get('Name')} {item_info.get('Id')} 演员信息完成 {flag}")
-            if self._ExclusiveExtract:
-                try:
-                    if plugin_id:
-                        # 打开独占模式（方式元数据刷新导致媒体数据丢失）
-                        flag = self.__set_strm_assistant_exclusive_mode(emby, plugin_config, plugin_id, False)
-                        if not flag:
-                            logger.error(f"关闭 Strm Assistant 独占模式失败")
-                        else:
-                            logger.info(f"Strm Assistant 独占模式已关闭")
-                except Exception as e:
-                    logger.error(f"关闭 Strm Assistant 独占模式失败：{str(e)}")
+
             logger.info(f"刷新 {emby_name} 媒体库元数据完成")
 
     def __get_latest_media(self) -> List[dict]:
@@ -563,99 +546,6 @@ class EmbyMetaRefresh(_PluginBase):
             logger.error(f"更新人物信息失败：{str(err)}")
             return None
 
-    def __get_strm_assistant_config(self):
-        """
-        获取Strm Assistant配置
-        """
-        # 获取插件列表
-        list_plugins = self.__get_plugins()
-        if not list_plugins:
-            return None, None
-
-        # 获取弹幕配置插件
-        plugin_id = None
-        plugin_name = None
-        for plugin in list_plugins:
-            if plugin.get("DisplayName") == "Strm Assistant":
-                plugin_id = plugin.get("PluginId")
-                plugin_name = plugin.get("Name")
-                break
-
-        if not plugin_id:
-            logger.debug("Strm Assistant插件未安装")
-            return None, None
-
-        plugin_id = f"{plugin_id[:6]}:{plugin_name}"
-
-        # 获取插件配置
-        plugin_info = self.__get_plugin_info(plugin_id)
-        if not plugin_info:
-            return None, None
-        # 获取Strm Assistant配置
-        plugin_config = plugin_info.get("EditObjectContainer", {}).get("Object")
-        if not plugin_config:
-            return None, None
-
-        return plugin_config, plugin_id
-
-    def __set_strm_assistant_exclusive_mode(self, emby, plugin_config, plugin_id, exclusive_mode: bool):
-        """
-        设置Strm Assistant独占模式
-        """
-        plugin_config["MediaInfoExtractOptions"]["ExclusiveExtract"] = exclusive_mode
-        data = {
-            "ClientLocale": "zh-cn",
-            "CommandId": "PageSave",
-            "ItemId": "undefined",
-            "PageId": plugin_id,
-            "Data": json.dumps(plugin_config, ensure_ascii=False)
-        }
-
-        try:
-            res = emby.post_data(
-                url=f"[HOST]emby/UI/Command?reqformat=json&api_key=[APIKEY]",
-                data=json.dumps(data),
-                headers={
-                    "Content-Type": "text/plain"
-                }
-            )
-            if res and res.status_code in [200, 204]:
-                return True
-        except Exception as err:
-            logger.error(f"设置Strm Assistant独占模式失败：{str(err)}")
-        return False
-
-    def __get_plugins(self) -> list:
-        """
-        获取插件列表
-        """
-        if not self._EMBY_HOST or not self._EMBY_APIKEY:
-            return []
-        req_url = f"%semby/web/configurationpages?PageType=PluginConfiguration&EnableInMainMenu=true&api_key=%s" % (
-            self._EMBY_HOST, self._EMBY_APIKEY)
-        with RequestUtils().get_res(req_url) as res:
-            if res:
-                return res.json()
-            else:
-                logger.error(f"获取插件列表失败，无法连接Emby！")
-                return []
-
-    def __get_plugin_info(self, plugin_id) -> dict:
-        """
-        获取插件详情
-        """
-        if not self._EMBY_HOST or not self._EMBY_APIKEY:
-            return {}
-        req_url = f"%semby/UI/View?PageId=%s&api_key=%s" % (
-            self._EMBY_HOST, plugin_id, self._EMBY_APIKEY)
-
-        with RequestUtils().get_res(req_url) as res:
-            if res:
-                return res.json()
-            else:
-                logger.error(f"获取插件详情失败，无法连接Emby！")
-                return {}
-
     @staticmethod
     def set_iteminfo(itemid: str, iteminfo: dict, emby):
         """
@@ -825,7 +715,9 @@ class EmbyMetaRefresh(_PluginBase):
                     logger.error(f"Emby中没有找到{transferinfo.title} ({transferinfo.year})")
                     return
                 for movie in movies:
-                    self.__refresh_emby_library_by_id(item_id=movie.item_id)
+                    self.__refresh_emby_library_by_id(item_id=movie.item_id, mtype=transferinfo.type,
+                                                      tmdb_id=transferinfo.tmdbid, season=transferinfo.season,
+                                                      episode=transferinfo.episode)
                     logger.info(f"已通知刷新Emby电影：{movie.title} ({movie.year}) item_id:{movie.item_id}")
                     if self._actor_chi:
                         self.__update_people_chi(item_id=movie.item_id, title=movie.title, type=MediaType.MOVIE)
@@ -853,7 +745,9 @@ class EmbyMetaRefresh(_PluginBase):
                         f"Emby中没有找到{transferinfo.title} ({transferinfo.year}) {transferinfo.seasons}{transferinfo.episodes}")
                     return
 
-                self.__refresh_emby_library_by_id(item_id=episode_item_id)
+                self.__refresh_emby_library_by_id(item_id=episode_item_id, mtype=transferinfo.type,
+                                                  tmdb_id=transferinfo.tmdbid, season=transferinfo.season,
+                                                  episode=transferinfo.episode)
                 logger.info(
                     f"已通知刷新Emby电视剧：{transferinfo.title} ({transferinfo.year}) {transferinfo.seasons}{transferinfo.episodes} item_id:{episode_item_id}")
                 if self._actor_chi:
@@ -893,7 +787,41 @@ class EmbyMetaRefresh(_PluginBase):
             return None
         return None
 
-    def __refresh_emby_library_by_id(self, item_id: str) -> bool:
+    def __refresh_emby_library_by_id(self, item_id: str, mtype: str, tmdb_id: int, season: int = None,
+                                     episode: int = None) -> bool:
+        """
+        通知Emby刷新一个项目的媒体库
+        """
+        if not tmdb_id:
+            return self.__refresh_by_id(item_id,
+                                        self._ReplaceAllMetadata if self._ReplaceAllMetadata != "updateDB" else "false",
+                                        self._ReplaceAllImages if self._ReplaceAllImages != "updateDB" else "false")
+
+        if self._ReplaceAllMetadata == "updateDB" and self._ReplaceAllImages == "updateDB":
+            # 获取元数据及图片更新
+            if mtype == "电影":
+                tmdb_info = TmdbApi().get_info(mtype=MediaType.MOVIE, tmdbid=tmdb_id)
+            else:
+                tmdb_info = TmdbApi().get_tv_episode_detail(tmdbid=tmdb_id, season=season, episode=episode)
+            if not tmdb_info:
+                return False
+            item_info = self.__get_item_info(item_id)
+            if not item_info.get("ImageTags"):
+                
+
+
+
+
+        elif self._ReplaceAllMetadata == "updateDB" and self._ReplaceAllImages != "updateDB":
+            # 更新图片，不更新元数据
+            return self.__refresh_by_id(item_id, "false", self._ReplaceAllImages)
+        elif self._ReplaceAllMetadata != "updateDB" and self._ReplaceAllImages == "updateDB":
+            # 更新元数据，不更新图片
+            return self.__refresh_by_id(item_id, self._ReplaceAllMetadata, "false")
+        else:
+            return self.__refresh_by_id(item_id, self._ReplaceAllMetadata, self._ReplaceAllImages)
+
+    def __refresh_by_id(self, item_id: str, replace_all_metadata: str, replace_all_images: str) -> bool:
         """
         通知Emby刷新一个项目的媒体库
         """
@@ -901,7 +829,7 @@ class EmbyMetaRefresh(_PluginBase):
             return False
         req_url = "%semby/Items/%s/Refresh?Recursive=true&MetadataRefreshMode=FullRefresh" \
                   "&ImageRefreshMode=FullRefresh&ReplaceAllMetadata=%s&ReplaceAllImages=%s&api_key=%s" % (
-                      self._EMBY_HOST, item_id, self._ReplaceAllMetadata, self._ReplaceAllImages, self._EMBY_APIKEY)
+                      self._EMBY_HOST, item_id, replace_all_metadata, replace_all_images, self._EMBY_APIKEY)
         try:
             with RequestUtils().post_res(req_url) as res:
                 if res:
@@ -1117,6 +1045,7 @@ class EmbyMetaRefresh(_PluginBase):
                                             'items': [
                                                 {'title': 'true', 'value': "true"},
                                                 {'title': 'false', 'value': "false"},
+                                                {'title': 'updateDB', 'value': "updateDB"},
                                             ]
                                         }
                                     }
@@ -1137,6 +1066,7 @@ class EmbyMetaRefresh(_PluginBase):
                                             'items': [
                                                 {'title': 'true', 'value': "true"},
                                                 {'title': 'false', 'value': "false"},
+                                                {'title': 'updateDB', 'value': "updateDB"},
                                             ]
                                         }
                                     }
@@ -1202,27 +1132,6 @@ class EmbyMetaRefresh(_PluginBase):
                                         }
                                     }
                                 ]
-                            },
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VSelect',
-                                        'props': {
-                                            'multiple': False,
-                                            'chips': True,
-                                            'clearable': True,
-                                            'model': 'ExclusiveExtract',
-                                            'label': '联动独占模式',
-                                            'items': [{'title': 'true', 'value': "true"},
-                                                      {'title': 'false', 'value': "false"}]
-                                        }
-                                    }
-                                ]
                             }
                         ]
                     },
@@ -1240,28 +1149,7 @@ class EmbyMetaRefresh(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '周期请求媒体服务器元数据刷新接口。注：只支持Emby。'
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VAlert',
-                                        'props': {
-                                            'type': 'info',
-                                            'variant': 'tonal',
-                                            'text': '联动独占模式：Emby安装Strm Assistant插件的前提下，为保留Emby Strm文件的媒体信息，可开启该模式，当刷新元数据前打开独占模式，刷新完后关闭独占模式'
+                                            'text': '周期请求媒体服务器元数据刷新接口。注：只支持Emby。updateDB方式直接调用emby接口更新数据，否则调用Emby元数据刷新接口。'
                                         }
                                     }
                                 ]
@@ -1274,7 +1162,6 @@ class EmbyMetaRefresh(_PluginBase):
             "enabled": False,
             "onlyonce": False,
             "actor_chi": False,
-            "ExclusiveExtract": False,
             "ReplaceAllMetadata": "true",
             "ReplaceAllImages": "true",
             "cron": "5 1 * * *",

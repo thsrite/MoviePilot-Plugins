@@ -622,8 +622,8 @@ class EmbyDanmu(_PluginBase):
         """
         if not self._EMBY_HOST or not self._EMBY_APIKEY:
             return []
-        req_url = f"%semby/web/configurationpages?PageType=PluginConfiguration&EnableInMainMenu=true&UserId=%s&api_key=%s" % (
-            self._EMBY_HOST, self._EMBY_USER, self._EMBY_APIKEY)
+        req_url = f"%semby/web/configurationpages?PageType=PluginConfiguration&EnableInMainMenu=true&api_key=%s" % (
+            self._EMBY_HOST, self._EMBY_APIKEY)
         with RequestUtils().get_res(req_url) as res:
             if res:
                 return res.json()
