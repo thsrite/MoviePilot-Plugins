@@ -11,7 +11,6 @@ from pathlib import Path
 from posixpath import join as join_path
 from re import compile as re_compile
 from typing import Any, List, Dict, Tuple, Optional
-
 import pytz
 import requests
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -20,7 +19,6 @@ from p115client import P115Client
 from posixpatht import escape
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers.polling import PollingObserver
-
 from app.chain.media import MediaChain
 from app.core.config import settings
 from app.core.event import eventmanager, Event
@@ -84,6 +82,7 @@ class CloudStrmCompanion(_PluginBase):
     _cover = False
     _monitor = False
     _copy_files = False
+    _copy_subtitles = False
     _url = None
     _notify = False
     _refresh_emby = False
@@ -132,6 +131,7 @@ class CloudStrmCompanion(_PluginBase):
             self._monitor = config.get("monitor")
             self._cover = config.get("cover")
             self._copy_files = config.get("copy_files")
+            self._copy_subtitles = config.get("copy_subtitles")
             self._refresh_emby = config.get("refresh_emby")
             self._notify = config.get("notify")
             self._monitor_confs = config.get("monitor_confs")
@@ -423,16 +423,18 @@ class CloudStrmCompanion(_PluginBase):
                     self.__create_strm_file(strm_file=target_file,
                                             strm_content=strm_content)
                 else:
-                    if self._copy_files:
-                        if self._other_mediaext:
-                            if Path(event_path).suffix.lower() not in [ext.strip() for ext in
-                                                                       self._other_mediaext.split(",")]:
-                                return
-                        # 确保目标文件的父目录存在
+                    # 复制非媒体文件
+                    if self._copy_files and self._other_mediaext:
+                        if Path(event_path).suffix.lower() in [ext.strip() for ext in self._other_mediaext.split(",")]:
+                            os.makedirs(os.path.dirname(target_file), exist_ok=True)
+                            shutil.copy2(str(event_path), target_file)
+                            logger.info(f"复制非媒体文件 {str(event_path)} 到 {target_file}")
+
+                    # 复制字幕文件（独立于copy_files检查）
+                    if self._copy_subtitles and Path(event_path).suffix.lower() in ['.srt', '.ass', '.ssa', '.sub']:
                         os.makedirs(os.path.dirname(target_file), exist_ok=True)
-                        # 其他nfo、jpg等复制文件
                         shutil.copy2(str(event_path), target_file)
-                        logger.info(f"复制其他文件 {str(event_path)} 到 {target_file}")
+                        logger.info(f"复制字幕文件 {str(event_path)} 到 {target_file}")
         except Exception as e:
             logger.error("目录监控发生错误：%s - %s" % (str(e), traceback.format_exc()))
 
@@ -948,6 +950,7 @@ class CloudStrmCompanion(_PluginBase):
             "monitor": self._monitor,
             "interval": self._interval,
             "copy_files": self._copy_files,
+            "copy_subtitles": self._copy_subtitles,
             "refresh_emby": self._refresh_emby,
             "cron": self._cron,
             "url": self._url,
@@ -1157,6 +1160,22 @@ class CloudStrmCompanion(_PluginBase):
                                         'props': {
                                             'model': 'refresh_emby',
                                             'label': '刷新媒体库（Emby）',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'copy_subtitles',
+                                            'label': '复制字幕文件',
                                         }
                                     }
                                 ]
@@ -1410,6 +1429,7 @@ class CloudStrmCompanion(_PluginBase):
             "monitor": False,
             "cover": False,
             "copy_files": False,
+            "copy_subtitles": False,
             "refresh_emby": False,
             "mediaservers": [],
             "monitor_confs": "",
