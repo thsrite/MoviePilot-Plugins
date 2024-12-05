@@ -11,6 +11,7 @@ from pathlib import Path
 from posixpath import join as join_path
 from re import compile as re_compile
 from typing import Any, List, Dict, Tuple, Optional
+
 import pytz
 import requests
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -19,7 +20,7 @@ from p115client import P115Client
 from posixpatht import escape
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers.polling import PollingObserver
-from app.chain.media import MediaChain
+
 from app.core.config import settings
 from app.core.event import eventmanager, Event
 from app.core.metainfo import MetaInfoPath
@@ -27,7 +28,7 @@ from app.helper.mediaserver import MediaServerHelper
 from app.log import logger
 from app.plugins import _PluginBase
 from app.schemas import MediaInfo
-from app.schemas.types import EventType, NotificationType
+from app.schemas.types import EventType, NotificationType, MediaType
 from app.utils.http import RequestUtils
 from app.utils.string import StringUtils
 
@@ -61,7 +62,7 @@ class CloudStrmCompanion(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png"
     # 插件版本
-    plugin_version = "1.1.9"
+    plugin_version = "1.2.0"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -907,15 +908,20 @@ class CloudStrmCompanion(_PluginBase):
 
                     # 剧集季集信息 S01 E01-E04 || S01 E01、E02、E04
                     # 处理文件多，说明是剧集，显示季入库消息
+                    media_type = None
                     if str(mtype) == "tv":
                         # 季集文本
                         season_episode = f"{medis_title_year_season} {StringUtils.format_ep(episodes)}"
+                        media_type = MediaType.TV
                     else:
                         # 电影文本
                         season_episode = f"{medis_title_year_season}"
+                        media_type = MediaType.MOVIE
 
                     # 获取封面图片
-                    mediainfo: MediaInfo = MediaChain().recognize_by_meta(file_meta)
+                    mediainfo: MediaInfo = self.chain.recognize_media(meta=file_meta,
+                                                                      mtype=media_type,
+                                                                      tmdbid=file_meta.tmdbid)
 
                     # 发送消息
                     self.send_transfer_message(msg_title=season_episode,
