@@ -446,6 +446,9 @@ class CloudLinkMonitor(_PluginBase):
                     target_dir.overwrite_mode = self._overwrite_mode.get(mon_path) or 'never'
                     target_dir.library_storage = "local"
                     target_dir.library_category_folder = self._category
+                else:
+                    target_dir.transfer_type = transfer_type
+                    target_dir.scraping = self._scrape
 
                 if not target_dir.library_path:
                     logger.error(f"未配置监控目录 {mon_path} 的目的目录")
@@ -455,10 +458,8 @@ class CloudLinkMonitor(_PluginBase):
                 transferinfo: TransferInfo = self.chain.transfer(fileitem=file_item,
                                                                  meta=file_meta,
                                                                  mediainfo=mediainfo,
-                                                                 transfer_type=transfer_type,
                                                                  target_directory=target_dir,
-                                                                 episodes_info=episodes_info,
-                                                                 scrape=self._scrape)
+                                                                 episodes_info=episodes_info)
 
                 if not transferinfo:
                     logger.error("文件转移模块运行失败")
