@@ -1,39 +1,38 @@
-import os
-import threading
 import datetime
+import os
+import re
+import threading
 from pathlib import Path
-
+from threading import Lock
 from typing import Any, List, Dict, Tuple, Optional
 from xml.dom import minidom
-from threading import Lock
-from app.chain.tmdb import TmdbChain
-from app.core.metainfo import MetaInfoPath
-from app.schemas import MediaInfo, TransferInfo
-from app.utils.dom import DomUtils
-from PIL import Image
+
+import chardet
 import pytz
-from app.db.site_oper import SiteOper
+from PIL import Image
+from app.helper.sites import SitesHelper
 from apscheduler.schedulers.background import BackgroundScheduler
+from lxml import etree
+from requests import RequestException
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
-from app.utils.common import retry
-from requests import RequestException
-from app.core.meta.words import WordsMatcher
-from app.log import logger
-from app.plugins import _PluginBase
+
+from app.chain.tmdb import TmdbChain
 from app.core.config import settings
-from app.utils.system import SystemUtils
-from app.schemas.types import NotificationType
-import re
-
-import chardet
-from lxml import etree
-
+from app.core.meta.words import WordsMatcher
+from app.core.metainfo import MetaInfoPath
+from app.db.site_oper import SiteOper
+from app.helper.directory import DirectoryHelper
+from app.log import logger
 from app.modules.indexer import TorrentSpider
-from app.helper.sites import SitesHelper
-
+from app.plugins import _PluginBase
+from app.schemas import MediaInfo, TransferInfo, TransferDirectoryConf
+from app.schemas.types import NotificationType
+from app.utils.common import retry
+from app.utils.dom import DomUtils
 from app.utils.http import RequestUtils
+from app.utils.system import SystemUtils
 
 ffmpeg_lock = threading.Lock()
 lock = Lock()
@@ -64,7 +63,7 @@ class ShortPlayMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Amule_B.png"
     # 插件版本
-    plugin_version = "3.2"
+    plugin_version = "4.0"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -308,6 +307,23 @@ class ShortPlayMonitor(_PluginBase):
             # 走tmdb刮削
             if mediainfo:
                 try:
+                    # 查询转移目的目录
+                    target_dir = DirectoryHelper().get_dir(mediainfo, src_path=Path(source_dir))
+                    if not target_dir or not target_dir.library_path:
+                        target_dir = TransferDirectoryConf()
+                        target_dir.library_path = dest_dir
+                        target_dir.transfer_type = self._transfer_type
+                        target_dir.renaming = True
+                        target_dir.notify = False
+                        target_dir.overwrite_mode = 'never'
+                        target_dir.library_storage = "local"
+                    else:
+                        target_dir.transfer_type = self._transfer_type
+
+                    if not target_dir.library_path:
+                        logger.error(f"未配置监控目录 {source_dir} 的目的目录")
+                        return
+
                     # 更新媒体图片
                     self.chain.obtain_images(mediainfo=mediainfo)
                     episodes_info = self.tmdbchain.tmdb_episodes(tmdbid=mediainfo.tmdb_id,
@@ -316,7 +332,6 @@ class ShortPlayMonitor(_PluginBase):
                     # 转移
                     transferinfo: TransferInfo = self.chain.transfer(mediainfo=mediainfo,
                                                                      path=Path(event_path),
-                                                                     transfer_type=self._transfer_type,
                                                                      target=Path(dest_dir),
                                                                      meta=file_meta,
                                                                      episodes_info=episodes_info)
@@ -324,9 +339,9 @@ class ShortPlayMonitor(_PluginBase):
                         logger.error("文件转移模块运行失败")
                         transfer_flag = False
                     else:
-                        self.chain.scrape_metadata(path=transferinfo.target_path,
-                                                   mediainfo=mediainfo,
-                                                   transfer_type=self._transfer_type)
+                        self.chain.scrape_metadata(fileitem=transferinfo.target_diritem,
+                                                   meta=file_meta,
+                                                   mediainfo=mediainfo)
                         transfer_flag = True
                 except Exception as e:
                     print(str(e))
@@ -349,7 +364,7 @@ class ShortPlayMonitor(_PluginBase):
                     last = target.replace(str(parent), "")
                     if rename_conf:
                         # 自定义识别次
-                        title, _ = WordsMatcher().prepare(parent)
+                        title, _ = WordsMatcher().prepare(str(parent))
                         target_path = Path(dest_dir).joinpath(title + last)
                     else:
                         title = parent
@@ -509,12 +524,6 @@ class ShortPlayMonitor(_PluginBase):
             elif transfer_type == 'move':
                 # 移动
                 retcode, retmsg = SystemUtils.move(file_item, target_file)
-            elif transfer_type == 'rclone_move':
-                # Rclone 移动
-                retcode, retmsg = SystemUtils.rclone_move(file_item, target_file)
-            elif transfer_type == 'rclone_copy':
-                # Rclone 复制
-                retcode, retmsg = SystemUtils.rclone_copy(file_item, target_file)
             else:
                 # 复制
                 retcode, retmsg = SystemUtils.copy(file_item, target_file)
@@ -884,9 +893,7 @@ class ShortPlayMonitor(_PluginBase):
                                                 {'title': '移动', 'value': 'move'},
                                                 {'title': '复制', 'value': 'copy'},
                                                 {'title': '硬链接', 'value': 'link'},
-                                                {'title': '软链接', 'value': 'filesoftlink'},
-                                                {'title': 'Rclone复制', 'value': 'rclone_copy'},
-                                                {'title': 'Rclone移动', 'value': 'rclone_move'}
+                                                {'title': '软链接', 'value': 'softlink'},
                                             ]
                                         }
                                     }
