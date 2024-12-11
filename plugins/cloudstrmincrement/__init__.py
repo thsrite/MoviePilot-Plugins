@@ -25,7 +25,7 @@ class CloudStrmIncrement(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png"
     # 插件版本
-    plugin_version = "1.1.3"
+    plugin_version = "1.1.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -231,13 +231,17 @@ class CloudStrmIncrement(_PluginBase):
                     # 移动后文件
                     source_file = increment_file.replace(increment_dir, source_dir)
 
+                    logger.info(f"移动后增量文件 {source_file}")
+
                     # 判断目标文件是否存在
                     if not Path(source_file).parent.exists():
-                        Path(source_file).parent.mkdir(parents=True, exist_ok=True)
+                        Path(source_file).mkdir(parents=True, exist_ok=True)
+                        logger.info(f"创建增量文件父目录 {str(Path(source_file).parent)}")
 
                     if self._del_source:
-                        shutil.move(increment_file, source_file, copy_function=shutil.copy2)
+                        shutil.copy2(increment_file, source_file)
                         logger.info(f"移动增量文件 {increment_file} 到 {source_file}")
+                        Path(increment_file).unlink()
                     else:
                         shutil.copy2(increment_file, source_file)
                         logger.info(f"复制增量文件 {increment_file} 到 {source_file}")
