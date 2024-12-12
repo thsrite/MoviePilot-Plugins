@@ -62,7 +62,7 @@ class CloudStrmCompanion(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png"
     # 插件版本
-    plugin_version = "1.2.1"
+    plugin_version = "1.2.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -342,10 +342,6 @@ class CloudStrmCompanion(_PluginBase):
                     local_file = str(cloud_file).replace(cloud_dir, local_dir)
                     # 本地strm路径
                     target_file = str(cloud_file).replace(cloud_dir, strm_dir)
-                    # 只处理媒体文件
-                    if Path(local_file).suffix.lower() not in [ext.strip() for ext in
-                                                               self._rmt_mediaext.split(",")]:
-                        continue
 
                     if str(cloud_file) not in self._cloud_files:
                         logger.info(f"扫描到新文件 {cloud_file}，正在开始处理")
@@ -353,13 +349,30 @@ class CloudStrmCompanion(_PluginBase):
                         self._cloud_files.append(str(cloud_file))
                         __save_flag = True
 
-                        # 生成strm文件内容
-                        strm_content = self.__format_content(format_str=format_str,
-                                                             local_file=local_file,
-                                                             cloud_file=str(cloud_file))
-                        # 生成strm文件
-                        self.__create_strm_file(strm_file=target_file,
-                                                strm_content=strm_content)
+                        # 只处理媒体文件
+                        if Path(local_file).suffix.lower() in [ext.strip() for ext in
+                                                               self._rmt_mediaext.split(",")]:
+                            # 生成strm文件内容
+                            strm_content = self.__format_content(format_str=format_str,
+                                                                 local_file=local_file,
+                                                                 cloud_file=str(cloud_file))
+                            # 生成strm文件
+                            self.__create_strm_file(strm_file=target_file,
+                                                    strm_content=strm_content)
+                        else:
+                            # 复制非媒体文件
+                            if self._copy_files and self._other_mediaext and Path(local_file).suffix.lower() in [
+                                ext.strip() for ext in self._other_mediaext.split(",")]:
+                                os.makedirs(os.path.dirname(target_file), exist_ok=True)
+                                shutil.copy2(str(local_file), target_file)
+                                logger.info(f"复制非媒体文件 {str(local_file)} 到 {target_file}")
+
+                            # 复制字幕文件（独立于copy_files检查）
+                            if self._copy_subtitles and Path(local_file).suffix.lower() in ['.srt', '.ass', '.ssa',
+                                                                                            '.sub']:
+                                os.makedirs(os.path.dirname(target_file), exist_ok=True)
+                                shutil.copy2(str(local_file), target_file)
+                                logger.info(f"复制字幕文件 {str(local_file)} 到 {target_file}")
                     else:
                         logger.info(f"{cloud_file} 已在缓存中！跳过处理")
                 except Exception as e:
@@ -425,11 +438,13 @@ class CloudStrmCompanion(_PluginBase):
                                             strm_content=strm_content)
                 else:
                     # 复制非媒体文件
-                    if self._copy_files and self._other_mediaext:
-                        if Path(event_path).suffix.lower() in [ext.strip() for ext in self._other_mediaext.split(",")]:
-                            os.makedirs(os.path.dirname(target_file), exist_ok=True)
-                            shutil.copy2(str(event_path), target_file)
-                            logger.info(f"复制非媒体文件 {str(event_path)} 到 {target_file}")
+                    if self._copy_files and self._other_mediaext and Path(event_path).suffix.lower() in [ext.strip() for
+                                                                                                         ext in
+                                                                                                         self._other_mediaext.split(
+                                                                                                             ",")]:
+                        os.makedirs(os.path.dirname(target_file), exist_ok=True)
+                        shutil.copy2(str(event_path), target_file)
+                        logger.info(f"复制非媒体文件 {str(event_path)} 到 {target_file}")
 
                     # 复制字幕文件（独立于copy_files检查）
                     if self._copy_subtitles and Path(event_path).suffix.lower() in ['.srt', '.ass', '.ssa', '.sub']:
