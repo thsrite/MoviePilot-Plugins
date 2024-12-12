@@ -417,7 +417,7 @@
     "name": "云盘Strm助手",
     "description": "实时监控、定时全量增量生成strm文件。",
     "labels": "云盘",
-    "version": "1.2.1",
+    "version": "1.2.2",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png",
     "author": "thsrite",
     "level": 1,
