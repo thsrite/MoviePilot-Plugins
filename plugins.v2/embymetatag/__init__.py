@@ -1,5 +1,8 @@
+import json
+import os
 import re
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Optional, Any, List, Dict, Tuple
 
 import pytz
@@ -27,7 +30,7 @@ class EmbyMetaTag(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/tag.png"
     # 插件版本
-    plugin_version = "1.4"
+    plugin_version = "1.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -41,6 +44,7 @@ class EmbyMetaTag(_PluginBase):
 
     # 私有属性
     _enabled = False
+    _rebuild = False
     _onlyonce = False
     _cron = None
     _tag_confs = None
@@ -53,25 +57,38 @@ class EmbyMetaTag(_PluginBase):
     _EMBY_USER = None
     _EMBY_APIKEY = None
     _scheduler: Optional[BackgroundScheduler] = None
+    _audio_files_json = "audio_files.json"
 
     _tags = {}
     _acc_tags = []
     _media_tags = {}
     _media_type = {}
+    _audio_files = []
 
     def init_plugin(self, config: dict = None):
         # 停止现有任务
         self.stop_service()
         self.mediaserver_helper = MediaServerHelper()
+        self._audio_files_json = os.path.join(self.get_data_path(), self._audio_files_json)
 
         if config:
             self._enabled = config.get("enabled")
+            self._rebuild = config.get("rebuild")
             self._onlyonce = config.get("onlyonce")
             self._cron = config.get("cron")
             self._tag_confs = config.get("tag_confs")
             self._aac_confs = config.get("aac_confs")
             self._name_tag_confs = config.get("name_tag_confs")
             self._mediaservers = config.get("mediaservers") or []
+
+            if self._rebuild:
+                logger.info("开始清理媒体音频标签缓存")
+                self._rebuild = False
+                self._audio_files = []
+                if Path(self._audio_files_json).exists():
+                    Path(self._audio_files_json).unlink()
+                logger.info("媒体音频标签缓存清理完成")
+                self.__update_config()
 
             self._tags = {}
             if self._tag_confs:
@@ -150,6 +167,7 @@ class EmbyMetaTag(_PluginBase):
         self.update_config(
             {
                 "onlyonce": self._onlyonce,
+                "rebuild": self._rebuild,
                 "cron": self._cron,
                 "enabled": self._enabled,
                 "tag_confs": self._tag_confs,
@@ -234,12 +252,25 @@ class EmbyMetaTag(_PluginBase):
 
             # 媒体音频标签
             if self._acc_tags and len(self._acc_tags) > 0:
+                if Path(self._audio_files_json).exists():
+                    logger.info("尝试加载本地媒体音频标签缓存")
+                    # 尝试加载本地
+                    with open(self._audio_files_json, 'r') as file:
+                        content = file.read()
+                        if content:
+                            self._audio_files = json.loads(content)
+
                 MediaServerChain().sync()
                 media_items = self.__get_media_items(db=None)
                 logger.info(f"获取到同步媒体数据：{len(media_items)} 个")
 
+                __save_flag = False
                 for media_item in media_items:
                     if not media_item:
+                        continue
+
+                    if str(media_item.item_id) in self._audio_files:
+                        logger.info(f"音频文件标签已处理过：{media_item.item_type} {media_item.title}")
                         continue
 
                     if media_item.item_type == "电影":
@@ -272,17 +303,34 @@ class EmbyMetaTag(_PluginBase):
                         if not match_flag:
                             continue
 
-                        logger.info(f"匹配到媒体音频：{media_item.item_type} {media_item.title} {acc_tags}")
-                        add_tags += acc_tags
+                        if acc_tags:
+                            logger.info(f"匹配到媒体音频：{media_item.item_type} {media_item.title} {acc_tags}")
+                            add_tags += acc_tags
 
                     # 给媒体添加tag
-                    logger.info(f"开始给媒体添加标签：{media_item.item_type} {media_item.title} {add_tags}")
-                    self.__add_tags(item_name=media_item.title,
-                                    item_id=media_item.item_id,
-                                    media_tags=add_tags,
-                                    type="媒体音频")
+                    if add_tags:
+                        # logger.info(f"开始给媒体添加标签：{media_item.item_type} {media_item.title} {add_tags}")
+                        __save_flag = self.__add_tags(item_name=media_item.title,
+                                                      item_id=media_item.item_id,
+                                                      media_tags=add_tags,
+                                                      type="媒体音频")
+                        if __save_flag:
+                            self._audio_files.append(str(media_item.item_id))
+
+                # 重新保存json文件
+                if __save_flag:
+                    self.__sava_json()
 
             logger.info(f"{emby_name} 媒体标签任务完成")
+
+    def __sava_json(self):
+        """
+        保存json文件
+        """
+        logger.info(f"开始写入本地文件 {self._audio_files_json}")
+        file = open(self._audio_files_json, 'w')
+        file.write(json.dumps(self._audio_files))
+        file.close()
 
     def __add_tags(self, item_name, item_id, media_tags, type):
         """
@@ -303,6 +351,10 @@ class EmbyMetaTag(_PluginBase):
             tags = {"Tags": tags}
             add_flag = self.__add_tag(item_id, tags)
             logger.info(f"{type} 添加标签成功：{item_name} {tags} {add_flag}")
+            return True
+        else:
+            logger.info(f"{type} 已有标签：{item_name} {media_tags}")
+            return False
 
     @eventmanager.register(EventType.PluginAction)
     def remote_sync(self, event: Event):
@@ -382,10 +434,12 @@ class EmbyMetaTag(_PluginBase):
             with RequestUtils().get_res(req_url) as res:
                 if res and res.status_code == 200:
                     item = res.json()
-                    return [media_stream.get('Title') or media_stream.get('Language') for media_stream in
+                    return [media_stream.get('Title') or media_stream.get('Language') or media_stream.get(
+                        'DisplayTitle') or media_stream.get('DisplayLanguage') for media_stream in
                             item.get("MediaSources", {})[0].get("MediaStreams", []) if
                             media_stream.get('Type') == 'Audio' and (
-                                    media_stream.get('Title') or media_stream.get('Language'))]
+                                    media_stream.get('Title') or media_stream.get('Language') or media_stream.get(
+                                'DisplayTitle') or media_stream.get('DisplayLanguage'))]
         except Exception as e:
             logger.error(f"连接Items/Id/PlaybackInfo出错：" + str(e))
         return []
@@ -439,7 +493,7 @@ class EmbyMetaTag(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 6
+                                    'md': 4
                                 },
                                 'content': [
                                     {
@@ -455,7 +509,7 @@ class EmbyMetaTag(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
-                                    'md': 6
+                                    'md': 4
                                 },
                                 'content': [
                                     {
@@ -463,6 +517,22 @@ class EmbyMetaTag(_PluginBase):
                                         'props': {
                                             'model': 'onlyonce',
                                             'label': '立即运行一次',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'rebuild',
+                                            'label': '清理媒体音频标签缓存',
                                         }
                                     }
                                 ]
@@ -608,6 +678,7 @@ class EmbyMetaTag(_PluginBase):
         ], {
             "enabled": False,
             "onlyonce": False,
+            "rebuild": False,
             "cron": "5 1 * * *",
             "tag_confs": "",
             "name_tag_confs": "",

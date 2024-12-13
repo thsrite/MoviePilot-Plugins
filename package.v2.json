@@ -33,11 +33,12 @@
     "name": "Emby媒体标签",
     "description": "自动给媒体库媒体添加标签。",
     "labels": "Emby",
-    "version": "1.4",
+    "version": "1.5",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/tag.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v1.5": "支持音频标签缓存，防重复请求",
       "v1.4": "支持给音频添加语言标签",
       "v1.3": "适配v2多媒体服务器",
       "v1.2": "支持指定特殊媒体名称添加标签",
