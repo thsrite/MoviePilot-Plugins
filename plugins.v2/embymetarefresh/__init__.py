@@ -36,7 +36,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "2.1.6"
+    plugin_version = "2.1.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -169,7 +169,7 @@ class EmbyMetaRefresh(_PluginBase):
             if not self._EMBY_HOST.startswith("http"):
                 self._EMBY_HOST = "http://" + self._EMBY_HOST
 
-            # 判断有无安装strm assistant插件
+            # 判断有无安装神医助手插件
             plugin_config, plugin_id = None, None
             if self._ExclusiveExtract:
                 try:
@@ -178,11 +178,11 @@ class EmbyMetaRefresh(_PluginBase):
                         # 打开独占模式（方式元数据刷新导致媒体数据丢失）
                         flag = self.__set_strm_assistant_exclusive_mode(emby, plugin_config, plugin_id, True)
                         if not flag:
-                            logger.error(f"打开 Strm Assistant 独占模式失败")
+                            logger.error(f"打开 神医助手 独占模式失败")
                         else:
-                            logger.info(f"Strm Assistant 独占模式已打开")
+                            logger.info(f"神医助手 独占模式已打开")
                 except Exception as e:
-                    logger.error(f"获取 Strm Assistant 配置失败：{str(e)}")
+                    logger.error(f"获取 神医助手 配置失败：{str(e)}")
 
             if str(self._refresh_type) == "历史记录":
                 # 获取days内入库的媒体
@@ -277,11 +277,11 @@ class EmbyMetaRefresh(_PluginBase):
                         # 打开独占模式（方式元数据刷新导致媒体数据丢失）
                         flag = self.__set_strm_assistant_exclusive_mode(emby, plugin_config, plugin_id, False)
                         if not flag:
-                            logger.error(f"关闭 Strm Assistant 独占模式失败")
+                            logger.error(f"关闭 神医助手 独占模式失败")
                         else:
-                            logger.info(f"Strm Assistant 独占模式已关闭")
+                            logger.info(f"神医助手 独占模式已关闭")
                 except Exception as e:
-                    logger.error(f"关闭 Strm Assistant 独占模式失败：{str(e)}")
+                    logger.error(f"关闭 神医助手 独占模式失败：{str(e)}")
             logger.info(f"刷新 {emby_name} 媒体库元数据完成")
 
     def __get_latest_media(self) -> List[dict]:
@@ -565,7 +565,7 @@ class EmbyMetaRefresh(_PluginBase):
 
     def __get_strm_assistant_config(self):
         """
-        获取Strm Assistant配置
+        获取神医助手配置
         """
         # 获取插件列表
         list_plugins = self.__get_plugins()
@@ -576,13 +576,13 @@ class EmbyMetaRefresh(_PluginBase):
         plugin_id = None
         plugin_name = None
         for plugin in list_plugins:
-            if plugin.get("DisplayName") == "Strm Assistant":
+            if plugin.get("DisplayName") == "神医助手":
                 plugin_id = plugin.get("PluginId")
                 plugin_name = plugin.get("Name")
                 break
 
         if not plugin_id:
-            logger.debug("Strm Assistant插件未安装")
+            logger.debug("神医助手插件未安装")
             return None, None
 
         plugin_id = f"{plugin_id[:6]}:{plugin_name}"
@@ -591,7 +591,7 @@ class EmbyMetaRefresh(_PluginBase):
         plugin_info = self.__get_plugin_info(plugin_id)
         if not plugin_info:
             return None, None
-        # 获取Strm Assistant配置
+        # 获取神医助手配置
         plugin_config = plugin_info.get("EditObjectContainer", {}).get("Object")
         if not plugin_config:
             return None, None
@@ -600,7 +600,7 @@ class EmbyMetaRefresh(_PluginBase):
 
     def __set_strm_assistant_exclusive_mode(self, emby, plugin_config, plugin_id, exclusive_mode: bool):
         """
-        设置Strm Assistant独占模式
+        设置神医助手独占模式
         """
         plugin_config["MediaInfoExtractOptions"]["ExclusiveExtract"] = exclusive_mode
         data = {
@@ -622,7 +622,7 @@ class EmbyMetaRefresh(_PluginBase):
             if res and res.status_code in [200, 204]:
                 return True
         except Exception as err:
-            logger.error(f"设置Strm Assistant独占模式失败：{str(err)}")
+            logger.error(f"设置神医助手独占模式失败：{str(err)}")
         return False
 
     def __get_plugins(self) -> list:
@@ -1261,7 +1261,7 @@ class EmbyMetaRefresh(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '联动独占模式：Emby安装Strm Assistant插件的前提下，为保留Emby Strm文件的媒体信息，可开启该模式，当刷新元数据前打开独占模式，刷新完后关闭独占模式（一直开着独占模式的话，新媒体入库会卡好久，一关闭独占模式立马入库。）媒体服务器API密钥要改为X-Emby-Token的值'
+                                            'text': '联动独占模式：Emby安装神医助手插件的前提下，为保留Emby Strm文件的媒体信息，可开启该模式，当刷新元数据前打开独占模式，刷新完后关闭独占模式（一直开着独占模式的话，新媒体入库会卡好久，一关闭独占模式立马入库。）媒体服务器API密钥要改为X-Emby-Token的值'
                                         }
                                     }
                                 ]
