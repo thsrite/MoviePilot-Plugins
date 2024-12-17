@@ -11,7 +11,7 @@ from app.schemas.types import EventType
 
 class BbDown(_PluginBase):
     # 插件名称
-    plugin_name = "BbDown"
+    plugin_name = "bbdown"
     # 插件描述
     plugin_desc = "交互下载B站视频，调用BBDown。"
     # 插件图标
@@ -60,7 +60,7 @@ class BbDown(_PluginBase):
                                   userid=event.event_data.get("user"))
                 return
 
-            bbdown_path = Path(self._bbdown_path) / "BbDown"
+            bbdown_path = Path(self._bbdown_path) / "bbdown"
             ffmpeg_path = Path(self._bbdown_path) / "ffmpeg"
             if not bbdown_path.exists() or not ffmpeg_path.exists():
                 self.post_message(channel=event.event_data.get("channel"),
@@ -73,7 +73,7 @@ class BbDown(_PluginBase):
             logger.info(f"赋予执行权限：{bbdown_path} {ffmpeg_path}")
 
             # 执行命令
-            command = f"cd {self._bbdown_path} && ./BbDown {args} {f'--work-dir {self._save_path}' if self._save_path else ''}"
+            command = f"cd {self._bbdown_path} && ./bbdown {args} {f'--work-dir {self._save_path}' if self._save_path else ''}"
             logger.info(f"执行命令：{command}")
 
             self.post_message(channel=event.event_data.get("channel"),
