@@ -511,17 +511,5 @@
       "v3.1": "支持自定义转移方式",
       "v3.0": "默认从tmdb刮削，刮削失败则从pt站刮削"
     }
-  },
-  "BbDown": {
-    "name": "BBDown",
-    "description": "交互下载B站视频，调用BBDown。",
-    "labels": "工具",
-    "version": "1.0.4",
-    "icon": "Bilibili_E.png",
-    "author": "thsrite",
-    "level": 1,
-    "history": {
-      "v1.0.4": "交互下载B站视频，调用BBDown"
-    }
   }
 }
