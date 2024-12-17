@@ -8,7 +8,7 @@ from app.plugins import _PluginBase
 from app.schemas.types import EventType
 
 
-class BBDown(_PluginBase):
+class BbDown(_PluginBase):
     # 插件名称
     plugin_name = "BBDown"
     # 插件描述
@@ -16,7 +16,7 @@ class BBDown(_PluginBase):
     # 插件图标
     plugin_icon = "Bilibili_E.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.0.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -77,18 +77,18 @@ class BBDown(_PluginBase):
 
             self.post_message(channel=event.event_data.get("channel"),
                               title=f"BBDown命令提交成功，请耐心等候！",
+                              text=f"保存路径：{self._save_path}" if self._save_path else None,
                               userid=event.event_data.get("user"))
 
-            output = self.__execute_command(command)
+            output = self.__execute_command(command, event)
             logger.info(f"命令输出：{output}")
 
             self.post_message(channel=event.event_data.get("channel"),
                               title=f"执行命令成功！",
-                              text=f"命令输出：{output[-1]}",
+                              text=f"{output[-1]}",
                               userid=event.event_data.get("user"))
 
-    @staticmethod
-    def __execute_command(command: str):
+    def __execute_command(self, command: str, event: Event = None):
         """
         执行命令
         :param command: 命令
@@ -102,6 +102,10 @@ class BBDown(_PluginBase):
             if error:
                 logger.info(error.strip())
                 ouptut.append(error.strip())
+                if event:
+                    self.post_message(channel=event.event_data.get("channel"),
+                                      title=error.strip(),
+                                      userid=event.event_data.get("user"))
         while True:
             output = result.stdout.readline().decode("utf-8")
             if output == '' and result.poll() is not None:
@@ -109,6 +113,10 @@ class BBDown(_PluginBase):
             if output:
                 logger.info(output.strip())
                 ouptut.append(output.strip())
+                if event:
+                    self.post_message(channel=event.event_data.get("channel"),
+                                      title=error.strip(),
+                                      userid=event.event_data.get("user"))
 
         return ouptut
 

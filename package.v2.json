@@ -511,16 +511,16 @@
       "v3.0": "默认从tmdb刮削，刮削失败则从pt站刮削"
     }
   },
-  "BBDown": {
-    "name": "BBDown",
+  "BbDown": {
+    "name": "BbDown",
     "description": "交互下载B站视频，调用BBDown。",
     "labels": "工具",
-    "version": "1.0",
+    "version": "1.0.1",
     "icon": "Bilibili_E.png",
     "author": "thsrite",
     "level": 1,
     "history": {
-      "v1.0": "交互下载B站视频，调用BBDown"
+      "v1.0.1": "交互下载B站视频，调用BBDown"
     }
   }
 }
