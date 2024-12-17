@@ -208,7 +208,7 @@ class BBDown(_PluginBase):
                                         'component': 'VTextField',
                                         'props': {
                                             'model': 'save_path',
-                                            'label': '保存路径',
+                                            'label': '保存路径（请确保有访问权限）',
                                         }
                                     }
                                 ]
