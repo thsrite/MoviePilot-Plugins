@@ -17,7 +17,7 @@ class BbDown(_PluginBase):
     # 插件图标
     plugin_icon = "Bilibili_E.png"
     # 插件版本
-    plugin_version = "1.0.2"
+    plugin_version = "1.0.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -60,11 +60,11 @@ class BbDown(_PluginBase):
                                   userid=event.event_data.get("user"))
                 return
 
-            bbdown_path = Path(self._bbdown_path) / "bbdown"
+            bbdown_path = Path(self._bbdown_path) / "BBDown"
             ffmpeg_path = Path(self._bbdown_path) / "ffmpeg"
             if not bbdown_path.exists() or not ffmpeg_path.exists():
                 self.post_message(channel=event.event_data.get("channel"),
-                                  title=f"BBDown路径下BBDwon或ffmpeg不存在！请检查配置！。",
+                                  title=f"{self._bbdown_path}路径下BBDwon或ffmpeg不存在！请检查配置！。",
                                   userid=event.event_data.get("user"))
                 return
 

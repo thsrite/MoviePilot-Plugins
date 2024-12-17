@@ -515,12 +515,12 @@
     "name": "BBDown",
     "description": "交互下载B站视频，调用BBDown。",
     "labels": "工具",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "icon": "Bilibili_E.png",
     "author": "thsrite",
     "level": 1,
     "history": {
-      "v1.0.2": "交互下载B站视频，调用BBDown"
+      "v1.0.3": "交互下载B站视频，调用BBDown"
     }
   }
 }
