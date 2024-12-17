@@ -11,7 +11,7 @@ from app.schemas.types import EventType
 
 class BbDown(_PluginBase):
     # 插件名称
-    plugin_name = "bbdown"
+    plugin_name = "BBDown"
     # 插件描述
     plugin_desc = "交互下载B站视频，调用BBDown。"
     # 插件图标
