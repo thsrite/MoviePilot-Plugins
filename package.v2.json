@@ -520,7 +520,7 @@
     "author": "thsrite",
     "level": 1,
     "history": {
-      "v1.0.3": "交互下载B站视频，调用BBDown"
+      "v1.0.4": "交互下载B站视频，调用BBDown"
     }
   }
 }

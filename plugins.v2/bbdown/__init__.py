@@ -1,5 +1,4 @@
 import subprocess
-import time
 from pathlib import Path
 from typing import List, Tuple, Dict, Any
 
@@ -17,7 +16,7 @@ class BbDown(_PluginBase):
     # 插件图标
     plugin_icon = "Bilibili_E.png"
     # 插件版本
-    plugin_version = "1.0.3"
+    plugin_version = "1.0.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -81,26 +80,13 @@ class BbDown(_PluginBase):
                               text=f"保存路径：{self._save_path}" if self._save_path else None,
                               userid=event.event_data.get("user"))
 
-            # output = self.__execute_command(command=command)
-            # 创建命令执行对象
-            executor = CommandExecutor()
-            executor.set_input_callback(self.bbdown_input)
-
-            # 执行命令
-            output = executor.execute_command(command)
-
+            output = self.__execute_command(command=command)
             logger.info(f"命令输出：{output}")
 
             self.post_message(channel=event.event_data.get("channel"),
                               title=f"执行命令成功！",
                               text=f"{output[-1]}",
                               userid=event.event_data.get("user"))
-
-    # 外部方法提供输入
-    @eventmanager.register(EventType.PluginAction)
-    def bbdown_input(self, event: Event = None):
-        time.sleep(5)  # 模拟等待其他操作
-        return "输入的数据"
 
     def __execute_command(self, command: str):
         """
@@ -270,48 +256,3 @@ class BbDown(_PluginBase):
         退出插件
         """
         pass
-
-
-class CommandExecutor:
-    def __init__(self):
-        self._input_callback = None
-        self._output = []
-
-    def set_input_callback(self, callback):
-        """ 设置外部输入回调函数 """
-        self._input_callback = callback
-
-    def execute_command(self, command: str):
-        """
-        执行命令并等待输入
-        :param command: 命令
-        """
-        result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                  stderr=subprocess.PIPE)
-        output = []
-
-        while True:
-            # 读取标准输出
-            output_line = result.stdout.readline().decode('utf-8')
-            error_line = result.stderr.readline().decode('utf-8')
-
-            # 如果命令结束且没有输出，则退出
-            if output_line == '' and error_line == '' and result.poll() is not None:
-                break
-
-            if output_line:
-                output.append(output_line.strip())
-                logger.info(output_line.strip())  # 输出到控制台
-
-            if error_line:
-                output.append(error_line.strip())
-                logger.info(error_line.strip())  # 输出到控制台
-
-            # 如果有需要输入的提示，调用回调函数来获取输入
-            if '请选择' in output_line:  # 假设命令要求输入时，输出中包含‘请输入’字符串
-                if self._input_callback:
-                    input_data = self._input_callback()  # 调用回调函数获取输入
-                    result.stdin.write(input_data.encode('utf-8'))
-                    result.stdin.flush()
-
-        return output
