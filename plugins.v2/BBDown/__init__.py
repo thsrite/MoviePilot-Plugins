@@ -84,7 +84,7 @@ class BBDown(_PluginBase):
 
             self.post_message(channel=event.event_data.get("channel"),
                               title=f"执行命令成功！",
-                              text=f"命令输出：{output}",
+                              text=f"命令输出：{output[-1]}",
                               userid=event.event_data.get("user"))
 
     @staticmethod
