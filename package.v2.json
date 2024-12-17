@@ -512,7 +512,7 @@
     }
   },
   "BbDown": {
-    "name": "BbDown",
+    "name": "BBDown",
     "description": "交互下载B站视频，调用BBDown。",
     "labels": "工具",
     "version": "1.0.1",
