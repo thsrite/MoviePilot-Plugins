@@ -16,7 +16,7 @@ class BbDown(_PluginBase):
     # 插件图标
     plugin_icon = "Bilibili_E.png"
     # 插件版本
-    plugin_version = "1.0.1"
+    plugin_version = "1.0.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -80,7 +80,7 @@ class BbDown(_PluginBase):
                               text=f"保存路径：{self._save_path}" if self._save_path else None,
                               userid=event.event_data.get("user"))
 
-            output = self.__execute_command(command, event)
+            output = self.__execute_command(command=command)
             logger.info(f"命令输出：{output}")
 
             self.post_message(channel=event.event_data.get("channel"),
@@ -88,7 +88,7 @@ class BbDown(_PluginBase):
                               text=f"{output[-1]}",
                               userid=event.event_data.get("user"))
 
-    def __execute_command(self, command: str, event: Event = None):
+    def __execute_command(self, command: str):
         """
         执行命令
         :param command: 命令
@@ -102,10 +102,6 @@ class BbDown(_PluginBase):
             if error:
                 logger.info(error.strip())
                 ouptut.append(error.strip())
-                if event:
-                    self.post_message(channel=event.event_data.get("channel"),
-                                      title=error.strip(),
-                                      userid=event.event_data.get("user"))
         while True:
             output = result.stdout.readline().decode("utf-8")
             if output == '' and result.poll() is not None:
@@ -113,10 +109,6 @@ class BbDown(_PluginBase):
             if output:
                 logger.info(output.strip())
                 ouptut.append(output.strip())
-                if event:
-                    self.post_message(channel=event.event_data.get("channel"),
-                                      title=error.strip(),
-                                      userid=event.event_data.get("user"))
 
         return ouptut
 
