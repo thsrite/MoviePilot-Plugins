@@ -73,7 +73,7 @@ class BbDown(_PluginBase):
             logger.info(f"赋予执行权限：{bbdown_path} {ffmpeg_path}")
 
             # 执行命令
-            command = f"cd {self._bbdown_path} && ./bbdown {args} {f'--work-dir {self._save_path}' if self._save_path else ''}"
+            command = f"cd {self._bbdown_path} && ./BBDown {args} {f'--work-dir {self._save_path}' if self._save_path else ''}"
             logger.info(f"执行命令：{command}")
 
             self.post_message(channel=event.event_data.get("channel"),
