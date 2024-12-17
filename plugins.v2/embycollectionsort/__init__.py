@@ -8,8 +8,8 @@ import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from app.core.event import eventmanager, Event
 from app.core.config import settings
+from app.core.event import eventmanager, Event
 from app.helper.mediaserver import MediaServerHelper
 from app.log import logger
 from app.plugins import _PluginBase
@@ -27,7 +27,7 @@ class EmbyCollectionSort(_PluginBase):
     # 插件图标
     plugin_icon = "Element_A.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -45,6 +45,7 @@ class EmbyCollectionSort(_PluginBase):
     _cron = None
     _sort_type = None
     _collection_library_id = None
+    _black_collection = None
     _mediaservers = None
 
     mediaserver_helper = None
@@ -64,6 +65,7 @@ class EmbyCollectionSort(_PluginBase):
             self._cron = config.get("cron")
             self._sort_type = config.get("sort_type") or "asc"
             self._collection_library_id = config.get("collection_library_id")
+            self._black_collection = config.get("black_collection")
             self._mediaservers = config.get("mediaservers") or []
 
             # 加载模块
@@ -112,6 +114,7 @@ class EmbyCollectionSort(_PluginBase):
                 "sort_type": self._sort_type,
                 "collection_library_id": self._collection_library_id,
                 "mediaservers": self._mediaservers,
+                "black_collection": self._black_collection,
             }
         )
 
@@ -143,78 +146,89 @@ class EmbyCollectionSort(_PluginBase):
             handle_times = []
 
             for collection in collections:
-                logger.info(f"开始处理合集: {collection.get('Name')} {collection.get('Id')}")
-                items = self.__get_items(collection.get("Id"))
-                item_dict = []
-                for item in items:
-                    item_info = self.__get_item_info(item.get("Id"))
-                    item_dict.append({"Name": item.get("Name"), "Id": item.get("Id"), "item_info": item_info})
+                try:
+                    if self._black_collection and any(
+                            str(black) in collection.get('Name') for black in self._black_collection.split(",") if
+                            black):
+                        logger.info(f"跳过黑名单合集: {collection.get('Name')} {collection.get('Id')}")
+                        continue
 
-                # 按照发布时间排序
-                sorted_items = sorted(item_dict, key=lambda x: x.get("item_info").get("PremiereDate"),
-                                      reverse=self._sort_type == "降序")
-                # 初始化时间
-                current_time = datetime.strptime(sorted_items[0]["item_info"]["DateCreated"], "%Y-%m-%dT%H:%M:%S.%f0Z")
+                    logger.info(f"开始处理合集: {collection.get('Name')} {collection.get('Id')}")
+                    items = self.__get_items(collection.get("Id"))
+                    item_dict = []
+                    for item in items:
+                        item_info = self.__get_item_info(item.get("Id"))
+                        item_dict.append({"Name": item.get("Name"), "Id": item.get("Id"), "item_info": item_info})
 
-                # 更新每个 item 的 DateCreated，规则为
-                updated_items = []
+                    # 按照发布时间排序
+                    sorted_items = sorted(item_dict, key=lambda x: x.get("item_info").get("PremiereDate"),
+                                          reverse=self._sort_type == "降序")
+                    # 初始化时间
+                    current_time = datetime.strptime(sorted_items[0]["item_info"]["DateCreated"],
+                                                     "%Y-%m-%dT%H:%M:%S.%f0Z")
 
-                while sorted_items:
-                    sub_update_items = []
+                    # 更新每个 item 的 DateCreated，规则为
+                    updated_items = []
 
-                    for item in sorted_items:
-                        with lock:
-                            new_date_created = current_time.strftime("%Y-%m-%dT%H:%M:%S.%f0Z")
-                            # 时间相同，跳过
-                            if str(new_date_created) == str(item['item_info']['DateCreated']):
+                    while sorted_items:
+                        sub_update_items = []
+
+                        for item in sorted_items:
+                            with lock:
+                                new_date_created = current_time.strftime("%Y-%m-%dT%H:%M:%S.%f0Z")
+                                # 时间相同，跳过
+                                if str(new_date_created) == str(item['item_info']['DateCreated']):
+                                    logger.debug(
+                                        f"合集媒体: {item.get('Name')} 原入库时间 {item['item_info']['DateCreated']} 新入库时间 {new_date_created} 时间相同，跳过")
+                                    handle_times.append(str(current_time))
+                                    sub_update_items.append(str(current_time))
+                                    # 时间减一秒，用于下一个 item 的更新
+                                    current_time -= timedelta(seconds=1)
+                                    continue
+
+                                if str(current_time) in handle_times:
+                                    logger.warn(
+                                        f"合集媒体: {item.get('Name')} {current_time} 时间已被占用，开始增加 {len(sorted_items) + 1} 秒，重新尝试处理")
+                                    # 处理完成的 items 从列表中移除
+                                    handle_times = [str(_time) for _time in handle_times if
+                                                    _time not in sub_update_items]
+                                    # 如果时间已被占用，增加 len(sorted_items) + 1 秒
+                                    current_time += timedelta(seconds=len(sorted_items) + 1)
+                                    # 重置已处理的 items 列表和 handle_times 集合
+                                    updated_items.clear()
+                                    # 时间已被占用，跳出 for 循环
+                                    break
+
                                 logger.debug(
-                                    f"合集媒体: {item.get('Name')} 原入库时间 {item['item_info']['DateCreated']} 新入库时间 {new_date_created} 时间相同，跳过")
+                                    f"合集媒体: {item.get('Name')} 原入库时间 {item['item_info']['DateCreated']} 新入库时间 {new_date_created}")
+                                item["item_info"]["DateCreated"] = new_date_created
+                                updated_items.append(item["item_info"])
                                 handle_times.append(str(current_time))
                                 sub_update_items.append(str(current_time))
                                 # 时间减一秒，用于下一个 item 的更新
                                 current_time -= timedelta(seconds=1)
-                                continue
+                        else:
+                            # 所有 item 处理完成，跳出 while 循环
+                            break
+                        time.sleep(1)
 
-                            if str(current_time) in handle_times:
-                                logger.warn(
-                                    f"合集媒体: {item.get('Name')} {current_time} 时间已被占用，开始增加 {len(sorted_items) + 1} 秒，重新尝试处理")
-                                # 处理完成的 items 从列表中移除
-                                handle_times = [str(_time) for _time in handle_times if _time not in sub_update_items]
-                                # 如果时间已被占用，增加 len(sorted_items) + 1 秒
-                                current_time += timedelta(seconds=len(sorted_items) + 1)
-                                # 重置已处理的 items 列表和 handle_times 集合
-                                updated_items.clear()
-                                # 时间已被占用，跳出 for 循环
-                                break
+                    if not updated_items:
+                        logger.warn(f"合集: {collection.get('Name')} {collection.get('Id')} 无需更新入库时间")
+                        continue
 
-                            logger.debug(
-                                f"合集媒体: {item.get('Name')} 原入库时间 {item['item_info']['DateCreated']} 新入库时间 {new_date_created}")
-                            item["item_info"]["DateCreated"] = new_date_created
-                            updated_items.append(item["item_info"])
-                            handle_times.append(str(current_time))
-                            sub_update_items.append(str(current_time))
-                            # 时间减一秒，用于下一个 item 的更新
-                            current_time -= timedelta(seconds=1)
-                    else:
-                        # 所有 item 处理完成，跳出 while 循环
-                        break
-                    time.sleep(1)
+                    logger.debug(f"获取合集排序后最新的入库时间: {current_time}")
 
-                if not updated_items:
-                    logger.warn(f"合集: {collection.get('Name')} {collection.get('Id')} 无需更新入库时间")
-                    continue
+                    # 更新入库时间
+                    for item_info in updated_items:
+                        update_flag = self.__update_item_info(item_info.get("Id"), item_info)
+                        if update_flag:
+                            logger.info(f"{item_info.get('Name')} 更新入库时间到{item_info.get('DateCreated')}成功")
+                        else:
+                            logger.error(f"{item_info.get('Name')} 更新入库时间到{item_info.get('DateCreated')}失败")
 
-                logger.debug(f"获取合集排序后最新的入库时间: {current_time}")
-
-                # 更新入库时间
-                for item_info in updated_items:
-                    update_flag = self.__update_item_info(item_info.get("Id"), item_info)
-                    if update_flag:
-                        logger.info(f"{item_info.get('Name')} 更新入库时间到{item_info.get('DateCreated')}成功")
-                    else:
-                        logger.error(f"{item_info.get('Name')} 更新入库时间到{item_info.get('DateCreated')}失败")
-
-                logger.info(f"合集处理完成: {collection.get('Name')} {collection.get('Id')}")
+                    logger.info(f"合集处理完成: {collection.get('Name')} {collection.get('Id')}")
+                except Exception as e:
+                    logger.error(f"处理合集 {collection.get('Name')} {collection.get('Id')} 失败: {str(e)}")
 
             logger.info(f"更新 {emby_name} 合集媒体排序完成")
 
@@ -416,6 +430,27 @@ class EmbyCollectionSort(_PluginBase):
                                 },
                                 'content': [
                                     {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'black_collection',
+                                            'label': '黑名单合集名称',
+                                            'placeholder': '多个名称用英文逗号分隔'
+                                        }
+                                    }
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
                                         'component': 'VAlert',
                                         'props': {
                                             'type': 'info',
@@ -435,6 +470,7 @@ class EmbyCollectionSort(_PluginBase):
             "sort_type": "降序",
             "cron": "5 1 * * *",
             "collection_library_id": "",
+            "black_collection": "",
             "mediaservers": [],
         }
 
