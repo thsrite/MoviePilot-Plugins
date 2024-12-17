@@ -62,7 +62,7 @@ class CloudStrmCompanion(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png"
     # 插件版本
-    plugin_version = "1.2.2"
+    plugin_version = "1.2.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -335,19 +335,17 @@ class CloudStrmCompanion(_PluginBase):
                 continue
             # 遍历云盘树形结构文件
             for cloud_file in self.parse_tree_structure(content=tree_content, dir_path=cloud_dir):
-                try:
-                    if Path(str(cloud_file)).is_dir():
-                        continue
-                    # 本地挂载路径
-                    local_file = str(cloud_file).replace(cloud_dir, local_dir)
-                    # 本地strm路径
-                    target_file = str(cloud_file).replace(cloud_dir, strm_dir)
+                if Path(str(cloud_file)).is_dir():
+                    continue
+                # 本地挂载路径
+                local_file = str(cloud_file).replace(cloud_dir, local_dir)
+                # 本地strm路径
+                target_file = str(cloud_file).replace(cloud_dir, strm_dir)
 
+                success_flag = False
+                try:
                     if str(cloud_file) not in self._cloud_files:
                         logger.info(f"扫描到新文件 {cloud_file}，正在开始处理")
-                        # 云盘文件json新增
-                        self._cloud_files.append(str(cloud_file))
-                        __save_flag = True
 
                         # 只处理媒体文件
                         if Path(local_file).suffix.lower() in [ext.strip() for ext in
@@ -357,8 +355,8 @@ class CloudStrmCompanion(_PluginBase):
                                                                  local_file=local_file,
                                                                  cloud_file=str(cloud_file))
                             # 生成strm文件
-                            self.__create_strm_file(strm_file=target_file,
-                                                    strm_content=strm_content)
+                            success_flag = self.__create_strm_file(strm_file=target_file,
+                                                                   strm_content=strm_content)
                         else:
                             # 复制非媒体文件
                             if self._copy_files and self._other_mediaext and Path(local_file).suffix.lower() in [
@@ -373,10 +371,17 @@ class CloudStrmCompanion(_PluginBase):
                                 os.makedirs(os.path.dirname(target_file), exist_ok=True)
                                 shutil.copy2(str(local_file), target_file)
                                 logger.info(f"复制字幕文件 {str(local_file)} 到 {target_file}")
+                            success_flag = True
                     else:
                         logger.info(f"{cloud_file} 已在缓存中！跳过处理")
                 except Exception as e:
                     logger.error(f"处理文件 {cloud_file} 失败：{str(e)}")
+                    success_flag = False
+
+                if success_flag:
+                    # 云盘文件json新增
+                    self._cloud_files.append(str(cloud_file))
+                    __save_flag = True
 
             # 重新保存json文件
             if __save_flag:
@@ -552,8 +557,10 @@ class CloudStrmCompanion(_PluginBase):
             if self._refresh_emby and self._mediaservers:
                 time.sleep(0.1)
                 self.__refresh_emby_file(strm_file)
+            return True
         except Exception as e:
             logger.error(f"创建strm文件失败 {strm_file} -> {str(e)}")
+        return False
 
     def __refresh_emby_file(self, strm_file: str):
         """
