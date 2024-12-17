@@ -515,7 +515,7 @@
     "name": "BBDown",
     "description": "交互下载B站视频，调用BBDown。",
     "labels": "工具",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "icon": "Bilibili_E.png",
     "author": "thsrite",
     "level": 1,
