@@ -229,8 +229,6 @@ class EmbyMetaRefresh(_PluginBase):
                         if str(item.get('Type')) == 'Movie' and float(item.get("PrimaryImageAspectRatio")) >= 0.7:
                             refresh_image = "true"
 
-                    logger.error(
-                        f"最新媒体：{'电视剧' if str(item.get('Type')) == 'Episode' else '电影'} {'%s S%02dE%02d %s' % (item.get('SeriesName'), item.get('ParentIndexNumber'), item.get('IndexNumber'), item.get('Name')) if str(item.get('Type')) == 'Episode' else item.get('Name')} {item.get('Id')} {item.get('PrimaryImageAspectRatio')} {refresh_meta} {refresh_image} 开始处理")
                     if refresh_meta == "true" or refresh_image == "true":
                         logger.info(
                             f"开始刷新媒体库元数据，最新媒体：{'电视剧' if str(item.get('Type')) == 'Episode' else '电影'} {'%s S%02dE%02d %s' % (item.get('SeriesName'), item.get('ParentIndexNumber'), item.get('IndexNumber'), item.get('Name')) if str(item.get('Type')) == 'Episode' else item.get('Name')} {item.get('Id')}")
