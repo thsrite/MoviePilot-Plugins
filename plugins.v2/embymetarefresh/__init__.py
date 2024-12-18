@@ -21,6 +21,7 @@ from app.core.event import eventmanager, Event
 from app.db.transferhistory_oper import TransferHistoryOper
 from app.helper.mediaserver import MediaServerHelper
 from app.log import logger
+from app.modules.themoviedb import TmdbApi
 from app.plugins import _PluginBase
 from app.schemas.types import EventType, MediaType
 from app.utils.common import retry
@@ -36,7 +37,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "2.1.8"
+    plugin_version = "2.1.9"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -53,6 +54,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 私有属性
     _enabled = False
     tmdbchain = None
+    tmdbapi = None
     _onlyonce = False
     _ExclusiveExtract = False
     _cron = None
@@ -74,6 +76,7 @@ class EmbyMetaRefresh(_PluginBase):
         # 停止现有任务
         self.stop_service()
         self.tmdbchain = TmdbChain()
+        self.tmdbapi = TmdbApi()
         self.mediaserver_helper = MediaServerHelper()
 
         if config:
@@ -220,14 +223,22 @@ class EmbyMetaRefresh(_PluginBase):
                     if (str(item.get('Type')) == 'Episode' and str(
                             item.get("Name")) == f"第 {item.get('IndexNumber')} 集"):
                         refresh_meta = "true"
-                    if not item.get("Overview") or not item.get("ImageTags") or not item.get("PrimaryImageAspectRatio"):
+
+                    # 判断图片是否tmdb封面，不是则刷新
+                    if str(item.get('Type')) == 'Episode' and (not item.get("PrimaryImageAspectRatio") or float(
+                            item.get("PrimaryImageAspectRatio")) >= 1.8):
+                        # 判断下tmdb有没有封面，没有则不刷新封面
+                        tv_info = self.tmdbapi.match(name=item.get('SeriesName'),
+                                                     mtype=MediaType.TV,
+                                                     year=item.get('ProductionYear'))
+                        if tv_info:
+                            episode_info = TmdbApi().get_tv_episode_detail(tv_info["id"],
+                                                                           item.get('ParentIndexNumber'),
+                                                                           item.get('IndexNumber'))
+                            if episode_info and episode_info.get("still_path"):
+                                refresh_image = "true"
+                    if str(item.get('Type')) == 'Movie' and float(item.get("PrimaryImageAspectRatio")) >= 0.7:
                         refresh_image = "true"
-                    else:
-                        # 判断图片是否tmdb封面，不是则刷新
-                        if str(item.get('Type')) == 'Episode' and float(item.get("PrimaryImageAspectRatio")) >= 1.8:
-                            refresh_image = "true"
-                        if str(item.get('Type')) == 'Movie' and float(item.get("PrimaryImageAspectRatio")) >= 0.7:
-                            refresh_image = "true"
 
                     if refresh_meta == "true" or refresh_image == "true":
                         logger.info(
@@ -935,7 +946,7 @@ class EmbyMetaRefresh(_PluginBase):
         """
         if not self._EMBY_HOST or not self._EMBY_APIKEY:
             return []
-        req_url = "%semby/Users/%s/Items?Limit=%s&api_key=%s&SortBy=DateCreated,SortName&SortOrder=Descending&IncludeItemTypes=Episode,Movie&Recursive=true&Fields=DateCreated,Overview,PrimaryImageAspectRatio" % (
+        req_url = "%semby/Users/%s/Items?Limit=%s&api_key=%s&SortBy=DateCreated,SortName&SortOrder=Descending&IncludeItemTypes=Episode,Movie&Recursive=true&Fields=DateCreated,Overview,PrimaryImageAspectRatio,ProductionYear" % (
             self._EMBY_HOST, self._EMBY_USER, limit, self._EMBY_APIKEY)
         try:
             with RequestUtils().get_res(req_url) as res:
