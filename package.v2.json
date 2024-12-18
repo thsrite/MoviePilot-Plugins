@@ -3,11 +3,12 @@
     "name": "Emby元数据刷新",
     "description": "定时刷新Emby媒体库元数据，演职人员中文。",
     "labels": "Emby",
-    "version": "2.1.7",
+    "version": "2.1.8",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v2.1.8": "优化刷新封面逻辑（原则是封面不是TMDB封面就刷新）",
       "v2.1.7": "兼容Emby插件新名称：神医助手",
       "v2.1.6": "联动Emby Strm Assistant插件独占模式",
       "v2.1.5": "媒体库未连接不继续任务",

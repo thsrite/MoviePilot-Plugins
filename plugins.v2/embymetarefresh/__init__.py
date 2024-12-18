@@ -36,7 +36,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "2.1.7"
+    plugin_version = "2.1.8"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -215,12 +215,28 @@ class EmbyMetaRefresh(_PluginBase):
                 # 刷新媒体库
                 for item in latest:
                     # 信息不全再刷新
+                    refresh_meta = "false"
+                    refresh_image = "false"
                     if (str(item.get('Type')) == 'Episode' and str(
-                            item.get("Name")) == f"第 {item.get('IndexNumber')} 集") or not item.get(
-                        "Overview") or not item.get("ImageTags"):
+                            item.get("Name")) == f"第 {item.get('IndexNumber')} 集"):
+                        refresh_meta = "true"
+                    if not item.get("Overview") or not item.get("ImageTags") or not item.get("PrimaryImageAspectRatio"):
+                        refresh_image = "true"
+                    else:
+                        # 判断图片是否tmdb封面，不是则刷新
+                        if str(item.get('Type')) == 'Episode' and float(item.get("PrimaryImageAspectRatio")) >= 1.8:
+                            refresh_image = "true"
+                        if str(item.get('Type')) == 'Movie' and float(item.get("PrimaryImageAspectRatio")) >= 0.7:
+                            refresh_image = "true"
+
+                    logger.error(
+                        f"最新媒体：{'电视剧' if str(item.get('Type')) == 'Episode' else '电影'} {'%s S%02dE%02d %s' % (item.get('SeriesName'), item.get('ParentIndexNumber'), item.get('IndexNumber'), item.get('Name')) if str(item.get('Type')) == 'Episode' else item.get('Name')} {item.get('Id')} {item.get('PrimaryImageAspectRatio')} {refresh_meta} {refresh_image} 开始处理")
+                    if refresh_meta == "true" or refresh_image == "true":
                         logger.info(
                             f"开始刷新媒体库元数据，最新媒体：{'电视剧' if str(item.get('Type')) == 'Episode' else '电影'} {'%s S%02dE%02d %s' % (item.get('SeriesName'), item.get('ParentIndexNumber'), item.get('IndexNumber'), item.get('Name')) if str(item.get('Type')) == 'Episode' else item.get('Name')} {item.get('Id')}")
-                        self.__refresh_emby_library_by_id(item.get("Id"))
+                        self.__refresh_emby_library_by_id(item_id=item.get("Id"),
+                                                          refresh_meta=refresh_meta,
+                                                          refresh_image=refresh_image)
                         if self._interval:
                             logger.info(f"等待 {self._interval} 秒后继续刷新")
                             time.sleep(int(self._interval))
@@ -893,7 +909,7 @@ class EmbyMetaRefresh(_PluginBase):
             return None
         return None
 
-    def __refresh_emby_library_by_id(self, item_id: str) -> bool:
+    def __refresh_emby_library_by_id(self, item_id: str, refresh_meta: str = None, refresh_image: str = None) -> bool:
         """
         通知Emby刷新一个项目的媒体库
         """
@@ -901,7 +917,9 @@ class EmbyMetaRefresh(_PluginBase):
             return False
         req_url = "%semby/Items/%s/Refresh?Recursive=true&MetadataRefreshMode=FullRefresh" \
                   "&ImageRefreshMode=FullRefresh&ReplaceAllMetadata=%s&ReplaceAllImages=%s&api_key=%s" % (
-                      self._EMBY_HOST, item_id, self._ReplaceAllMetadata, self._ReplaceAllImages, self._EMBY_APIKEY)
+                      self._EMBY_HOST, item_id, refresh_meta or self._ReplaceAllMetadata,
+                      refresh_image or self._ReplaceAllImages,
+                      self._EMBY_APIKEY)
         try:
             with RequestUtils().post_res(req_url) as res:
                 if res:
@@ -919,7 +937,7 @@ class EmbyMetaRefresh(_PluginBase):
         """
         if not self._EMBY_HOST or not self._EMBY_APIKEY:
             return []
-        req_url = "%semby/Users/%s/Items?Limit=%s&api_key=%s&SortBy=DateCreated,SortName&SortOrder=Descending&IncludeItemTypes=Episode,Movie&Recursive=true&Fields=DateCreated,Overview" % (
+        req_url = "%semby/Users/%s/Items?Limit=%s&api_key=%s&SortBy=DateCreated,SortName&SortOrder=Descending&IncludeItemTypes=Episode,Movie&Recursive=true&Fields=DateCreated,Overview,PrimaryImageAspectRatio" % (
             self._EMBY_HOST, self._EMBY_USER, limit, self._EMBY_APIKEY)
         try:
             with RequestUtils().get_res(req_url) as res:
