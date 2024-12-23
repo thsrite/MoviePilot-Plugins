@@ -37,7 +37,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "2.1.9"
+    plugin_version = "2.2.0"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -230,7 +230,8 @@ class EmbyMetaRefresh(_PluginBase):
                         # 判断下tmdb有没有封面，没有则不刷新封面
                         tv_info = self.tmdbapi.match(name=item.get('SeriesName'),
                                                      mtype=MediaType.TV,
-                                                     year=item.get('ProductionYear'))
+                                                     year=str(item.get('ProductionYear')))
+                        logger.info(f"电视剧 {item.get('SeriesName')} 信息：{tv_info}")
                         if tv_info:
                             episode_info = TmdbApi().get_tv_episode_detail(tv_info["id"],
                                                                            item.get('ParentIndexNumber'),
