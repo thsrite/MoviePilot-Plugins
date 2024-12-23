@@ -25,7 +25,7 @@ class MediaSyncDel(_PluginBase):
     # 插件图标
     plugin_icon = "mediasyncdel.png"
     # 插件版本
-    plugin_version = "1.8.7"
+    plugin_version = "1.8.8"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -800,16 +800,15 @@ class MediaSyncDel(_PluginBase):
             if self._del_source:
                 # 1、直接删除源文件
                 if transferhis.src and Path(transferhis.src).suffix in settings.RMT_MEDIAEXT:
-                    self._storagechain.delete_file(schemas.FileItem(**transferhis.dest_fileitem))
+                    self._storagechain.delete_media_file(fileitem=schemas.FileItem(**transferhis.dest_fileitem),
+                                                         mtype=MediaType(transferhis.type),
+                                                         delete_self=True)
                     src_fileitem = schemas.FileItem(**transferhis.src_fileitem)
                     logger.info(f"开始删除源文件 {src_fileitem.path}")
-                    state = self._storagechain.delete_file(src_fileitem)
+                    state = self._storagechain.delete_media_file(fileitem=src_fileitem,
+                                                                 mtype=MediaType(transferhis.type),
+                                                                 delete_self=True)
                     if state:
-                        folder_item = self._storagechain.get_parent_item(src_fileitem)
-                        if folder_item and not self._storagechain.any_files(folder_item,
-                                                                            extensions=settings.RMT_MEDIAEXT):
-                            logger.warn(f"删除残留空文件夹：【{folder_item.storage}】{folder_item.path}")
-                            self._storagechain.delete_file(folder_item)
                         if transferhis.download_hash:
                             try:
                                 # 2、判断种子是否被删除完
