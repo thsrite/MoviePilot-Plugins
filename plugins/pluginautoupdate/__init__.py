@@ -17,7 +17,6 @@ from app.schemas import NotificationType
 from app.scheduler import Scheduler
 from app.schemas.types import EventType
 from app.core.event import eventmanager, Event
-from app.utils.string import StringUtils
 
 router = APIRouter()
 
@@ -30,7 +29,7 @@ class PluginAutoUpdate(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/pluginupdate.png"
     # 插件版本
-    plugin_version = "2.0"
+    plugin_version = "2.0.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -309,6 +308,8 @@ class PluginAutoUpdate(_PluginBase):
         pluginOptions = []
 
         for plugin in local_plugins:
+            if not plugin.installed:
+                continue
             pluginOptions.append({
                 "title": f"{plugin.plugin_name} v{plugin.plugin_version}",
                 "value": plugin.id
