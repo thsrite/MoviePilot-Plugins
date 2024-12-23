@@ -20,7 +20,7 @@ class SubscribeGroup(_PluginBase):
     # 插件图标
     plugin_icon = "teamwork.png"
     # 插件版本
-    plugin_version = "2.8.3"
+    plugin_version = "2.8.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -176,6 +176,9 @@ class SubscribeGroup(_PluginBase):
 
             # 二级分类自定义配置
             category_conf = self._subscribe_confs.get(category)
+
+            logger.error(
+                f"订阅记录:{subscribe.name} 二级分类:{category} 自定义配置:{category_conf}")
 
             update_dict = {}
             if category_conf.get('include'):
@@ -350,41 +353,44 @@ class SubscribeGroup(_PluginBase):
 
     def __parse_pix(self, resource_pix):
         # 识别1080或者4k或720
-        if re.match(r"1080[pi]|x1080", resource_pix, ignorecase=True):
+        if re.match(r"1080[pi]|x1080", resource_pix, re.IGNORECASE):
             resource_pix = "1080[pi]|x1080"
-        if re.match(r"4K|2160p|x2160", resource_pix, ignorecase=True):
+            return resource_pix
+        if re.match(r"4K|2160p|x2160", resource_pix, re.IGNORECASE):
             resource_pix = "4K|2160p|x2160"
-        if re.match(r"720[pi]|x720", resource_pix, ignorecase=True):
+            return resource_pix
+        if re.match(r"720[pi]|x720", resource_pix, re.IGNORECASE):
             resource_pix = "720[pi]|x720"
+            return resource_pix
         return resource_pix
 
     def __parse_type(self, resource_type):
-        if re.match(r"Blu-?Ray.+VC-?1|Blu-?Ray.+AVC|UHD.+blu-?ray.+HEVC|MiniBD", resource_type, ignorecase=True):
+        if re.match(r"Blu-?Ray.+VC-?1|Blu-?Ray.+AVC|UHD.+blu-?ray.+HEVC|MiniBD", resource_type, re.IGNORECASE):
             resource_type = "Blu-?Ray.+VC-?1|Blu-?Ray.+AVC|UHD.+blu-?ray.+HEVC|MiniBD"
-        if re.match(r"Remux", resource_type, ignorecase=True):
+        if re.match(r"Remux", resource_type, re.IGNORECASE):
             resource_type = "Remux"
-        if re.match(r"Blu-?Ray", resource_type, ignorecase=True):
+        if re.match(r"Blu-?Ray", resource_type, re.IGNORECASE):
             resource_type = "Blu-?Ray"
-        if re.match(r"UHD|UltraHD", resource_type, ignorecase=True):
+        if re.match(r"UHD|UltraHD", resource_type, re.IGNORECASE):
             resource_type = "UHD|UltraHD"
-        if re.match(r"WEB-?DL|WEB-?RIP", resource_type, ignorecase=True):
+        if re.match(r"WEB-?DL|WEB-?RIP", resource_type, re.IGNORECASE):
             resource_type = "WEB-?DL|WEB-?RIP"
-        if re.match(r"HDTV", resource_type, ignorecase=True):
+        if re.match(r"HDTV", resource_type, re.IGNORECASE):
             resource_type = "HDTV"
-        if re.match(r"[Hx].?265|HEVC", resource_type, ignorecase=True):
+        if re.match(r"[Hx].?265|HEVC", resource_type, re.IGNORECASE):
             resource_type = "[Hx].?265|HEVC"
-        if re.match(r"[Hx].?264|AVC", resource_type, ignorecase=True):
+        if re.match(r"[Hx].?264|AVC", resource_type, re.IGNORECASE):
             resource_type = "[Hx].?264|AVC"
         return resource_type
 
     def __parse_effect(self, resource_effect):
-        if re.match(r"Dolby[\\s.]+Vision|DOVI|[\\s.]+DV[\\s.]+", resource_effect, ignorecase=True):
+        if re.match(r"Dolby[\\s.]+Vision|DOVI|[\\s.]+DV[\\s.]+", resource_effect, re.IGNORECASE):
             resource_effect = "Dolby[\\s.]+Vision|DOVI|[\\s.]+DV[\\s.]+"
-        if re.match(r"Dolby[\\s.]*\\+?Atmos|Atmos", resource_effect, ignorecase=True):
+        if re.match(r"Dolby[\\s.]*\\+?Atmos|Atmos", resource_effect, re.IGNORECASE):
             resource_effect = "Dolby[\\s.]*\\+?Atmos|Atmos"
-        if re.match(r"[\\s.]+HDR[\\s.]+|HDR10|HDR10\\+", resource_effect, ignorecase=True):
+        if re.match(r"[\\s.]+HDR[\\s.]+|HDR10|HDR10\\+", resource_effect, re.IGNORECASE):
             resource_effect = "[\\s.]+HDR[\\s.]+|HDR10|HDR10\\+"
-        if re.match(r"[\\s.]+SDR[\\s.]+", resource_effect, ignorecase=True):
+        if re.match(r"[\\s.]+SDR[\\s.]+", resource_effect, re.IGNORECASE):
             resource_effect = "[\\s.]+SDR[\\s.]+"
         return resource_effect
 
