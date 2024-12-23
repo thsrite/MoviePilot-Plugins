@@ -21,7 +21,7 @@ class PluginUnInstall(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/uninstall.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.2.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -74,7 +74,7 @@ class PluginUnInstall(_PluginBase):
             SystemConfigOper().set(SystemConfigKey.UserInstalledPlugins, new_install_plugins)
 
             self.update_config({
-                "plugin_ids": "",
+                "plugin_ids": [],
                 "clear_config": self._clear_config,
                 "clear_data": self._clear_data
             })
