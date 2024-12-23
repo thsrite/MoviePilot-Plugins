@@ -71,6 +71,7 @@ class EmbyMetaRefresh(_PluginBase):
     _EMBY_USER = None
     _EMBY_APIKEY = None
     _scheduler: Optional[BackgroundScheduler] = None
+    _tmdb_cache = {}
 
     def init_plugin(self, config: dict = None):
         # 停止现有任务
@@ -78,6 +79,7 @@ class EmbyMetaRefresh(_PluginBase):
         self.tmdbchain = TmdbChain()
         self.tmdbapi = TmdbApi()
         self.mediaserver_helper = MediaServerHelper()
+        self._tmdb_cache = {}
 
         if config:
             self._enabled = config.get("enabled")
@@ -227,12 +229,20 @@ class EmbyMetaRefresh(_PluginBase):
                     # 判断图片是否tmdb封面，不是则刷新
                     if str(item.get('Type')) == 'Episode' and (not item.get("PrimaryImageAspectRatio") or float(
                             item.get("PrimaryImageAspectRatio")) >= 1.8):
-                        # 判断下tmdb有没有封面，没有则不刷新封面
-                        tv_info = self.tmdbapi.match(name=item.get('SeriesName'),
-                                                     mtype=MediaType.TV,
-                                                     year=str(item.get('ProductionYear')))
-                        logger.info(f"电视剧 {item.get('SeriesName')} 信息：{tv_info}")
+
+                        # 判断是否有缓存
+                        tv_info = None
+                        key = f"{item.get('Type')}-{item.get('SeriesName')}-{str(item.get('ProductionYear'))}"
+                        if key in self._tmdb_cache.keys():
+                            tv_info = self._tmdb_cache[key]
+
+                        if not tv_info:
+                            # 判断下tmdb有没有封面，没有则不刷新封面
+                            tv_info = self.tmdbapi.match(name=item.get('SeriesName'),
+                                                         mtype=MediaType.TV,
+                                                         year=str(item.get('ProductionYear')))
                         if tv_info:
+                            self._tmdb_cache[key] = tv_info
                             episode_info = TmdbApi().get_tv_episode_detail(tv_info["id"],
                                                                            item.get('ParentIndexNumber'),
                                                                            item.get('IndexNumber'))
