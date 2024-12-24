@@ -27,7 +27,7 @@ class MediaSyncDel(_PluginBase):
     # 插件图标
     plugin_icon = "mediasyncdel.png"
     # 插件版本
-    plugin_version = "1.8.9"
+    plugin_version = "1.9.0"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -803,11 +803,14 @@ class MediaSyncDel(_PluginBase):
                 # 1、直接删除源文件
                 if transferhis.src and Path(transferhis.src).suffix in settings.RMT_MEDIAEXT:
                     # 删除硬链接文件和源文件
-                    Path(transferhis.dest).unlink(missing_ok=True)
-                    self.__remove_parent_dir(Path(transferhis.dest))
-                    Path(transferhis.src).unlink(missing_ok=True)
-                    logger.info(f"源文件 {transferhis.src} 已删除")
-                    self.__remove_parent_dir(Path(transferhis.src))
+                    if Path(transferhis.dest).exists():
+                        Path(transferhis.dest).unlink(missing_ok=True)
+                        self.__remove_parent_dir(Path(transferhis.dest))
+                    if Path(transferhis.src).exists():
+                        logger.info(f"源文件 {transferhis.src} 开始删除")
+                        Path(transferhis.src).unlink(missing_ok=True)
+                        logger.info(f"源文件 {transferhis.src} 已删除")
+                        self.__remove_parent_dir(Path(transferhis.src))
 
                     if transferhis.download_hash:
                         try:
