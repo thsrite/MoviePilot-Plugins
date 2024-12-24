@@ -1,4 +1,5 @@
 import os
+import shutil
 import time
 from pathlib import Path
 from typing import List, Tuple, Dict, Any, Optional
@@ -15,6 +16,7 @@ from app.helper.downloader import DownloaderHelper
 from app.log import logger
 from app.plugins import _PluginBase
 from app.schemas.types import NotificationType, EventType, MediaType, MediaImageType
+from app.utils.system import SystemUtils
 
 
 class MediaSyncDel(_PluginBase):
@@ -25,7 +27,7 @@ class MediaSyncDel(_PluginBase):
     # 插件图标
     plugin_icon = "mediasyncdel.png"
     # 插件版本
-    plugin_version = "1.8.8"
+    plugin_version = "1.8.9"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -800,31 +802,29 @@ class MediaSyncDel(_PluginBase):
             if self._del_source:
                 # 1、直接删除源文件
                 if transferhis.src and Path(transferhis.src).suffix in settings.RMT_MEDIAEXT:
-                    self._storagechain.delete_media_file(fileitem=schemas.FileItem(**transferhis.dest_fileitem),
-                                                         mtype=MediaType(transferhis.type),
-                                                         delete_self=True)
-                    src_fileitem = schemas.FileItem(**transferhis.src_fileitem)
-                    logger.info(f"开始删除源文件 {src_fileitem.path}")
-                    state = self._storagechain.delete_media_file(fileitem=src_fileitem,
-                                                                 mtype=MediaType(transferhis.type),
-                                                                 delete_self=True)
-                    if state:
-                        if transferhis.download_hash:
-                            try:
-                                # 2、判断种子是否被删除完
-                                delete_flag, success_flag, handle_torrent_hashs = self.handle_torrent(
-                                    type=transferhis.type,
-                                    src=transferhis.src,
-                                    torrent_hash=transferhis.download_hash)
-                                if not success_flag:
-                                    error_cnt += 1
+                    # 删除硬链接文件和源文件
+                    Path(transferhis.dest).unlink(missing_ok=True)
+                    self.__remove_parent_dir(Path(transferhis.dest))
+                    Path(transferhis.src).unlink(missing_ok=True)
+                    logger.info(f"源文件 {transferhis.src} 已删除")
+                    self.__remove_parent_dir(Path(transferhis.src))
+
+                    if transferhis.download_hash:
+                        try:
+                            # 2、判断种子是否被删除完
+                            delete_flag, success_flag, handle_torrent_hashs = self.handle_torrent(
+                                type=transferhis.type,
+                                src=transferhis.src,
+                                torrent_hash=transferhis.download_hash)
+                            if not success_flag:
+                                error_cnt += 1
+                            else:
+                                if delete_flag:
+                                    del_torrent_hashs += handle_torrent_hashs
                                 else:
-                                    if delete_flag:
-                                        del_torrent_hashs += handle_torrent_hashs
-                                    else:
-                                        stop_torrent_hashs += handle_torrent_hashs
-                            except Exception as e:
-                                logger.error("删除种子失败：%s" % str(e))
+                                    stop_torrent_hashs += handle_torrent_hashs
+                        except Exception as e:
+                            logger.error("删除种子失败：%s" % str(e))
 
         logger.info(f"同步删除 {msg} 完成！")
 
@@ -887,6 +887,26 @@ class MediaSyncDel(_PluginBase):
 
         # 保存历史
         self.save_data("history", history)
+
+    def __remove_parent_dir(self, file_path: Path):
+        """
+        删除父目录
+        """
+        # 删除空目录
+        # 判断当前媒体父路径下是否有媒体文件，如有则无需遍历父级
+        if not SystemUtils.exits_files(file_path.parent, settings.RMT_MEDIAEXT):
+            # 判断父目录是否为空, 为空则删除
+            i = 0
+            for parent_path in file_path.parents:
+                i += 1
+                if i > 3:
+                    break
+                if str(parent_path.parent) != str(file_path.root):
+                    # 父目录非根目录，才删除父目录
+                    if not SystemUtils.exits_files(parent_path, settings.RMT_MEDIAEXT):
+                        # 当前路径下没有媒体文件则删除
+                        shutil.rmtree(parent_path)
+                        logger.warn(f"本地空目录 {parent_path} 已删除")
 
     def __get_transfer_his(self, media_type: str, media_name: str, media_path: str,
                            tmdb_id: int, season_num: str, episode_num: str):
