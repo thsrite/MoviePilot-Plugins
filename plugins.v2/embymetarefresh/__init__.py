@@ -37,7 +37,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "2.2.0"
+    plugin_version = "2.2.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -621,10 +621,11 @@ class EmbyMetaRefresh(_PluginBase):
             logger.debug("神医助手插件未安装")
             return None, None
 
-        plugin_id = f"{plugin_id[:6]}:{plugin_name}"
+        plugin_id = f"{plugin_id[:6]}:MediaInfoExtractPageView"
 
         # 获取插件配置
         plugin_info = self.__get_plugin_info(plugin_id)
+
         if not plugin_info:
             return None, None
         # 获取神医助手配置
@@ -638,7 +639,24 @@ class EmbyMetaRefresh(_PluginBase):
         """
         设置神医助手独占模式
         """
-        plugin_config["MediaInfoExtractOptions"]["ExclusiveExtract"] = exclusive_mode
+        plugin_config["ExclusiveExtract"] = exclusive_mode
+        plugin_config["ExclusiveControlList"] = [
+            {
+                "Value": "IgnoreFileChange",
+                "Name": "忽略文件变更",
+                "IsEnabled": False
+            },
+            {
+                "Value": "CatchAllAllow",
+                "Name": "尽可能全放行",
+                "IsEnabled": False
+            },
+            {
+                "Value": "CatchAllBlock",
+                "Name": "尽可能全阻止",
+                "IsEnabled": True
+            }
+        ]
         data = {
             "ClientLocale": "zh-cn",
             "CommandId": "PageSave",
@@ -646,7 +664,6 @@ class EmbyMetaRefresh(_PluginBase):
             "PageId": plugin_id,
             "Data": json.dumps(plugin_config, ensure_ascii=False)
         }
-
         try:
             res = emby.post_data(
                 url=f"[HOST]emby/UI/Command?reqformat=json&api_key=[APIKEY]",
