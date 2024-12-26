@@ -37,7 +37,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "2.2.1"
+    plugin_version = "2.2.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -197,6 +197,17 @@ class EmbyMetaRefresh(_PluginBase):
                 transferhistorys = TransferHistoryOper().list_by_date(target_date.strftime('%Y-%m-%d'))
                 if not transferhistorys:
                     logger.error(f"{self._num}天内没有媒体库入库记录")
+                    if self._ExclusiveExtract:
+                        try:
+                            if plugin_id:
+                                # 打开独占模式（方式元数据刷新导致媒体数据丢失）
+                                flag = self.__set_strm_assistant_exclusive_mode(emby, plugin_config, plugin_id, False)
+                                if not flag:
+                                    logger.error(f"关闭 神医助手 独占模式失败")
+                                else:
+                                    logger.info(f"神医助手 独占模式已关闭")
+                        except Exception as e:
+                            logger.error(f"关闭 神医助手 独占模式失败：{str(e)}")
                     return
 
                 logger.info(f"开始刷新媒体库元数据，最近 {self._num} 天内入库媒体：{len(transferhistorys)}个")
@@ -210,6 +221,18 @@ class EmbyMetaRefresh(_PluginBase):
                 latest = self.__get_latest_media()
                 if not latest:
                     logger.error(f"Emby中没有最新媒体")
+
+                    if self._ExclusiveExtract:
+                        try:
+                            if plugin_id:
+                                # 打开独占模式（方式元数据刷新导致媒体数据丢失）
+                                flag = self.__set_strm_assistant_exclusive_mode(emby, plugin_config, plugin_id, False)
+                                if not flag:
+                                    logger.error(f"关闭 神医助手 独占模式失败")
+                                else:
+                                    logger.info(f"神医助手 独占模式已关闭")
+                        except Exception as e:
+                            logger.error(f"关闭 神医助手 独占模式失败：{str(e)}")
                     return
 
                 logger.info(f"开始刷新媒体库元数据，{self._num} 天内最新媒体：{len(latest)} 个")
