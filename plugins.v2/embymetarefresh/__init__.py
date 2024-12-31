@@ -37,7 +37,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "2.2.2"
+    plugin_version = "2.2.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -270,9 +270,13 @@ class EmbyMetaRefresh(_PluginBase):
                                                                            item.get('ParentIndexNumber'),
                                                                            item.get('IndexNumber'))
                             if episode_info and episode_info.get("still_path"):
-                                refresh_image = "true"
-                    if str(item.get('Type')) == 'Movie' and float(item.get("PrimaryImageAspectRatio")) >= 0.7:
-                        refresh_image = "true"
+                                # 更新封面
+                                flag = self.__update_item_image(item_id=item.get("Id"),
+                                                                image_url=f"https://image.tmdb.org/t/p/original{episode_info.get('still_path')}")
+                                if flag:
+                                    refresh_image = "false"
+                                logger.info(
+                                    f"最新媒体：电视剧 {'%s S%02dE%02d %s' % (item.get('SeriesName'), item.get('ParentIndexNumber'), item.get('IndexNumber'), item.get('Name')) if str(item.get('Type')) == 'Episode' else item.get('Name')} {item.get('Id')} 封面更新 {flag}")
 
                     if refresh_meta == "true" or refresh_image == "true":
                         logger.info(
@@ -731,6 +735,23 @@ class EmbyMetaRefresh(_PluginBase):
             else:
                 logger.error(f"获取插件详情失败，无法连接Emby！")
                 return {}
+
+    def __update_item_image(self, item_id, image_url) -> bool:
+        """
+        更新媒体项图片
+        """
+        if not self._EMBY_HOST or not self._EMBY_APIKEY:
+            return False
+        req_url = f"%semby/Items/%s/Images/Primary/0/Url?reqformat=json&api_key=%s" % (
+            self._EMBY_HOST, item_id, self._EMBY_APIKEY)
+        data = {"Url": image_url}
+        try:
+            with RequestUtils().post_res(url=req_url, data=data) as res:
+                if res and res.status_code in [200, 204]:
+                    return True
+        except Exception as err:
+            logger.error(f"更新媒体项图片失败：{str(err)}")
+        return False
 
     @staticmethod
     def set_iteminfo(itemid: str, iteminfo: dict, emby):
