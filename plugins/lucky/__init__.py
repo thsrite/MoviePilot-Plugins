@@ -1,31 +1,30 @@
-from pathlib import Path
+import logging
+import time
+from typing import Any, List, Dict, Tuple
 
-from app.chain.dashboard import DashboardChain
-from app.core.config import settings
-from app.db.subscribe_oper import SubscribeOper
-from app.helper.directory import DirectoryHelper
-from app.plugins import _PluginBase
-from typing import Any, List, Dict, Tuple, Optional
+import requests
+
 from app import schemas
+from app.core.config import settings
+from app.plugins import _PluginBase
 from app.utils.string import StringUtils
-from app.utils.system import SystemUtils
 
 
-class HomePage(_PluginBase):
+class Lucky(_PluginBase):
     # 插件名称
-    plugin_name = "HomePage"
+    plugin_name = "Lucky"
     # 插件描述
-    plugin_desc = "HomePage自定义API。"
+    plugin_desc = "Lucky HomePage自定义API。"
     # 插件图标
-    plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/homepage.png"
+    plugin_icon = "Lucky_A.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.0"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
     author_url = "https://github.com/thsrite"
     # 插件配置项ID前缀
-    plugin_config_prefix = "homepage_"
+    plugin_config_prefix = "lucky_"
     # 加载顺序
     plugin_order = 30
     # 可使用的用户级别
@@ -33,58 +32,104 @@ class HomePage(_PluginBase):
 
     # 任务执行间隔
     _enabled = False
+    _openToken = None
+    _baseUrl = None
+    _lucky_url = None
 
     def init_plugin(self, config: dict = None):
         if config:
             self._enabled = config.get("enabled")
+            self._baseUrl = config.get("baseUrl")
+            self._openToken = config.get("openToken")
+
+            self._lucky_url = f'{self._baseUrl}%s?_=%s&openToken={self._openToken}'
+
+    def get_rules(self):
+        rule_url = self._lucky_url % ('/api/webservice/rules', int(time.time() * 1000))
+        rules = []
+        connections = 0
+        trafficIn = 0
+        trafficOut = 0
+        try:
+            response = requests.get(rule_url, verify=False)  # 关闭SSL证书验证
+            response.raise_for_status()  # 如果状态码不是 2xx，抛出异常
+            if response.json().get('ret') == 0:
+                for rule in response.json().get('ruleList'):
+                    if rule.get('ProxyList'):
+                        rules += rule.get('ProxyList')
+                if response.json().get('statistics'):
+                    for statistic in response.json().get('statistics').values():
+                        if statistic.get('Connections'):
+                            connections += statistic.get('Connections')
+                        if statistic.get('TrafficIn'):
+                            trafficIn += statistic.get('TrafficIn')
+                        if statistic.get('TrafficOut'):
+                            trafficOut += statistic.get('TrafficOut')
+        except requests.exceptions.RequestException as e:
+            logging.error("An error occurred:", e)
+        return rules, connections, trafficIn, trafficOut
+
+    def get_ip(self):
+        ip_url = self._lucky_url % ('/api/ddnstasklist', int(time.time() * 1000))
+        try:
+            response = requests.get(ip_url, verify=False)  # 关闭SSL证书验证
+            response.raise_for_status()  # 如果状态码不是 2xx，抛出异常
+            if response.json().get('ret') == 0:
+                return response.json().get('data')[0].get('IpAddr')
+        except requests.exceptions.RequestException as e:
+            logging.error("An error occurred:", e)
+            return None
+
+    def get_ssl(self):
+        ssl_url = self._lucky_url % ('/api/ssl', int(time.time() * 1000))
+        try:
+            response = requests.get(ssl_url, verify=False)  # 关闭SSL证书验证
+            response.raise_for_status()  # 如果状态码不是 2xx，抛出异常
+            if response.json().get('ret') == 0:
+                return response.json().get('list')[0].get('CertsInfo')[0].get('NotAfterTime')
+        except requests.exceptions.RequestException as e:
+            logging.error("An error occurred:", e)
+            return None
 
     def get_state(self) -> bool:
         return self._enabled
 
-    def statistic(self, apikey: str) -> Any:
+    def lucky(self, apikey: str) -> Any:
         """
         订阅、剩余空间等信息
         """
         if apikey != settings.API_TOKEN:
             return schemas.Response(success=False, message="API密钥错误")
 
-        # 媒体统计
-        movie_count = 0
-        tv_count = 0
-        episode_count = 0
-        user_count = 0
-        media_statistics: Optional[List[schemas.Statistic]] = DashboardChain().media_statistic()
-        if media_statistics:
-            # 汇总各媒体库统计信息
-            for media_statistic in media_statistics:
-                movie_count += media_statistic.movie_count
-                tv_count += media_statistic.tv_count
-                episode_count += media_statistic.episode_count
-                user_count += media_statistic.user_count
-
-        # 磁盘统计
-        library_dirs = DirectoryHelper().get_library_dirs()
-        total_storage, free_storage = SystemUtils.space_usage([Path(d.path) for d in library_dirs if d.path])
-
-        # 订阅统计
-        movie_subscribes = 0
-        tv_subscribes = 0
-        subscribes = SubscribeOper().list()
-        for subscribe in subscribes:
-            if str(subscribe.type) == '电影':
-                movie_subscribes += 1
+        rules, connections, trafficIn, trafficOut = self.get_rules()
+        enabled_cnt = 0
+        closed_cnt = 0
+        for rule in rules:
+            if rule.get('Enable'):
+                enabled_cnt += 1
             else:
-                tv_subscribes += 1
+                closed_cnt += 1
+
+        ipaddr = self.get_ip()
+        expire_time = self.get_ssl()
+
+        logging.info(
+            f"Proxy Rules Enabled: {enabled_cnt}\n"
+            f"Proxy Rules Closed: {closed_cnt}\n"
+            f"Connections: {connections}\n"
+            f"TrafficIn: {trafficIn}\n"
+            f"TrafficOut: {trafficOut}\n"
+            f"Lucky IP: {ipaddr}\n"
+            f"SSL Expire Time: {expire_time}\n")
+
         return {
-            'movie_count': movie_count,
-            'tv_count': tv_count,
-            'episode_count': episode_count,
-            'user_count': user_count,
-            'total_storage': StringUtils.str_filesize(total_storage),
-            'free_storage': StringUtils.str_filesize(free_storage),
-            'used_storage': StringUtils.str_filesize(total_storage - free_storage),
-            'movie_subscribes': movie_subscribes,
-            'tv_subscribes': tv_subscribes,
+            'enabled_cnt': enabled_cnt,
+            'closed_cnt': closed_cnt,
+            'ipaddr': ipaddr,
+            'expire_time': expire_time,
+            'connections': connections,
+            'trafficIn': StringUtils.str_filesize(trafficIn),
+            'trafficOut': StringUtils.str_filesize(trafficOut)
         }
 
     @staticmethod
@@ -102,11 +147,11 @@ class HomePage(_PluginBase):
         }]
         """
         return [{
-            "path": "/statistic",
-            "endpoint": self.statistic,
+            "path": "/lucky",
+            "endpoint": self.lucky,
             "methods": ["GET"],
-            "summary": "数据统计",
-            "description": "订阅数量等统计数量",
+            "summary": "Lucky",
+            "description": "Lucky",
         }]
 
     def get_form(self) -> Tuple[List[dict], Dict[str, Any]]:
@@ -145,6 +190,44 @@ class HomePage(_PluginBase):
                                 'component': 'VCol',
                                 'props': {
                                     'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'baseUrl',
+                                            'label': 'Lucky地址',
+                                            'placeholder': 'http://localhost:16601 (结尾没有/)'
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'openToken',
+                                            'label': 'openToken',
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
                                 },
                                 'content': [
                                     {
@@ -155,16 +238,12 @@ class HomePage(_PluginBase):
                                         },
                                         'content': [
                                             {
-                                                'component': 'span',
-                                                'text': '配置教程请参考：'
-                                            },
-                                            {
                                                 'component': 'a',
                                                 'props': {
-                                                    'href': 'https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/docs/HomePage.md',
+                                                    'href': 'https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/docs/Lucky.md',
                                                     'target': '_blank'
                                                 },
-                                                'text': 'https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/docs/HomePage.md'
+                                                'text': '需自行前往Lucky设置开启OpenToken并重启Lucky。'
                                             }
                                         ]
                                     }
@@ -197,10 +276,11 @@ class HomePage(_PluginBase):
             }
         ], {
             "enabled": False,
+            "openToken": "",
         }
 
     def get_page(self) -> List[dict]:
-        dict = self.statistic(settings.API_TOKEN)
+        dict = self.lucky(settings.API_TOKEN)
         # 拼装页面
         return [
             {
@@ -234,7 +314,7 @@ class HomePage(_PluginBase):
                                                         'props': {
                                                             'class': 'text-caption'
                                                         },
-                                                        'text': '电影订阅'
+                                                        'text': '启用配置数量'
                                                     },
                                                     {
                                                         'component': 'div',
@@ -247,7 +327,7 @@ class HomePage(_PluginBase):
                                                                 'props': {
                                                                     'class': 'text-h6'
                                                                 },
-                                                                'text': dict.get('movie_subscribes')
+                                                                'text': dict.get('enabled_cnt')
                                                             }
                                                         ]
                                                     }
@@ -287,7 +367,7 @@ class HomePage(_PluginBase):
                                                         'props': {
                                                             'class': 'text-caption'
                                                         },
-                                                        'text': '电视剧订阅'
+                                                        'text': '关闭配置数量'
                                                     },
                                                     {
                                                         'component': 'div',
@@ -300,7 +380,7 @@ class HomePage(_PluginBase):
                                                                 'props': {
                                                                     'class': 'text-h6'
                                                                 },
-                                                                'text': dict.get('tv_subscribes')
+                                                                'text': dict.get('closed_cnt')
                                                             }
                                                         ]
                                                     }
@@ -340,7 +420,7 @@ class HomePage(_PluginBase):
                                                         'props': {
                                                             'class': 'text-caption'
                                                         },
-                                                        'text': '总空间'
+                                                        'text': '公网ip地址'
                                                     },
                                                     {
                                                         'component': 'div',
@@ -353,7 +433,7 @@ class HomePage(_PluginBase):
                                                                 'props': {
                                                                     'class': 'text-h6'
                                                                 },
-                                                                'text': dict.get('total_storage')
+                                                                'text': dict.get('ipaddr')
                                                             }
                                                         ]
                                                     }
@@ -393,7 +473,7 @@ class HomePage(_PluginBase):
                                                         'props': {
                                                             'class': 'text-caption'
                                                         },
-                                                        'text': '剩余空间'
+                                                        'text': '证书过期时间'
                                                     },
                                                     {
                                                         'component': 'div',
@@ -406,7 +486,7 @@ class HomePage(_PluginBase):
                                                                 'props': {
                                                                     'class': 'text-h6'
                                                                 },
-                                                                'text': dict.get('free_storage')
+                                                                'text': dict.get('expire_time')
                                                             }
                                                         ]
                                                     }
@@ -446,7 +526,7 @@ class HomePage(_PluginBase):
                                                         'props': {
                                                             'class': 'text-caption'
                                                         },
-                                                        'text': '电影数量'
+                                                        'text': '链接数'
                                                     },
                                                     {
                                                         'component': 'div',
@@ -459,7 +539,7 @@ class HomePage(_PluginBase):
                                                                 'props': {
                                                                     'class': 'text-h6'
                                                                 },
-                                                                'text': dict.get('movie_count')
+                                                                'text': dict.get('connections')
                                                             }
                                                         ]
                                                     }
@@ -499,7 +579,7 @@ class HomePage(_PluginBase):
                                                         'props': {
                                                             'class': 'text-caption'
                                                         },
-                                                        'text': '电视剧数量'
+                                                        'text': '流量In'
                                                     },
                                                     {
                                                         'component': 'div',
@@ -512,7 +592,7 @@ class HomePage(_PluginBase):
                                                                 'props': {
                                                                     'class': 'text-h6'
                                                                 },
-                                                                'text': dict.get('tv_count')
+                                                                'text': dict.get('trafficIn')
                                                             }
                                                         ]
                                                     }
@@ -552,7 +632,7 @@ class HomePage(_PluginBase):
                                                         'props': {
                                                             'class': 'text-caption'
                                                         },
-                                                        'text': '电影剧集数量'
+                                                        'text': '流量Out'
                                                     },
                                                     {
                                                         'component': 'div',
@@ -565,7 +645,7 @@ class HomePage(_PluginBase):
                                                                 'props': {
                                                                     'class': 'text-h6'
                                                                 },
-                                                                'text': dict.get('episode_count')
+                                                                'text': dict.get('trafficOut')
                                                             }
                                                         ]
                                                     }
@@ -577,59 +657,6 @@ class HomePage(_PluginBase):
                             }
                         ]
                     },
-                    {
-                        'component': 'VCol',
-                        'props': {
-                            'cols': 12,
-                            'md': 3,
-                            'sm': 6
-                        },
-                        'content': [
-                            {
-                                'component': 'VCard',
-                                'props': {
-                                    'variant': 'tonal',
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VCardText',
-                                        'props': {
-                                            'class': 'd-flex align-center',
-                                        },
-                                        'content': [
-                                            {
-                                                'component': 'div',
-                                                'content': [
-                                                    {
-                                                        'component': 'span',
-                                                        'props': {
-                                                            'class': 'text-caption'
-                                                        },
-                                                        'text': '用户数量'
-                                                    },
-                                                    {
-                                                        'component': 'div',
-                                                        'props': {
-                                                            'class': 'd-flex align-center flex-wrap'
-                                                        },
-                                                        'content': [
-                                                            {
-                                                                'component': 'span',
-                                                                'props': {
-                                                                    'class': 'text-h6'
-                                                                },
-                                                                'text': dict.get('user_count')
-                                                            }
-                                                        ]
-                                                    }
-                                                ]
-                                            }
-                                        ]
-                                    }
-                                ]
-                            }
-                        ]
-                    }
                 ]
             }]
 

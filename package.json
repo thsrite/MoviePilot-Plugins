@@ -770,5 +770,18 @@
       "v1.1": "支持交互命令手动同步单个剧集 /as 媒体库名 剧集名。",
       "v1.0": "同步剧演员信息到集演员信息。"
     }
+  },
+  "Lucky": {
+    "name": "Lucky",
+    "description": "Lucky HomePage自定义API。",
+    "labels": "工具",
+    "version": "1.0",
+    "icon": "Lucky_A.png",
+    "author": "thsrite",
+    "level": 1,
+    "v2": true,
+    "history": {
+      "v1.0": "Lucky HomePage自定义API。"
+    }
   }
 }
