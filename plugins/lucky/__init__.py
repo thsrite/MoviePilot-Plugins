@@ -318,6 +318,59 @@ class Lucky(_PluginBase):
                                                         'props': {
                                                             'class': 'text-caption'
                                                         },
+                                                        'text': '总配置数量'
+                                                    },
+                                                    {
+                                                        'component': 'div',
+                                                        'props': {
+                                                            'class': 'd-flex align-center flex-wrap'
+                                                        },
+                                                        'content': [
+                                                            {
+                                                                'component': 'span',
+                                                                'props': {
+                                                                    'class': 'text-h6'
+                                                                },
+                                                                'text': dict.get('total_cnt')
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        'component': 'VCol',
+                        'props': {
+                            'cols': 12,
+                            'md': 3,
+                            'sm': 6
+                        },
+                        'content': [
+                            {
+                                'component': 'VCard',
+                                'props': {
+                                    'variant': 'tonal',
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VCardText',
+                                        'props': {
+                                            'class': 'd-flex align-center',
+                                        },
+                                        'content': [
+                                            {
+                                                'component': 'div',
+                                                'content': [
+                                                    {
+                                                        'component': 'span',
+                                                        'props': {
+                                                            'class': 'text-caption'
+                                                        },
                                                         'text': '启用配置数量'
                                                     },
                                                     {
