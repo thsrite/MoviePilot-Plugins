@@ -112,6 +112,8 @@ class Lucky(_PluginBase):
 
         ipaddr = self.get_ip()
         expire_time = self.get_ssl()
+        if expire_time:
+            expire_time = expire_time.split(' ')[0]
 
         logging.info(
             f"Proxy Rules Enabled: {enabled_cnt}\n"
@@ -473,7 +475,7 @@ class Lucky(_PluginBase):
                                                         'props': {
                                                             'class': 'text-caption'
                                                         },
-                                                        'text': '证书过期时间'
+                                                        'text': '证书过期日期'
                                                     },
                                                     {
                                                         'component': 'div',

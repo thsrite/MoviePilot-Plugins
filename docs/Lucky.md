@@ -24,7 +24,7 @@ HomePage services.yaml配置
                 - field: ipaddr
                   label: 公网ip地址
                 - field: expire_time
-                  label: 证书过期时间
+                  label: 证书过期日期
                 # - field: connections
                 #   label: 链接数
                 # - field: trafficIn
