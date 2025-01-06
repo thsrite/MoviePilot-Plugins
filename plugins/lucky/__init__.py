@@ -116,6 +116,7 @@ class Lucky(_PluginBase):
             expire_time = expire_time.split(' ')[0]
 
         logging.info(
+            f"Proxy Rules Total: {len(rules)}\n"
             f"Proxy Rules Enabled: {enabled_cnt}\n"
             f"Proxy Rules Closed: {closed_cnt}\n"
             f"Connections: {connections}\n"
@@ -125,6 +126,7 @@ class Lucky(_PluginBase):
             f"SSL Expire Time: {expire_time}\n")
 
         return {
+            'total_cnt': len(rules),
             'enabled_cnt': enabled_cnt,
             'closed_cnt': closed_cnt,
             'ipaddr': ipaddr,
@@ -152,7 +154,7 @@ class Lucky(_PluginBase):
             "path": "/lucky",
             "endpoint": self.lucky,
             "methods": ["GET"],
-            "summary": "Lucky",
+            "summary": "Lucky HomePage自定义API",
             "description": "Lucky",
         }]
 

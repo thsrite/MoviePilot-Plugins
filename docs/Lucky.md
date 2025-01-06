@@ -25,6 +25,8 @@ HomePage services.yaml配置
                   label: 公网ip地址
                 - field: expire_time
                   label: 证书过期日期
+                - field: total_cnt
+                  label: 总配置数量
                 # - field: connections
                 #   label: 链接数
                 # - field: trafficIn
