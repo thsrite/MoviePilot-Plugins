@@ -63,7 +63,7 @@ class CloudLinkMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
-    plugin_version = "2.5.6"
+    plugin_version = "2.5.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -436,7 +436,7 @@ class CloudLinkMonitor(_PluginBase):
 
                 # 查询转移目的目录
                 target_dir = DirectoryHelper().get_dir(mediainfo, src_path=Path(mon_path))
-                if not target_dir or not target_dir.library_path:
+                if not target_dir or not target_dir.library_path or not target_dir.download_path.startswith(mon_path):
                     target_dir = TransferDirectoryConf()
                     target_dir.library_path = target
                     target_dir.transfer_type = transfer_type
