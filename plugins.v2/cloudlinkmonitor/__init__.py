@@ -92,7 +92,7 @@ class CloudLinkMonitor(_PluginBase):
     _refresh = False
     _softlink = False
     _strm = False
-    _cron = None
+    # _cron = None
     filetransfer = None
     mediaChain = None
     _size = 0
@@ -139,7 +139,7 @@ class CloudLinkMonitor(_PluginBase):
             self._monitor_dirs = config.get("monitor_dirs") or ""
             self._exclude_keywords = config.get("exclude_keywords") or ""
             self._interval = config.get("interval") or 10
-            self._cron = config.get("cron")
+            # self._cron = config.get("cron")
             self._size = config.get("size") or 0
             self._softlink = config.get("softlink")
             self._strm = config.get("strm")

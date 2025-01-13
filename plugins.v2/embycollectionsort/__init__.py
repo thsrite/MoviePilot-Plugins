@@ -27,7 +27,7 @@ class EmbyCollectionSort(_PluginBase):
     # 插件图标
     plugin_icon = "Element_A.png"
     # 插件版本
-    plugin_version = "1.3"
+    plugin_version = "1.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -347,7 +347,7 @@ class EmbyCollectionSort(_PluginBase):
                                 },
                                 'content': [
                                     {
-                                        'component': 'VTextField',
+                                        'component': 'VCronField',
                                         'props': {
                                             'model': 'cron',
                                             'label': '执行周期',

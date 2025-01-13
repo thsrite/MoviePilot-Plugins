@@ -62,7 +62,7 @@ class FileSoftLink(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png"
     # 插件版本
-    plugin_version = "2.0.4"
+    plugin_version = "2.0.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -881,7 +881,7 @@ class FileSoftLink(_PluginBase):
                                 "props": {"cols": 12, "md": 4},
                                 "content": [
                                     {
-                                        "component": "VTextField",
+                                        "component": "VCronField",
                                         "props": {
                                             "model": "cron",
                                             "label": "定时全量同步周期",
