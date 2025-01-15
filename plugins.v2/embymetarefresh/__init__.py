@@ -37,7 +37,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "2.2.4"
+    plugin_version = "2.2.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -242,41 +242,44 @@ class EmbyMetaRefresh(_PluginBase):
 
                 # 刷新媒体库
                 for item in latest:
+                    refresh_meta = self._ReplaceAllMetadata
+                    refresh_image = self._ReplaceAllImages
                     # 信息不全再刷新
-                    refresh_meta = "false"
-                    refresh_image = "false"
-                    if (str(item.get('Type')) == 'Episode' and str(
-                            item.get("Name")) == f"第 {item.get('IndexNumber')} 集"):
-                        refresh_meta = "true"
+                    if self._ReplaceAllMetadata == "auto":
+                        refresh_meta = "false"
+                        if (str(item.get('Type')) == 'Episode' and (str(
+                                item.get("Name")) == f"第 {item.get('IndexNumber')} 集") or not item.get("Overview")):
+                            refresh_meta = "true"
+                    if self._ReplaceAllImages == "auto":
+                        refresh_image = "false"
+                        # 判断图片是否tmdb封面，不是则刷新
+                        if str(item.get('Type')) == 'Episode' and (not item.get("PrimaryImageAspectRatio") or float(
+                                item.get("PrimaryImageAspectRatio")) >= 1.8):
 
-                    # 判断图片是否tmdb封面，不是则刷新
-                    if str(item.get('Type')) == 'Episode' and (not item.get("PrimaryImageAspectRatio") or float(
-                            item.get("PrimaryImageAspectRatio")) >= 1.8):
+                            # 判断是否有缓存
+                            tv_info = None
+                            key = f"{item.get('Type')}-{item.get('SeriesName')}-{str(item.get('ProductionYear'))}"
+                            if key in self._tmdb_cache.keys():
+                                tv_info = self._tmdb_cache[key]
 
-                        # 判断是否有缓存
-                        tv_info = None
-                        key = f"{item.get('Type')}-{item.get('SeriesName')}-{str(item.get('ProductionYear'))}"
-                        if key in self._tmdb_cache.keys():
-                            tv_info = self._tmdb_cache[key]
-
-                        if not tv_info:
-                            # 判断下tmdb有没有封面，没有则不刷新封面
-                            tv_info = self.tmdbapi.match(name=item.get('SeriesName'),
-                                                         mtype=MediaType.TV,
-                                                         year=str(item.get('ProductionYear')))
-                        if tv_info:
-                            self._tmdb_cache[key] = tv_info
-                            episode_info = TmdbApi().get_tv_episode_detail(tv_info["id"],
-                                                                           item.get('ParentIndexNumber'),
-                                                                           item.get('IndexNumber'))
-                            if episode_info and episode_info.get("still_path"):
-                                # 更新封面
-                                flag = self.__update_item_image(item_id=item.get("Id"),
-                                                                image_url=f"https://image.tmdb.org/t/p/original{episode_info.get('still_path')}")
-                                if flag:
-                                    refresh_image = "false"
-                                logger.info(
-                                    f"最新媒体：电视剧 {'%s S%02dE%02d %s' % (item.get('SeriesName'), item.get('ParentIndexNumber'), item.get('IndexNumber'), item.get('Name')) if str(item.get('Type')) == 'Episode' else item.get('Name')} {item.get('Id')} 封面更新 {flag}")
+                            if not tv_info:
+                                # 判断下tmdb有没有封面，没有则不刷新封面
+                                tv_info = self.tmdbapi.match(name=item.get('SeriesName'),
+                                                             mtype=MediaType.TV,
+                                                             year=str(item.get('ProductionYear')))
+                            if tv_info:
+                                self._tmdb_cache[key] = tv_info
+                                episode_info = TmdbApi().get_tv_episode_detail(tv_info["id"],
+                                                                               item.get('ParentIndexNumber'),
+                                                                               item.get('IndexNumber'))
+                                if episode_info and episode_info.get("still_path"):
+                                    # 更新封面
+                                    flag = self.__update_item_image(item_id=item.get("Id"),
+                                                                    image_url=f"https://image.tmdb.org/t/p/original{episode_info.get('still_path')}")
+                                    if flag:
+                                        refresh_image = "false"
+                                    logger.info(
+                                        f"最新媒体：电视剧 {'%s S%02dE%02d %s' % (item.get('SeriesName'), item.get('ParentIndexNumber'), item.get('IndexNumber'), item.get('Name')) if str(item.get('Type')) == 'Episode' else item.get('Name')} {item.get('Id')} 封面更新 {flag}")
 
                     if refresh_meta == "true" or refresh_image == "true":
                         logger.info(
@@ -1216,6 +1219,7 @@ class EmbyMetaRefresh(_PluginBase):
                                             'items': [
                                                 {'title': 'true', 'value': "true"},
                                                 {'title': 'false', 'value': "false"},
+                                                {'title': 'auto', 'value': "auto"},
                                             ]
                                         }
                                     }
@@ -1236,6 +1240,7 @@ class EmbyMetaRefresh(_PluginBase):
                                             'items': [
                                                 {'title': 'true', 'value': "true"},
                                                 {'title': 'false', 'value': "false"},
+                                                {'title': 'auto', 'value': "auto"},
                                             ]
                                         }
                                     }
