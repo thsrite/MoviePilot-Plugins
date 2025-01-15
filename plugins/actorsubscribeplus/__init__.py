@@ -24,7 +24,7 @@ class ActorSubscribePlus(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/actorsubscribeplus.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -380,7 +380,7 @@ class ActorSubscribePlus(_PluginBase):
                                 },
                                 'content': [
                                     {
-                                        'component': 'VCronField',
+                                        'component': 'VTextField',
                                         'props': {
                                             'model': 'cron',
                                             'label': '执行周期',

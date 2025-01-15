@@ -25,7 +25,7 @@ class CloudStrmIncrement(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png"
     # 插件版本
-    plugin_version = "1.1.5"
+    plugin_version = "1.1.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -610,7 +610,7 @@ class CloudStrmIncrement(_PluginBase):
                                 },
                                 'content': [
                                     {
-                                        'component': 'VCronField',
+                                        'component': 'VTextField',
                                         'props': {
                                             'model': 'cron',
                                             'label': '生成周期',
