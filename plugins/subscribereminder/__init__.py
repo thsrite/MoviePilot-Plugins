@@ -23,7 +23,7 @@ class SubscribeReminder(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/subscribe_reminder.png"
     # 插件版本
-    plugin_version = "1.3"
+    plugin_version = "1.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -163,26 +163,51 @@ class SubscribeReminder(_PluginBase):
                         "image": subscribe.backdrop or subscribe.poster
                     })
 
-        # 如当前日期匹配到订阅，则发送通知
+        # 处理电视剧订阅
         if "tv" in self._subtype and current_tv_subscribe:
             text = ""
+            count = 0
             for sub in current_tv_subscribe:
                 text += f"📺︎{sub.get('name')} {sub.get('season')}{sub.get('episode')}\n"
+                count += 1
+                if count % 8 == 0:  # 每8条发送一次
+                    self.post_message(mtype=mtype,
+                                      title="电视剧更新",
+                                      text=text,
+                                      image=random.choice(current_tv_subscribe)["image"])
+                    logger.info(f"推送电视剧更新：{text}")
+                    text = ""  # 重置text变量以开始新的消息
 
+            # 如果还有剩余未发送的内容
             if text:
                 self.post_message(mtype=mtype,
                                   title="电视剧更新",
                                   text=text,
                                   image=random.choice(current_tv_subscribe)["image"])
+                logger.info(f"推送电视剧更新：{text}")
+
+        # 处理电影订阅
         if "movie" in self._subtype and current_movie_subscribe:
             text = ""
+            count = 0
             for sub in current_movie_subscribe:
                 text += f"📽︎{sub.get('name')}\n"
+                count += 1
+                if count % 8 == 0:  # 每8条发送一次
+                    self.post_message(mtype=mtype,
+                                      title="电影更新",
+                                      text=text,
+                                      image=random.choice(current_movie_subscribe)["image"])
+                    text = ""  # 重置text变量以开始新的消息
+                    logger.info(f"推送电影更新：{text}")
+
+            # 如果还有剩余未发送的内容
             if text:
                 self.post_message(mtype=mtype,
                                   title="电影更新",
                                   text=text,
                                   image=random.choice(current_movie_subscribe)["image"])
+                logger.info(f"推送电影更新：{text}")
 
     def get_state(self) -> bool:
         return self._enabled
