@@ -18,7 +18,7 @@ class Lucky(_PluginBase):
     # 插件图标
     plugin_icon = "Lucky_A.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.0.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -75,7 +75,7 @@ class Lucky(_PluginBase):
             response = requests.get(ip_url, verify=False)  # 关闭SSL证书验证
             response.raise_for_status()  # 如果状态码不是 2xx，抛出异常
             if response.json().get('ret') == 0:
-                return response.json().get('data')[0].get('IpAddr')
+                return response.json().get('data')[0].get('IpAddr') or response.json().get('data')[0].get('Ipv4Addr')
         except requests.exceptions.RequestException as e:
             logging.error("An error occurred:", e)
             return None
