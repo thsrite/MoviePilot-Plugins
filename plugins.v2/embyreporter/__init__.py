@@ -838,8 +838,11 @@ class EmbyReporter(_PluginBase):
         except Exception:
             return False, "🤕Emby 服务器连接失败!"
 
-    def get_report(self, days, types=None, user_id=None, end_date=datetime.now(pytz.timezone("Asia/Shanghai")),
+    def get_report(self, days, types=None, user_id=None, end_date=None),
                    limit=10):
+        # 如果没有传入 end_date，使用当前上海时区的时间
+        if end_date is None:
+            end_date=datetime.now(pytz.timezone("Asia/Shanghai")
         if not types:
             types = self.PLAYBACK_REPORTING_TYPE_MOVIE
         sub_date = end_date - timedelta(days=int(days))
