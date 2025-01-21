@@ -845,9 +845,9 @@ class EmbyReporter(_PluginBase):
         sub_date = end_date - timedelta(days=int(days))
         start_time = sub_date.strftime("%Y-%m-%d 00:00:00")
         end_time = end_date.strftime("%Y-%m-%d 23:59:59")
-        logger.info("======")
-        logger.info(start_time)
-        logger.info(end_time)
+        logger.info(f"======")
+        logger.info(f"开始 {start_time}")
+        logger.info(f"结束 {end_time}")
         sql = "SELECT UserId, ItemId, ItemType, "
         sql += types + " AS name, "
         sql += "COUNT(1) AS play_count, "
