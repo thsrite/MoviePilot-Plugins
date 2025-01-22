@@ -227,11 +227,12 @@
     "name": "Emby观影报告",
     "description": "推送Emby观影报告，需Emby安装Playback Report 插件。",
     "labels": "Emby",
-    "version": "1.9.2",
+    "version": "1.9.3",
     "icon": "Pydiocells_A.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v1.9.3": "修复观影记录日期获取",
       "v1.9.2": "媒体库黑名单改为媒体库名称",
       "v1.9.1": "修复媒体库黑名单设置",
       "v1.9": "支持媒体库黑名单设置",

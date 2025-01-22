@@ -1,24 +1,22 @@
 import os
-
-from app.core.config import settings
-from app.plugins import _PluginBase
+import random
+from datetime import datetime, timedelta
+from io import BytesIO
+from pathlib import Path
 from typing import Any, List, Dict, Tuple, Optional
-from app.log import logger
+
+import pytz
+from PIL import Image
+from PIL import ImageDraw
+from PIL import ImageFont
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-
-from app.schemas import NotificationType
-from pathlib import Path
-
-import random
-from io import BytesIO
-from PIL import Image
-from PIL import ImageFont
-from PIL import ImageDraw
-import pytz
 from cacheout import Cache
-from datetime import datetime, timedelta
 
+from app.core.config import settings
+from app.log import logger
+from app.plugins import _PluginBase
+from app.schemas import NotificationType
 from app.utils.http import RequestUtils
 from app.utils.string import StringUtils
 
@@ -33,7 +31,7 @@ class EmbyReporter(_PluginBase):
     # 插件图标
     plugin_icon = "Pydiocells_A.png"
     # 插件版本
-    plugin_version = "1.9.2"
+    plugin_version = "1.9.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -795,13 +793,12 @@ class EmbyReporter(_PluginBase):
         except Exception:
             return False, "🤕Emby 服务器连接失败!"
 
-    def get_report(self, days, types=None, user_id=None, end_date=datetime.now(pytz.timezone("Asia/Shanghai")),
-                   limit=10):
+    def get_report(self, days, types=None, user_id=None, limit=10):
         if not types:
             types = self.PLAYBACK_REPORTING_TYPE_MOVIE
-        sub_date = end_date - timedelta(days=int(days))
+        sub_date = datetime.now(pytz.timezone("Asia/Shanghai")) - timedelta(days=int(days))
         start_time = sub_date.strftime("%Y-%m-%d 00:00:00")
-        end_time = end_date.strftime("%Y-%m-%d 23:59:59")
+        end_time = datetime.now(pytz.timezone("Asia/Shanghai")).strftime("%Y-%m-%d 23:59:59")
         sql = "SELECT UserId, ItemId, ItemType, "
         sql += types + " AS name, "
         sql += "COUNT(1) AS play_count, "

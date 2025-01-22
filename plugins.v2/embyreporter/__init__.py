@@ -32,7 +32,7 @@ class EmbyReporter(_PluginBase):
     # 插件图标
     plugin_icon = "Pydiocells_A.png"
     # 插件版本
-    plugin_version = "2.1.3"
+    plugin_version = "2.1.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -838,13 +838,12 @@ class EmbyReporter(_PluginBase):
         except Exception:
             return False, "🤕Emby 服务器连接失败!"
 
-    def get_report(self, days, types=None, user_id=None, end_date=datetime.now(pytz.timezone("Asia/Shanghai")),
-                   limit=10):
+    def get_report(self, days, types=None, user_id=None,limit=10):
         if not types:
             types = self.PLAYBACK_REPORTING_TYPE_MOVIE
-        sub_date = end_date - timedelta(days=int(days))
+        sub_date = datetime.now(pytz.timezone("Asia/Shanghai")) - timedelta(days=int(days))
         start_time = sub_date.strftime("%Y-%m-%d 00:00:00")
-        end_time = end_date.strftime("%Y-%m-%d 23:59:59")
+        end_time = datetime.now(pytz.timezone("Asia/Shanghai")).strftime("%Y-%m-%d 23:59:59")
         sql = "SELECT UserId, ItemId, ItemType, "
         sql += types + " AS name, "
         sql += "COUNT(1) AS play_count, "
