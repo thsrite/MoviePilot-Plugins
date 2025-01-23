@@ -442,11 +442,12 @@
     "name": "云盘Strm助手",
     "description": "实时监控、定时全量增量生成strm文件。",
     "labels": "云盘",
-    "version": "1.2.4",
+    "version": "1.2.5",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v1.2.5": "可自定义是否UrlEncode编码",
       "v1.2.4": "优化执行周期输入，需要MoviePilot v2.2.1+",
       "v1.2.3": "Strm生成成功后缓存已处理记录",
       "v1.2.2": "修复全量同步处理非媒体文件，增加友好提示",

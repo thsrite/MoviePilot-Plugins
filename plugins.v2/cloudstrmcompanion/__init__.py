@@ -5,6 +5,7 @@ import shutil
 import threading
 import time
 import traceback
+import urllib.parse
 from datetime import datetime, timedelta
 from io import BytesIO
 from pathlib import Path
@@ -62,7 +63,7 @@ class CloudStrmCompanion(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png"
     # 插件版本
-    plugin_version = "1.2.4"
+    plugin_version = "1.2.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -87,6 +88,7 @@ class CloudStrmCompanion(_PluginBase):
     _url = None
     _notify = False
     _refresh_emby = False
+    _uriencode = False
     _strm_dir_conf = {}
     _cloud_dir_conf = {}
     _category_conf = {}
@@ -135,6 +137,7 @@ class CloudStrmCompanion(_PluginBase):
             self._copy_subtitles = config.get("copy_subtitles")
             self._refresh_emby = config.get("refresh_emby")
             self._notify = config.get("notify")
+            self._uriencode = config.get("uriencode")
             self._monitor_confs = config.get("monitor_confs")
             self._url = config.get("url")
             self._mediaservers = config.get("mediaservers") or []
@@ -353,7 +356,8 @@ class CloudStrmCompanion(_PluginBase):
                             # 生成strm文件内容
                             strm_content = self.__format_content(format_str=format_str,
                                                                  local_file=local_file,
-                                                                 cloud_file=str(cloud_file))
+                                                                 cloud_file=str(cloud_file),
+                                                                 uriencode=self._uriencode)
                             # 生成strm文件
                             success_flag = self.__create_strm_file(strm_file=target_file,
                                                                    strm_content=strm_content)
@@ -437,7 +441,8 @@ class CloudStrmCompanion(_PluginBase):
                     # 生成strm文件内容
                     strm_content = self.__format_content(format_str=format_str,
                                                          local_file=event_path,
-                                                         cloud_file=str(cloud_file))
+                                                         cloud_file=str(cloud_file),
+                                                         uriencode=self._uriencode)
                     # 生成strm文件
                     self.__create_strm_file(strm_file=target_file,
                                             strm_content=strm_content)
@@ -469,17 +474,19 @@ class CloudStrmCompanion(_PluginBase):
         file.close()
 
     @staticmethod
-    def __format_content(format_str: str, local_file: str, cloud_file: str):
+    def __format_content(format_str: str, local_file: str, cloud_file: str, uriencode: bool):
         """
         格式化strm内容
         """
         if "{local_file}" in format_str:
             return format_str.replace("{local_file}", local_file)
         elif "{cloud_file}" in format_str:
-            # 替换路径中的\为/
-            cloud_file = cloud_file.replace("\\", "/")
-            # 对盘符之后的所有内容进行url转码
-            # cloud_file = urllib.parse.quote(cloud_file, safe='')
+            if uriencode:
+                # 对盘符之后的所有内容进行url转码
+                cloud_file = urllib.parse.quote(cloud_file, safe='')
+            else:
+                # 替换路径中的\为/
+                cloud_file = cloud_file.replace("\\", "/")
             return format_str.replace("{cloud_file}", cloud_file)
         else:
             return None
@@ -1242,6 +1249,27 @@ class CloudStrmCompanion(_PluginBase):
                                 },
                                 'content': [
                                     {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'uriencode',
+                                            'label': 'url编码',
+                                        }
+                                    }
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
                                         'component': 'VCronField',
                                         'props': {
                                             'model': 'cron',
@@ -1478,6 +1506,7 @@ class CloudStrmCompanion(_PluginBase):
             "monitor": False,
             "cover": False,
             "copy_files": False,
+            "uriencode": False,
             "copy_subtitles": False,
             "refresh_emby": False,
             "mediaservers": [],
