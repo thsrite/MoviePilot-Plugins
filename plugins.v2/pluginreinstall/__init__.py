@@ -430,7 +430,7 @@ class PluginReInstall(_PluginBase):
                 if pid in install_plugins:
                     local_plugin = local_plugins.get(pid)
                     if local_plugin:
-                        if StringUtils.compare_version(local_plugin.get("plugin_version"), plugin.get("version")) < 0:
+                        if StringUtils.compare_version(local_plugin.get("plugin_version"),">", plugin.get("version")):
                             local_plugins[pid] = {
                                 "id": pid,
                                 "plugin_name": plugin.get("name"),
