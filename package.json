@@ -421,7 +421,6 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/uninstall.png",
     "author": "thsrite",
     "level": 1,
-    "v2": true,
     "history": {
       "v1.2.1": "fix update_config",
       "v1.2": "卸载时先停止注册服务",

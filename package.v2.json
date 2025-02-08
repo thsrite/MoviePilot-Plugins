@@ -503,11 +503,12 @@
     "name": "插件重装重载",
     "description": "强制重载、强制重装已安装插件。",
     "labels": "插件管理",
-    "version": "2.0.1",
+    "version": "2.0.2",
     "icon": "refresh.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v2.0.2": "修改compare_version方法",
       "v2.0.1": "仅可选择已安装插件",
       "v2.0": "支持交互命令重载、重装插件",
       "v1.8": "修复插件显示版本问题",
@@ -534,6 +535,22 @@
       "v3.2": "支持消息发送",
       "v3.1": "支持自定义转移方式",
       "v3.0": "默认从tmdb刮削，刮削失败则从pt站刮削"
+    }
+  },
+  "PluginUnInstall": {
+    "name": "插件彻底卸载",
+    "description": "删除数据库中已安装插件记录、清理插件文件。",
+    "labels": "插件管理",
+    "version": "2.1",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/uninstall.png",
+    "author": "thsrite",
+    "level": 1,
+    "history": {
+      "v2.1": "适配MP V2新的代码方法",
+      "v1.2.1": "fix update_config",
+      "v1.2": "卸载时先停止注册服务",
+      "v1.1": "可选删除插件配置及数据",
+      "v1.0": "init"
     }
   }
 }

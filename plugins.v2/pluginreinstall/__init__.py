@@ -1,4 +1,5 @@
 import re
+from typing import Any, List, Dict, Tuple
 
 from fastapi import APIRouter
 
@@ -7,12 +8,11 @@ from app.core.event import eventmanager, Event
 from app.core.plugin import PluginManager
 from app.db.systemconfig_oper import SystemConfigOper
 from app.helper.plugin import PluginHelper
-from app.plugins import _PluginBase
-from typing import Any, List, Dict, Tuple
 from app.log import logger
+from app.plugins import _PluginBase
+from app.scheduler import Scheduler
 from app.schemas.types import SystemConfigKey, EventType
 from app.utils.string import StringUtils
-from app.scheduler import Scheduler
 
 router = APIRouter()
 
@@ -25,7 +25,7 @@ class PluginReInstall(_PluginBase):
     # 插件图标
     plugin_icon = "refresh.png"
     # 插件版本
-    plugin_version = "2.0.1"
+    plugin_version = "2.0.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -430,7 +430,7 @@ class PluginReInstall(_PluginBase):
                 if pid in install_plugins:
                     local_plugin = local_plugins.get(pid)
                     if local_plugin:
-                        if StringUtils.compare_version(local_plugin.get("plugin_version"), plugin.get("version")) < 0:
+                        if StringUtils.compare_version(local_plugin.get("plugin_version"), ">", plugin.get("version")):
                             local_plugins[pid] = {
                                 "id": pid,
                                 "plugin_name": plugin.get("name"),
