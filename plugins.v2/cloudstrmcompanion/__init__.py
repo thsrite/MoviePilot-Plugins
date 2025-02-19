@@ -302,7 +302,7 @@ class CloudStrmCompanion(_PluginBase):
 
         if event:
             event_data = event.event_data
-            if not event_data or event_data.get("action") != "cloudStrmCompanion":
+            if not event_data or event_data.get("action") != "CloudStrmCompanion":
                 return
             logger.info("收到命令，开始云盘Strm助手同步生成 ...")
             self.post_message(channel=event.event_data.get("channel"),
