@@ -10,13 +10,13 @@ from xml.dom import minidom
 import chardet
 import pytz
 from PIL import Image
-from app.helper.sites import SitesHelper
 from apscheduler.schedulers.background import BackgroundScheduler
 from lxml import etree
 from requests import RequestException
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
+from app.helper.sites import SitesHelper, SiteSpider
 
 from app.chain.tmdb import TmdbChain
 from app.core.config import settings
@@ -25,7 +25,6 @@ from app.core.metainfo import MetaInfoPath
 from app.db.site_oper import SiteOper
 from app.helper.directory import DirectoryHelper
 from app.log import logger
-from app.modules.indexer import TorrentSpider
 from app.plugins import _PluginBase
 from app.schemas import MediaInfo, TransferInfo, TransferDirectoryConf
 from app.schemas.types import NotificationType
@@ -63,7 +62,7 @@ class ShortPlayMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Amule_B.png"
     # 插件版本
-    plugin_version = "4.0"
+    plugin_version = "4.0.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -667,8 +666,7 @@ class ShortPlayMonitor(_PluginBase):
         if not page_source:
             logger.error(f"请求站点 {site.name} 失败")
             return None
-        _spider = TorrentSpider(indexer=index,
-                                page=1)
+        _spider = SiteSpider(indexer=index, page=1)
         torrents = _spider.parse(page_source)
         if not torrents:
             logger.error(f"未检索到站点 {site.name} 资源")
