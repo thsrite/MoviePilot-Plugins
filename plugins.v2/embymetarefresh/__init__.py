@@ -12,12 +12,16 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from dateutil.parser import isoparse
 from requests import RequestException
+from sqlalchemy.orm import Session
 from zhconv import zhconv
 
 from app import schemas
 from app.chain.tmdb import TmdbChain
 from app.core.config import settings
 from app.core.event import eventmanager, Event
+from app.db import db_query
+from app.db.models import Subscribe
+from app.db.models.subscribehistory import SubscribeHistory
 from app.db.transferhistory_oper import TransferHistoryOper
 from app.helper.mediaserver import MediaServerHelper
 from app.log import logger
@@ -37,7 +41,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "2.2.6"
+    plugin_version = "2.2.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -272,9 +276,13 @@ class EmbyMetaRefresh(_PluginBase):
 
                                     if not tv_info:
                                         # 判断下tmdb有没有封面，没有则不刷新封面
-                                        tv_info = self.tmdbapi.match(name=item.get('SeriesName'),
-                                                                     mtype=MediaType.TV,
-                                                                     year=str(item.get('ProductionYear')))
+                                        tmdb_id = self.__get_subscribe_by_name(db=None, name=item.get('SeriesName'))
+                                        if tmdb_id:
+                                            tv_info = self.tmdbapi.get_info(tmdbid=tmdb_id, mtype=MediaType.TV)
+                                        if not tv_info:
+                                            tv_info = self.tmdbapi.match(name=item.get('SeriesName'),
+                                                                         mtype=MediaType.TV,
+                                                                         year=str(item.get('ProductionYear')))
                                     if tv_info:
                                         self._tmdb_cache[key] = tv_info
                                         episode_info = TmdbApi().get_tv_episode_detail(tv_info["id"],
@@ -1454,3 +1462,22 @@ class EmbyMetaRefresh(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error("退出插件失败：%s" % str(e))
+
+    @staticmethod
+    @db_query
+    def __get_subscribe_by_name(db: Optional[Session], name: str) -> int:
+        """
+        根据下载记录hash查询下载记录
+        """
+        tmdb_id = None
+        subscribe = db.query(Subscribe).filter(Subscribe.name == name,
+                                               Subscribe.type == MediaType.TV.value).first()
+        if subscribe:
+            tmdb_id = subscribe.tmdbid
+        else:
+            subscribe_history = db.query(SubscribeHistory).filter(SubscribeHistory.name == name,
+                                                                  SubscribeHistory.type == MediaType.TV.value).first()
+            if subscribe_history:
+                tmdb_id = subscribe_history.tmdbid
+
+        return tmdb_id
