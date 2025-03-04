@@ -4,18 +4,17 @@ import shutil
 import urllib.parse
 from datetime import datetime, timedelta
 from pathlib import Path
-
-import pytz
 from typing import Any, List, Dict, Tuple, Optional
 
-from app.core.event import eventmanager, Event
-from app.schemas.types import EventType
+import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
+from app.core.config import settings
+from app.core.event import eventmanager, Event
 from app.log import logger
 from app.plugins import _PluginBase
-from app.core.config import settings
+from app.schemas.types import EventType
 
 
 class CloudStrm(_PluginBase):
@@ -26,7 +25,7 @@ class CloudStrm(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png"
     # 插件版本
-    plugin_version = "4.4.1"
+    plugin_version = "4.4.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -343,7 +342,7 @@ class CloudStrm(_PluginBase):
                     if Path(dest_file).is_dir():
                         if not Path(dest_file).exists():
                             logger.info(f"创建目标文件夹 {dest_file}")
-                            os.makedirs(dest_file)
+                            os.makedirs(dest_file, exist_ok=True)
                             continue
                     else:
                         # 非媒体文件
@@ -354,7 +353,7 @@ class CloudStrm(_PluginBase):
                         # 文件
                         if not Path(dest_file).parent.exists():
                             logger.info(f"创建目标文件夹 {Path(dest_file).parent}")
-                            os.makedirs(Path(dest_file).parent)
+                            os.makedirs(Path(dest_file).parent, exist_ok=True)
 
                         # 视频文件创建.strm文件
                         if Path(dest_file).suffix.lower() in settings.RMT_MEDIAEXT:
@@ -394,7 +393,7 @@ class CloudStrm(_PluginBase):
 
             if not dest_path.exists():
                 logger.info(f"创建目标文件夹 {dest_path}")
-                os.makedirs(str(dest_path))
+                os.makedirs(str(dest_path), exist_ok=True)
 
             # 构造.strm文件路径
             strm_path = os.path.join(dest_path, f"{os.path.splitext(video_name)[0]}.strm")
