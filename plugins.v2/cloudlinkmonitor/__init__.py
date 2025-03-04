@@ -63,7 +63,7 @@ class CloudLinkMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
-    plugin_version = "2.5.7"
+    plugin_version = "2.5.8"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -92,7 +92,7 @@ class CloudLinkMonitor(_PluginBase):
     _refresh = False
     _softlink = False
     _strm = False
-    # _cron = None
+    _cron = None
     filetransfer = None
     mediaChain = None
     _size = 0
