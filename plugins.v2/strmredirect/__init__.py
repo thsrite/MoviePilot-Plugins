@@ -16,7 +16,7 @@ class StrmRedirect(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlinkredirect.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.2.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -70,7 +70,7 @@ class StrmRedirect(_PluginBase):
                         strm_content = file.read()
                     if not strm_content:
                         continue
-                    unencoded = self.find_unencoded_parts(strm_content)
+                    # unencoded = self.find_unencoded_parts(strm_content)
                     # 解码url
                     unercoded_strm_content = urllib.parse.unquote(strm_content)
                     if self._unquote:
@@ -80,10 +80,10 @@ class StrmRedirect(_PluginBase):
                     if target_from and target_to:
                         if str(unercoded_strm_content).startswith(target_from):
                             strm_content = unercoded_strm_content.replace(target_from, target_to)
-                            no_encoded = unencoded[0]
-                            encoded = strm_content.replace(no_encoded, "")
+                            # no_encoded = unencoded[0]
+                            # encoded = strm_content.replace(no_encoded, "")
                             # encoded = urllib.parse.quote(encoded)
-                            strm_content = no_encoded + encoded
+                            # strm_content = no_encoded + encoded
 
                             # 如果不是url，不进行编码
                             if not str(strm_content).startswith("http"):

@@ -478,12 +478,12 @@
     "name": "Strm重定向",
     "description": "重写Strm文件内容。",
     "labels": "云盘",
-    "version": "1.2",
+    "version": "1.2.1",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlinkredirect.png",
     "author": "thsrite",
     "level": 1,
-    "v2": true,
     "history": {
+      "v1.2.1": "修复strm重定向",
       "v1.2": "支持解码URL重新写入Strm",
       "v1.0": "重写Strm文件内容"
     }
