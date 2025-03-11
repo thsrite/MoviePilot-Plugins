@@ -104,7 +104,7 @@ class CloudStrmCompanion(_PluginBase):
     _mediaservers = None
     mediaserver_helper = None
     _emby_paths = {}
-
+    _path_replacements = {} # 新增：路径替换规则属性
     _cloud_files_json = "cloud_files.json"
     _headers = {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_2_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.192 Safari/537.36",
@@ -122,6 +122,7 @@ class CloudStrmCompanion(_PluginBase):
         self._cloud_dir_conf = {}
         self._format_conf = {}
         self._category_conf = {}
+        self._path_replacements = {}  # 新增：清空路径替换规则        
         self._cloud_files_json = os.path.join(self.get_data_path(), self._cloud_files_json)
         self.mediaserver_helper = MediaServerHelper()
 
@@ -142,6 +143,12 @@ class CloudStrmCompanion(_PluginBase):
             self._url = config.get("url")
             self._mediaservers = config.get("mediaservers") or []
             self._other_mediaext = config.get("other_mediaext")
+            # 新增：读取路径替换规则
+            if config.get("path_replacements"):
+                for replacement in str(config.get("path_replacements")).split("\n"):
+                    if replacement and ":" in replacement:
+                        source, target = replacement.split(":", 1)
+                        self._path_replacements[source.strip()] = target.strip()
             self._rmt_mediaext = config.get(
                 "rmt_mediaext") or ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
             self._115_cookie = config.get("115_cookie")
@@ -512,6 +519,11 @@ class CloudStrmCompanion(_PluginBase):
             if Path(strm_file).exists() and not self._cover:
                 logger.info(f"目标文件 {strm_file} 已存在")
                 return
+            # 新增：应用自定义路径替换规则
+            for source, target in self._path_replacements.items():
+                if source in strm_content:
+                    strm_content = strm_content.replace(source, target)
+                    logger.debug(f"应用路径替换规则: {source} -> {target}")
 
             # 写入.strm文件
             with open(strm_file, 'w', encoding='utf-8') as f:
@@ -994,6 +1006,8 @@ class CloudStrmCompanion(_PluginBase):
             "rmt_mediaext": self._rmt_mediaext,
             "other_mediaext": self._other_mediaext,
             "mediaservers": self._mediaservers,
+            # 新增：路径替换规则
+            "path_replacements": "\n".join([f"{source}:{target}" for source, target in self._path_replacements.items()]) if self._path_replacements else "",
         })
 
     def get_state(self) -> bool:
@@ -1425,6 +1439,29 @@ class CloudStrmCompanion(_PluginBase):
                             }
                         ]
                     },
+                    # 新增：路径替换规则文本框
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextarea',
+                                        'props': {
+                                            'model': 'path_replacements',
+                                            'label': '路径替换规则',
+                                            'rows': 3,
+                                            'placeholder': '源路径:目标路径（每行一条规则）'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
                     {
                         'component': 'VRow',
                         'content': [
@@ -1516,7 +1553,8 @@ class CloudStrmCompanion(_PluginBase):
             "115_cookie": "",
             "url": "",
             "other_mediaext": ".nfo, .jpg, .png, .json",
-            "rmt_mediaext": ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
+            "rmt_mediaext": ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v",
+            "path_replacements": ""  # 新增：路径替换规则默认值
         }
 
     def get_page(self) -> List[dict]:
