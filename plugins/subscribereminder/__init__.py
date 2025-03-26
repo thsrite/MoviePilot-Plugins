@@ -192,16 +192,19 @@ class SubscribeReminder(_PluginBase):
         # 处理电影订阅
         if "movie" in self._subtype and current_movie_subscribe:
             text = ""
+            image = []
             count = 0
             for sub in current_movie_subscribe:
                 text += f"📽︎{sub.get('name')}\n"
                 count += 1
+                image.append(sub.get('image'))
                 if count % 8 == 0:  # 每8条发送一次
                     self.post_message(mtype=mtype,
                                       title="电影更新",
                                       text=text,
-                                      image=random.choice(current_movie_subscribe)["image"])
+                                      image=random.choice(image))
                     text = ""  # 重置text变量以开始新的消息
+                    image = []
                     logger.info(f"推送电影更新：{text}")
 
             # 如果还有剩余未发送的内容
@@ -209,7 +212,7 @@ class SubscribeReminder(_PluginBase):
                 self.post_message(mtype=mtype,
                                   title="电影更新",
                                   text=text,
-                                  image=random.choice(current_movie_subscribe)["image"])
+                                  image=random.choice(image))
                 logger.info(f"推送电影更新：{text}")
 
     def get_state(self) -> bool:
