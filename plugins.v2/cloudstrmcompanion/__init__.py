@@ -6,19 +6,12 @@ import threading
 import time
 import traceback
 import urllib.parse
-from datetime import datetime, timedelta
-from io import BytesIO
+from datetime import datetime
 from pathlib import Path
-from posixpath import join as join_path
-from re import compile as re_compile
-from typing import Any, List, Dict, Tuple, Optional
+from typing import Any, List, Dict, Tuple
 
-import pytz
 import requests
-from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from p115client import P115Client
-from posixpatht import escape
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers.polling import PollingObserver
 
@@ -63,7 +56,7 @@ class CloudStrmCompanion(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png"
     # 插件版本
-    plugin_version = "1.2.7"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -77,10 +70,7 @@ class CloudStrmCompanion(_PluginBase):
 
     # 私有属性
     _enabled = False
-    _cron = None
     _monitor_confs = None
-    _onlyonce = False
-    _rebuild = False
     _cover = False
     _monitor = False
     _copy_files = False
@@ -98,23 +88,16 @@ class CloudStrmCompanion(_PluginBase):
     _medias = {}
     _rmt_mediaext = None
     _other_mediaext = None
-    _115_cookie = None
-    _115client = None
     _interval: int = 10
     _mediaservers = None
     mediaserver_helper = None
     _emby_paths = {}
-    _path_replacements = {} # 新增：路径替换规则属性
+    _path_replacements = {}  # 新增：路径替换规则属性
     _cloud_files_json = "cloud_files.json"
     _headers = {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_2_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.192 Safari/537.36",
         "Cookie": "",
     }
-
-    # 定时器
-    _scheduler: Optional[BackgroundScheduler] = None
-    # 退出事件
-    _event = threading.Event()
 
     def init_plugin(self, config: dict = None):
         # 清空配置
@@ -122,15 +105,12 @@ class CloudStrmCompanion(_PluginBase):
         self._cloud_dir_conf = {}
         self._format_conf = {}
         self._category_conf = {}
-        self._path_replacements = {}  # 新增：清空路径替换规则        
+        self._path_replacements = {}  # 新增：清空路径替换规则
         self._cloud_files_json = os.path.join(self.get_data_path(), self._cloud_files_json)
         self.mediaserver_helper = MediaServerHelper()
 
         if config:
             self._enabled = config.get("enabled")
-            self._cron = config.get("cron")
-            self._onlyonce = config.get("onlyonce")
-            self._rebuild = config.get("rebuild")
             self._interval = config.get("interval") or 10
             self._monitor = config.get("monitor")
             self._cover = config.get("cover")
@@ -151,30 +131,14 @@ class CloudStrmCompanion(_PluginBase):
                         self._path_replacements[source.strip()] = target.strip()
             self._rmt_mediaext = config.get(
                 "rmt_mediaext") or ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v"
-            self._115_cookie = config.get("115_cookie")
-            if self._115_cookie:
-                self._headers["Cookie"] = self._115_cookie
-                self._115client = P115Client(self._115_cookie, check_for_relogin=True)
             if config.get("emby_path"):
                 for path in str(config.get("emby_path")).split(","):
                     self._emby_paths[path.split(":")[0]] = path.split(":")[1]
 
-        if self._rebuild:
-            logger.info("开始清理旧数据索引")
-            self._rebuild = False
-            self._cloud_files = []
-            if Path(self._cloud_files_json).exists():
-                Path(self._cloud_files_json).unlink()
-            logger.info("旧数据索引清理完成")
-            self.__update_config()
-
         # 停止现有任务
         self.stop_service()
 
-        if self._enabled or self._onlyonce:
-            # 定时服务
-            self._scheduler = BackgroundScheduler(timezone=settings.TZ)
-
+        if self._enabled:
             if self._notify:
                 # 追加入库消息统一发送服务
                 self._scheduler.add_job(self.send_msg, trigger='interval', seconds=15)
@@ -238,40 +202,13 @@ class CloudStrmCompanion(_PluginBase):
                             logger.warn(
                                 f"云盘实时监控服务启动出现异常：{err_msg}，请在宿主机上（不是docker容器内）执行以下命令并重启："
                                 + """
-                                                        echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
-                                                        echo fs.inotify.max_user_instances=524288 | sudo tee -a /etc/sysctl.conf
-                                                        sudo sysctl -p
-                                                        """)
+                                                            echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf
+                                                            echo fs.inotify.max_user_instances=524288 | sudo tee -a /etc/sysctl.conf
+                                                            sudo sysctl -p
+                                                            """)
                         else:
                             logger.error(f"{local_dir} 启动x实时监控失败：{err_msg}")
                         self.systemmessage.put(f"{local_dir} 启动实时监控失败：{err_msg}")
-
-            # 运行一次定时服务
-            if self._onlyonce:
-                logger.info("云盘Strm助手全量执行服务启动，立即运行一次")
-                self._scheduler.add_job(func=self.scan, trigger='date',
-                                        run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
-                                        name="云盘Strm助手全量执行")
-                # 关闭一次性开关
-                self._onlyonce = False
-                # 保存配置
-                self.__update_config()
-
-            # 周期运行
-            if self._cron:
-                try:
-                    self._scheduler.add_job(func=self.scan,
-                                            trigger=CronTrigger.from_crontab(self._cron),
-                                            name="云盘Strm助手同步")
-                except Exception as err:
-                    logger.error(f"定时任务配置错误：{err}")
-                    # 推送实时消息
-                    self.systemmessage.put(f"执行周期配置错误：{err}")
-
-            # 启动任务
-            if self._scheduler.get_jobs():
-                self._scheduler.print_jobs()
-                self._scheduler.start()
 
     @eventmanager.register(EventType.PluginAction)
     def strm_one(self, event: Event = None):
@@ -297,112 +234,6 @@ class CloudStrmCompanion(_PluginBase):
 
             # 处理单文件
             self.__handle_file(event_path=file_path, mon_path=mon_path)
-
-    @eventmanager.register(EventType.PluginAction)
-    def scan(self, event: Event = None):
-        """
-        扫描
-        """
-        if not self._strm_dir_conf or not self._strm_dir_conf.keys():
-            logger.error("未获取到可用目录监控配置，请检查")
-            return
-
-        if event:
-            event_data = event.event_data
-            if not event_data or event_data.get("action") != "CloudStrmCompanion":
-                return
-            logger.info("收到命令，开始云盘Strm助手同步生成 ...")
-            self.post_message(channel=event.event_data.get("channel"),
-                              title="开始云盘Strm助手同步生成 ...",
-                              userid=event.event_data.get("user"))
-
-        if not self._115client:
-            logger.error("115_cookie 未配置或cookie已失效，请检查配置")
-            return
-
-        logger.info("云盘Strm助手同步生成任务开始")
-        # 首次扫描或者重建索引
-        if Path(self._cloud_files_json).exists():
-            logger.info("尝试加载本地缓存")
-            # 尝试加载本地
-            with open(self._cloud_files_json, 'r') as file:
-                content = file.read()
-                if content:
-                    self._cloud_files = json.loads(content)
-
-        __save_flag = False
-        # 遍历云盘目录
-        for local_dir in self._cloud_dir_conf.keys():
-            # 云盘路径
-            cloud_dir = self._cloud_dir_conf.get(local_dir)
-            # 本地strm路径
-            strm_dir = self._strm_dir_conf.get(local_dir)
-            # 格式化配置
-            format_str = self._format_conf.get(local_dir)
-            # 获取云盘树形结构
-            tree_content = self.retrieve_directory_structure(cloud_dir)
-            if not tree_content:
-                continue
-            # 遍历云盘树形结构文件
-            for cloud_file in self.parse_tree_structure(content=tree_content, dir_path=cloud_dir):
-                if Path(str(cloud_file)).is_dir():
-                    continue
-                # 本地挂载路径
-                local_file = str(cloud_file).replace(cloud_dir, local_dir)
-                # 本地strm路径
-                target_file = str(cloud_file).replace(cloud_dir, strm_dir)
-
-                success_flag = False
-                try:
-                    if str(cloud_file) not in self._cloud_files:
-                        logger.info(f"扫描到新文件 {cloud_file}，正在开始处理")
-
-                        # 只处理媒体文件
-                        if Path(local_file).suffix.lower() in [ext.strip() for ext in
-                                                               self._rmt_mediaext.split(",")]:
-                            # 生成strm文件内容
-                            strm_content = self.__format_content(format_str=format_str,
-                                                                 local_file=local_file,
-                                                                 cloud_file=str(cloud_file),
-                                                                 uriencode=self._uriencode)
-                            # 生成strm文件
-                            success_flag = self.__create_strm_file(strm_file=target_file,
-                                                                   strm_content=strm_content)
-                        else:
-                            # 复制非媒体文件
-                            if self._copy_files and self._other_mediaext and Path(local_file).suffix.lower() in [
-                                ext.strip() for ext in self._other_mediaext.split(",")]:
-                                os.makedirs(os.path.dirname(target_file), exist_ok=True)
-                                shutil.copy2(str(local_file), target_file)
-                                logger.info(f"复制非媒体文件 {str(local_file)} 到 {target_file}")
-
-                            # 复制字幕文件（独立于copy_files检查）
-                            if self._copy_subtitles and Path(local_file).suffix.lower() in ['.srt', '.ass', '.ssa',
-                                                                                            '.sub']:
-                                os.makedirs(os.path.dirname(target_file), exist_ok=True)
-                                shutil.copy2(str(local_file), target_file)
-                                logger.info(f"复制字幕文件 {str(local_file)} 到 {target_file}")
-                            success_flag = True
-                    else:
-                        logger.info(f"{cloud_file} 已在缓存中！跳过处理")
-                except Exception as e:
-                    logger.error(f"处理文件 {cloud_file} 失败：{str(e)}")
-                    success_flag = False
-
-                if success_flag:
-                    # 云盘文件json新增
-                    self._cloud_files.append(str(cloud_file))
-                    __save_flag = True
-
-            # 重新保存json文件
-            if __save_flag:
-                self.__sava_json()
-
-        logger.info("云盘Strm助手同步生成任务完成")
-        if event:
-            self.post_message(channel=event.event_data.get("channel"),
-                              title="云盘Strm助手同步生成任务完成！",
-                              userid=event.event_data.get("user"))
 
     def event_handler(self, event, mon_path: str, text: str, event_path: str):
         """
@@ -661,85 +492,6 @@ class CloudStrmCompanion(_PluginBase):
                     logger.info(f"等待目录树生成完成，剩余重试 {retry_cnt} 次")
                     time.sleep(3)
         return None
-
-    def retrieve_directory_structure(self, directory_path):
-        """
-        获取目录树结构
-        """
-        file_id = None
-        try:
-            logger.info(f"开始生成 {directory_path} 目录树")
-            dir_info = self._115client.fs_dir_getid(directory_path)
-            if not dir_info:
-                logger.error(f"{directory_path} 目录不存在或路径错误")
-                return
-            fid = dir_info.get("id")
-            if not fid:
-                logger.error(f"{directory_path} 目录不存在或路径错误")
-                return
-            pick_code, file_id = self.export_dir(fid)
-            if not pick_code:
-                logger.error(f"{directory_path} 生成目录数失败")
-                return
-            # 获取目录树下载链接
-            download_url = self._115client.download_url(pick_code, headers=self._headers)
-            directory_content = self.fetch_content(download_url)
-            logger.info(f"{directory_path} 目录树下载成功")
-            return directory_content
-        except Exception as e:
-            logger.error(f"{directory_path} 目录树生成失败: {str(e)}")
-        finally:
-            if file_id:
-                try:
-                    self._115client.fs_delete(file_id)
-                except:
-                    pass
-
-    def fetch_content(self, url):
-        """
-        下载目录树文件内容
-        """
-        try:
-            with requests.get(url, headers=self._headers, stream=True, timeout=60) as response:
-                response.raise_for_status()
-                content = BytesIO()
-                for chunk in response.iter_content(chunk_size=8192):
-                    content.write(chunk)
-                return content.getvalue().decode("utf-16")
-        except:
-            logger.error(f"文件下载失败: {traceback.format_exc()}")
-            return None
-
-    @staticmethod
-    def parse_tree_structure(content: str, dir_path: str):
-        """
-        解析目录树内容并生成每个路径
-        """
-        tree_pattern = re_compile(r"^(?:\| )+\|-")
-        dir_path = Path(dir_path)
-        current_path = [str(dir_path.parent)] if dir_path.parent != Path("/") or (dir_path.parent == dir_path and (
-                dir_path.is_absolute() or ':' in dir_path.name)) else ["/"]  # 初始化当前路径为根目录
-
-        for line in content.splitlines():
-            # 匹配目录树的每一行
-            match = tree_pattern.match(line)
-            if not match:
-                continue  # 跳过不符合格式的行
-
-            # 计算当前行的深度
-            level_indicator = match.group(0)
-            depth = (len(level_indicator) // 2) - 1
-            # 获取当前行的目录名称，去掉前面的 '| ' 或 '- '
-            item_name = escape(line.strip()[len(level_indicator):].strip())
-
-            # 根据深度更新当前路径
-            if depth < len(current_path):
-                current_path[depth] = item_name  # 更新已有深度的名称
-            else:
-                current_path.append(item_name)  # 添加新的深度名称
-
-            # 生成并返回当前深度的完整路径
-            yield join_path(*current_path[:depth + 1]).replace('\\', '/')
 
     @eventmanager.register(EventType.PluginAction)
     def remote_sync_one(self, event: Event = None):
@@ -1007,7 +759,8 @@ class CloudStrmCompanion(_PluginBase):
             "other_mediaext": self._other_mediaext,
             "mediaservers": self._mediaservers,
             # 新增：路径替换规则
-            "path_replacements": "\n".join([f"{source}:{target}" for source, target in self._path_replacements.items()]) if self._path_replacements else "",
+            "path_replacements": "\n".join([f"{source}:{target}" for source, target in
+                                            self._path_replacements.items()]) if self._path_replacements else "",
         })
 
     def get_state(self) -> bool:
@@ -1051,14 +804,6 @@ class CloudStrmCompanion(_PluginBase):
             "kwargs": {} # 定时器参数
         }]
         """
-        if self._enabled and self._cron:
-            return [{
-                "id": "CloudStrmCompanion",
-                "name": "云盘Strm助手同步",
-                "trigger": CronTrigger.from_crontab(self._cron),
-                "func": self.scan,
-                "kwargs": {}
-            }]
         return []
 
     def get_api(self) -> List[Dict[str, Any]]:
@@ -1159,24 +904,8 @@ class CloudStrmCompanion(_PluginBase):
                                     {
                                         'component': 'VSwitch',
                                         'props': {
-                                            'model': 'onlyonce',
-                                            'label': '全量同步一次',
-                                        }
-                                    }
-                                ]
-                            },
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VSwitch',
-                                        'props': {
-                                            'model': 'rebuild',
-                                            'label': '重建缓存',
+                                            'model': 'notify',
+                                            'label': '发送通知',
                                         }
                                     }
                                 ]
@@ -1196,12 +925,7 @@ class CloudStrmCompanion(_PluginBase):
                                         }
                                     }
                                 ]
-                            }
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
+                            },
                             {
                                 'component': 'VCol',
                                 'props': {
@@ -1212,12 +936,17 @@ class CloudStrmCompanion(_PluginBase):
                                     {
                                         'component': 'VSwitch',
                                         'props': {
-                                            'model': 'notify',
-                                            'label': '发送通知',
+                                            'model': 'uriencode',
+                                            'label': 'url编码',
                                         }
                                     }
                                 ]
                             },
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
                             {
                                 'component': 'VCol',
                                 'props': {
@@ -1255,60 +984,6 @@ class CloudStrmCompanion(_PluginBase):
                     {
                         'component': 'VRow',
                         'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VSwitch',
-                                        'props': {
-                                            'model': 'uriencode',
-                                            'label': 'url编码',
-                                        }
-                                    }
-                                ]
-                            },
-                        ]
-                    },
-                    {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VCronField',
-                                        'props': {
-                                            'model': 'cron',
-                                            'label': '同步周期',
-                                            'placeholder': '0 0 * * *'
-                                        }
-                                    }
-                                ]
-                            },
-                            {
-                                'component': 'VCol',
-                                'props': {
-                                    'cols': 12,
-                                    'md': 4
-                                },
-                                'content': [
-                                    {
-                                        'component': 'VTextField',
-                                        'props': {
-                                            'model': '115_cookie',
-                                            'label': '115Cookie',
-                                        }
-                                    }
-                                ]
-                            },
                             {
                                 'component': 'VCol',
                                 'props': {
@@ -1536,9 +1211,6 @@ class CloudStrmCompanion(_PluginBase):
             }
         ], {
             "enabled": False,
-            "cron": "",
-            "onlyonce": False,
-            "rebuild": False,
             "notify": False,
             "monitor": False,
             "cover": False,
@@ -1550,7 +1222,6 @@ class CloudStrmCompanion(_PluginBase):
             "monitor_confs": "",
             "emby_path": "",
             "interval": 10,
-            "115_cookie": "",
             "url": "",
             "other_mediaext": ".nfo, .jpg, .png, .json",
             "rmt_mediaext": ".mp4, .mkv, .ts, .iso,.rmvb, .avi, .mov, .mpeg,.mpg, .wmv, .3gp, .asf, .m4v, .flv, .m2ts, .strm,.tp, .f4v",
@@ -1572,10 +1243,3 @@ class CloudStrmCompanion(_PluginBase):
                 except Exception as e:
                     print(str(e))
         self._observer = []
-        if self._scheduler:
-            self._scheduler.remove_all_jobs()
-            if self._scheduler.running:
-                self._event.set()
-                self._scheduler.shutdown()
-                self._event.clear()
-            self._scheduler = None
