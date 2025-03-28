@@ -8,10 +8,10 @@ import traceback
 import urllib.parse
 from datetime import datetime
 from pathlib import Path
-from typing import Any, List, Dict, Tuple
+from typing import Any, List, Dict, Tuple, Optional
 
 import requests
-from apscheduler.triggers.cron import CronTrigger
+from apscheduler.schedulers.background import BackgroundScheduler
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers.polling import PollingObserver
 
@@ -99,6 +99,12 @@ class CloudStrmCompanion(_PluginBase):
         "Cookie": "",
     }
 
+    # 定时器
+    _scheduler: Optional[BackgroundScheduler] = None
+    # 退出事件
+    _event = threading.Event()
+
+
     def init_plugin(self, config: dict = None):
         # 清空配置
         self._strm_dir_conf = {}
@@ -139,6 +145,9 @@ class CloudStrmCompanion(_PluginBase):
         self.stop_service()
 
         if self._enabled:
+            # 定时服务
+            self._scheduler = BackgroundScheduler(timezone=settings.TZ)
+
             if self._notify:
                 # 追加入库消息统一发送服务
                 self._scheduler.add_job(self.send_msg, trigger='interval', seconds=15)
@@ -209,6 +218,11 @@ class CloudStrmCompanion(_PluginBase):
                         else:
                             logger.error(f"{local_dir} 启动x实时监控失败：{err_msg}")
                         self.systemmessage.put(f"{local_dir} 启动实时监控失败：{err_msg}")
+
+            # 启动任务
+            if self._scheduler.get_jobs():
+                self._scheduler.print_jobs()
+                self._scheduler.start()
 
     @eventmanager.register(EventType.PluginAction)
     def strm_one(self, event: Event = None):
@@ -1243,3 +1257,10 @@ class CloudStrmCompanion(_PluginBase):
                 except Exception as e:
                     print(str(e))
         self._observer = []
+        if self._scheduler:
+            self._scheduler.remove_all_jobs()
+            if self._scheduler.running:
+                self._event.set()
+                self._scheduler.shutdown()
+                self._event.clear()
+            self._scheduler = None
