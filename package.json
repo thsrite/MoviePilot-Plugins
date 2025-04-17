@@ -778,12 +778,13 @@
     "name": "Lucky",
     "description": "Lucky HomePage自定义API。",
     "labels": "工具",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "icon": "Lucky_A.png",
     "author": "thsrite",
     "level": 1,
     "v2": true,
     "history": {
+      "v1.0.2": "修复问题",
       "v1.0.1": "支持Lucky最新版本获取ipv4。",
       "v1.0.0": "Lucky HomePage自定义API。"
     }
