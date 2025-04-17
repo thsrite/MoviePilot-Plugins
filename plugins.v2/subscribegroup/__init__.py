@@ -9,7 +9,7 @@ from app.db.site_oper import SiteOper
 from app.db.subscribe_oper import SubscribeOper
 from app.log import logger
 from app.plugins import _PluginBase
-from app.schemas.types import EventType, SystemConfigKey
+from app.schemas.types import EventType, SystemConfigKey, MediaType
 
 
 class SubscribeGroup(_PluginBase):
@@ -20,7 +20,7 @@ class SubscribeGroup(_PluginBase):
     # 插件图标
     plugin_icon = "teamwork.png"
     # 插件版本
-    plugin_version = "2.8.4"
+    plugin_version = "2.8.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -164,8 +164,13 @@ class SubscribeGroup(_PluginBase):
             sid = event_data.get("subscribe_id")
             category = event_data.get("mediainfo").get("category")
             if not category:
-                logger.error(f"订阅ID:{sid} 未获取到二级分类")
-                return
+                media_info = self.chain.recognize_media(mtype=MediaType(event_data.get("mediainfo").get("type")),
+                                                        tmdbid=event_data.get("mediainfo").get("tmdb_id"))
+                if media_info and media_info.get("category"):
+                    category = media_info.get("category")
+                else:
+                    logger.error(f"订阅ID:{sid} 未获取到二级分类")
+                    return
 
             if category not in self._subscribe_confs.keys():
                 logger.error(f"订阅ID:{sid} 二级分类:{category} 未配置自定义规则")
