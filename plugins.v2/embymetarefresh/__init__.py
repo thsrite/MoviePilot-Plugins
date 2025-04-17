@@ -41,7 +41,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "2.2.7"
+    plugin_version = "2.2.8"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -197,6 +197,8 @@ class EmbyMetaRefresh(_PluginBase):
                     logger.error(f"获取 神医助手 配置失败：{str(e)}")
 
             if str(self._refresh_type) == "历史记录":
+                self._ReplaceAllMetadata = "true"
+                self._ReplaceAllImages = "true"
                 # 获取days内入库的媒体
                 current_date = datetime.now()
                 # 计算几天前的日期
