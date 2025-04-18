@@ -20,7 +20,7 @@ class SubscribeGroup(_PluginBase):
     # 插件图标
     plugin_icon = "teamwork.png"
     # 插件版本
-    plugin_version = "2.8.5"
+    plugin_version = "2.8.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -166,8 +166,10 @@ class SubscribeGroup(_PluginBase):
             if not category:
                 media_info = self.chain.recognize_media(mtype=MediaType(event_data.get("mediainfo").get("type")),
                                                         tmdbid=event_data.get("mediainfo").get("tmdb_id"))
-                if media_info and media_info.get("category"):
-                    category = media_info.get("category")
+                logger.error(f"订阅ID:{sid} 未获取到二级分类，尝试通过媒体信息识别 {media_info}")
+                if media_info and media_info.category:
+                    category = media_info.category
+                    logger.info(f"订阅ID:{sid} 二级分类:{category} 已通过媒体信息识别")
                 else:
                     logger.error(f"订阅ID:{sid} 未获取到二级分类")
                     return
