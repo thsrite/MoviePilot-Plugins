@@ -6,10 +6,11 @@ import threading
 import time
 import traceback
 import urllib.parse
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, List, Dict, Tuple, Optional
 
+import pytz
 import requests
 from apscheduler.schedulers.background import BackgroundScheduler
 from watchdog.events import FileSystemEventHandler
@@ -56,7 +57,7 @@ class CloudStrmCompanion(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png"
     # 插件版本
-    plugin_version = "1.3"
+    plugin_version = "1.3.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -73,6 +74,7 @@ class CloudStrmCompanion(_PluginBase):
     _monitor_confs = None
     _cover = False
     _monitor = False
+    _onlyonce = False
     _copy_files = False
     _copy_subtitles = False
     _url = None
@@ -117,6 +119,7 @@ class CloudStrmCompanion(_PluginBase):
 
         if config:
             self._enabled = config.get("enabled")
+            self._onlyonce = config.get("onlyonce")
             self._interval = config.get("interval") or 10
             self._monitor = config.get("monitor")
             self._cover = config.get("cover")
@@ -144,7 +147,7 @@ class CloudStrmCompanion(_PluginBase):
         # 停止现有任务
         self.stop_service()
 
-        if self._enabled:
+        if self._enabled or self._onlyonce:
             # 定时服务
             self._scheduler = BackgroundScheduler(timezone=settings.TZ)
 
@@ -219,10 +222,46 @@ class CloudStrmCompanion(_PluginBase):
                             logger.error(f"{local_dir} 启动x实时监控失败：{err_msg}")
                         self.systemmessage.put(f"{local_dir} 启动实时监控失败：{err_msg}")
 
+            # 运行一次定时服务
+            if self._onlyonce:
+                logger.info("云盘Strm助手全量执行服务启动，立即运行一次")
+                self._scheduler.add_job(func=self.scan, trigger='date',
+                                        run_date=datetime.now(tz=pytz.timezone(settings.TZ)) + timedelta(seconds=3),
+                                        name="云盘Strm助手全量执行服")
+                # 关闭一次性开关
+                self._onlyonce = False
+                # 保存配置
+                self.__update_config()
+
             # 启动任务
             if self._scheduler.get_jobs():
                 self._scheduler.print_jobs()
                 self._scheduler.start()
+
+    def scan(self):
+        """
+        全量执行
+        """
+        logger.info("开始全量执行")
+        for mon_path in self._strm_dir_conf.keys():
+            # 遍历目录下所有文件
+            for root, dirs, files in os.walk(mon_path):
+                # 如果遇到名为'extrafanart'的文件夹，则跳过处理该文件夹，继续处理其他文件夹
+                if "extrafanart" in dirs:
+                    dirs.remove("extrafanart")
+                # 处理文件
+                for file in files:
+                    source_file = os.path.join(root, file)
+                    # 回收站及隐藏的文件不处理
+                    if (source_file.find("/@Recycle") != -1
+                            or source_file.find("/#recycle") != -1
+                            or source_file.find("/.") != -1
+                            or source_file.find("/@eaDir") != -1):
+                        logger.info(f"{source_file} 是回收站或隐藏的文件，跳过处理")
+                        continue
+
+                    self.__handle_file(event_path=source_file, mon_path=mon_path)
+        logger.info("全量执行完成")
 
     @eventmanager.register(EventType.PluginAction)
     def strm_one(self, event: Event = None):
@@ -759,16 +798,13 @@ class CloudStrmCompanion(_PluginBase):
             "onlyonce": self._onlyonce,
             "cover": self._cover,
             "notify": self._notify,
-            "rebuild": self._rebuild,
             "monitor": self._monitor,
             "interval": self._interval,
             "copy_files": self._copy_files,
             "copy_subtitles": self._copy_subtitles,
             "refresh_emby": self._refresh_emby,
-            "cron": self._cron,
             "url": self._url,
             "monitor_confs": self._monitor_confs,
-            "115_cookie": self._115_cookie,
             "rmt_mediaext": self._rmt_mediaext,
             "other_mediaext": self._other_mediaext,
             "mediaservers": self._mediaservers,
@@ -989,6 +1025,22 @@ class CloudStrmCompanion(_PluginBase):
                                         'props': {
                                             'model': 'copy_subtitles',
                                             'label': '复制字幕文件',
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'onlyonce',
+                                            'label': '立即运行一次',
                                         }
                                     }
                                 ]
@@ -1228,6 +1280,7 @@ class CloudStrmCompanion(_PluginBase):
             "notify": False,
             "monitor": False,
             "cover": False,
+            "onlyonce": False,
             "copy_files": False,
             "uriencode": False,
             "copy_subtitles": False,
