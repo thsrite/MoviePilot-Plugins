@@ -57,7 +57,7 @@ class CloudStrmCompanion(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png"
     # 插件版本
-    plugin_version = "1.3.1"
+    plugin_version = "1.3.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -105,7 +105,6 @@ class CloudStrmCompanion(_PluginBase):
     _scheduler: Optional[BackgroundScheduler] = None
     # 退出事件
     _event = threading.Event()
-
 
     def init_plugin(self, config: dict = None):
         # 清空配置
@@ -337,23 +336,44 @@ class CloudStrmCompanion(_PluginBase):
                     # 生成strm文件
                     self.__create_strm_file(strm_file=target_file,
                                             strm_content=strm_content)
-                else:
-                    # 复制非媒体文件
-                    if self._copy_files and self._other_mediaext and Path(event_path).suffix.lower() in [ext.strip() for
-                                                                                                         ext in
-                                                                                                         self._other_mediaext.split(
-                                                                                                             ",")]:
-                        os.makedirs(os.path.dirname(target_file), exist_ok=True)
-                        shutil.copy2(str(event_path), target_file)
-                        logger.info(f"复制非媒体文件 {str(event_path)} 到 {target_file}")
 
-                    # 复制字幕文件（独立于copy_files检查）
-                    if self._copy_subtitles and Path(event_path).suffix.lower() in ['.srt', '.ass', '.ssa', '.sub']:
-                        os.makedirs(os.path.dirname(target_file), exist_ok=True)
-                        shutil.copy2(str(event_path), target_file)
-                        logger.info(f"复制字幕文件 {str(event_path)} 到 {target_file}")
+                    # nfo、jpg等同名文件
+                    pattern = Path(event_path).stem.replace('[', '?').replace(']', '?')
+                    files = list(Path(event_path).parent.glob(f"{pattern}.*"))
+                    logger.debug(f"筛选到 {Path(event_path).parent} 下同名文件 {pattern} {files}")
+                    for file in files:
+                        target_file = str(file).replace(mon_path, strm_dir)
+                        self.__handle_other_files(event_path=str(file), target_file=target_file)
+
+                    # thumb图片
+                    thumb_file = Path(event_path).parent / (Path(event_path).stem + "-thumb.jpg")
+                    if thumb_file.exists():
+                        target_file = str(thumb_file).replace(mon_path, strm_dir)
+                        self.__handle_other_files(event_path=str(thumb_file), target_file=target_file)
+                else:
+                    self.__handle_other_files(event_path=event_path, target_file=target_file)
         except Exception as e:
             logger.error("目录监控发生错误：%s - %s" % (str(e), traceback.format_exc()))
+
+    def __handle_other_files(self, event_path: str, target_file: str):
+        """
+        处理非媒体文件
+        :param event_path: 事件文件路径
+        """
+        # 复制非媒体文件
+        if self._copy_files and self._other_mediaext and Path(event_path).suffix.lower() in [ext.strip() for
+                                                                                             ext in
+                                                                                             self._other_mediaext.split(
+                                                                                                 ",")]:
+            os.makedirs(os.path.dirname(target_file), exist_ok=True)
+            shutil.copy2(str(event_path), target_file)
+            logger.info(f"复制非媒体文件 {str(event_path)} 到 {target_file}")
+
+        # 复制字幕文件（独立于copy_files检查）
+        if self._copy_subtitles and Path(event_path).suffix.lower() in ['.srt', '.ass', '.ssa', '.sub']:
+            os.makedirs(os.path.dirname(target_file), exist_ok=True)
+            shutil.copy2(str(event_path), target_file)
+            logger.info(f"复制字幕文件 {str(event_path)} 到 {target_file}")
 
     def __sava_json(self):
         """

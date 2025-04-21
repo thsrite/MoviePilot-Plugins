@@ -447,11 +447,12 @@
     "name": "云盘Strm助手",
     "description": "实时监控、定时全量增量生成strm文件。",
     "labels": "云盘",
-    "version": "1.3.1",
+    "version": "1.3.2",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v1.3.2": "插件联动生成Strm文件同时处理非媒体文件",
       "v1.3.1": "增加全量同步",
       "v1.3": "移除全量同步、定时同步（谨慎升级）",
       "v1.2.7": "增加路径替换规则",
