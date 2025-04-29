@@ -4,13 +4,11 @@ from pathlib import Path
 from app.core.config import settings
 from app.core.plugin import PluginManager
 from app.db.systemconfig_oper import SystemConfigOper
-from app.helper.plugin import PluginHelper
 from app.plugins import _PluginBase
 from typing import Any, List, Dict, Tuple
 from app.log import logger
 from app.scheduler import Scheduler
 from app.schemas.types import SystemConfigKey
-from app.utils.string import StringUtils
 
 
 class PluginUnInstall(_PluginBase):
@@ -21,7 +19,7 @@ class PluginUnInstall(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/uninstall.png"
     # 插件版本
-    plugin_version = "2.1"
+    plugin_version = "2.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -93,17 +91,8 @@ class PluginUnInstall(_PluginBase):
         """
         拼装插件配置页面，需要返回两块数据：1、页面配置；2、数据结构
         """
-        # 已安装插件
-        local_plugins = self.get_local_plugins()
-        # 编历 local_plugins，生成插件类型选项
-        pluginOptions = []
-
-        for plugin_id in list(local_plugins.keys()):
-            local_plugin = local_plugins.get(plugin_id)
-            pluginOptions.append({
-                "title": f"{local_plugin.get('plugin_name')} v{local_plugin.get('plugin_version')}",
-                "value": local_plugin.get("id")
-            })
+        # 直接调用修复后的 get_local_plugins 获取选项
+        pluginOptions = self.get_local_plugins()
         return [
             {
                 'component': 'VForm',
@@ -197,35 +186,32 @@ class PluginUnInstall(_PluginBase):
     def get_local_plugins():
         """
         获取本地插件
+        (修改为只获取已安装插件，避免 compare_version 和市场查询)
         """
-        # 已安装插件
-        install_plugins = SystemConfigOper().get(SystemConfigKey.UserInstalledPlugins) or []
+        plugin_manager = PluginManager()
+        # 获取本地所有插件实例
+        local_plugin_instances = plugin_manager.get_local_plugins() or []
 
-        local_plugins = {}
-        # 线上插件列表
-        markets = settings.PLUGIN_MARKET.split(",")
-        for market in markets:
-            online_plugins = PluginHelper().get_plugins(market) or {}
-            for pid, plugin in online_plugins.items():
-                if pid in install_plugins:
-                    local_plugin = local_plugins.get(pid)
-                    if local_plugin:
-                        if StringUtils.compare_version(local_plugin.get("plugin_version"),">", plugin.get("version")):
-                            local_plugins[pid] = {
-                                "id": pid,
-                                "plugin_name": plugin.get("name"),
-                                "repo_url": market,
-                                "plugin_version": plugin.get("version")
-                            }
-                    else:
-                        local_plugins[pid] = {
-                            "id": pid,
-                            "plugin_name": plugin.get("name"),
-                            "repo_url": market,
-                            "plugin_version": plugin.get("version")
-                        }
+        # 过滤出已安装的插件
+        installed_plugins = [p for p in local_plugin_instances if getattr(p, 'installed', False)]
 
-        return local_plugins
+        # 根据插件顺序排序 (可选)
+        sorted_plugins = sorted(installed_plugins, key=lambda p: getattr(p, 'plugin_order', 1000))
+
+        # 构建 VSelect 需要的选项列表
+        plugin_options = []
+        for plugin in sorted_plugins:
+             # 确保 getattr 有默认值
+             plugin_name = getattr(plugin, 'plugin_name', getattr(plugin, 'id', '未知插件'))
+             plugin_version = getattr(plugin, 'plugin_version', 'N/A')
+             plugin_id = getattr(plugin, 'id', None)
+             if plugin_id:
+                 plugin_options.append({
+                     "title": f"{plugin_name} v{plugin_version}",
+                     "value": plugin_id
+                 })
+
+        return plugin_options
 
     def get_page(self) -> List[dict]:
         pass

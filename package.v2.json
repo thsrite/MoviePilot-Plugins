@@ -552,11 +552,12 @@
     "name": "插件彻底卸载",
     "description": "删除数据库中已安装插件记录、清理插件文件。",
     "labels": "插件管理",
-    "version": "2.1",
+    "version": "2.2",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/uninstall.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v2.2": "修复插件获取（by madrays佬）",
       "v2.1": "适配MP V2新的代码方法",
       "v1.2.1": "fix update_config",
       "v1.2": "卸载时先停止注册服务",
