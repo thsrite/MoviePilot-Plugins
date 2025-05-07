@@ -694,12 +694,14 @@ class WeChatForward(_PluginBase):
                     # 搜索消息，获取消息text中的用户
                     result = re.search(r"用户：(.*?)\n", text)
                     if not result:
-                        # 订阅消息，获取消息text中的用户
-                        pattern = r"来自用户：(.*?)$"
-                        result = re.search(pattern, text)
+                        result = re.search(r"\*用户\*：(.*?)\n", text)
                         if not result:
-                            logger.error(f"{title} 未获取到用户，跳过处理")
-                            continue
+                            # 订阅消息，获取消息text中的用户
+                            pattern = r"来自用户：(.*?)$"
+                            result = re.search(pattern, text)
+                            if not result:
+                                logger.error(f"{title} 未获取到用户，跳过处理")
+                                continue
 
                     # 获取消息text中的用户
                     user_id = result.group(1)
