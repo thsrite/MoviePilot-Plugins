@@ -113,7 +113,7 @@ class Lucky(_PluginBase):
         ipaddr = self.get_ip()
         expire_time = self.get_ssl()
         if expire_time:
-            expire_time = expire_time.split(' ')[0]
+            expire_time = expire_time.split(' ')[0].replace('-', '')
 
         logging.info(
             f"Proxy Rules Total: {len(rules)}\n"
