@@ -86,7 +86,11 @@ class Lucky(_PluginBase):
             response = requests.get(ssl_url, verify=False)  # 关闭SSL证书验证
             response.raise_for_status()  # 如果状态码不是 2xx，抛出异常
             if response.json().get('ret') == 0:
-                return response.json().get('list')[0].get('CertsInfo')[0].get('NotAfterTime')
+                try:
+                    return response.json().get('list')[0].get('CertsInfo')[0].get('NotAfterTime')
+                except Exception as e:
+                    return response.json().get('list')[0].get('CertsInfo', {}).get('NotAfterTime')
+            return None
         except Exception as e:
             logging.error("An error occurred:", e)
             return None
