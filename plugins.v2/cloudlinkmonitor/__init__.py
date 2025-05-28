@@ -193,6 +193,7 @@ class CloudLinkMonitor(_PluginBase):
                     self._dirconf[mon_path] = target_path
                 else:
                     self._dirconf[mon_path] = None
+                    logger.info(f"{mon_path} 的目的目录为空，发生变动时直接通知下游")
 
                 # 转移方式
                 self._transferconf[mon_path] = _transfer_type
@@ -393,6 +394,16 @@ class CloudLinkMonitor(_PluginBase):
 
                 # 查询转移目的目录
                 target: Path = self._dirconf.get(mon_path)
+
+                if self._strm and target is None:
+                    # 通知Strm助手生成
+                    logger.info(f"{file_path} 直接通知strm助手生成strm!")
+                    self.eventmanager.send_event(EventType.PluginAction, {
+                        'file_path': str(file_path),
+                        'action': 'cloudstrm_file'
+                    })
+                    return
+
                 # 查询转移方式
                 transfer_type = self._transferconf.get(mon_path)
 
