@@ -202,11 +202,12 @@
     "name": "媒体文件同步删除",
     "description": "同步删除历史记录、源文件和下载任务。",
     "labels": "媒体库，文件整理",
-    "version": "1.9.0",
+    "version": "1.9.1",
     "icon": "mediasyncdel.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v1.9.1": "兼容MoviePilot v2.5.3-1",
       "v1.9.0": "刷新版本号",
       "v1.8.9": "修复删除空文件",
       "v1.8.7": "修复主程序修改事件任务后，同步删除未收到通知的问题",
