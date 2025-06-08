@@ -587,7 +587,7 @@ class MediaSyncDel(_PluginBase):
         event_type = event_data.event
 
         # Emby Webhook event_type = library.deleted
-        if not event_type or str(event_type) != 'library.deleted':
+        if not event_type or str(event_type) not in ['library.deleted', 'ItemDeleted']:
             return
 
         # 媒体类型
