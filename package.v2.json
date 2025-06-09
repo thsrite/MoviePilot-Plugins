@@ -409,11 +409,12 @@
     "name": "目录实时监控",
     "description": "监控云盘目录文件变化，自动转移媒体文件。",
     "labels": "云盘,工具",
-    "version": "2.5.8",
+    "version": "2.5.9",
     "icon": "Linkease_A.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v2.5.9": "增加定时任务执行",
       "v2.5.8": "fix bug",
       "v2.5.7": "修复获取目录设置配置",
       "v2.5.6": "修复软连接",

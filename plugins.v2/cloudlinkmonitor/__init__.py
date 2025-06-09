@@ -63,7 +63,7 @@ class CloudLinkMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Linkease_A.png"
     # 插件版本
-    plugin_version = "2.5.8"
+    plugin_version = "2.5.9"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -139,7 +139,7 @@ class CloudLinkMonitor(_PluginBase):
             self._monitor_dirs = config.get("monitor_dirs") or ""
             self._exclude_keywords = config.get("exclude_keywords") or ""
             self._interval = config.get("interval") or 10
-            # self._cron = config.get("cron")
+            self._cron = config.get("cron")
             self._size = config.get("size") or 0
             self._softlink = config.get("softlink")
             self._strm = config.get("strm")
@@ -269,6 +269,7 @@ class CloudLinkMonitor(_PluginBase):
             "interval": self._interval,
             "history": self._history,
             "softlink": self._softlink,
+            "cron": self._cron,
             "strm": self._strm,
             "scrape": self._scrape,
             "category": self._category,
@@ -952,6 +953,28 @@ class CloudLinkMonitor(_PluginBase):
                                             'model': 'interval',
                                             'label': '入库消息延迟',
                                             'placeholder': '10'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 4
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'cron',
+                                            'label': '定时任务',
+                                            'placeholder': '0 0 * * *'
                                         }
                                     }
                                 ]
