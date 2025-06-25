@@ -62,7 +62,7 @@ class ShortPlayMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Amule_B.png"
     # 插件版本
-    plugin_version = "4.0.1"
+    plugin_version = "4.0.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -517,7 +517,7 @@ class ShortPlayMonitor(_PluginBase):
             if transfer_type == 'link':
                 # 硬链接
                 retcode, retmsg = SystemUtils.link(file_item, target_file)
-            elif transfer_type == 'filesoftlink':
+            elif transfer_type == 'softlink':
                 # 软链接
                 retcode, retmsg = SystemUtils.softlink(file_item, target_file)
             elif transfer_type == 'move':
