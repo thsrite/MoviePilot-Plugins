@@ -5,8 +5,14 @@ from typing import Any, List, Dict, Tuple, Optional
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from clouddrive import CloudDriveClient, Client
-from clouddrive.proto import CloudDrive_pb2
+try:
+    from clouddrive import CloudDriveClient, Client
+    from clouddrive.proto import CloudDrive_pb2
+except ImportError:
+    from sys import executable
+    from subprocess import run
+
+    run([executable, "-m", "pip", "install", "clouddrive-0.0.12.7.1.tar.gz"], check=True)
 
 from app import schemas
 from app.core.config import settings
@@ -25,7 +31,7 @@ class Cd2Assistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png"
     # 插件版本
-    plugin_version = "2.0.3"
+    plugin_version = "2.0.4"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
