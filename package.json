@@ -126,7 +126,6 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/pluginupdate.png",
     "author": "thsrite",
     "level": 1,
-    "v2": true,
     "history": {
       "v2.0.1": "仅可选择已安装插件",
       "v2.0": "修复插件显示版本问题",
