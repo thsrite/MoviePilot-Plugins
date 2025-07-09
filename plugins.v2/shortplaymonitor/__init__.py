@@ -16,7 +16,8 @@ from requests import RequestException
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 from watchdog.observers.polling import PollingObserver
-from app.helper.sites import SitesHelper, SiteSpider
+from app.helper.sites import SitesHelper
+from app.modules.indexer.spider import SiteSpider
 
 from app.chain.tmdb import TmdbChain
 from app.core.config import settings
@@ -62,7 +63,7 @@ class ShortPlayMonitor(_PluginBase):
     # 插件图标
     plugin_icon = "Amule_B.png"
     # 插件版本
-    plugin_version = "4.0.2"
+    plugin_version = "4.0.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
