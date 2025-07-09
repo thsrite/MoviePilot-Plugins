@@ -10,7 +10,7 @@ except ImportError:
     from sys import executable
     from subprocess import run
 
-    run([executable, "-m", "pip", "install", "clouddrive-0.0.12.7.1.tar.gz"], check=True)
+    run([executable, "-m", "pip", "install", "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/refs/heads/main/data/clouddrive-0.0.12.7.1.tar.gz"], check=True)
 from app import schemas
 from app.core.config import settings
 from app.core.event import eventmanager, Event
@@ -32,7 +32,7 @@ class Cd2Assistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png"
     # 插件版本
-    plugin_version = "1.8.5"
+    plugin_version = "1.8.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
