@@ -23,7 +23,7 @@ class InvitesSignin(_PluginBase):
     # 插件图标
     plugin_icon = "invites.png"
     # 插件版本
-    plugin_version = "1.5"
+    plugin_version = "1.5.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -81,6 +81,9 @@ class InvitesSignin(_PluginBase):
             if self._scheduler.get_jobs():
                 self._scheduler.print_jobs()
                 self._scheduler.start()
+
+    def __keep(self):
+        RequestUtils(cookies=self._cookie).get_res(url="https://invites.fun")
 
     def __signin(self):
         """
@@ -143,6 +146,8 @@ class InvitesSignin(_PluginBase):
                     text="签到失败，请检查cookie是否失效")
             return
 
+        logger.info("药丸签到成功")
+
         sign_dict = json.loads(res.text)
         money = sign_dict['data']['attributes']['money']
         totalContinuousCheckIn = sign_dict['data']['attributes']['totalContinuousCheckIn']
@@ -198,6 +203,12 @@ class InvitesSignin(_PluginBase):
                 "name": "药丸签到服务",
                 "trigger": CronTrigger.from_crontab(self._cron),
                 "func": self.__signin,
+                "kwargs": {}
+            },{
+                "id": "InvitesKeep",
+                "name": "药丸保活服务",
+                "trigger": CronTrigger.from_crontab("0 */1 * * *"),
+                "func": self.__keep,
                 "kwargs": {}
             }]
         return []
