@@ -5,31 +5,14 @@ from typing import Any, List, Dict, Tuple, Optional
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-
 try:
     from clouddrive import CloudDriveClient, Client
     from clouddrive.proto import CloudDrive_pb2
 except ImportError:
-    import os
     from sys import executable
     from subprocess import run
 
-    proxy = os.getenv("PROXY_HOST")
-
-    cmd = [
-        executable, "-m", "pip", "install",
-        "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/refs/heads/main/data/clouddrive-0.0.12.7.1.tar.gz"
-    ]
-
-    if proxy:
-        cmd += ["--proxy", proxy]
-        os.environ["HTTP_PROXY"] = proxy
-        os.environ["HTTPS_PROXY"] = proxy
-
-    run(cmd, check=True)
-
-    from clouddrive import CloudDriveClient, Client
-    from clouddrive.proto import CloudDrive_pb2
+    run([executable, "-m", "pip", "install", "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/refs/heads/main/data/clouddrive-0.0.12.7.1.tar.gz"], check=True)
 
 from app import schemas
 from app.core.config import settings
