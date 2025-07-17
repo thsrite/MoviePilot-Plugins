@@ -12,8 +12,6 @@ except ImportError:
     from sys import executable
     from subprocess import run
 
-    run([executable, "-m", "pip", "install", "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/refs/heads/main/data/clouddrive-0.0.12.7.1.tar.gz"], check=True)
-
 from app import schemas
 from app.core.config import settings
 from app.core.event import eventmanager, Event
