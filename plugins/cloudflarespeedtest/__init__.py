@@ -62,7 +62,7 @@ class CloudflareSpeedTest(_PluginBase):
     _cf_ipv6 = None
     _result_file = None
     _release_prefix = 'https://github.com/XIU2/CloudflareSpeedTest/releases/download'
-    _binary_name = 'CloudflareST'
+    _binary_name = 'cfst'
 
     def init_plugin(self, config: dict = None):
         # 停止现有任务
