@@ -1310,7 +1310,6 @@ class WeatherWidget(_PluginBase):
     def __resolve_weather(self) -> Optional[str]:
         """解析当前天气"""
         try:
-            logger.error(f"请求天气信息: {self._weather_url}, UA: {self._ua}")
             response = RequestUtils(timeout=10, ua=self._ua).get_res(self._weather_url)
             response.raise_for_status()
         except Exception as e:
