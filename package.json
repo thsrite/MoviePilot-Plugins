@@ -173,7 +173,7 @@
     "level": 1,
     "v2": true,
     "history": {
-      "v1.3": "新增接口/webhook/custom,参数title、content、url",
+      "v1.3": "新增参数title、content、url",
       "v1.2": "修改配置描述",
       "v1.1": "修复bug",
       "v1.0": "接收群辉webhook通知并推送"

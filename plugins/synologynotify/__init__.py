@@ -36,36 +36,23 @@ class SynologyNotify(_PluginBase):
             self._notify = config.get("notify")
             self._msgtype = config.get("msgtype")
 
-    def send_notify(self, text: str) -> schemas.Response:
+    def send_notify(self, text: str = None, title: str = None, content: str = None, url: str = None) -> schemas.Response:
         """
         发送通知
         """
-        logger.info(f"收到webhook消息啦。。。  {text}")
+        logger.info(f"收到webhook消息啦。。。  {text}  {title} {content} {url}")
         if self._enabled and self._notify:
             mtype = NotificationType.Manual
             if self._msgtype:
                 mtype = NotificationType.__getitem__(str(self._msgtype)) or NotificationType.Manual
-            self.post_message(title="群辉通知",
-                              mtype=mtype,
-                              text=text)
-
-        return schemas.Response(
-            success=True,
-            message="发送成功"
-        )
-
-    def send_notify_custom(self, title: str, content: str, url: str) -> schemas.Response:
-        """
-        发送通知
-        """
-        logger.info(f"收到webhook消息啦。。。  {title} {content} {url}")
-        if self._enabled and self._notify:
-            mtype = NotificationType.Manual
-            if self._msgtype:
-                mtype = NotificationType.__getitem__(str(self._msgtype)) or NotificationType.Manual
-            self.post_message(title=title,
-                              mtype=mtype,
-                              text=f"{content}\n[查看详情]({url})")
+            if text:
+                self.post_message(title="群辉通知",
+                                  mtype=mtype,
+                                  text=text)
+            else:
+                self.post_message(title=title,
+                                  mtype=mtype,
+                                  text=f"{content}\n[查看详情]({url})")
 
         return schemas.Response(
             success=True,
@@ -96,13 +83,6 @@ class SynologyNotify(_PluginBase):
                 "methods": ["GET"],
                 "summary": "群辉webhook",
                 "description": "接受群辉webhook通知并推送",
-            },
-            {
-                "path": "/webhook/custom",
-                "endpoint": self.send_notify_custom,
-                "methods": ["GET"],
-                "summary": "群辉webhook自定义",
-                "description": "参数title、content、url",
             }
         ]
 
