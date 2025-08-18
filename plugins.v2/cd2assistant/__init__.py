@@ -5,14 +5,9 @@ from typing import Any, List, Dict, Tuple, Optional
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-try:
-    from clouddrive import CloudDriveClient, Client
-    from clouddrive.proto import CloudDrive_pb2
-except ImportError:
-    from sys import executable
-    from subprocess import run
 
-    run([executable, "-m", "pip", "install", "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/refs/heads/main/data/clouddrive-0.0.12.7.1.tar.gz"], check=True)
+from clouddrive import CloudDriveClient, Client
+from clouddrive.proto import CloudDrive_pb2
 
 from app import schemas
 from app.core.config import settings
@@ -21,7 +16,6 @@ from app.log import logger
 from app.plugins import _PluginBase
 from app.schemas import NotificationType
 from app.schemas.types import EventType
-
 
 class Cd2Assistant(_PluginBase):
     # 插件名称

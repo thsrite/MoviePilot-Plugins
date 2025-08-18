@@ -1,0 +1,17 @@
+https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/refs/heads/main/data/clouddrive-0.0.12.7.1.tar.gz
+glob_pattern
+grpcio
+grpcio-tools
+grpclib
+grpclib[protobuf]
+http_response
+path_ignore_pattern
+protobuf
+python-argtools
+python-dateutil
+python-download>=0.0.3
+python-filewrap>=0.1.1
+python-httpfile>=0.0.2
+python-http_request>=0.0.6
+python-urlopen
+yarl

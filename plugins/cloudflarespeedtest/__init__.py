@@ -62,7 +62,7 @@ class CloudflareSpeedTest(_PluginBase):
     _cf_ipv6 = None
     _result_file = None
     _release_prefix = 'https://github.com/XIU2/CloudflareSpeedTest/releases/download'
-    _binary_name = 'CloudflareST'
+    _binary_name = 'cfst'
 
     def init_plugin(self, config: dict = None):
         # 停止现有任务
@@ -370,7 +370,7 @@ class CloudflareSpeedTest(_PluginBase):
                 if SystemUtils.is_windows():
                     self.__get_windows_cloudflarest(download_url, proxies)
                 else:
-                    os.system(f'wget -P {self._cf_path} https://ghproxy.com/{download_url}')
+                    os.system(f'wget -P {self._cf_path} https://ghfast.top/{download_url}')
 
         # 判断是否下载好安装包
         if Path(f'{self._cf_path}/{cf_file_name}').exists():
