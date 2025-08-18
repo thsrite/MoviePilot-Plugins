@@ -13,7 +13,7 @@ class SynologyNotify(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/synology.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -54,6 +54,24 @@ class SynologyNotify(_PluginBase):
             message="发送成功"
         )
 
+    def send_notify_custom(self, title: str, content: str, url: str) -> schemas.Response:
+        """
+        发送通知
+        """
+        logger.info(f"收到webhook消息啦。。。  {title} {content} {url}")
+        if self._enabled and self._notify:
+            mtype = NotificationType.Manual
+            if self._msgtype:
+                mtype = NotificationType.__getitem__(str(self._msgtype)) or NotificationType.Manual
+            self.post_message(title=title,
+                              mtype=mtype,
+                              text=f"{content}\n[查看详情]({url})")
+
+        return schemas.Response(
+            success=True,
+            message="发送成功"
+        )
+
     def get_state(self) -> bool:
         return self._enabled
 
@@ -71,13 +89,22 @@ class SynologyNotify(_PluginBase):
             "summary": "API说明"
         }]
         """
-        return [{
-            "path": "/webhook",
-            "endpoint": self.send_notify,
-            "methods": ["GET"],
-            "summary": "群辉webhook",
-            "description": "接受群辉webhook通知并推送",
-        }]
+        return [
+            {
+                "path": "/webhook",
+                "endpoint": self.send_notify,
+                "methods": ["GET"],
+                "summary": "群辉webhook",
+                "description": "接受群辉webhook通知并推送",
+            },
+            {
+                "path": "/webhook/custom",
+                "endpoint": self.send_notify_custom,
+                "methods": ["GET"],
+                "summary": "群辉webhook自定义",
+                "description": "参数title、content、url",
+            }
+        ]
 
     def get_form(self) -> Tuple[List[dict], Dict[str, Any]]:
         """

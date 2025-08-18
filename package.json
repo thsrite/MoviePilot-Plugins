@@ -167,12 +167,13 @@
     "name": "群辉Webhook通知",
     "description": "接收群辉webhook通知并推送。",
     "labels": "消息通知",
-    "version": "1.2",
+    "version": "1.3",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/synology.png",
     "author": "thsrite",
     "level": 1,
     "v2": true,
     "history": {
+      "v1.3": "新增接口/webhook/custom,参数title、content、url",
       "v1.2": "修改配置描述",
       "v1.1": "修复bug",
       "v1.0": "接收群辉webhook通知并推送"
