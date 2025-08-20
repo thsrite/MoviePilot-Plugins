@@ -20,7 +20,7 @@ class EmbyDanmu(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/danmu.png"
     # 插件版本
-    plugin_version = "1.6"
+    plugin_version = "1.7"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -34,6 +34,7 @@ class EmbyDanmu(_PluginBase):
 
     # 私有属性
     _enabled = False
+    _disabled = False
     _library_task = {}
     _danmu_source = []
     _mediaservers = None
@@ -52,6 +53,7 @@ class EmbyDanmu(_PluginBase):
         # 读取配置
         if config:
             self._enabled = config.get("enabled")
+            self._disabled = config.get("disabled")
             self._dirs = config.get("dirs")
             self._mediaservers = config.get("mediaservers") or []
 
@@ -425,7 +427,7 @@ class EmbyDanmu(_PluginBase):
 
                 # 判断当前媒体库是否有其他任务在执行
                 self._library_task[library_id].remove(library_item_name)
-                if len(self._library_task[library_id]) == 0:
+                if len(self._library_task[library_id]) == 0 and self._disabled:
                     # 关闭弹幕插件
                     logger.info(
                         f"{emby_name} {library_name} {library_item_name} {f'第{library_item_season}季 ' if library_item_season else ''}获取弹幕任务完成，关闭弹幕插件")
@@ -761,6 +763,22 @@ class EmbyDanmu(_PluginBase):
                                         }
                                     }
                                 ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'disabled',
+                                            'label': '是否禁用媒体库的Danmu插件',
+                                        }
+                                    }
+                                ]
                             }
                         ]
                     },
@@ -858,6 +876,7 @@ class EmbyDanmu(_PluginBase):
             }
         ], {
             "enabled": False,
+            "disabled": False,
             "dirs": "",
             "mediaservers": [],
         }
