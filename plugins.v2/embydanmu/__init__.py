@@ -20,7 +20,7 @@ class EmbyDanmu(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/danmu.png"
     # 插件版本
-    plugin_version = "1.7"
+    plugin_version = "1.8"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -597,7 +597,9 @@ class EmbyDanmu(_PluginBase):
         else:
             retry_cnt = len(season_items)
             _downloaded_danmu_files = []
-            while len(_downloaded_danmu_files) < len(season_items) and retry_cnt > 0:
+            # 没有新增弹幕充实3次直接跳过
+            _no_incre_cnt = 0
+            while len(_downloaded_danmu_files) < len(season_items) and retry_cnt > 0 and _no_incre_cnt <= 3:
                 # 解析日志判断是否全部失败
                 if self.__check_all_failed_by_log(item_name=item_info.get("SeriesName"),
                                                   item_year=item_info.get("ProductionYear")):
@@ -609,6 +611,9 @@ class EmbyDanmu(_PluginBase):
                         if danmu_file.name not in _downloaded_danmu_files:
                             _downloaded_danmu_files.append(danmu_file.name)
                             logger.info(f"已下载弹幕文件：{danmu_file.name}")
+                            _no_incre_cnt = 0
+                        else:
+                            _no_incre_cnt += 1
                     # 判断是否完成任务
                     if len(_downloaded_danmu_files) != len(season_items):
                         retry_cnt -= 1
