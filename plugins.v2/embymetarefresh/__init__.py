@@ -1,5 +1,5 @@
 import base64
-import copy
+import gc
 import json
 import re
 import threading
@@ -41,7 +41,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "2.2.8"
+    plugin_version = "2.2.9"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -77,6 +77,8 @@ class EmbyMetaRefresh(_PluginBase):
     _scheduler: Optional[BackgroundScheduler] = None
     _tmdb_cache = {}
     _episodes_images = []
+    # 缓存大小限制
+    _max_cache_size = 100
 
     def init_plugin(self, config: dict = None):
         # 停止现有任务
@@ -162,6 +164,8 @@ class EmbyMetaRefresh(_PluginBase):
         """
         刷新媒体库元数据
         """
+        # 强制进行垃圾回收以释放内存
+        
         emby_servers = self.mediaserver_helper.get_services(name_filters=self._mediaservers, type_filter="emby")
         if not emby_servers:
             logger.error("未配置Emby媒体服务器")
@@ -374,6 +378,13 @@ class EmbyMetaRefresh(_PluginBase):
                             logger.info(f"神医助手 独占模式已关闭")
                 except Exception as e:
                     logger.error(f"关闭 神医助手 独占模式失败：{str(e)}")
+            
+            # 清理缓存
+            self.__clean_cache()
+            # 强制垃圾回收
+            unreachable = gc.collect()
+            logger.error(f"gc 回收了 {unreachable} 个不可达对象")
+            
             logger.info(f"刷新 {emby_name} 媒体库元数据完成")
 
     @staticmethod
@@ -554,8 +565,14 @@ class EmbyMetaRefresh(_PluginBase):
                 peopleimdbid = p["ProviderIds"]["imdb"]
             return peopletmdbid, peopleimdbid
 
-        # 返回的人物信息
-        ret_people = copy.deepcopy(people)
+        # 返回的人物信息 - 使用浅拷贝替代深拷贝以减少内存使用
+        ret_people = people.copy()
+        # 对于嵌套字典，需要单独处理
+        for key, value in people.items():
+            if isinstance(value, dict):
+                ret_people[key] = value.copy()
+            elif isinstance(value, list):
+                ret_people[key] = value.copy()
 
         try:
             # 查询媒体库人物详情
@@ -1450,6 +1467,25 @@ class EmbyMetaRefresh(_PluginBase):
     def get_page(self) -> List[dict]:
         pass
 
+    def __clean_cache(self):
+        """
+        清理缓存，限制缓存大小
+        """
+        # 清理 _tmdb_cache
+        if len(self._tmdb_cache) > self._max_cache_size:
+            # 保留最近使用的条目
+            keys_to_remove = list(self._tmdb_cache.keys())[:-self._max_cache_size]
+            for key in keys_to_remove:
+                del self._tmdb_cache[key]
+            logger.debug(f"已清理 _tmdb_cache，删除 {len(keys_to_remove)} 个条目")
+        
+        # 清理 _episodes_images
+        if len(self._episodes_images) > self._max_cache_size:
+            # 保留最近的条目
+            self._episodes_images = self._episodes_images[-self._max_cache_size:]
+            self.save_data("episodes_images", self._episodes_images)
+            logger.debug(f"已清理 _episodes_images，保留 {self._max_cache_size} 个条目")
+    
     def stop_service(self):
         """
         退出插件
