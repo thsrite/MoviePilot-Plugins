@@ -6,6 +6,8 @@ import threading
 import time
 from datetime import datetime, timedelta
 from typing import Optional, Any, List, Dict, Tuple
+from app.core.cache import FileCache, AsyncFileCache
+from pathlib import Path
 
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -41,7 +43,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "2.2.8"
+    plugin_version = "2.3.0"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -60,7 +62,7 @@ class EmbyMetaRefresh(_PluginBase):
     tmdbchain = None
     tmdbapi = None
     _onlyonce = False
-    _ExclusiveExtract = False
+    _exclusiveExtract = False
     _cron = None
     _actor_chi = False
     _num = None
@@ -77,6 +79,7 @@ class EmbyMetaRefresh(_PluginBase):
     _scheduler: Optional[BackgroundScheduler] = None
     _tmdb_cache = {}
     _episodes_images = []
+    _region_name = "embymetarefresh_cache"
 
     def init_plugin(self, config: dict = None):
         # 停止现有任务
@@ -84,14 +87,18 @@ class EmbyMetaRefresh(_PluginBase):
         self.tmdbchain = TmdbChain()
         self.tmdbapi = TmdbApi()
         self.mediaserver_helper = MediaServerHelper()
-        self._tmdb_cache = {}
+        # 创建缓存实例，最大128项，TTL 30分钟
+        self._tmdb_cache = FileCache(
+            base=Path(f"/tmp/{self._region_name}"),
+            ttl=604800  # 7天
+        )
 
         if config:
             self._enabled = config.get("enabled")
             self._onlyonce = config.get("onlyonce")
             self._cron = config.get("cron")
             self._actor_chi = config.get("actor_chi")
-            self._ExclusiveExtract = config.get("ExclusiveExtract")
+            self._exclusiveExtract = config.get("exclusiveExtract")
             self._num = config.get("num") or 5
             self._actor_path = config.get("actor_path")
             self._refresh_type = config.get("refresh_type") or "历史记录"
@@ -154,7 +161,7 @@ class EmbyMetaRefresh(_PluginBase):
                 "actor_path": self._actor_path,
                 "mediaservers": self._mediaservers,
                 "interval": self._interval,
-                "ExclusiveExtract": self._ExclusiveExtract,
+                "exclusiveExtract": self._exclusiveExtract,
             }
         )
 
@@ -183,7 +190,7 @@ class EmbyMetaRefresh(_PluginBase):
 
             # 判断有无安装神医助手插件
             plugin_config, plugin_id = None, None
-            if self._ExclusiveExtract:
+            if self._exclusiveExtract == "true":
                 try:
                     plugin_config, plugin_id = self.__get_strm_assistant_config()
                     if plugin_id:
@@ -206,7 +213,7 @@ class EmbyMetaRefresh(_PluginBase):
                 transferhistorys = TransferHistoryOper().list_by_date(target_date.strftime('%Y-%m-%d'))
                 if not transferhistorys:
                     logger.error(f"{self._num}天内没有媒体库入库记录")
-                    if self._ExclusiveExtract:
+                    if self._exclusiveExtract == "true":
                         try:
                             if plugin_id:
                                 # 打开独占模式（方式元数据刷新导致媒体数据丢失）
@@ -231,7 +238,7 @@ class EmbyMetaRefresh(_PluginBase):
                 if not latest:
                     logger.error(f"Emby中没有最新媒体")
 
-                    if self._ExclusiveExtract:
+                    if self._exclusiveExtract == "true":
                         try:
                             if plugin_id:
                                 # 打开独占模式（方式元数据刷新导致媒体数据丢失）
@@ -271,10 +278,9 @@ class EmbyMetaRefresh(_PluginBase):
                                         f"最新媒体：电视剧 {'%s S%02dE%02d %s' % (item.get('SeriesName'), item.get('ParentIndexNumber'), item.get('IndexNumber'), item.get('Name')) if str(item.get('Type')) == 'Episode' else item.get('Name')} {item.get('Id')} 封面无需更新")
                                 else:
                                     # 判断是否有缓存
-                                    tv_info = None
                                     key = f"{item.get('Type')}-{item.get('SeriesName')}-{str(item.get('ProductionYear'))}"
-                                    if key in self._tmdb_cache.keys():
-                                        tv_info = self._tmdb_cache[key]
+                                    # 检查缓存
+                                    tv_info = self._tmdb_cache.get(key, region=self._region_name) or None
 
                                     if not tv_info:
                                         # 判断下tmdb有没有封面，没有则不刷新封面
@@ -286,7 +292,7 @@ class EmbyMetaRefresh(_PluginBase):
                                                                          mtype=MediaType.TV,
                                                                          year=str(item.get('ProductionYear')))
                                     if tv_info:
-                                        self._tmdb_cache[key] = tv_info
+                                        self._tmdb_cache.set(key, tv_info, region=self._region_name)
                                         episode_info = TmdbApi().get_tv_episode_detail(tv_info["id"],
                                                                                        item.get('ParentIndexNumber'),
                                                                                        item.get('IndexNumber'))
@@ -363,7 +369,7 @@ class EmbyMetaRefresh(_PluginBase):
                             flag = self.set_iteminfo(itemid=item_info.get("Id"), iteminfo=item_info, emby=emby)
                             logger.info(
                                 f"最新媒体：{'电视剧' if str(item_info.get('Type')) == 'Episode' else '电影'} {'%s S%02dE%02d %s' % (item_info.get('SeriesName'), item_info.get('ParentIndexNumber'), item_info.get('IndexNumber'), item_info.get('Name')) if str(item_info.get('Type')) == 'Episode' else item_info.get('Name')} {item_info.get('Id')} 演员信息完成 {flag}")
-            if self._ExclusiveExtract:
+            if self._exclusiveExtract == "true":
                 try:
                     if plugin_id:
                         # 打开独占模式（方式元数据刷新导致媒体数据丢失）
@@ -374,6 +380,7 @@ class EmbyMetaRefresh(_PluginBase):
                             logger.info(f"神医助手 独占模式已关闭")
                 except Exception as e:
                     logger.error(f"关闭 神医助手 独占模式失败：{str(e)}")
+
             logger.info(f"刷新 {emby_name} 媒体库元数据完成")
 
     @staticmethod
@@ -727,7 +734,7 @@ class EmbyMetaRefresh(_PluginBase):
         """
         设置神医助手独占模式
         """
-        plugin_config["ExclusiveExtract"] = exclusive_mode
+        plugin_config["exclusiveExtract"] = exclusive_mode
         plugin_config["ExclusiveControlList"] = [
             {
                 "Value": "IgnoreFileChange",
@@ -1378,7 +1385,7 @@ class EmbyMetaRefresh(_PluginBase):
                                             'multiple': False,
                                             'chips': True,
                                             'clearable': True,
-                                            'model': 'ExclusiveExtract',
+                                            'model': 'exclusiveExtract',
                                             'label': '联动独占模式',
                                             'items': [{'title': 'true', 'value': "true"},
                                                       {'title': 'false', 'value': "false"}]
@@ -1436,7 +1443,7 @@ class EmbyMetaRefresh(_PluginBase):
             "enabled": False,
             "onlyonce": False,
             "actor_chi": False,
-            "ExclusiveExtract": False,
+            "exclusiveExtract": False,
             "ReplaceAllMetadata": "true",
             "ReplaceAllImages": "true",
             "cron": "5 1 * * *",
