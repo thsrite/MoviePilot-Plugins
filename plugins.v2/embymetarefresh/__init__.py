@@ -561,8 +561,14 @@ class EmbyMetaRefresh(_PluginBase):
                 peopleimdbid = p["ProviderIds"]["imdb"]
             return peopletmdbid, peopleimdbid
 
-        # 返回的人物信息
-        ret_people = copy.deepcopy(people)
+        # 返回的人物信息 - 使用浅拷贝替代深拷贝以减少内存使用
+        ret_people = people.copy()
+        # 对于嵌套字典，需要单独处理
+        for key, value in people.items():
+            if isinstance(value, dict):
+                ret_people[key] = value.copy()
+            elif isinstance(value, list):
+                ret_people[key] = value.copy()
 
         try:
             # 查询媒体库人物详情
