@@ -137,11 +137,12 @@
     "name": "Emby弹幕下载",
     "description": "通知Emby Danmu插件下载弹幕。",
     "labels": "Emby,媒体库",
-    "version": "1.8",
+    "version": "2.0",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/danmu.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v2.0": "支持 `/danmu 媒体库名` 通知emby下载媒体库所有媒体弹幕",
       "v1.8": "没有弹幕新增超过3次直接跳过检查",
       "v1.7": "增加是否自动禁用媒体库danmu插件开关（默认False）",
       "v1.6": "增加Emby、MoviePilot目录映射（相同可不填）",
