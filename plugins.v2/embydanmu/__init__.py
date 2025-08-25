@@ -234,7 +234,10 @@ class EmbyDanmu(_PluginBase):
                                             self.post_message(channel=event.event_data.get("channel"),
                                                               title=f"{emby_name} {library_name} {library_item_name} 第{season_item.get('IndexNumber')}季 弹幕文件已全部存在：{danmu_cnt}/{season_item_cnt}",
                                                               userid=event.event_data.get("user"))
-                                            break
+                                            if is_special_library:
+                                                continue
+                                            else:
+                                                break
 
                                         danmu_flag = self.__download_danmu(season_id)
                                         if danmu_flag:
@@ -287,7 +290,10 @@ class EmbyDanmu(_PluginBase):
                                                         self.post_message(channel=event.event_data.get("channel"),
                                                                           title=f"{emby_name} {library_name} {library_item_name} 第{season.get('IndexNumber')}季 弹幕文件已全部存在：{danmu_cnt}/{season_item_cnt}",
                                                                           userid=event.event_data.get("user"))
-                                                        break
+                                                        if is_special_library:
+                                                            continue
+                                                        else:
+                                                            break
 
                                                     # 通知Danmu插件获取弹幕
                                                     danmu_flag = self.__download_danmu(season_id)
