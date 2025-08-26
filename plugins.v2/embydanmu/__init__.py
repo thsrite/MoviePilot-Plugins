@@ -430,9 +430,9 @@ class EmbyDanmu(_PluginBase):
                                                     retry_cnt = -1
                                                 else:
                                                     logger.warn(
-                                                        f"{emby_name} {parent_path} 下未找到弹幕文件：{danmu_path_pattern}，等待10秒后重试 ({retry_cnt}次)")
+                                                        f"{emby_name} {parent_path} 下未找到弹幕文件：{danmu_path_pattern}，等待5秒后重试 ({retry_cnt}次)")
                                                     retry_cnt -= 1
-                                                    time.sleep(10)
+                                                    time.sleep(5)
 
                                             if len(list(parent_path.glob(danmu_path_pattern))) >= 1:
                                                 logger.info(
@@ -656,9 +656,9 @@ class EmbyDanmu(_PluginBase):
                     # 判断是否完成任务
                     if len(_downloaded_danmu_files) != len(season_items):
                         logger.warn(
-                            f"{parent_path} 下弹幕文件：{danmu_path_pattern} 未下载完成，等待10秒后重试 ({retry_cnt}次)")
+                            f"{parent_path} 下弹幕文件：{danmu_path_pattern} 未下载完成，等待5秒后重试 ({retry_cnt}次)")
                         retry_cnt -= 1
-                        time.sleep(10)
+                        time.sleep(5)
 
             return len(_downloaded_danmu_files), len(season_items)
 
