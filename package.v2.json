@@ -417,11 +417,12 @@
     "name": "自动备份",
     "description": "自动备份数据和配置文件。",
     "labels": "系统设置",
-    "version": "2.0.4",
+    "version": "2.1.0",
     "icon": "Time_machine_B.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v2.1.0": "支持postgresql备份（权限问题，需手动执行插件详情命令安装client）",
       "v2.0.4": "优化执行周期输入，需要MoviePilot v2.2.1+",
       "v2.0.3": "增加对MoviePilot V2 版本 SQLite WAL模式的支持",
       "v2.0.1": "修复cookies文件夹备份失败",

@@ -1,6 +1,7 @@
 import glob
 import os
 import shutil
+import subprocess
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -8,6 +9,7 @@ from pathlib import Path
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from sqlalchemy.orm import Session
 
 from app import schemas
 from app.core.config import settings
@@ -25,7 +27,7 @@ class AutoBackup(_PluginBase):
     # 插件图标
     plugin_icon = "Time_machine_B.png"
     # 插件版本
-    plugin_version = "2.0.4"
+    plugin_version = "2.1.0"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -128,8 +130,12 @@ class AutoBackup(_PluginBase):
 
                 # 遍历并删除最旧的几个备份
                 for i in range(del_cnt):
-                    os.remove(files[i])
-                    logger.debug(f"删除备份文件 {files[i]} 成功")
+                    file_path = Path(files[i])
+                    if file_path.is_file():
+                        file_path.unlink()
+                    elif file_path.is_dir():
+                        shutil.rmtree(file_path)
+                    logger.debug(f"删除备份 {files[i]} 成功")
             else:
                 logger.info(
                     f"获取到 {bk_path} 路径下备份文件数量 {bk_cnt} 保留数量 {int(self._cnt)} 无需删除")
@@ -161,12 +167,67 @@ class AutoBackup(_PluginBase):
             category_file = config_path / "category.yaml"
             if category_file.exists():
                 shutil.copy(category_file, backup_path)
-            # 查找所有以 "user.db" 开头的文件
-            userdb_files = list(config_path.glob("user.db*"))
-            # 如果找到了任何匹配的文件，则进行复制
-            for userdb_file in userdb_files:
-                if userdb_file.exists():
-                    shutil.copy(userdb_file, backup_path)
+
+            # 备份数据库
+            if settings.DB_TYPE == "sqlite":
+                # 查找所有以 "user.db" 开头的文件
+                userdb_files = list(config_path.glob("user.db*"))
+                # 如果找到了任何匹配的文件，则进行复制
+                for userdb_file in userdb_files:
+                    if userdb_file.exists():
+                        shutil.copy(userdb_file, backup_path)
+            if settings.DB_TYPE == "postgresql":
+                # 获取数据库连接信息
+                db_host = str(settings.DB_POSTGRESQL_HOST)
+                db_port = str(settings.DB_POSTGRESQL_PORT)
+                db_name = str(settings.DB_POSTGRESQL_DATABASE)
+                db_user = str(settings.DB_POSTGRESQL_USERNAME)
+                db_password = str(settings.DB_POSTGRESQL_PASSWORD)
+
+                # 设置环境变量以避免在命令行中暴露密码
+                env = os.environ.copy()
+                env['PGPASSWORD'] = db_password
+
+                # 检查 pg_dump 是否可用
+                if not shutil.which('pg_dump'):
+                    # 执行安装 PostgreSQL 17 客户端的命令
+                    try:
+                        subprocess.run([
+                            'sh', '-c',
+                            'apt-get update && apt-get install -y wget gnupg lsb-release && '
+                            'wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/postgresql.gpg && '
+                            'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list && '
+                            'apt-get update && apt-get install -y postgresql-client-17'
+                        ], check=True, capture_output=True, text=True)
+                        logger.info("PostgreSQL 17 客户端安装成功。")
+                    except subprocess.CalledProcessError as e:
+                        logger.error(f"安装 PostgreSQL 17 客户端失败: {e.stderr.strip() if e.stderr else str(e)}")
+                        logger.error("请手动执行安装命令。")
+                        logger.error('apt-get update && apt-get install -y wget gnupg lsb-release && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/postgresql.gpg && echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list && apt-get update && apt-get install -y postgresql-client-17')
+                        return None
+
+                # 构建 pg_dump 命令
+                pg_dump_cmd = [
+                    'pg_dump',
+                    '-h', db_host,
+                    '-p', db_port,
+                    '-U', db_user,
+                    '-d', db_name,
+                    '-f', str(backup_path / 'postgresql_backup.sql')
+                ]
+
+                # 执行备份
+                try:
+                    result = subprocess.run(pg_dump_cmd, env=env, check=True, capture_output=True, text=True)
+                    logger.info(f"PostgreSQL数据库备份成功: {backup_path / 'postgresql_backup.sql'}")
+                except subprocess.CalledProcessError as e:
+                    error_message = e.stderr.strip() if e.stderr else str(e)
+                    logger.error(f"PostgreSQL数据库备份失败: {error_message}")
+                    # 检查是否是版本不匹配的错误
+                    if "server version mismatch" in error_message:
+                        logger.error("PostgreSQL数据库备份失败: pg_dump 版本与服务器版本不匹配，请安装与服务器版本匹配的 pg_dump。")
+                    return None
+
             app_file = config_path / "app.env"
             if app_file.exists():
                 shutil.copy(app_file, backup_path)
@@ -180,7 +241,8 @@ class AutoBackup(_PluginBase):
             shutil.make_archive(str(backup_path), 'zip', str(backup_path))
             shutil.rmtree(str(backup_path))
             return zip_file
-        except IOError:
+        except IOError as e:
+            logger.error(f"创建备份失败: {e}")
             return None
 
     def get_state(self) -> bool:
@@ -357,7 +419,28 @@ class AutoBackup(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '备份文件路径默认为本地映射的config/plugins/AutoBackup。'
+                                            'text': '备份文件路径默认为本地映射的config/plugins/AutoBackup。如果是postgresql，请手动执行以下命令安装postgresql客户端'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': 'apt-get update && apt-get install -y wget gnupg lsb-release && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/postgresql.gpg && echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list && apt-get update && apt-get install -y postgresql-client-17'
                                         }
                                     }
                                 ]
