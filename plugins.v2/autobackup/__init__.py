@@ -161,7 +161,8 @@ class AutoBackup(_PluginBase):
             config_path = Path(settings.CONFIG_PATH)
             backup_file = f"bk_{time.strftime('%Y%m%d%H%M%S')}"
             backup_path = bk_path / backup_file
-            backup_path.mkdir(parents=True)
+            if not backup_path.exists():
+                backup_path.mkdir(parents=True)
 
             # 把现有的相关文件进行copy备份
             category_file = config_path / "category.yaml"
