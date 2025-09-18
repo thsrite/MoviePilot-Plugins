@@ -57,7 +57,7 @@ class CloudStrmCompanion(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png"
     # 插件版本
-    plugin_version = "1.3.2"
+    plugin_version = "1.3.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -640,6 +640,7 @@ class CloudStrmCompanion(_PluginBase):
                                         self.post_message(channel=event.event_data.get("channel"),
                                                           title=f"{target_path} Strm生成完成！",
                                                           userid=event.event_data.get("user"))
+                                    time.sleep(2)
 
                                     if limit is None and event_data and event_data.get("action") == "strm_one":
                                         return
@@ -741,6 +742,7 @@ class CloudStrmCompanion(_PluginBase):
             if event.event_data.get("user"):
                 self.post_message(channel=event.event_data.get("channel"),
                                   title=f"{sub_path} Strm生成完成！", userid=event.event_data.get("user"))
+            time.sleep(2)
 
     def send_msg(self):
         """
