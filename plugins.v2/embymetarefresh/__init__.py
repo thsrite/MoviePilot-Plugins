@@ -1,12 +1,12 @@
 import base64
-import copy
 import json
 import re
 import threading
 import time
+import pickle
 from datetime import datetime, timedelta
 from typing import Optional, Any, List, Dict, Tuple
-from app.core.cache import FileCache, AsyncFileCache
+from app.core.cache import FileCache
 from pathlib import Path
 
 import pytz
@@ -43,7 +43,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "2.3.1"
+    plugin_version = "2.3.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -77,7 +77,7 @@ class EmbyMetaRefresh(_PluginBase):
     _EMBY_USER = None
     _EMBY_APIKEY = None
     _scheduler: Optional[BackgroundScheduler] = None
-    _tmdb_cache = {}
+    _tmdb_cache = None
     _episodes_images = []
     _region_name = "embymetarefresh_cache"
 
@@ -87,10 +87,10 @@ class EmbyMetaRefresh(_PluginBase):
         self.tmdbchain = TmdbChain()
         self.tmdbapi = TmdbApi()
         self.mediaserver_helper = MediaServerHelper()
-        # 创建缓存实例，最大128项，TTL 30分钟
+        # 创建缓存实例，使用 Redis 缓存时保留 7 天，使用文件系统缓存停止服务时清理
         self._tmdb_cache = FileCache(
             base=Path(f"/tmp/{self._region_name}"),
-            ttl=604800  # 7天
+            ttl=604800
         )
 
         if config:
@@ -280,7 +280,7 @@ class EmbyMetaRefresh(_PluginBase):
                                     # 判断是否有缓存
                                     key = f"{item.get('Type')}-{item.get('SeriesName')}-{str(item.get('ProductionYear'))}"
                                     # 检查缓存
-                                    tv_info = self._tmdb_cache.get(key, region=self._region_name) or None
+                                    tv_info = self._tmdb_cache.get(key, region=self._region_name)
 
                                     if not tv_info:
                                         # 判断下tmdb有没有封面，没有则不刷新封面
@@ -292,7 +292,10 @@ class EmbyMetaRefresh(_PluginBase):
                                                                          mtype=MediaType.TV,
                                                                          year=str(item.get('ProductionYear')))
                                     if tv_info:
-                                        self._tmdb_cache.set(key, tv_info, region=self._region_name)
+                                        if isinstance(tv_info, bytes):
+                                            tv_info = pickle.loads(tv_info)
+                                        
+                                        self._tmdb_cache.set(key, pickle.dumps(tv_info), region=self._region_name)
                                         episode_info = TmdbApi().get_tv_episode_detail(tv_info["id"],
                                                                                        item.get('ParentIndexNumber'),
                                                                                        item.get('IndexNumber'))
