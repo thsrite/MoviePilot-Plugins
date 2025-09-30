@@ -21,11 +21,12 @@
     "name": "Emby元数据刷新",
     "description": "定时刷新Emby媒体库元数据，演职人员中文。",
     "labels": "Emby",
-    "version": "2.3.1",
+    "version": "2.3.2",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v2.3.2": "修复缓存序列化错误问题",
       "v2.3.1": "doumao yyds",
       "v2.3.0": "优化内存占用",
       "v2.2.8": "修复按照历史记录刷新，auto默认为true",
