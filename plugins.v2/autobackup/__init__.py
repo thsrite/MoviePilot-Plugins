@@ -33,7 +33,7 @@ class AutoBackup(_PluginBase):
     # 插件图标
     plugin_icon = "Time_machine_B.png"
     # 插件版本
-    plugin_version = "2.1.1"
+    plugin_version = "2.1.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -202,8 +202,8 @@ class AutoBackup(_PluginBase):
                     # 执行安装 PostgreSQL 客户端的命令
                     try:
                         AutoBackup.install_postgresql_client(pg_version)
-                        logger.info("PostgreSQL 17 客户端安装成功。")
-                    except (docker.errors.ContainerError, subprocess.CalledProcessError) as e:
+                        logger.info(f"PostgreSQL {pg_version} 客户端安装成功。")
+                    except (docker.errors.APIError, docker.errors.ContainerError, subprocess.CalledProcessError) as e:
                         logger.error(f"安装 PostgreSQL {pg_version} 客户端失败: {e.stderr.strip() if e.stderr else str(e)}")
                         logger.error("请手动执行安装命令。")
                         logger.error(f'apt-get update && apt-get install -y wget gnupg lsb-release && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/postgresql.gpg && echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list && apt-get update && apt-get install -y postgresql-client-{pg_version}')
@@ -279,30 +279,31 @@ class AutoBackup(_PluginBase):
         # 设置代理
         exec_env = {}
         if proxy_url and proxy_url.startswith(('http://', 'https://')):
-            exec_env['http_proxy'] = proxy_url
-            exec_env['https_proxy'] = proxy_url
+            exec_env.update(dict.fromkeys(['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy'], proxy_url))
         # 构建安装脚本
         install_script = (
-            "apt-get update && "
-            "apt-get install -y wget gnupg lsb-release && "
-            "wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | "
-            "gpg --dearmor > /etc/apt/trusted.gpg.d/postgresql.gpg && "
-            "echo 'deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main' "
-            "> /etc/apt/sources.list.d/pgdg.list && "
-            "apt-get update && "
-            "apt-get install -y postgresql-%s" % pg_version
+            'apt-get update && '
+            'apt-get install -y wget gnupg lsb-release && '
+            'wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | '
+            'gpg --dearmor > /etc/apt/trusted.gpg.d/postgresql.gpg && '
+            'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" '
+            '> /etc/apt/sources.list.d/pgdg.list && '
+            'apt-get update && '
+            'apt-get install -y postgresql-%s' % pg_version
         )
-
-        if SystemUtils.is_docker() and (container_id := SystemHelper._get_container_id()):
+        # 非root用户且是docker环境
+        if os.geteuid() != 0 and SystemUtils.is_docker() and (container_id := SystemHelper._get_container_id()):
             # 创建 Docker 客户端
             client = docker.DockerClient(base_url=settings.DOCKER_CLIENT_API)
             # 获取容器对象
             container = client.containers.get(container_id)
             # 执行命令
-            container.exec_run(
+            exit_code, output = container.exec_run(
                 cmd=['sh', '-c', install_script],
                 environment=exec_env
             )
+            if exit_code != 0:
+                raise docker.errors.ContainerError(exit_status=exit_code, command=install_script, stderr=output)
 
         else:
             subprocess.run(

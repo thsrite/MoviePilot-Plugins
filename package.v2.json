@@ -419,7 +419,7 @@
     "name": "自动备份",
     "description": "自动备份数据和配置文件。",
     "labels": "系统设置",
-    "version": "2.1.1",
+    "version": "2.1.2",
     "icon": "Time_machine_B.png",
     "author": "thsrite",
     "level": 1,
