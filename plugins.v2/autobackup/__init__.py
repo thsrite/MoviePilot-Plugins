@@ -5,18 +5,24 @@ import subprocess
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any, List, Dict, Tuple, Optional
 
+import docker
+import docker.errors
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app import schemas
 from app.core.config import settings
+from app.db import db_query
+from app.helper.system import SystemHelper
 from app.plugins import _PluginBase
-from typing import Any, List, Dict, Tuple, Optional
 from app.log import logger
 from app.schemas import NotificationType
+from app.utils.system import SystemUtils
 
 
 class AutoBackup(_PluginBase):
@@ -27,7 +33,7 @@ class AutoBackup(_PluginBase):
     # 插件图标
     plugin_icon = "Time_machine_B.png"
     # 插件版本
-    plugin_version = "2.1.0"
+    plugin_version = "2.1.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -191,20 +197,16 @@ class AutoBackup(_PluginBase):
 
                 # 检查 pg_dump 是否可用
                 if not shutil.which('pg_dump'):
-                    # 执行安装 PostgreSQL 17 客户端的命令
+                    # 获取 PostgreSQL 版本号
+                    pg_version = AutoBackup._get_postgresql_major_version()
+                    # 执行安装 PostgreSQL 客户端的命令
                     try:
-                        subprocess.run([
-                            'sh', '-c',
-                            'apt-get update && apt-get install -y wget gnupg lsb-release && '
-                            'wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/postgresql.gpg && '
-                            'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list && '
-                            'apt-get update && apt-get install -y postgresql-client-17'
-                        ], check=True, capture_output=True, text=True)
+                        AutoBackup.install_postgresql_client(pg_version)
                         logger.info("PostgreSQL 17 客户端安装成功。")
-                    except subprocess.CalledProcessError as e:
-                        logger.error(f"安装 PostgreSQL 17 客户端失败: {e.stderr.strip() if e.stderr else str(e)}")
+                    except (docker.errors.ContainerError, subprocess.CalledProcessError) as e:
+                        logger.error(f"安装 PostgreSQL {pg_version} 客户端失败: {e.stderr.strip() if e.stderr else str(e)}")
                         logger.error("请手动执行安装命令。")
-                        logger.error('apt-get update && apt-get install -y wget gnupg lsb-release && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/postgresql.gpg && echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list && apt-get update && apt-get install -y postgresql-client-17')
+                        logger.error(f'apt-get update && apt-get install -y wget gnupg lsb-release && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/postgresql.gpg && echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list && apt-get update && apt-get install -y postgresql-client-{pg_version}')
                         return None
 
                 # 构建 pg_dump 命令
@@ -245,6 +247,71 @@ class AutoBackup(_PluginBase):
         except IOError as e:
             logger.error(f"创建备份失败: {e}")
             return None
+
+    @classmethod
+    @db_query
+    def _get_postgresql_major_version(cls, db: Session = None):
+        """
+        获取 PostgreSQL 版本号
+        """
+
+        try:
+            result = db.execute(text("SHOW server_version;"))
+            row = result.fetchone()
+            if row:
+                version_string = row[0]  # 获取第一个字段的值
+                # 提取主版本号
+                major_version = version_string.split('.')[0]
+                return int(major_version)  # 转换为整数
+        except Exception as e:
+            logger.debug(f"获取PostgreSQL版本失败: {e}")
+
+        return 17  # 默认版本
+
+    @staticmethod
+    def install_postgresql_client(pg_version):
+        """
+        安装 PostgreSQL 客户端
+        """
+        logger.info(f"正在安装 PostgreSQL {pg_version} 客户端...")
+        proxy_url = settings.PROXY_HOST
+
+        # 设置代理
+        exec_env = {}
+        if proxy_url and proxy_url.startswith(('http://', 'https://')):
+            exec_env['http_proxy'] = proxy_url
+            exec_env['https_proxy'] = proxy_url
+        # 构建安装脚本
+        install_script = (
+            "apt-get update && "
+            "apt-get install -y wget gnupg lsb-release && "
+            "wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | "
+            "gpg --dearmor > /etc/apt/trusted.gpg.d/postgresql.gpg && "
+            "echo 'deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main' "
+            "> /etc/apt/sources.list.d/pgdg.list && "
+            "apt-get update && "
+            "apt-get install -y postgresql-%s" % pg_version
+        )
+
+        if SystemUtils.is_docker() and (container_id := SystemHelper._get_container_id()):
+            # 创建 Docker 客户端
+            client = docker.DockerClient(base_url=settings.DOCKER_CLIENT_API)
+            # 获取容器对象
+            container = client.containers.get(container_id)
+            # 执行命令
+            container.exec_run(
+                cmd=['sh', '-c', install_script],
+                environment=exec_env
+            )
+
+        else:
+            subprocess.run(
+                ['sh', '-c', install_script],
+                capture_output=True,
+                text=True,
+                check=True,
+                env=exec_env
+            )
 
     def get_state(self) -> bool:
         return self._enabled
