@@ -1,11 +1,13 @@
 import glob
 import os
+import re
 import shutil
 import subprocess
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, List, Dict, Tuple, Optional
+from urllib.parse import urljoin
 
 import docker
 import docker.errors
@@ -19,8 +21,8 @@ from app import schemas
 from app.core.config import settings
 from app.db import db_query
 from app.helper.system import SystemHelper
-from app.plugins import _PluginBase
 from app.log import logger
+from app.plugins import _PluginBase
 from app.schemas import NotificationType
 from app.utils.system import SystemUtils
 
@@ -33,7 +35,7 @@ class AutoBackup(_PluginBase):
     # 插件图标
     plugin_icon = "Time_machine_B.png"
     # 插件版本
-    plugin_version = "2.1.2"
+    plugin_version = "2.1.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -54,6 +56,17 @@ class AutoBackup(_PluginBase):
     _notify = False
     _back_path = None
 
+    # WebDAV相关配置
+    _webdav_enabled = False
+    _webdav_hostname = None
+    _webdav_login = None
+    _webdav_password = None
+    _webdav_digest_auth = False
+    _webdav_max_count = None
+    _webdav_notify = False
+    _webdav_disable_check = False
+    _webdav_client = None
+
     # 定时器
     _scheduler: Optional[BackgroundScheduler] = None
 
@@ -68,6 +81,20 @@ class AutoBackup(_PluginBase):
             self._notify = config.get("notify")
             self._onlyonce = config.get("onlyonce")
             self._back_path = config.get("back_path")
+
+            # WebDAV配置
+            self._webdav_enabled = config.get("webdav_enabled", False)
+            self._webdav_hostname = config.get("webdav_hostname")
+            self._webdav_login = config.get("webdav_login")
+            self._webdav_password = config.get("webdav_password")
+            self._webdav_digest_auth = config.get("webdav_digest_auth", False)
+            self._webdav_max_count = config.get("webdav_max_count")
+            self._webdav_notify = config.get("webdav_notify", False)
+            self._webdav_disable_check = config.get("webdav_disable_check", False)
+
+            # 初始化WebDAV客户端
+            if self._webdav_enabled:
+                self.__init_webdav_client()
 
             # 加载模块
         if self._onlyonce:
@@ -85,6 +112,14 @@ class AutoBackup(_PluginBase):
                 "cnt": self._cnt,
                 "notify": self._notify,
                 "back_path": self._back_path,
+                "webdav_enabled": self._webdav_enabled,
+                "webdav_hostname": self._webdav_hostname,
+                "webdav_login": self._webdav_login,
+                "webdav_password": self._webdav_password,
+                "webdav_digest_auth": self._webdav_digest_auth,
+                "webdav_max_count": self._webdav_max_count,
+                "webdav_notify": self._webdav_notify,
+                "webdav_disable_check": self._webdav_disable_check
             })
 
             # 启动任务
@@ -146,16 +181,32 @@ class AutoBackup(_PluginBase):
                 logger.info(
                     f"获取到 {bk_path} 路径下备份文件数量 {bk_cnt} 保留数量 {int(self._cnt)} 无需删除")
 
+        # 如果启用了WebDAV备份，则上传到WebDAV
+        webdav_success = True
+        webdav_msg = ""
+        if self._webdav_enabled and zip_file and success:
+            webdav_success, webdav_msg = self.__upload_to_webdav(zip_file)
+            if webdav_success and self._webdav_max_count:
+                self.__clean_old_webdav_backups(self._webdav_max_count)
+
         # 发送通知
-        if self._notify:
+        if self._notify or self._webdav_notify:
+            notification_msg = f"创建备份{'成功' if success else '失败'}\n"
+            if success:
+                notification_msg += f"清理备份数量 {del_cnt}\n"
+                notification_msg += f"剩余备份数量 {bk_cnt - del_cnt}\n"
+
+            if self._webdav_enabled:
+                notification_msg += f"\nWebDAV上传{'成功' if webdav_success else '失败'}"
+                if webdav_msg:
+                    notification_msg += f"\n{webdav_msg}"
+
             self.post_message(
                 mtype=NotificationType.SiteMessage,
                 title="【自动备份任务完成】",
-                text=f"创建备份{'成功' if zip_file else '失败'}\n"
-                     f"清理备份数量 {del_cnt}\n"
-                     f"剩余备份数量 {bk_cnt - del_cnt}")
+                text=notification_msg)
 
-        return success, msg
+        return success and webdav_success, f"{msg}{(' ' + webdav_msg) if webdav_msg else ''}"
 
     @staticmethod
     def backup_file(bk_path: Path = None):
@@ -282,14 +333,14 @@ class AutoBackup(_PluginBase):
             exec_env.update(dict.fromkeys(['HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy'], proxy_url))
         # 构建安装脚本
         install_script = (
-            'apt-get update && '
-            'apt-get install -y wget gnupg lsb-release && '
-            'wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | '
-            'gpg --dearmor > /etc/apt/trusted.gpg.d/postgresql.gpg && '
-            'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" '
-            '> /etc/apt/sources.list.d/pgdg.list && '
-            'apt-get update && '
-            'apt-get install -y postgresql-%s' % pg_version
+                'apt-get update && '
+                'apt-get install -y wget gnupg lsb-release && '
+                'wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | '
+                'gpg --dearmor > /etc/apt/trusted.gpg.d/postgresql.gpg && '
+                'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" '
+                '> /etc/apt/sources.list.d/pgdg.list && '
+                'apt-get update && '
+                'apt-get install -y postgresql-%s' % pg_version
         )
         # 非root用户且是docker环境
         if os.geteuid() != 0 and SystemUtils.is_docker() and (container_id := SystemHelper._get_container_id()):
@@ -313,6 +364,133 @@ class AutoBackup(_PluginBase):
                 check=True,
                 env=exec_env
             )
+
+    def __init_webdav_client(self):
+        """初始化WebDAV客户端"""
+        try:
+            from webdav3.client import Client
+
+            # 检查必要配置
+            if not self._webdav_hostname or not self._webdav_login or not self._webdav_password:
+                logger.warning("WebDAV配置不完整，请检查服务器地址、登录名和密码")
+                return False
+
+            # WebDAV配置
+            webdav_config = {
+                'webdav_hostname': self._webdav_hostname,
+                'webdav_login': self._webdav_login,
+                'webdav_password': self._webdav_password,
+                'webdav_digest_auth': self._webdav_digest_auth
+            }
+
+            if self._webdav_disable_check:
+                webdav_config.update({"disable_check": True})
+
+            self._webdav_client = Client(webdav_config)
+            logger.info("WebDAV客户端初始化成功")
+            return True
+        except ImportError:
+            logger.error("缺少webdavclient3依赖包，请安装：pip install webdavclient3")
+            return False
+        except Exception as e:
+            logger.error(f"WebDAV客户端初始化失败: {str(e)}")
+            return False
+
+    def __connect_to_webdav(self):
+        """尝试连接到WebDAV服务器，并验证连接是否成功。"""
+        try:
+            if not self._webdav_client:
+                logger.error("无法获取WebDAV客户端实例，请尝试重新启用插件")
+                return False
+            # 尝试列出根目录来检查连接
+            self._webdav_client.list('/')  # 如果不成功，会抛出异常
+            logger.info("成功连接到WebDAV服务器")
+            return True
+        except Exception as e:
+            logger.error(f"连接到WebDAV服务器失败: {str(e)}")
+            return False
+
+    def __upload_to_webdav(self, local_file_path):
+        """
+        上传备份文件到WebDAV服务器
+        """
+        logger.info("开始上传备份文件到WebDAV服务器")
+
+        # 检查WebDAV客户端
+        if not self._webdav_client:
+            if not self.__init_webdav_client():
+                return False, "WebDAV客户端初始化失败"
+
+        # 检查连接
+        if not self.__connect_to_webdav():
+            return False, "连接到WebDAV服务器失败"
+
+        # 初始化外部变量以捕获回调结果
+        result_message = ""
+
+        def upload_callback():
+            """上传完成后的回调函数"""
+            nonlocal result_message
+            # 检查文件是否在WebDAV上存在
+            try:
+                if self._webdav_client.check(remote_file_path):
+                    logger.info(f"上传完成，远程备份路径：{remote_file_path}")
+                    result_message = f"WebDAV备份验证成功"
+                else:
+                    logger.error(
+                        f"上传完成，但远程备份路径没有检测到备份文件，请检查备份路径是否正确，远程备份路径：{remote_file_path}")
+                    result_message = f"WebDAV备份上传完成但验证失败"
+            except Exception as e:
+                logger.warning(f"检查文件存在性时出错: {str(e)}，但上传可能已完成")
+                result_message = f"WebDAV备份上传完成但验证失败"
+
+        try:
+            # 使用urljoin确保路径正确
+            file_name = os.path.basename(local_file_path)
+            remote_file_path = urljoin(f'{self._webdav_hostname}/', file_name)
+            logger.info(f"远程备份路径为：{remote_file_path}")
+            self._webdav_client.upload_sync(remote_path=file_name, local_path=local_file_path, callback=upload_callback)
+            return True, result_message
+        except Exception as e:
+            error_msg = f"上传到WebDAV服务器失败: {str(e)}"
+            logger.error(error_msg)
+            if hasattr(e, 'response'):
+                logger.error(f"服务器响应: {getattr(e.response, 'text', '无响应内容')}")
+            return False, error_msg
+
+    def __clean_old_webdav_backups(self, max_count):
+        """
+        清理WebDAV服务器上的旧备份文件
+        """
+        if not max_count or not self._webdav_client:
+            return
+
+        # 定义备份文件的正则表达式模式
+        pattern = re.compile(r"bk_\d{14}\.zip")
+
+        # 清理WebDAV服务器上的旧备份
+        try:
+            remote_files = self._webdav_client.list('/')
+            filtered_files = [f for f in remote_files if pattern.match(f)]
+            sorted_files = sorted(filtered_files,
+                                  key=lambda x: datetime.strptime(x, "bk_%Y%m%d%H%M%S.zip"))
+            excess_count = len(sorted_files) - int(max_count)
+
+            if excess_count > 0:
+                logger.info(
+                    f"WebDAV上备份文件数量为 {len(sorted_files)}，超出最大保留数 {max_count}，需删除 {excess_count} 个备份文件")
+                for file_info in sorted_files[:-int(max_count)]:
+                    remote_file_path = f"/{file_info}"
+                    try:
+                        self._webdav_client.clean(remote_file_path)
+                        logger.info(f"WebDAV上的备份文件 {remote_file_path} 已删除")
+                    except Exception as e:
+                        logger.error(f"删除WebDAV文件 {remote_file_path} 失败: {str(e)}")
+            else:
+                logger.info(
+                    f"WebDAV上备份文件数量为 {len(sorted_files)}，符合最大保留数 {max_count}，不需删除文件")
+        except Exception as e:
+            logger.error(f"获取WebDAV文件列表失败: {str(e)}")
 
     def get_state(self) -> bool:
         return self._enabled
@@ -474,6 +652,247 @@ class AutoBackup(_PluginBase):
                             }
                         ]
                     },
+                    # WebDAV配置部分
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 12
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VDivider'
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 12
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSubheader',
+                                        'props': {
+                                            'text': 'WebDAV备份配置'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'webdav_enabled',
+                                            'label': '启用WebDAV备份',
+                                            'hint': '开启后插件将备份文件上传到WebDAV服务器',
+                                            'persistent-hint': True
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'webdav_notify',
+                                            'label': 'WebDAV通知',
+                                            'hint': '是否在WebDAV上传事件发生时发送通知',
+                                            'persistent-hint': True,
+                                            'show': '{{webdav_enabled}}'
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'webdav_digest_auth',
+                                            'label': '启用Digest认证',
+                                            'hint': '开启后将使用Digest认证',
+                                            'persistent-hint': True,
+                                            'show': '{{webdav_enabled}}'
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 3
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VSwitch',
+                                        'props': {
+                                            'model': 'webdav_disable_check',
+                                            'label': '忽略校验',
+                                            'hint': '开启后将忽略Webdav目录校验',
+                                            'persistent-hint': True,
+                                            'show': '{{webdav_enabled}}'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'props': {'show': '{{webdav_enabled}}'},
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 12
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'webdav_hostname',
+                                            'label': 'WebDAV服务器地址',
+                                            'hint': '输入WebDAV服务器的地址',
+                                            'persistent-hint': True
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'webdav_login',
+                                            'label': '登录名',
+                                            'hint': '输入登录名',
+                                            'persistent-hint': True
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'webdav_password',
+                                            'label': '登录密码',
+                                            'hint': '输入登录密码',
+                                            'persistent-hint': True
+                                        }
+                                    }
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'webdav_max_count',
+                                            'label': 'WebDAV最大保留备份数',
+                                            "min": "0",
+                                            'hint': '输入WebDAV最大保留备份数',
+                                            'persistent-hint': True
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'props': {'show': '{{webdav_enabled}}'},
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '注意：如WebDAV备份失败，请检查日志，并确认WebDAV目录存在，如果存在中文字符，可以尝试进行Url编码后重试'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        'component': 'VRow',
+                        'props': {'show': '{{webdav_enabled}}'},
+                        'content': [
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VAlert',
+                                        'props': {
+                                            'type': 'info',
+                                            'variant': 'tonal',
+                                            'text': '注意：如WebDAV备份失败，请尝试开启忽略校验后重试'
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
                     {
                         'component': 'VRow',
                         'content': [
@@ -522,7 +941,9 @@ class AutoBackup(_PluginBase):
             "enabled": False,
             "request_method": "POST",
             "webhook_url": "",
-            "back_path": str(self.get_data_path())
+            "back_path": str(self.get_data_path()),
+            "webdav_enabled": False,
+            "webdav_notify": True
         }
 
     def get_page(self) -> List[dict]:
