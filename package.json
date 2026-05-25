@@ -277,11 +277,12 @@
     "name": "短剧刮削",
     "description": "监控视频短剧创建，刮削。",
     "labels": "刮削",
-    "version": "3.2",
+    "version": "3.2.1",
     "icon": "Amule_B.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v3.2.1": "引入watchdog依赖",
       "v3.2": "支持消息发送",
       "v3.1": "支持自定义转移方式",
       "v3.0": "默认从tmdb刮削，刮削失败则从pt站刮削"
@@ -291,11 +292,12 @@
     "name": "云盘实时监控",
     "description": "监控云盘目录文件变化，自动转移链接。",
     "labels": "云盘",
-    "version": "2.4.6",
+    "version": "2.4.7",
     "icon": "Linkease_A.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v2.4.7": "引入watchdog依赖",
       "v2.4.6": "修复bug",
       "v2.4.5": "联动实时软连接插件（近媒体文件）",
       "v2.4.4": "修复刷新媒体库",
@@ -434,11 +436,12 @@
     "name": "实时软连接",
     "description": "监控目录文件变化，媒体文件软连接，其他文件可选复制。",
     "labels": "文件管理",
-    "version": "2.0.2",
+    "version": "2.0.3",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v2.0.3": "引入watchdog依赖",
       "v2.0.2": "增加同步间隔",
       "v2.0.1": "不重要的更新",
       "v2.0": "修复交互命令",
@@ -559,11 +562,12 @@
     "name": "目录监控",
     "description": "监控目录文件发生变化时实时整理到媒体库。(统一入库消息增强版)（测试中-.-）",
     "labels": "文件整理",
-    "version": "1.0",
+    "version": "1.0.1",
     "icon": "directory.png",
     "author": "thsrite",
     "level": 1,
     "history": {
+      "v1.0.1": "引入watchdog依赖",
       "v1.0": "同步merge主仓库[目录监控]插件，增加统一发送消息逻辑（Testing…）"
     }
   },
