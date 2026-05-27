@@ -12,7 +12,21 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from dateutil.parser import isoparse
 from requests import RequestException
-from zhconv import zhconv
+
+try:
+    from zhconv import zhconv as _zhconv
+
+    def _convert_to_zh_hans(text: str) -> str:
+        return _zhconv.convert(text, "zh-hans")
+except ImportError:
+    try:
+        from zhconv_rs import zhconv as _zhconv_rs
+
+        def _convert_to_zh_hans(text: str) -> str:
+            return _zhconv_rs(text, "zh-hans")
+    except ImportError:
+        def _convert_to_zh_hans(text: str) -> str:
+            return text
 
 from app import schemas
 from app.chain.tmdb import TmdbChain
@@ -36,7 +50,7 @@ class EmbyMetaRefresh(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png"
     # 插件版本
-    plugin_version = "1.7.4"
+    plugin_version = "1.7.5"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -596,8 +610,8 @@ class EmbyMetaRefresh(_PluginBase):
             if also_known_as:
                 for name in also_known_as:
                     if name and StringUtils.is_chinese(name):
-                        # 使用cn2an将繁体转化为简体
-                        return zhconv.convert(name, "zh-hans")
+                        # 使用 zhconv / zhconv-rs 将繁体转化为简体
+                        return _convert_to_zh_hans(name)
         except Exception as err:
             logger.error(f"获取人物中文名失败：{err}")
         return ""
