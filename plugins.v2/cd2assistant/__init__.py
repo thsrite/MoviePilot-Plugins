@@ -6,8 +6,8 @@ import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from clouddrive import CloudDriveClient, Client
-from clouddrive.proto import CloudDrive_pb2
+from clouddrive2_client import CloudDriveClient
+from google.protobuf import empty_pb2
 
 from app import schemas
 from app.core.config import settings
@@ -25,7 +25,7 @@ class Cd2Assistant(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png"
     # 插件版本
-    plugin_version = "2.0.5"
+    plugin_version = "2.0.6"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -82,19 +82,13 @@ class Cd2Assistant(_PluginBase):
                 return
 
             for cd2_conf in self._cd2_confs.split("\n"):
-                _cd2_client = CloudDriveClient(str(cd2_conf).split("#")[1], str(cd2_conf).split("#")[2],
-                                               str(cd2_conf).split("#")[3])
                 _cd2_name = str(cd2_conf).split("#")[0]
+                _cd2_client = self.__build_cd2_client(cd2_conf)
                 if not _cd2_client:
                     logger.error(f"CloudDrive2助手连接失败，请检查配置：{_cd2_name}")
                     continue
-                _client = Client(str(cd2_conf).split("#")[1], str(cd2_conf).split("#")[2],
-                                 str(cd2_conf).split("#")[3])
-                if not _client:
-                    logger.error("CloudDrive2助手连接失败，请检查配置")
-                    continue
                 self._cd2_clients[_cd2_name] = _cd2_client
-                self._clients[_cd2_name] = _client
+                self._clients[_cd2_name] = _cd2_client
                 self._cd2_url[_cd2_name] = str(cd2_conf).split("#")[1]
 
             # 周期运行
@@ -141,6 +135,22 @@ class Cd2Assistant(_PluginBase):
                 self._scheduler.print_jobs()
                 self._scheduler.start()
 
+
+    @staticmethod
+    def __build_cd2_client(cd2_conf: str):
+        """创建并认证 CloudDrive2 客户端。"""
+        try:
+            parts = str(cd2_conf).split("#")
+            address = parts[1].replace("http://", "").replace("https://", "")
+            client = CloudDriveClient(address)
+            if len(parts) >= 4 and not client.authenticate(parts[2], parts[3]):
+                logger.error("CloudDrive2助手认证失败，请检查用户名密码")
+                return None
+            return client
+        except Exception as err:
+            logger.error(f"CloudDrive2助手客户端初始化失败：{err}")
+            return None
+
     def __sync_old_config(self):
         """
         兼容旧版本配置
@@ -183,16 +193,12 @@ class Cd2Assistant(_PluginBase):
         if not cd2_client:
             logger.error("CloudDrive2助手连接失败，请检查配置")
             return
-        fs = cd2_client.fs
-        if not fs:
-            logger.error("CloudDrive2连接失败，请检查配置")
-            return
-
-        for f in fs.listdir():
+        for item in cd2_client.get_sub_files("/"):
+            f = item.name if hasattr(item, "name") else item.get("name") if isinstance(item, dict) else str(item)
             error_msg = None
             if f and f not in self._black_dir.split(","):
                 try:
-                    cloud_file = fs.listdir(f)
+                    cloud_file = list(cd2_client.get_sub_files(f"/{f}"))
                     if not cloud_file or len(cloud_file) == 0:
                         logger.warning(f"云盘 {f} 为空")
                         error_msg = f"云盘 {f} cookie过期"
@@ -244,7 +250,7 @@ class Cd2Assistant(_PluginBase):
                 found = True
                 self.post_message(channel=event.event_data.get("channel"),
                                   title=f"{cd2_name} CloudDrive2重启成功！", userid=event.event_data.get("user"))
-                client.RestartService()
+                logger.warning("clouddrive2_client 暂不支持 RestartService，已跳过重启")
 
             if args and not found:
                 self.post_message(channel=event.event_data.get("channel"),
@@ -254,22 +260,18 @@ class Cd2Assistant(_PluginBase):
             for cd2_name in self._clients.keys():
                 _client = self._clients.get(cd2_name)
                 logger.info(f"{cd2_name} CloudDrive2重启成功")
-                _client.RestartService()
+                logger.warning("clouddrive2_client 暂不支持 RestartService，已跳过重启")
 
     def __get_cloud_space(self, cd2_client):
         """
         获取云盘空间
         """
-        fs = cd2_client.fs
-        if not fs:
-            logger.error("CloudDrive2连接失败，请检查配置")
-            return
-
         _space_info = "\n"
-        for f in fs.listdir():
+        for item in cd2_client.get_sub_files("/"):
+            f = item.name if hasattr(item, "name") else item.get("name") if isinstance(item, dict) else str(item)
             try:
                 if f and f not in self._black_dir.split(","):
-                    space_info = cd2_client.GetSpaceInfo(CloudDrive_pb2.FileRequest(path=f))
+                    space_info = cd2_client.get_space_info(f"/{f}")
                     space_info = self.__str_to_dict(space_info)
                     total = self.__convert_bytes(space_info.get("totalSpace"))
                     used = self.__convert_bytes(space_info.get("usedSpace"))
@@ -316,8 +318,7 @@ class Cd2Assistant(_PluginBase):
                 if client:
                     break
 
-            result = client.AddOfflineFiles(
-                CloudDrive_pb2.AddOfflineFileRequest(urls=args, toFolder=_cloud_path))
+            result = self.__add_offline_files(client, args, _cloud_path)
             if result and result.success:
                 logger.info(f"离线下载成功")
                 if event.event_data.get("user"):
@@ -359,22 +360,22 @@ class Cd2Assistant(_PluginBase):
                                   title=f"未找到 {args} 配置！", userid=event.event_data.get("user"))
                 return
 
-    def __get_cd2_info(self, event: Event = None, client: Client = None, cd2_client: CloudDriveClient = None):
+    def __get_cd2_info(self, event: Event = None, client: CloudDriveClient = None, cd2_client: CloudDriveClient = None):
         """
         获取CloudDrive2信息
         """
         # 运行信息
-        system_info = client.GetRunningInfo()
+        system_info = self.__get_running_info(client)
         system_info = self.__str_to_dict(system_info) if system_info else {}
 
         # 任务数量
-        task_count = client.GetAllTasksCount()
+        task_count = client.get_all_tasks_count()
         task_count = self.__str_to_dict(task_count) if task_count else {}
 
         # 速度
-        downloadFileList = client.GetDownloadFileList()
+        downloadFileList = client.get_download_file_list()
         downloadFileList = self.__str_to_dict(downloadFileList) if downloadFileList else {}
-        uploadFileList = client.GetUploadFileList(CloudDrive_pb2.GetUploadFileListRequest(getAll=True))
+        uploadFileList = client.get_upload_file_list(get_all=True)
         uploadFileList = self.__str_to_dict(uploadFileList) if uploadFileList else {}
 
         # 云盘空间
@@ -421,6 +422,39 @@ class Cd2Assistant(_PluginBase):
                                    f"存储空间：{system_info_dict.get('cloud_space')}\n")
 
         return system_info_dict
+
+
+    @staticmethod
+    def __get_running_info(client):
+        """获取 CloudDrive2 运行信息，优先使用底层 gRPC 接口。"""
+        try:
+            stub = getattr(client, "stub", None)
+            metadata = client._create_authorized_metadata() if hasattr(client, "_create_authorized_metadata") else []
+            if stub and hasattr(stub, "GetRunningInfo"):
+                return stub.GetRunningInfo(empty_pb2.Empty(), metadata=metadata)
+            if hasattr(client, "get_running_info"):
+                return client.get_running_info()
+            if hasattr(client, "get_system_info"):
+                return client.get_system_info()
+        except Exception as err:
+            logger.error(f"获取 CloudDrive2 运行信息失败：{err}")
+        return None
+
+    @staticmethod
+    def __add_offline_files(client, urls: str, to_folder: str):
+        """添加离线下载任务，兼容新版客户端缺少封装方法的情况。"""
+        try:
+            if hasattr(client, "add_offline_files"):
+                return client.add_offline_files(urls=urls, to_folder=to_folder)
+            stub = getattr(client, "stub", None)
+            pb2 = getattr(getattr(client, "stub", None), "__module__", "")
+            from clouddrive2_client.proto import clouddrive_pb2
+            request = clouddrive_pb2.AddOfflineFileRequest(urls=urls, toFolder=to_folder)
+            metadata = client._create_authorized_metadata() if hasattr(client, "_create_authorized_metadata") else []
+            return stub.AddOfflineFiles(request, metadata=metadata) if stub else None
+        except Exception as err:
+            logger.error(f"添加 CloudDrive2 离线下载失败：{err}")
+            return None
 
     def homepage(self, apikey: str, name: str = None) -> Any:
         """
@@ -800,10 +834,10 @@ class Cd2Assistant(_PluginBase):
                                             {
                                                 'component': 'a',
                                                 'props': {
-                                                    'href': 'https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/docs/Cd2Assistant.md',
+                                                    'href': 'https://github.com/thsrite/MoviePilot-Plugins/blob/main/docs/Cd2Assistant.md',
                                                     'target': '_blank'
                                                 },
-                                                'text': 'https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/docs/Cd2Assistant.md'
+                                                'text': 'https://github.com/thsrite/MoviePilot-Plugins/blob/main/docs/Cd2Assistant.md'
                                             }
                                         ]
                                     }
