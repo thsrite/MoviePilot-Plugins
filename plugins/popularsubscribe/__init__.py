@@ -222,7 +222,7 @@ class PopularSubscribe(_PluginBase):
             "name": name,
             "trigger": trigger,
             "func": self.__popular_subscribe,
-            "kwargs": {
+            "func_kwargs": {
                 "stype": stype,
                 "page_cnt": page_cnt,
                 "popular_cnt": popular_cnt,
