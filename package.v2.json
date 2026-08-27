@@ -25,6 +25,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png",
     "author": "thsrite",
     "level": 1,
+    "v3": false,
     "history": {
       "v2.3.3": "同时适配 zhconv 和 zhconv-rs",
       "v2.3.2": "修复缓存序列化错误问题",
