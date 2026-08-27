@@ -275,6 +275,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/homepage.png",
     "author": "thsrite",
     "level": 1,
+    "v3": false,
     "history": {
       "v1.3": "兼容v2",
       "v1.2": "适配v1.9.1-beta（不生效就重启）",

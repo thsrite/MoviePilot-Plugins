@@ -2,7 +2,7 @@
 
 ![img.png](../img/HomePage/img.png)
 
-HomePage services.yaml配置
+HomePage `services.yaml` 配置（MoviePilot V3）
 ```angular2html
 - Media:
     - MoviePilot:
@@ -14,7 +14,7 @@ HomePage services.yaml配置
         showStats: true
         widget:
             type: customapi
-            url: http://MoviePilot_IP:NGINX_PORT/api/v1/plugin/HomePage/statistic?apikey=api_token
+            url: http://MoviePilot_IP:NGINX_PORT/api/v1/plugin/HomePage/statistic?token=API_TOKEN
             method: GET
             mappings:
                 - field: movie_subscribes
@@ -35,6 +35,9 @@ HomePage services.yaml配置
                 #   label: 剩余空间
                 # - field: now_tasks
 ```
+
+V3 接口使用 MoviePilot 标准认证依赖，也支持 `Authorization: Bearer <登录令牌>` 或
+`X-API-KEY` 请求头。V1/V2 旧版插件仍使用 `?apikey=API_TOKEN`，不要将旧参数用于 V3 接口。
 
 ### 自定义API Response字段
 - movie_subscribes： 电影订阅

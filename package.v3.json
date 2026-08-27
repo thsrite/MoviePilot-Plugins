@@ -166,5 +166,19 @@
     "history": {
       "v3.0.0": "适配 V3 SDK、强化目录边界校验并迁移异步任务推送。"
     }
+  },
+  "HomePage": {
+    "name": "HomePage",
+    "description": "HomePage自定义API。",
+    "labels": "工具",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/homepage.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK，统一认证、响应模型和存储容量统计合同。"
+    }
   }
 }
