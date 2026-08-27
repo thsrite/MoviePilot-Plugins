@@ -216,6 +216,7 @@
     "author": "thsrite",
     "level": 1,
     "v2": true,
+    "v3": false,
     "history": {
       "v1.5": "单次消息图片",
       "v1.4": "单次消息发送8条更新，以此类推",

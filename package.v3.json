@@ -180,5 +180,19 @@
     "history": {
       "v2.0.0": "适配 V3 SDK，统一认证、响应模型和存储容量统计合同。"
     }
+  },
+  "SubscribeReminder": {
+    "name": "订阅提醒",
+    "description": "推送当天订阅更新内容。",
+    "labels": "订阅",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/subscribe_reminder.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK、统一媒体身份并迁移异步订阅提醒任务。"
+    }
   }
 }
