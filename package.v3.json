@@ -195,6 +195,20 @@
       "v2.0.0": "适配 V3 SDK，迁移 Webhook 通知与消息类型合同。"
     }
   },
+  "CloudSyncDel": {
+    "name": "云盘同步删除",
+    "description": "媒体库删除软连接/strm文件后，同步删除云盘文件。",
+    "labels": "云盘",
+    "version": "2.0.0",
+    "icon": "clouddisk.png",
+    "author": "thsrite",
+    "level": 2,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK、统一媒体身份并收紧路径删除边界。"
+    }
+  },
   "AutoBackup": {
     "name": "自动备份",
     "description": "自动备份数据和配置文件。",

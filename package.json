@@ -659,6 +659,7 @@
     "author": "thsrite",
     "level": 2,
     "v2": true,
+    "v3": false,
     "history": {
       "v1.6.2": "修复云盘删除检查空文件夹",
       "v1.6.1": "移除不必要的参数",
