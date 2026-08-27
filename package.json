@@ -418,6 +418,7 @@
     "author": "thsrite",
     "level": 1,
     "v2": true,
+    "v3": false,
     "history": {
       "v1.3": "自定义保留消息天数",
       "v1.2": "多个容器名,拼接",
