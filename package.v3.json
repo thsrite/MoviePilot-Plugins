@@ -21,6 +21,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png",
     "author": "thsrite",
     "level": 1,
+    "release": true,
     "system_version": ">=3.0.0",
     "history": {
       "v3.0.0": "适配 V3 插件 API，统一媒体身份并改用 MoviePilot 文本 SDK。"
