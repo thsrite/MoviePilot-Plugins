@@ -181,6 +181,20 @@
       "v2.0.0": "适配 V3 SDK、外部 API 错误边界和明确响应模型。"
     }
   },
+  "SynologyNotify": {
+    "name": "群辉Webhook通知",
+    "description": "接收群辉webhook通知并推送。",
+    "labels": "消息通知",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/synology.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK，迁移 Webhook 通知与消息类型合同。"
+    }
+  },
   "AutoBackup": {
     "name": "自动备份",
     "description": "自动备份数据和配置文件。",

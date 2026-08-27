@@ -173,6 +173,7 @@
     "author": "thsrite",
     "level": 1,
     "v2": true,
+    "v3": false,
     "history": {
       "v1.3": "新增参数title、content、url",
       "v1.2": "修改配置描述",
