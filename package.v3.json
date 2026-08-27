@@ -13,6 +13,20 @@
       "v5.0.0": "严格适配 MoviePilot V3，修复路径映射、索引和调度边界。"
     }
   },
+  "CloudStrmIncrement": {
+    "name": "云盘Strm生成（增量版）",
+    "description": "扫描增量目录，归档文件并生成Strm文件。",
+    "labels": "云盘",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK、宿主调度和安全增量文件处理合同。"
+    }
+  },
   "StrmConvert": {
     "name": "Strm文件模式转换",
     "description": "Strm文件内容转为本地路径或者cd2/alist API路径。",
