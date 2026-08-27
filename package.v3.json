@@ -39,5 +39,19 @@
     "history": {
       "v3.0.0": "适配 V3 SDK、统一媒体身份、整理历史与刮削链路。"
     }
+  },
+  "SubscribeGroup": {
+    "name": "订阅规则自动填充",
+    "description": "电视剧下载后自动添加官组等信息到订阅；添加订阅后根据二级分类名称自定义订阅规则。",
+    "labels": "订阅",
+    "version": "3.0.0",
+    "icon": "teamwork.png",
+    "author": "thsrite",
+    "level": 2,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v3.0.0": "适配 V3 SDK、统一媒体身份并迁移订阅与下载历史查询合同。"
+    }
   }
 }
