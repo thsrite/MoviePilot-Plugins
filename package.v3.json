@@ -124,5 +124,19 @@
     "history": {
       "v2.0.0": "适配 V3 SDK、迁移 Emby 标签和音频标签处理链路。"
     }
+  },
+  "WeChatForward": {
+    "name": "微信消息转发",
+    "description": "根据正则转发通知到其他WeChat应用。",
+    "labels": "消息通知",
+    "version": "3.0.0",
+    "icon": "Wechat_A.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v3.0.0": "适配 V3 事件、异步网络和订阅数据访问合同。"
+    }
   }
 }
