@@ -2,7 +2,7 @@
 """校验可发布到 MoviePilot V3 的插件市场版本与源码版本一致。
 
 Release workflow 同时处理 V1、V2 兼容实现和 V3 专用实现。旧索引中显式声明
-``v3: false`` 的实现不会再发布；V3 专用实现还必须满足迁移版本和元数据合同。
+``v3: false`` 的实现不会再发布；迁移期约束由迁移测试负责，不限制后续原生 V3 插件和版本演进。
 """
 
 from __future__ import annotations
@@ -52,41 +52,66 @@ def _expected_plugin_dir(package_file: Path, plugin_id: str) -> Path:
     return package_file.parent / base_dir / plugin_id_lc
 
 
-def _version_parts(value: object) -> tuple[int, ...] | None:
-    """解析只含数字段的插件版本。"""
-    match = re.fullmatch(r"\d+(?:\.\d+)*", str(value or "").strip())
+def _semantic_version(value: object) -> tuple[int, ...] | None:
+    """将版本解析为数字元组，兼容 history 使用的 ``v`` 前缀。"""
+    match = re.fullmatch(r"v?(\d+(?:\.\d+)*)", str(value or "").strip())
     if not match:
         return None
-    return tuple(int(part) for part in match.group().split("."))
+    return tuple(int(part) for part in match.group(1).split("."))
+
+
+def _compare_versions(left: tuple[int, ...], right: tuple[int, ...]) -> int:
+    """按语义版本数字段比较，缺失的小版本段按零处理。"""
+    width = max(len(left), len(right), 3)
+    normalized_left = left + (0,) * (width - len(left))
+    normalized_right = right + (0,) * (width - len(right))
+    return (normalized_left > normalized_right) - (normalized_left < normalized_right)
 
 
 def _check_v3_metadata(path: Path, plugin_id: str, metadata: dict) -> list[str]:
-    """校验 V3 专用实现长期有效的发布元数据约束。"""
+    """校验 V3 发布长期稳定的版本历史与旧代隔离约束。"""
     errors: list[str] = []
     version = str(metadata.get("version") or "").strip()
-    version_parts = _version_parts(version)
+    version_parts = _semantic_version(version)
     if version_parts is None or len(version_parts) < 2:
         errors.append(f"{path}: {plugin_id} V3 版本必须至少包含主版本和小版本：{version}")
 
-    if metadata.get("system_version") != ">=3.0.0":
-        errors.append(f'{path}: {plugin_id} system_version 必须为 ">=3.0.0"')
-
     history = metadata.get("history")
     expected_history_key = f"v{version}"
-    if not isinstance(history, dict) or list(history) != [expected_history_key]:
-        errors.append(f"{path}: {plugin_id} history 必须只保留当前版本 {expected_history_key}")
-    elif not isinstance(history[expected_history_key], str) or not history[expected_history_key].strip():
-        errors.append(f"{path}: {plugin_id} history 当前版本说明不能为空")
+    if not isinstance(history, dict) or not history:
+        errors.append(f"{path}: {plugin_id} history 不能为空")
+    else:
+        history_versions = list(history)
+        parsed_history = [_semantic_version(item) for item in history_versions]
+        for item, parsed in zip(history_versions, parsed_history):
+            if parsed is None:
+                errors.append(f"{path}: {plugin_id} history 包含非法版本 {item}")
+        if next(iter(history)) != expected_history_key:
+            errors.append(f"{path}: {plugin_id} history 首项必须为当前版本 {expected_history_key}")
+        elif not isinstance(history[expected_history_key], str) or not history[expected_history_key].strip():
+            errors.append(f"{path}: {plugin_id} history 当前版本说明不能为空")
+        for previous_key, previous, current_key, current in zip(
+            history_versions, parsed_history, history_versions[1:], parsed_history[1:]
+        ):
+            if previous and current and _compare_versions(previous, current) < 0:
+                errors.append(
+                    f"{path}: {plugin_id} history 未按语义版本降序排列："
+                    f"{previous_key} 在 {current_key} 之前"
+                )
 
     legacy = _legacy_metadata(path, plugin_id)
-    if legacy is None:
-        errors.append(
-            f"{path}: {plugin_id} 在 package.v2.json 或 package.json 中没有对应旧版本条目"
-        )
-        return errors
-    legacy_path, legacy_metadata = legacy
-    if legacy_metadata.get("v3") is not False:
-        errors.append(f"{legacy_path}: {plugin_id} 必须声明 v3=false")
+    if legacy is not None:
+        legacy_path, legacy_metadata = legacy
+        if legacy_metadata.get("v3") is not False:
+            errors.append(f"{legacy_path}: {plugin_id} 必须声明 v3=false")
+        legacy_version = _semantic_version(legacy_metadata.get("version"))
+        if version_parts and legacy_version:
+            expected_major = legacy_version[0] + 1
+            if version_parts[0] != expected_major:
+                errors.append(
+                    f"{path}: {plugin_id} V3 版本应与旧代 {legacy_metadata.get('version')} "
+                    f"保持大版本跃迁（主版本 {expected_major}.x），当前为 {version}"
+                )
 
     return errors
 

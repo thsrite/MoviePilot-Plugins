@@ -68,5 +68,61 @@
     "history": {
       "v2.0.0": "适配 V3 SDK、统一媒体身份并迁移整理与下载历史合同。"
     }
+  },
+  "ShortPlayMonitor": {
+    "name": "短剧刮削",
+    "description": "监控视频短剧创建，刮削。",
+    "labels": "刮削",
+    "version": "5.0.0",
+    "icon": "Amule_B.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v5.0.0": "适配 V3 SDK、统一媒体身份并迁移整理与刮削链路。"
+    }
+  },
+  "MediaRelease": {
+    "name": "影视将映订阅",
+    "description": "监控未上线影视作品，自动添加订阅。",
+    "labels": "订阅",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/mediarelease.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK、统一媒体身份并迁移订阅链路。"
+    }
+  },
+  "EmbyMetaTag": {
+    "name": "Emby媒体标签",
+    "description": "自动给媒体库媒体添加标签。",
+    "labels": "Emby",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/tag.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK、迁移 Emby 标签和音频标签处理链路。"
+    }
+  },
+  "WeChatForward": {
+    "name": "微信消息转发",
+    "description": "根据正则转发通知到其他WeChat应用。",
+    "labels": "消息通知",
+    "version": "3.0.0",
+    "icon": "Wechat_A.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v3.0.0": "适配 V3 事件、异步网络和订阅数据访问合同。"
+    }
   }
 }
