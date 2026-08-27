@@ -233,6 +233,7 @@
     "icon": "mediasyncdel.png",
     "author": "thsrite",
     "level": 1,
+    "v3": false,
     "history": {
       "v1.9.2": "兼容windows路径",
       "v1.9.1": "兼容MoviePilot v2.5.3-1",
@@ -364,6 +365,7 @@
     "icon": "teamwork.png",
     "author": "thsrite",
     "level": 2,
+    "v3": false,
     "history": {
       "v2.8.7": "修复下载填充",
       "v2.8.6": "修复订阅填充",
@@ -448,6 +450,7 @@
     "icon": "Linkease_A.png",
     "author": "thsrite",
     "level": 1,
+    "v3": false,
     "history": {
       "v2.5.10": "引入watchdog依赖",
       "v2.5.9": "增加定时任务执行",
@@ -489,6 +492,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png",
     "author": "thsrite",
     "level": 1,
+    "v3": false,
     "history": {
       "v1.3.4": "引入watchdog依赖",
       "v1.3.3": "增加多目录处理延时",
