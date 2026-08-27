@@ -139,6 +139,20 @@
       "v3.0.0": "适配 V3 事件、异步网络和订阅数据访问合同。"
     }
   },
+  "ActorSubscribePlus": {
+    "name": "演员作品订阅",
+    "description": "获取TMDB演员作品，并自动添加到订阅。",
+    "labels": "订阅",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/actorsubscribeplus.png",
+    "author": "thsrite",
+    "level": 2,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK、统一媒体身份并迁移演员订阅历史。"
+    }
+  },
   "AutoBackup": {
     "name": "自动备份",
     "description": "自动备份数据和配置文件。",

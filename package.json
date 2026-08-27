@@ -688,6 +688,7 @@
     "author": "thsrite",
     "level": 2,
     "v2": true,
+    "v3": false,
     "history": {
       "v1.1": "无评分默认评分0",
       "v1.0": "获取TMDB演员作品，并自动添加到订阅"
