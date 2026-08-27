@@ -646,6 +646,7 @@
     "author": "thsrite",
     "level": 2,
     "v2": true,
+    "v3": false,
     "history": {
       "v1.2": "修复重定向",
       "v1.1": "不删除软连接，强制更新重定向",
