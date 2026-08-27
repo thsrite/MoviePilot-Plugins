@@ -124,5 +124,19 @@
     "history": {
       "v3.0.0": "适配 V3 事件、异步网络和订阅数据访问合同。"
     }
+  },
+  "AutoBackup": {
+    "name": "自动备份",
+    "description": "自动备份数据和配置文件。",
+    "labels": "系统设置",
+    "version": "3.0.0",
+    "icon": "Time_machine_B.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v3.0.0": "使用 MoviePilot V3 数据库治理服务创建一致性快照并归档配置文件。"
+    }
   }
 }
