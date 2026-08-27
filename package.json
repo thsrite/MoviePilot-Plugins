@@ -7,6 +7,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png",
     "author": "thsrite",
     "level": 1,
+    "v3": false,
     "v2": true,
     "history": {
       "v4.4.2": "fix bug",
