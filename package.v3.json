@@ -125,6 +125,20 @@
       "v2.0.0": "适配 V3 SDK、迁移 Emby 标签和音频标签处理链路。"
     }
   },
+  "PopularSubscribe": {
+    "name": "热门媒体订阅",
+    "description": "自动添加热门电影、电视剧、动漫到订阅。",
+    "labels": "订阅",
+    "version": "3.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/popular.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v3.0.0": "适配 V3 SDK、统一媒体身份、统计读取与订阅历史。"
+    }
+  },
   "WeChatForward": {
     "name": "微信消息转发",
     "description": "根据正则转发通知到其他WeChat应用。",

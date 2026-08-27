@@ -538,6 +538,7 @@
     "author": "thsrite",
     "level": 1,
     "v2": true,
+    "v3": false,
     "history": {
       "v2.1": "修复 MoviePilot v2.14 定时任务未传递热门订阅参数的问题",
       "v2.0": "适配 MoviePilot v2.14 订阅统计接口",
