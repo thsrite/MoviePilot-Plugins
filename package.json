@@ -810,6 +810,7 @@
     "author": "thsrite",
     "level": 2,
     "v2": true,
+    "v3": false,
     "history": {
       "v1.5.1": "增加保活（重新获取ck）",
       "v1.5": "尝试修复签到",
