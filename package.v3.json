@@ -208,5 +208,19 @@
     "history": {
       "v2.0.0": "适配 V3 SDK，迁移下载器和历史记录访问合同。"
     }
+  },
+  "SubscribeCacheClear": {
+    "name": "清理订阅缓存",
+    "description": "清理订阅已下载集数。",
+    "labels": "订阅",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/broom.png",
+    "author": "thsrite",
+    "level": 2,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK，迁移订阅数据访问合同。"
+    }
   }
 }

@@ -85,6 +85,7 @@
     "author": "thsrite",
     "level": 2,
     "v2": true,
+    "v3": false,
     "history": {
       "v1.0": "清理订阅已下载集数"
     }
