@@ -260,6 +260,7 @@
     "icon": "Youtube-dl_A.png",
     "author": "thsrite",
     "level": 1,
+    "v3": false,
     "history": {
       "v1.1.6": "添加记录默认状态",
       "v1.1.5": "修复同步下载器种子",

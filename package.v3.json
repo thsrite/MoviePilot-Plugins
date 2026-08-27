@@ -194,5 +194,19 @@
     "history": {
       "v2.0.0": "适配 V3 SDK、统一媒体身份并迁移异步订阅提醒任务。"
     }
+  },
+  "SyncDownloadFiles": {
+    "name": "下载器文件同步",
+    "description": "同步下载器的文件信息到数据库，删除文件时联动删除下载任务。",
+    "labels": "下载管理",
+    "version": "2.0.0",
+    "icon": "Youtube-dl_A.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK，迁移下载器和历史记录访问合同。"
+    }
   }
 }
