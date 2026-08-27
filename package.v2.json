@@ -71,6 +71,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/tag.png",
     "author": "thsrite",
     "level": 1,
+    "v3": false,
     "history": {
       "v1.6": "优化执行周期输入，需要MoviePilot v2.2.1+",
       "v1.5": "支持音频标签缓存，防重复请求",

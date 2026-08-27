@@ -110,5 +110,19 @@
     "history": {
       "v3.0.0": "使用 MoviePilot V3 数据库治理服务创建一致性快照并归档配置文件。"
     }
+  },
+  "EmbyMetaTag": {
+    "name": "Emby媒体标签",
+    "description": "自动给媒体库媒体添加标签。",
+    "labels": "Emby",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/tag.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK、迁移 Emby 标签和音频标签处理链路。"
+    }
   }
 }
