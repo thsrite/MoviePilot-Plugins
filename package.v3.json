@@ -474,5 +474,19 @@
     },
     "system_version": ">=3.0.0",
     "release": true
+  },
+  "CustomCommand": {
+    "name": "自定义命令",
+    "description": "自定义执行周期执行命令并推送结果。",
+    "labels": "自定义命令",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/code.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK、宿主调度和可靠命令执行合同。"
+    }
   }
 }

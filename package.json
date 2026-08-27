@@ -397,6 +397,7 @@
     "author": "thsrite",
     "level": 1,
     "v2": true,
+    "v3": false,
     "history": {
       "v1.7": "自定义通知关键词",
       "v1.6": "自定义保留消息天数",
