@@ -233,6 +233,7 @@
     "icon": "mediasyncdel.png",
     "author": "thsrite",
     "level": 1,
+    "v3": false,
     "history": {
       "v1.9.2": "兼容windows路径",
       "v1.9.1": "兼容MoviePilot v2.5.3-1",
