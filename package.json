@@ -825,6 +825,7 @@
     "author": "thsrite",
     "level": 1,
     "v2": true,
+    "v3": false,
     "history": {
       "v1.5": "修改依赖包名",
       "v1.4": "修复立即运行一次",
