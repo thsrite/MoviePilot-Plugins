@@ -390,5 +390,19 @@
     "history": {
       "v2.0.0": "适配 V3 SDK、收紧 Emby 演员同步生命周期与网络资源释放。"
     }
+  },
+  "CommandExecute": {
+    "name": "命令执行器",
+    "description": "自定义容器命令执行。",
+    "labels": "工具",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/command.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK，并通过宿主服务统一命令执行与结果反馈。"
+    }
   }
 }

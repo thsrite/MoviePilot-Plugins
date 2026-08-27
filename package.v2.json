@@ -428,6 +428,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/command.png",
     "author": "thsrite",
     "level": 1,
+    "v3": false,
     "history": {
       "v1.3": "兼容v2",
       "v1.2": "调整交互命令返回信息",
