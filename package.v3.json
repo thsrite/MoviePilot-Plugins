@@ -152,5 +152,19 @@
     "history": {
       "v3.0.0": "适配 V3 SDK、异步 CloudDrive2 调用和明确的 HomePage 响应模型。"
     }
+  },
+  "FileSoftLink": {
+    "name": "实时软连接",
+    "description": "监控目录文件变化，媒体文件软连接，其他文件可选复制。",
+    "labels": "文件管理",
+    "version": "3.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlink.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v3.0.0": "适配 V3 SDK、强化目录边界校验并迁移异步任务推送。"
+    }
   }
 }
