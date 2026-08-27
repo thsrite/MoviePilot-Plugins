@@ -97,20 +97,6 @@
       "v2.0.0": "适配 V3 SDK、统一媒体身份并迁移订阅链路。"
     }
   },
-  "AutoBackup": {
-    "name": "自动备份",
-    "description": "自动备份数据和配置文件。",
-    "labels": "系统设置",
-    "version": "3.0.0",
-    "icon": "Time_machine_B.png",
-    "author": "thsrite",
-    "level": 1,
-    "release": true,
-    "system_version": ">=3.0.0",
-    "history": {
-      "v3.0.0": "使用 MoviePilot V3 数据库治理服务创建一致性快照并归档配置文件。"
-    }
-  },
   "EmbyMetaTag": {
     "name": "Emby媒体标签",
     "description": "自动给媒体库媒体添加标签。",
