@@ -97,6 +97,20 @@
       "v2.0.0": "适配 V3 SDK、统一媒体身份并迁移订阅链路。"
     }
   },
+  "ActorSubscribe": {
+    "name": "演员订阅",
+    "description": "自动订阅指定演员热映电影、电视剧。",
+    "labels": "订阅",
+    "version": "3.0.0",
+    "icon": "Mdcng_A.png",
+    "author": "thsrite",
+    "level": 2,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v3.0.0": "适配 V3 SDK、统一媒体身份并迁移演员订阅历史。"
+    }
+  },
   "EmbyMetaTag": {
     "name": "Emby媒体标签",
     "description": "自动给媒体库媒体添加标签。",

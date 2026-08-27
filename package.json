@@ -260,6 +260,7 @@
     "author": "thsrite",
     "level": 2,
     "v2": true,
+    "v3": false,
     "history": {
       "v2.1.1": "尝试修复未匹配到演员的bug",
       "v2.1": "逻辑优化",
