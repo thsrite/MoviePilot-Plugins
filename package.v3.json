@@ -460,5 +460,19 @@
     "history": {
       "v2.0.0": "适配 V3 插件 API，迁移文件复制服务。"
     }
+  },
+  "ScheduleReminder": {
+    "name": "日程提醒",
+    "description": "自定义提醒事项、提醒时间。",
+    "labels": "消息通知",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/reminder.png",
+    "author": "thsrite",
+    "level": 1,
+    "history": {
+      "v2.0.0": "适配 MoviePilot V3，任务调度由宿主统一管理"
+    },
+    "system_version": ">=3.0.0",
+    "release": true
   }
 }
