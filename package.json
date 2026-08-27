@@ -710,6 +710,7 @@
     "author": "thsrite",
     "level": 1,
     "v2": true,
+    "v3": false,
     "history": {
       "v1.1": "增加log显示",
       "v1.0": "自定义文件类型从源目录复制到目的目录"

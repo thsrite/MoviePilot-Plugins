@@ -446,5 +446,19 @@
     "history": {
       "v2.0.0": "适配 V3 插件 API，安全重定向软链接并由宿主统一调度。"
     }
+  },
+  "FileCopy": {
+    "name": "文件复制",
+    "description": "自定义文件类型从源目录复制到目的目录。",
+    "labels": "工具",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/copy_files.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 插件 API，迁移文件复制服务。"
+    }
   }
 }
