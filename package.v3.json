@@ -138,5 +138,19 @@
     "history": {
       "v3.0.0": "使用 MoviePilot V3 数据库治理服务创建一致性快照并归档配置文件。"
     }
+  },
+  "Cd2Assistant": {
+    "name": "CloudDrive2助手",
+    "description": "监控上传任务，检测是否有异常，发送通知。",
+    "labels": "云盘",
+    "version": "3.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png",
+    "author": "thsrite",
+    "level": 2,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v3.0.0": "适配 V3 SDK、异步 CloudDrive2 调用和明确的 HomePage 响应模型。"
+    }
   }
 }
