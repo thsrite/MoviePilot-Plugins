@@ -1,4 +1,18 @@
 {
+  "StrmConvert": {
+    "name": "Strm文件模式转换",
+    "description": "Strm文件内容转为本地路径或者cd2/alist API路径。",
+    "labels": "云盘",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/convert.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 API，保留本地/API 模式并强化路径映射与原子写入。"
+    }
+  },
   "CloudStrmCompanion": {
     "name": "云盘Strm助手",
     "description": "实时监控、定时全量增量生成strm文件。",
