@@ -798,6 +798,7 @@
     "author": "thsrite",
     "level": 1,
     "v2": true,
+    "v3": false,
     "history": {
       "v1.0.2": "修复问题",
       "v1.0.1": "支持Lucky最新版本获取ipv4。",

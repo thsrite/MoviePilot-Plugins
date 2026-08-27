@@ -167,6 +167,20 @@
       "v2.0.0": "适配 V3 SDK、统一媒体身份并迁移演员订阅历史。"
     }
   },
+  "Lucky": {
+    "name": "Lucky",
+    "description": "Lucky HomePage自定义API。",
+    "labels": "工具",
+    "version": "2.0.0",
+    "icon": "Lucky_A.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK、外部 API 错误边界和明确响应模型。"
+    }
+  },
   "AutoBackup": {
     "name": "自动备份",
     "description": "自动备份数据和配置文件。",
