@@ -584,6 +584,7 @@
     "icon": "Amule_B.png",
     "author": "thsrite",
     "level": 1,
+    "v3": false,
     "history": {
       "v4.0.4": "引入watchdog依赖",
       "v4.0.3": "修复主程序依赖调整",

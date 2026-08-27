@@ -68,5 +68,19 @@
     "history": {
       "v2.0.0": "适配 V3 SDK、统一媒体身份并迁移整理与下载历史合同。"
     }
+  },
+  "ShortPlayMonitor": {
+    "name": "短剧刮削",
+    "description": "监控视频短剧创建，刮削。",
+    "labels": "刮削",
+    "version": "5.0.0",
+    "icon": "Amule_B.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v5.0.0": "适配 V3 SDK、统一媒体身份并迁移整理与刮削链路。"
+    }
   }
 }
