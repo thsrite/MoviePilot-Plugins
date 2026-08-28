@@ -768,6 +768,7 @@
     "description": "通知Emby Danmu插件下载弹幕。",
     "labels": "Emby,媒体库",
     "version": "1.2",
+    "v3": false,
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/danmu.png",
     "author": "thsrite",
     "level": 1,

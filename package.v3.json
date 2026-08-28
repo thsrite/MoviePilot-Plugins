@@ -320,5 +320,19 @@
     "history": {
       "v3.0.0": "适配 V3 SDK，并将报告任务迁移到宿主调度器。"
     }
+  },
+  "EmbyDanmu": {
+    "name": "Emby弹幕下载",
+    "description": "通知Emby Danmu插件下载弹幕。",
+    "labels": "Emby,媒体库",
+    "version": "3.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/danmu.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v3.0.0": "适配 V3 SDK、收口 Emby 请求和弹幕任务处理。"
+    }
   }
 }
