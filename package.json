@@ -7,6 +7,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png",
     "author": "thsrite",
     "level": 1,
+    "v3": false,
     "v2": true,
     "history": {
       "v4.4.2": "fix bug",
@@ -33,6 +34,7 @@
     "author": "thsrite",
     "level": 1,
     "v2": true,
+    "v3": false,
     "history": {
       "v1.1.4": "fix",
       "v1.1.3": "支持[目录实时监控]插件联动",
@@ -397,6 +399,7 @@
     "author": "thsrite",
     "level": 1,
     "v2": true,
+    "v3": false,
     "history": {
       "v1.7": "自定义通知关键词",
       "v1.6": "自定义保留消息天数",
@@ -417,6 +420,7 @@
     "author": "thsrite",
     "level": 1,
     "v2": true,
+    "v3": false,
     "history": {
       "v1.3": "自定义保留消息天数",
       "v1.2": "多个容器名,拼接",
