@@ -1,4 +1,18 @@
 {
+  "StrmConvert": {
+    "name": "Strm文件模式转换",
+    "description": "Strm文件内容转为本地路径或者cd2/alist API路径。",
+    "labels": "云盘",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/convert.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 API，保留本地/API 模式并强化路径映射与原子写入。"
+    }
+  },
   "CloudStrmCompanion": {
     "name": "云盘Strm助手",
     "description": "实时监控、定时全量增量生成strm文件。",
@@ -390,5 +404,75 @@
     "history": {
       "v2.0.0": "适配 V3 SDK、收紧 Emby 演员同步生命周期与网络资源释放。"
     }
+  },
+  "CommandExecute": {
+    "name": "命令执行器",
+    "description": "自定义容器命令执行。",
+    "labels": "工具",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/command.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK，并通过宿主服务统一命令执行与结果反馈。"
+    }
+  },
+  "StrmRedirect": {
+    "name": "Strm重定向",
+    "description": "重写Strm文件内容。",
+    "labels": "云盘",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlinkredirect.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 宿主调度、路径边界与原子写入。"
+    }
+  },
+  "SoftLinkRedirect": {
+    "name": "软连接重定向",
+    "description": "重定向软连接指向。",
+    "labels": "云盘",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlinkredirect.png",
+    "author": "thsrite",
+    "level": 2,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 插件 API，安全重定向软链接并由宿主统一调度。"
+    }
+  },
+  "FileCopy": {
+    "name": "文件复制",
+    "description": "自定义文件类型从源目录复制到目的目录。",
+    "labels": "工具",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/copy_files.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 插件 API，迁移文件复制服务。"
+    }
+  },
+  "ScheduleReminder": {
+    "name": "日程提醒",
+    "description": "自定义提醒事项、提醒时间。",
+    "labels": "消息通知",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/reminder.png",
+    "author": "thsrite",
+    "level": 1,
+    "history": {
+      "v2.0.0": "适配 MoviePilot V3，任务调度由宿主统一管理"
+    },
+    "system_version": ">=3.0.0",
+    "release": true
   }
 }

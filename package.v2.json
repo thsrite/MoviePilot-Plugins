@@ -428,6 +428,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/command.png",
     "author": "thsrite",
     "level": 1,
+    "v3": false,
     "history": {
       "v1.3": "兼容v2",
       "v1.2": "调整交互命令返回信息",
@@ -547,6 +548,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlinkredirect.png",
     "author": "thsrite",
     "level": 1,
+    "v3": false,
     "history": {
       "v1.2.1": "修复strm重定向",
       "v1.2": "支持解码URL重新写入Strm",
