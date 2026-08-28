@@ -376,5 +376,19 @@
     "history": {
       "v2.0.0": "适配 V3 SDK、迁移 Emby 合集排序和多媒体服务器处理链路。"
     }
+  },
+  "EmbyActorSync": {
+    "name": "Emby剧集演员同步",
+    "description": "同步剧演员信息到集演员信息。",
+    "labels": "Emby,媒体库",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/embyactorsync.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK、收紧 Emby 演员同步生命周期与网络资源释放。"
+    }
   }
 }
