@@ -348,5 +348,19 @@
     "history": {
       "v2.0.0": "适配 V3 SDK，迁移 Emby 视频类型检查与通知链路。"
     }
+  },
+  "EmbyAudioBook": {
+    "name": "Emby有声书整理",
+    "description": "还在为Emby有声书整理烦恼吗？入库存在很多单集？",
+    "labels": "Emby,媒体库",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/audiobook.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK，迁移 Emby 有声书整理与演播作者修正链路。"
+    }
   }
 }
