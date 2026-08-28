@@ -101,6 +101,7 @@
     "icon": "download.png",
     "author": "thsrite",
     "level": 1,
+    "v3": false,
     "history": {
       "v1.2": "交互命令下载 /dt 种子url",
       "v1.1": "支持选择MoviePilot配置的下载路径",
