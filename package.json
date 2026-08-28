@@ -746,6 +746,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/extendtype.png",
     "author": "thsrite",
     "level": 1,
+    "v3": false,
     "history": {
       "v1.0": "定期检查Emby媒体库中是否包含指定的视频类型，发送通知。"
     }

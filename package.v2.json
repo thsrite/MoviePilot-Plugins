@@ -172,6 +172,7 @@
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/extendtype.png",
     "author": "thsrite",
     "level": 1,
+    "v3": false,
     "history": {
       "v1.2": "优化执行周期输入，需要MoviePilot v2.2.1+",
       "v1.1": "适配v2多媒体服务器",
