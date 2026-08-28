@@ -576,6 +576,7 @@
     "description": "HomePage自定义API。",
     "labels": "工具",
     "version": "1.2",
+    "v3": false,
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/homepage.png",
     "author": "thsrite",
     "level": 1,
