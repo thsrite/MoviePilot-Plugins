@@ -1,4 +1,18 @@
 {
+  "DownloadTorrent": {
+    "name": "添加种子下载",
+    "description": "选择下载器，添加种子任务。",
+    "labels": "站点",
+    "version": "3.0.0",
+    "icon": "download.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v3.0.0": "严格适配 MoviePilot V3 SDK、下载器服务和一次性种子任务消费。"
+    }
+  },
   "CloudStrm": {
     "name": "云盘Strm生成",
     "description": "定时扫描云盘文件，生成Strm文件。",
@@ -529,6 +543,48 @@
     "system_version": ">=3.0.0",
     "history": {
       "v2.0.0": "适配 V3 SDK、宿主调度和 Docker client 生命周期。"
+    }
+  },
+  "RemoveTorrent": {
+    "name": "删除站点种子",
+    "description": "删除下载器中某站点种子。",
+    "labels": "站点",
+    "version": "2.0.0",
+    "icon": "delete.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK，按下载器服务名称安全处理站点种子。"
+    }
+  },
+  "SubscribeStatistic": {
+    "name": "订阅下载统计",
+    "description": "统计指定时间内各站点订阅及下载情况。",
+    "labels": "订阅",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/subscribestatistic.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK、迁移订阅下载统计数据访问与通知链路。"
+    }
+  },
+  "LinkToSrc": {
+    "name": "源文件恢复",
+    "description": "根据MoviePilot的转移记录中的硬链文件恢复源文件。",
+    "labels": "媒体库",
+    "version": "2.0.0",
+    "icon": "Time_machine_A.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "严格适配 V3 整理历史与硬链接恢复安全合同。"
     }
   }
 }
