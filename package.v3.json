@@ -97,6 +97,20 @@
       "v2.0.0": "适配 V3 SDK、统一媒体身份并迁移订阅链路。"
     }
   },
+  "ActorSubscribe": {
+    "name": "演员订阅",
+    "description": "自动订阅指定演员热映电影、电视剧。",
+    "labels": "订阅",
+    "version": "3.0.0",
+    "icon": "Mdcng_A.png",
+    "author": "thsrite",
+    "level": 2,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v3.0.0": "适配 V3 SDK、统一媒体身份并迁移演员订阅历史。"
+    }
+  },
   "EmbyMetaTag": {
     "name": "Emby媒体标签",
     "description": "自动给媒体库媒体添加标签。",
@@ -111,6 +125,20 @@
       "v2.0.0": "适配 V3 SDK、迁移 Emby 标签和音频标签处理链路。"
     }
   },
+  "PopularSubscribe": {
+    "name": "热门媒体订阅",
+    "description": "自动添加热门电影、电视剧、动漫到订阅。",
+    "labels": "订阅",
+    "version": "3.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/popular.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v3.0.0": "适配 V3 SDK、统一媒体身份、统计读取与订阅历史。"
+    }
+  },
   "WeChatForward": {
     "name": "微信消息转发",
     "description": "根据正则转发通知到其他WeChat应用。",
@@ -123,6 +151,62 @@
     "system_version": ">=3.0.0",
     "history": {
       "v3.0.0": "适配 V3 事件、异步网络和订阅数据访问合同。"
+    }
+  },
+  "ActorSubscribePlus": {
+    "name": "演员作品订阅",
+    "description": "获取TMDB演员作品，并自动添加到订阅。",
+    "labels": "订阅",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/actorsubscribeplus.png",
+    "author": "thsrite",
+    "level": 2,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK、统一媒体身份并迁移演员订阅历史。"
+    }
+  },
+  "Lucky": {
+    "name": "Lucky",
+    "description": "Lucky HomePage自定义API。",
+    "labels": "工具",
+    "version": "2.0.0",
+    "icon": "Lucky_A.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK、外部 API 错误边界和明确响应模型。"
+    }
+  },
+  "SynologyNotify": {
+    "name": "群辉Webhook通知",
+    "description": "接收群辉webhook通知并推送。",
+    "labels": "消息通知",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/synology.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK，迁移 Webhook 通知与消息类型合同。"
+    }
+  },
+  "CloudSyncDel": {
+    "name": "云盘同步删除",
+    "description": "媒体库删除软连接/strm文件后，同步删除云盘文件。",
+    "labels": "云盘",
+    "version": "2.0.0",
+    "icon": "clouddisk.png",
+    "author": "thsrite",
+    "level": 2,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK、统一媒体身份并收紧路径删除边界。"
     }
   },
   "AutoBackup": {
