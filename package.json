@@ -355,6 +355,7 @@
     "description": "根据正则转发通知到其他WeChat应用。",
     "labels": "消息通知",
     "version": "2.7",
+    "v3": false,
     "icon": "Wechat_A.png",
     "author": "thsrite",
     "level": 1,
