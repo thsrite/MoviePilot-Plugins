@@ -290,6 +290,7 @@
     "description": "监控视频短剧创建，刮削。",
     "labels": "刮削",
     "version": "3.2.1",
+    "v3": false,
     "icon": "Amule_B.png",
     "author": "thsrite",
     "level": 1,
