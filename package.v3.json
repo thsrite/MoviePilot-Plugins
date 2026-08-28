@@ -306,5 +306,89 @@
     "history": {
       "v2.0.0": "适配 V3 SDK，迁移订阅数据访问合同。"
     }
+  },
+  "EmbyReporter": {
+    "name": "Emby观影报告",
+    "description": "推送Emby观影报告，需Emby安装Playback Report插件。",
+    "labels": "Emby",
+    "version": "3.0.0",
+    "icon": "Pydiocells_A.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v3.0.0": "适配 V3 SDK，并将报告任务迁移到宿主调度器。"
+    }
+  },
+  "EmbyDanmu": {
+    "name": "Emby弹幕下载",
+    "description": "通知Emby Danmu插件下载弹幕。",
+    "labels": "Emby,媒体库",
+    "version": "3.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/danmu.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v3.0.0": "适配 V3 SDK、收口 Emby 请求和弹幕任务处理。"
+    }
+  },
+  "EmbyExtendType": {
+    "name": "Emby视频类型检查",
+    "description": "定期检查Emby媒体库中是否包含指定的视频类型，发送通知。",
+    "labels": "Emby,媒体库",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/extendtype.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK，迁移 Emby 视频类型检查与通知链路。"
+    }
+  },
+  "EmbyAudioBook": {
+    "name": "Emby有声书整理",
+    "description": "还在为Emby有声书整理烦恼吗？入库存在很多单集？",
+    "labels": "Emby,媒体库",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/audiobook.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK，迁移 Emby 有声书整理与演播作者修正链路。"
+    }
+  },
+  "EmbyCollectionSort": {
+    "name": "Emby合集媒体排序",
+    "description": "Emby保留按照加入时间倒序的前提下，把合集中的媒体按照发布日期排序，修改加入时间已到达顺序排列的目的。",
+    "labels": "媒体库",
+    "version": "2.0.0",
+    "icon": "Element_A.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK、迁移 Emby 合集排序和多媒体服务器处理链路。"
+    }
+  },
+  "EmbyActorSync": {
+    "name": "Emby剧集演员同步",
+    "description": "同步剧演员信息到集演员信息。",
+    "labels": "Emby,媒体库",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/embyactorsync.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK、收紧 Emby 演员同步生命周期与网络资源释放。"
+    }
   }
 }
