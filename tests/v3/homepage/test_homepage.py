@@ -4,71 +4,17 @@ import ast
 import asyncio
 import inspect
 import json
-import os
-import sys
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-import pytest
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
-BACKEND_ROOT = Path(os.environ["MOVIEPILOT_BACKEND_PATH"])
-sys.path.insert(0, str(BACKEND_ROOT))
-
-from app.testing.bootstrap import prepare_v3_backend
-
-prepare_v3_backend(REPOSITORY_ROOT)
-
-from app.application.chain.context import (
-    ChainRuntimeContext,
-    configure_chain_runtime_context_provider,
-)
-from app.application.chain.data import configure_chain_data_ports, get_chain_data_ports
 from app.plugins import homepage as homepage_module
 from app.plugins.homepage import HomePage, HomePageStatistic
 from app.schemas.types import MediaType
 
 PLUGIN_PATH = REPOSITORY_ROOT / "plugins.v3" / "homepage" / "__init__.py"
-
-configure_chain_data_ports(
-    **{
-        name: lambda: Mock()
-        for name in (
-            "site",
-            "subscribe",
-            "workflow",
-            "download_history",
-            "transfer_history",
-            "transfer_pending",
-            "transfer_execution",
-            "media_server",
-            "download_failure",
-            "user",
-        )
-    }
-)
-
-
-@pytest.fixture(autouse=True)
-def _chain_runtime_context():
-    """为插件基类和 DashboardChain 提供隔离运行时上下文。"""
-    configure_chain_runtime_context_provider(
-        lambda: ChainRuntimeContext(
-            module_manager=Mock(),
-            plugin_manager=Mock(),
-            event_manager=Mock(),
-            message_oper=Mock(),
-            message_helper=Mock(),
-            file_cache=Mock(),
-            async_file_cache=Mock(),
-            message_queue_factory=lambda _callback: Mock(),
-            module_dispatcher_factory=lambda **_kwargs: Mock(),
-            data_ports=get_chain_data_ports(),
-        )
-    )
-    yield
-    configure_chain_runtime_context_provider(None)
 
 
 def _imports() -> set[str]:
