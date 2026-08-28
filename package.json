@@ -236,6 +236,7 @@
     "icon": "Pydiocells_A.png",
     "author": "thsrite",
     "level": 1,
+    "v3": false,
     "history": {
       "v1.9.3": "修复观影记录日期获取",
       "v1.9.2": "媒体库黑名单改为媒体库名称",

@@ -91,6 +91,7 @@
     "icon": "Pydiocells_A.png",
     "author": "thsrite",
     "level": 1,
+    "v3": false,
     "history": {
       "v2.1.5": "修复依赖问题",
       "v2.1.4": "修复观影记录日期获取",
