@@ -306,6 +306,7 @@
     "description": "监控云盘目录文件变化，自动转移链接。",
     "labels": "云盘",
     "version": "2.4.7",
+    "v3": false,
     "icon": "Linkease_A.png",
     "author": "thsrite",
     "level": 1,
