@@ -544,5 +544,19 @@
     "history": {
       "v2.0.0": "适配 V3 SDK、宿主调度和 Docker client 生命周期。"
     }
+  },
+  "RemoveTorrent": {
+    "name": "删除站点种子",
+    "description": "删除下载器中某站点种子。",
+    "labels": "站点",
+    "version": "2.0.0",
+    "icon": "delete.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK，按下载器服务名称安全处理站点种子。"
+    }
   }
 }

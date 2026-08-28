@@ -117,6 +117,7 @@
     "author": "thsrite",
     "level": 1,
     "v2": true,
+    "v3": false,
     "history": {
       "v1.2": "修复删除种子bug",
       "v1.1": "可选择删除有无辅种",
