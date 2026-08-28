@@ -487,6 +487,7 @@
     "description": "电视剧下载后自动添加官组等信息到订阅；添加订阅后根据二级分类名称自定义订阅规则。",
     "labels": "订阅",
     "version": "2.7",
+    "v3": false,
     "icon": "teamwork.png",
     "author": "thsrite",
     "level": 2,
