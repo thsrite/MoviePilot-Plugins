@@ -207,6 +207,7 @@
     "icon": "Element_A.png",
     "author": "thsrite",
     "level": 1,
+    "v3": false,
     "history": {
       "v1.4": "优化执行周期输入，需要MoviePilot v2.2.1+",
       "v1.3": "可设置合集排序黑名单",

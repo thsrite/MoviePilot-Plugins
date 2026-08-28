@@ -362,5 +362,19 @@
     "history": {
       "v2.0.0": "适配 V3 SDK，迁移 Emby 有声书整理与演播作者修正链路。"
     }
+  },
+  "EmbyCollectionSort": {
+    "name": "Emby合集媒体排序",
+    "description": "Emby保留按照加入时间倒序的前提下，把合集中的媒体按照发布日期排序，修改加入时间已到达顺序排列的目的。",
+    "labels": "媒体库",
+    "version": "2.0.0",
+    "icon": "Element_A.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK、迁移 Emby 合集排序和多媒体服务器处理链路。"
+    }
   }
 }
