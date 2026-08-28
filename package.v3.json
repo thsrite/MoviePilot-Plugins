@@ -558,5 +558,19 @@
     "history": {
       "v2.0.0": "适配 V3 SDK，按下载器服务名称安全处理站点种子。"
     }
+  },
+  "SubscribeStatistic": {
+    "name": "订阅下载统计",
+    "description": "统计指定时间内各站点订阅及下载情况。",
+    "labels": "订阅",
+    "version": "2.0.0",
+    "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/subscribestatistic.png",
+    "author": "thsrite",
+    "level": 1,
+    "release": true,
+    "system_version": ">=3.0.0",
+    "history": {
+      "v2.0.0": "适配 V3 SDK、迁移订阅下载统计数据访问与通知链路。"
+    }
   }
 }
