@@ -538,6 +538,7 @@
     "description": "自动给媒体库媒体添加标签。",
     "labels": "Emby",
     "version": "1.2",
+    "v3": false,
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/tag.png",
     "author": "thsrite",
     "level": 1,
