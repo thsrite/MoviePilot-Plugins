@@ -513,6 +513,7 @@
     "description": "定时刷新Emby媒体库元数据，演职人员中文。",
     "labels": "Emby",
     "version": "1.7.5",
+    "v3": false,
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/emby-icon.png",
     "author": "thsrite",
     "level": 1,
