@@ -1,6 +1,10 @@
 import ast
+import inspect
 import json
 from pathlib import Path
+
+from app.modules.themoviedb import TmdbApi
+from app.schemas.types import MediaType
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_PATH = REPOSITORY_ROOT / "plugins.v3" / "embymetarefresh" / "__init__.py"
@@ -73,3 +77,24 @@ def test_v3_source_uses_supported_plugin_apis() -> None:
     assert "from zhconv" not in source
     assert ".tmdbid" not in source
     assert "self.get_data_path() / \"tmdb_cache\"" in source
+
+
+def test_tmdb_module_contract_accepts_plugin_calls() -> None:
+    """TMDB 模块入口必须继续接受插件实际使用的详情和匹配参数。"""
+    inspect.signature(TmdbApi.get_info).bind(
+        None,
+        tmdbid=123,
+        mtype=MediaType.TV,
+    )
+    inspect.signature(TmdbApi.match).bind(
+        None,
+        name="示例剧",
+        mtype=MediaType.TV,
+        year="2026",
+    )
+    inspect.signature(TmdbApi.get_tv_episode_detail).bind(
+        None,
+        123,
+        1,
+        2,
+    )
