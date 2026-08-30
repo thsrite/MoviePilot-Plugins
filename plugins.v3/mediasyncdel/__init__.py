@@ -27,7 +27,7 @@ class MediaSyncDel(_PluginBase):
     # 插件图标
     plugin_icon = "mediasyncdel.png"
     # 插件版本
-    plugin_version = "2.0.0"
+    plugin_version = "2.0.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -821,9 +821,7 @@ class MediaSyncDel(_PluginBase):
                 continue
             image = transferhis.image or image
             year = transferhis.year
-
-            # 0、删除转移记录
-            self._transferhis.delete(transferhis.id)
+            history_delete_ready = True
 
             # 删除种子任务
             if self._del_source:
@@ -848,13 +846,22 @@ class MediaSyncDel(_PluginBase):
                                 torrent_hash=transferhis.download_hash)
                             if not success_flag:
                                 error_cnt += 1
+                                history_delete_ready = False
                             else:
                                 if delete_flag:
                                     del_torrent_hashs += handle_torrent_hashs
                                 else:
                                     stop_torrent_hashs += handle_torrent_hashs
                         except Exception as e:
+                            error_cnt += 1
+                            history_delete_ready = False
                             logger.error("删除种子失败：%s" % str(e))
+
+            # 整理历史是跨文件系统和下载器清理失败后的重试依据，只能最后删除。
+            if history_delete_ready:
+                self._transferhis.delete(transferhis.id)
+            else:
+                logger.warning(f"外部清理未完成，保留整理历史：{transferhis.id}")
 
         logger.info(f"同步删除 {msg} 完成！")
 

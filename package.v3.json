@@ -116,13 +116,14 @@
     "name": "媒体文件同步删除",
     "description": "同步删除历史记录、源文件和下载任务。",
     "labels": "媒体库，文件整理",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "icon": "mediasyncdel.png",
     "author": "thsrite",
     "level": 1,
     "release": true,
     "system_version": ">=3.0.0",
     "history": {
+      "v2.0.1": "外部文件或下载器清理失败时保留整理历史，避免丢失重试依据。",
       "v2.0.0": "适配 V3 SDK、统一媒体身份并迁移整理与下载历史合同。"
     }
   },

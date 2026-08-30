@@ -6,6 +6,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+import pytest
+
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 from app import schemas
@@ -36,10 +38,10 @@ def test_v3_manifest_and_sdk_contract() -> None:
         (REPOSITORY_ROOT / "package.v2.json").read_text(encoding="utf-8")
     )["MediaSyncDel"]
 
-    assert manifest["version"] == MediaSyncDel.plugin_version == "2.0.0"
+    assert manifest["version"] == MediaSyncDel.plugin_version == "2.0.1"
     assert manifest["release"] is True
     assert manifest["system_version"] == ">=3.0.0"
-    assert list(manifest["history"]) == ["v2.0.0"]
+    assert list(manifest["history"]) == ["v2.0.1", "v2.0.0"]
     assert legacy_manifest["v3"] is False
 
     imports = _imports()
@@ -81,7 +83,7 @@ def test_plugin_initializes_and_declares_response_model(monkeypatch) -> None:
     plugin = MediaSyncDel()
     plugin.init_plugin({})
 
-    assert plugin.plugin_version == "2.0.0"
+    assert plugin.plugin_version == "2.0.1"
     assert plugin.get_api()[0]["response_model"] is schemas.Response[None]
     assert plugin.get_api()[0]["auth"] == "bear"
     assert plugin.get_command() == []
@@ -202,3 +204,96 @@ def test_webhook_forwards_media_identity_to_delete_pipeline() -> None:
         episode_num=None,
         delete_time="2026-08-27 20:00:00",
     )
+
+
+def test_source_delete_failure_preserves_transfer_history(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    """源文件删除失败时应保留整理历史，为后续重试保留事实依据。"""
+    source_file = tmp_path / "source.mkv"
+    source_file.write_bytes(b"video")
+    transfer_history = SimpleNamespace(
+        id=7,
+        title="示例电影",
+        year="2026",
+        image=None,
+        src=str(source_file),
+        dest=str(tmp_path / "missing-destination.mkv"),
+        download_hash=None,
+        media_source=MediaSource.TMDB,
+        media_id="550",
+    )
+    plugin = MediaSyncDel()
+    plugin._transferhis = Mock()
+    plugin._downloadhis = Mock()
+    plugin._del_source = True
+    plugin._notify = False
+    plugin._library_path = ""
+    plugin._MediaSyncDel__get_transfer_his = Mock(
+        return_value=("电影 示例电影 themoviedb:550", [transfer_history])
+    )
+    monkeypatch.setattr(
+        Path,
+        "unlink",
+        Mock(side_effect=OSError("source is busy")),
+    )
+
+    with pytest.raises(OSError, match="source is busy"):
+        plugin._MediaSyncDel__sync_del(
+            media_type="Movie",
+            media_name="示例电影",
+            media_path=str(tmp_path / "deleted-library-item.mkv"),
+            media_source=MediaSource.TMDB,
+            media_id="550",
+            season_num=None,
+            episode_num=None,
+        )
+
+    plugin._transferhis.delete.assert_not_called()
+
+
+def test_torrent_cleanup_failure_preserves_transfer_history(tmp_path: Path) -> None:
+    """下载器清理失败时应保留整理历史，避免把部分完成误报为成功。"""
+    transfer_history = SimpleNamespace(
+        id=8,
+        title="示例电影",
+        type=MediaType.MOVIE.value,
+        year="2026",
+        image=None,
+        src=str(tmp_path / "missing-source.mkv"),
+        dest=str(tmp_path / "missing-destination.mkv"),
+        download_hash="hash-1",
+        media_source=MediaSource.TMDB,
+        media_id="550",
+    )
+    plugin = MediaSyncDel()
+    plugin._transferhis = Mock()
+    plugin._downloadhis = Mock()
+    plugin._del_source = True
+    plugin._notify = False
+    plugin._library_path = ""
+    plugin.get_data = Mock(return_value=[])
+    plugin.save_data = Mock()
+    plugin.handle_torrent = Mock(return_value=(False, False, []))
+    plugin._MediaSyncDel__get_transfer_his = Mock(
+        return_value=("电影 示例电影 themoviedb:550", [transfer_history])
+    )
+
+    plugin._MediaSyncDel__sync_del(
+        media_type="Movie",
+        media_name="示例电影",
+        media_path=str(tmp_path / "deleted-library-item.mkv"),
+        media_source=MediaSource.TMDB,
+        media_id="550",
+        season_num=None,
+        episode_num=None,
+    )
+
+    plugin.handle_torrent.assert_called_once_with(
+        type=MediaType.MOVIE.value,
+        src=transfer_history.src,
+        torrent_hash="hash-1",
+    )
+    plugin._transferhis.delete.assert_not_called()
+    plugin.save_data.assert_called_once()
