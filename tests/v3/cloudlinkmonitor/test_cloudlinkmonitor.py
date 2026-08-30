@@ -37,7 +37,7 @@ def test_v3_plugin_imports_and_initializes(monkeypatch) -> None:
     plugin = CloudLinkMonitor()
     plugin.init_plugin({})
 
-    assert plugin.plugin_version == "3.0.0"
+    assert plugin.plugin_version == "3.0.1"
     assert plugin.get_api()[0]["response_model"] is schemas.Response[None]
 
     plugin.stop_service()
@@ -103,8 +103,49 @@ def test_redo_hint_uses_complete_media_identity() -> None:
     assert MessageType.Manual.value
 
 
+def test_unrecognized_media_uses_host_transfer_history_repository(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    """未识别媒体的失败历史应由宿主组合根选择当前写入仓储。"""
+    media_file = tmp_path / "Example.Movie.2026.mkv"
+    media_file.write_bytes(b"video")
+    file_item = SimpleNamespace(path=media_file)
+    add_transfer_fail = Mock(return_value=SimpleNamespace(id=7))
+    monkeypatch.setattr(
+        cloudlinkmonitor_module,
+        "add_transfer_fail",
+        add_transfer_fail,
+    )
+
+    plugin = CloudLinkMonitor()
+    plugin.transferhis = Mock()
+    plugin.transferhis.get_by_src.return_value = None
+    plugin.systemconfig = Mock()
+    plugin.systemconfig.get.return_value = []
+    plugin.storagechain = Mock()
+    plugin.storagechain.get_file_item.return_value = file_item
+    plugin.chain = Mock()
+    plugin.chain.recognize_media.return_value = None
+    plugin._exclude_keywords = ""
+    plugin._size = 0
+    plugin._notify = False
+    plugin._dirconf = {str(tmp_path): tmp_path / "library"}
+    plugin._transferconf = {str(tmp_path): "copy"}
+
+    plugin._CloudLinkMonitor__handle_file(
+        event_path=str(media_file),
+        mon_path=str(tmp_path),
+    )
+
+    call_kwargs = add_transfer_fail.call_args.kwargs
+    assert call_kwargs["fileitem"] is file_item
+    assert call_kwargs["mode"] == "copy"
+    assert "transfer_history_oper" not in call_kwargs
+
+
 def test_v3_manifest_and_import_contracts() -> None:
-    """V3 索引、旧代回退开关与严格导入边界应保持一致。"""
+    """V3 索引、旧代回退开关与已知内部历史写入依赖应保持一致。"""
     manifest = json.loads(
         (REPOSITORY_ROOT / "package.v3.json").read_text(encoding="utf-8")
     )["CloudLinkMonitor"]
