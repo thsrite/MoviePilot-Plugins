@@ -4,7 +4,7 @@ import shutil
 import threading
 import traceback
 from pathlib import Path
-from typing import List, Tuple, Dict, Any, Optional
+from typing import List, Tuple, Dict, Any, Optional, Protocol
 
 import pytz
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -24,12 +24,18 @@ from app.plugins import _PluginBase
 from app.sdk.config import settings
 from app.sdk.events import eventmanager, Event
 from app.sdk.logging import logger
-from app.sdk.media import MediaInfo, MetaInfoPath, resolve_media_identity
+from app.sdk.media import MediaInfo, MetaBase, MetaInfoPath, resolve_media_identity
 from app.sdk.utilities import StringUtils, SystemUtils
-from app.schemas import TransferInfo, TransferDirectoryConf
+from app.schemas import FileItem, TransferInfo, TransferDirectoryConf
 from app.schemas.types import EventType, MediaSource, MediaType, MessageType, SystemConfigKey
 
 lock = threading.Lock()
+
+
+class _RetryableHistory(Protocol):
+    """未识别失败通知与宿主重整命令共享的最小历史合同。"""
+
+    id: int
 
 
 class FileMonitorHandler(FileSystemEventHandler):
@@ -82,7 +88,6 @@ class CloudLinkMonitor(_PluginBase):
     _enabled = False
     _notify = False
     _onlyonce = False
-    _history = False
     _scrape = False
     _category = False
     _refresh = False
@@ -122,7 +127,6 @@ class CloudLinkMonitor(_PluginBase):
             self._enabled = config.get("enabled")
             self._notify = config.get("notify")
             self._onlyonce = config.get("onlyonce")
-            self._history = config.get("history")
             self._scrape = config.get("scrape")
             self._category = config.get("category")
             self._refresh = config.get("refresh")
@@ -259,7 +263,6 @@ class CloudLinkMonitor(_PluginBase):
             "monitor_dirs": self._monitor_dirs,
             "exclude_keywords": self._exclude_keywords,
             "interval": self._interval,
-            "history": self._history,
             "softlink": self._softlink,
             "cron": self._cron,
             "strm": self._strm,
@@ -352,6 +355,20 @@ class CloudLinkMonitor(_PluginBase):
         """返回 V3 手动整理命令的完整媒体身份参数提示。"""
         return f"/redo {history_id} [media_source]|[media_id]|[类型]"
 
+    @staticmethod
+    def _record_unrecognized_failure(
+        *,
+        fileitem: FileItem,
+        mode: str,
+        meta: MetaBase,
+    ) -> _RetryableHistory:
+        """记录未识别媒体并返回宿主可重整的失败历史快照。"""
+        return add_transfer_fail(
+            fileitem=fileitem,
+            mode=mode,
+            meta=meta,
+        )
+
     def __handle_file(self, event_path: str, mon_path: str):
         """
         同步一个文件
@@ -435,8 +452,7 @@ class CloudLinkMonitor(_PluginBase):
                 mediainfo: MediaInfo = self.chain.recognize_media(meta=file_meta)
                 if not mediainfo:
                     logger.warn(f'未识别到媒体信息，标题：{file_meta.name}')
-                    # 新增转移失败历史记录
-                    his = add_transfer_fail(
+                    history = self._record_unrecognized_failure(
                         fileitem=file_item,
                         mode=transfer_type,
                         meta=file_meta,
@@ -445,7 +461,7 @@ class CloudLinkMonitor(_PluginBase):
                         self.post_message(
                             mtype=MessageType.Manual,
                             title=f"{file_path.name} 未识别到媒体信息，无法入库！\n"
-                                  f"回复：```\n{self._redo_hint(his.id)}\n``` 手动识别转移。"
+                                  f"回复：```\n{self._redo_hint(history.id)}\n``` 手动识别转移。"
                         )
                     return
 
@@ -789,23 +805,7 @@ class CloudLinkMonitor(_PluginBase):
                                         'component': 'VCol',
                                         'props': {
                                             'cols': 12,
-                                            'md': 4
-                                        },
-                                        'content': [
-                                            {
-                                                'component': 'VSwitch',
-                                                'props': {
-                                                    'model': 'history',
-                                                    'label': '存储历史记录',
-                                                }
-                                            }
-                                        ]
-                                    },
-                                    {
-                                        'component': 'VCol',
-                                        'props': {
-                                            'cols': 12,
-                                            'md': 4
+                                            'md': 6
                                         },
                                         'content': [
                                             {
@@ -821,7 +821,7 @@ class CloudLinkMonitor(_PluginBase):
                                         'component': 'VCol',
                                         'props': {
                                             'cols': 12,
-                                            'md': 4
+                                            'md': 6
                                         },
                                         'content': [
                                             {
@@ -1098,7 +1098,6 @@ class CloudLinkMonitor(_PluginBase):
             "enabled": False,
             "notify": False,
             "onlyonce": False,
-            "history": False,
             "scrape": False,
             "category": False,
             "refresh": True,
