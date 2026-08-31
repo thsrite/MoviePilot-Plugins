@@ -11,7 +11,12 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 from app import schemas
 from app.plugins import cloudlinkmonitor as cloudlinkmonitor_module
 from app.plugins.cloudlinkmonitor import CloudLinkMonitor
-from app.schemas.types import MediaSource, MediaType, MessageType
+from app.schemas.types import (
+    MediaSource,
+    MediaType,
+    MessageType,
+    NotificationChannel,
+)
 
 
 PLUGIN_PATH = REPOSITORY_ROOT / "plugins.v3" / "cloudlinkmonitor" / "__init__.py"
@@ -27,6 +32,25 @@ def _imports() -> set[str]:
     }
 
 
+def _form_models(value: object) -> set[str]:
+    """递归收集插件表单中绑定的配置字段。"""
+    if isinstance(value, dict):
+        models = {
+            model
+            for model in [value.get("props", {}).get("model")]
+            if isinstance(model, str)
+        }
+        for child in value.values():
+            models.update(_form_models(child))
+        return models
+    if isinstance(value, list):
+        models = set()
+        for child in value:
+            models.update(_form_models(child))
+        return models
+    return set()
+
+
 def test_v3_plugin_imports_and_initializes(monkeypatch) -> None:
     """V3 插件应能导入，并在隔离外部链资源后完成生命周期初始化。"""
     monkeypatch.setattr(cloudlinkmonitor_module, "TransferChain", Mock)
@@ -37,7 +61,7 @@ def test_v3_plugin_imports_and_initializes(monkeypatch) -> None:
     plugin = CloudLinkMonitor()
     plugin.init_plugin({})
 
-    assert plugin.plugin_version == "3.0.0"
+    assert plugin.plugin_version == "3.0.1"
     assert plugin.get_api()[0]["response_model"] is schemas.Response[None]
 
     plugin.stop_service()
@@ -103,8 +127,112 @@ def test_redo_hint_uses_complete_media_identity() -> None:
     assert MessageType.Manual.value
 
 
+def test_unrecognized_media_uses_single_failure_history_entry(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    """未识别媒体只经插件的失败历史入口写入，并使用返回的重整 ID。"""
+    media_file = tmp_path / "Example.Movie.2026.mkv"
+    media_file.write_bytes(b"video")
+    file_item = SimpleNamespace(path=media_file)
+
+    plugin = CloudLinkMonitor()
+    record_failure = Mock(return_value=SimpleNamespace(id=7))
+    monkeypatch.setattr(plugin, "_record_unrecognized_failure", record_failure)
+    plugin.transferhis = Mock()
+    plugin.transferhis.get_by_src.return_value = None
+    plugin.systemconfig = Mock()
+    plugin.systemconfig.get.return_value = []
+    plugin.storagechain = Mock()
+    plugin.storagechain.get_file_item.return_value = file_item
+    plugin.chain = Mock()
+    plugin.chain.recognize_media.return_value = None
+    plugin._exclude_keywords = ""
+    plugin._size = 0
+    plugin._notify = False
+    plugin._dirconf = {str(tmp_path): tmp_path / "library"}
+    plugin._transferconf = {str(tmp_path): "copy"}
+
+    plugin._CloudLinkMonitor__handle_file(
+        event_path=str(media_file),
+        mon_path=str(tmp_path),
+    )
+
+    call_kwargs = record_failure.call_args.kwargs
+    assert call_kwargs["fileitem"] is file_item
+    assert call_kwargs["mode"] == "copy"
+    assert call_kwargs["meta"].name == "Example Movie"
+
+
+def test_unrecognized_failure_persists_history_accepted_by_redo(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    """失败入口应通过真实事务仓储返回可由宿主 `/redo` 接受的历史 ID。"""
+    from app.application import history as history_module
+    from app.chain.transfer import TransferChain
+    from app.db.adapters.history.transfer import TransactionalTransferHistoryRepository
+    from app.db.session import SessionFactory, async_session_scope
+
+    repository = TransactionalTransferHistoryRepository(
+        sync_session=SessionFactory,
+        async_session=async_session_scope,
+    )
+    monkeypatch.setattr(
+        history_module,
+        "get_transfer_history_repository",
+        lambda: repository,
+    )
+    media_file = tmp_path / "Example.Movie.2026.mkv"
+    media_file.write_bytes(b"video")
+    file_item = schemas.FileItem(
+        path=str(media_file),
+        storage="local",
+        type="file",
+        name=media_file.name,
+    )
+
+    history = CloudLinkMonitor._record_unrecognized_failure(
+        fileitem=file_item,
+        mode="copy",
+        meta=cloudlinkmonitor_module.MetaInfoPath(media_file),
+    )
+
+    stored = repository.get(history.id)
+    assert stored is not None
+    assert stored.id == history.id
+    assert stored.src == str(media_file)
+    assert stored.status is False
+    assert stored.errmsg == "未识别到媒体信息"
+
+    transfer_chain = TransferChain()
+    redo = Mock(return_value=(True, ""))
+    monkeypatch.setattr(transfer_chain, "redo_transfer_history", redo)
+    monkeypatch.setattr(transfer_chain, "post_message", Mock())
+    transfer_chain.remote_transfer(
+        str(history.id),
+        channel=NotificationChannel.Telegram,
+        userid="10001",
+        source="cloudlinkmonitor-test",
+    )
+    redo.assert_called_once_with(history.id)
+
+
+def test_v3_form_removes_obsolete_history_setting() -> None:
+    """V3 整理历史由宿主 Chain 维护，表单和持久化配置不再暴露旧开关。"""
+    plugin = CloudLinkMonitor()
+    form, defaults = plugin.get_form()
+    plugin.update_config = Mock()
+
+    plugin._CloudLinkMonitor__update_config()
+
+    assert "history" not in _form_models(form)
+    assert "history" not in defaults
+    assert "history" not in plugin.update_config.call_args.args[0]
+
+
 def test_v3_manifest_and_import_contracts() -> None:
-    """V3 索引、旧代回退开关与严格导入边界应保持一致。"""
+    """V3 索引、旧代回退开关与单点内部历史写入依赖应保持一致。"""
     manifest = json.loads(
         (REPOSITORY_ROOT / "package.v3.json").read_text(encoding="utf-8")
     )["CloudLinkMonitor"]
@@ -142,3 +270,13 @@ def test_v3_manifest_and_import_contracts() -> None:
     assert not any(module.startswith(forbidden_prefixes) for module in imports)
     assert "app.log" not in imports
     assert "app.db.transferhistory_oper" not in imports
+
+    tree = ast.parse(PLUGIN_PATH.read_text(encoding="utf-8"))
+    failure_writes = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "add_transfer_fail"
+    ]
+    assert len(failure_writes) == 1

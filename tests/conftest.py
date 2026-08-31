@@ -97,22 +97,9 @@ def configure_plugin_test_services(request):
         ChainRuntimeContext,
         configure_chain_runtime_context_provider,
     )
-    from app.application.chain.data import configure_chain_data_ports
     from app.application.configuration import SystemConfigService, configure_system_config
     from app.db.oper.systemconfig import SystemConfigOper
 
-    port_names = (
-        "site",
-        "subscribe",
-        "download_history",
-        "transfer_history",
-        "transfer_pending",
-        "transfer_execution",
-        "media_server",
-        "download_failure",
-        "user",
-    )
-    configure_chain_data_ports(**{name: MagicMock for name in port_names})
     context = ChainRuntimeContext(
         module_manager=MagicMock(),
         plugin_manager=MagicMock(),
@@ -121,8 +108,24 @@ def configure_plugin_test_services(request):
         message_helper=MagicMock(),
         file_cache=MagicMock(),
         async_file_cache=MagicMock(),
-        message_queue_factory=lambda _callback: MagicMock(),
+        message_queue=MagicMock(),
         module_dispatcher_factory=lambda **_kwargs: MagicMock(),
+        site_repository=MagicMock(),
+        subscription_repository=MagicMock(),
+        subscription_mutation_scope=MagicMock(),
+        sync_subscription_mutation_scope=MagicMock(),
+        subscription_delete_scope=MagicMock(),
+        sync_subscription_delete_scope=MagicMock(),
+        subscription_completion_scope=MagicMock(),
+        rule_group_mutation_scope=MagicMock(),
+        site_reference_mutation_scope=MagicMock(),
+        download_history_repository=MagicMock(),
+        transfer_history_repository=MagicMock(),
+        transfer_admission_repository=MagicMock(),
+        transfer_execution_repository=MagicMock(),
+        media_server_repository=MagicMock(),
+        download_failure_repository=MagicMock(),
+        user_repository=MagicMock(),
     )
     configure_system_config(SystemConfigService(repository=SystemConfigOper()))
     configure_chain_runtime_context_provider(lambda: context)
