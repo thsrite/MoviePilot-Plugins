@@ -20,7 +20,7 @@ class StrmRedirect(_PluginBase):
     plugin_name = "Strm重定向"
     plugin_desc = "重写Strm文件内容。"
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlinkredirect.png"
-    plugin_version = "2.0.0"
+    plugin_version = "2.0.1"
     plugin_author = "thsrite"
     author_url = "https://github.com/thsrite"
     plugin_config_prefix = "strmredirect_"
