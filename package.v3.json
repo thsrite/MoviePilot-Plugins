@@ -17,13 +17,14 @@
     "name": "云盘Strm生成",
     "description": "定时扫描云盘文件，生成Strm文件。",
     "labels": "云盘",
-    "version": "5.0.0",
+    "version": "5.0.1",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png",
     "author": "thsrite",
     "level": 1,
     "release": true,
     "system_version": ">=3.0.0",
     "history": {
+      "v5.0.1": "MediaVault 已上线，交流群 @mediavault3 定期抽奖，欢迎来玩。",
       "v5.0.0": "严格适配 MoviePilot V3，修复路径映射、索引和调度边界。"
     }
   },
@@ -31,13 +32,14 @@
     "name": "云盘Strm生成（增量版）",
     "description": "扫描增量目录，归档文件并生成Strm文件。",
     "labels": "云盘",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/create.png",
     "author": "thsrite",
     "level": 1,
     "release": true,
     "system_version": ">=3.0.0",
     "history": {
+      "v2.0.1": "MediaVault 已上线，交流群 @mediavault3 定期抽奖，欢迎来玩。",
       "v2.0.0": "适配 V3 SDK、宿主调度和安全增量文件处理合同。"
     }
   },
@@ -45,13 +47,14 @@
     "name": "Strm文件模式转换",
     "description": "Strm文件内容转为本地路径或者cd2/alist API路径。",
     "labels": "云盘",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/convert.png",
     "author": "thsrite",
     "level": 1,
     "release": true,
     "system_version": ">=3.0.0",
     "history": {
+      "v2.0.1": "MediaVault 已上线，交流群 @mediavault3 定期抽奖，欢迎来玩。",
       "v2.0.0": "适配 V3 API，保留本地/API 模式并强化路径映射与原子写入。"
     }
   },
@@ -59,13 +62,14 @@
     "name": "云盘Strm助手",
     "description": "实时监控、定时全量增量生成strm文件。",
     "labels": "云盘",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/cloudcompanion.png",
     "author": "thsrite",
     "level": 1,
     "release": true,
     "system_version": ">=3.0.0",
     "history": {
+      "v2.0.1": "MediaVault 已上线，交流群 @mediavault3 定期抽奖，欢迎来玩。",
       "v2.0.0": "适配 V3 插件 API，统一媒体身份并改用稳定 SDK。"
     }
   },
@@ -87,13 +91,14 @@
     "name": "目录实时监控",
     "description": "监控云盘目录文件变化，自动转移媒体文件。",
     "labels": "云盘,工具",
-    "version": "3.0.1",
+    "version": "3.0.2",
     "icon": "Linkease_A.png",
     "author": "thsrite",
     "level": 1,
     "release": true,
     "system_version": ">=3.0.0",
     "history": {
+      "v3.0.2": "MediaVault 已上线，交流群 @mediavault3 定期抽奖，欢迎来玩。",
       "v3.0.1": "修复未识别媒体时整理失败历史写入异常。",
       "v3.0.0": "适配 V3 SDK、统一媒体身份、整理历史与刮削链路。"
     }
@@ -257,13 +262,14 @@
     "name": "云盘同步删除",
     "description": "媒体库删除软连接/strm文件后，同步删除云盘文件。",
     "labels": "云盘",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "icon": "clouddisk.png",
     "author": "thsrite",
     "level": 2,
     "release": true,
     "system_version": ">=3.0.0",
     "history": {
+      "v2.0.1": "MediaVault 已上线，交流群 @mediavault3 定期抽奖，欢迎来玩。",
       "v2.0.0": "适配 V3 SDK、统一媒体身份并收紧路径删除边界。"
     }
   },
@@ -285,13 +291,14 @@
     "name": "CloudDrive2助手",
     "description": "监控上传任务，检测是否有异常，发送通知。",
     "labels": "云盘",
-    "version": "3.0.0",
+    "version": "3.0.1",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png",
     "author": "thsrite",
     "level": 2,
     "release": true,
     "system_version": ">=3.0.0",
     "history": {
+      "v3.0.1": "MediaVault 已上线，交流群 @mediavault3 定期抽奖，欢迎来玩。",
       "v3.0.0": "适配 V3 SDK、异步 CloudDrive2 调用和明确的 HomePage 响应模型。"
     }
   },
@@ -467,13 +474,14 @@
     "name": "Strm重定向",
     "description": "重写Strm文件内容。",
     "labels": "云盘",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/softlinkredirect.png",
     "author": "thsrite",
     "level": 1,
     "release": true,
     "system_version": ">=3.0.0",
     "history": {
+      "v2.0.1": "MediaVault 已上线，交流群 @mediavault3 定期抽奖，欢迎来玩。",
       "v2.0.0": "适配 V3 宿主调度、路径边界与原子写入。"
     }
   },

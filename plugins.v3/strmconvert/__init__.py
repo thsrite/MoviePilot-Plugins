@@ -22,7 +22,7 @@ class StrmConvert(_PluginBase):
     plugin_name = "Strm文件模式转换"
     plugin_desc = "Strm文件内容转为本地路径或者cd2/alist API路径。"
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/convert.png"
-    plugin_version = "2.0.0"
+    plugin_version = "2.0.1"
     plugin_author = "thsrite"
     author_url = "https://github.com/thsrite"
     plugin_config_prefix = "strmconvert_"

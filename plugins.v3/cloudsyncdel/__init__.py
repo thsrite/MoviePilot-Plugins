@@ -24,7 +24,7 @@ class CloudSyncDel(_PluginBase):
     plugin_name = "云盘同步删除"
     plugin_desc = "媒体库删除软连接/strm文件后，同步删除云盘文件。"
     plugin_icon = "clouddisk.png"
-    plugin_version = "2.0.0"
+    plugin_version = "2.0.1"
     plugin_author = "thsrite"
     author_url = "https://github.com/thsrite"
     plugin_config_prefix = "cloudsyncdel_"

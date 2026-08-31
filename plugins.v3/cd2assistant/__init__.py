@@ -47,7 +47,7 @@ class Cd2Assistant(_PluginBase):
     plugin_name = "CloudDrive2助手"
     plugin_desc = "监控上传任务，检测是否有异常，发送通知。"
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/clouddrive.png"
-    plugin_version = "3.0.0"
+    plugin_version = "3.0.1"
     plugin_author = "thsrite"
     author_url = "https://github.com/thsrite"
     plugin_config_prefix = "cd2assistant_"
