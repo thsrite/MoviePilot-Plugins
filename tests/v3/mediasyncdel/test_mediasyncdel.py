@@ -38,10 +38,10 @@ def test_v3_manifest_and_sdk_contract() -> None:
         (REPOSITORY_ROOT / "package.v2.json").read_text(encoding="utf-8")
     )["MediaSyncDel"]
 
-    assert manifest["version"] == MediaSyncDel.plugin_version == "2.0.1"
+    assert manifest["version"] == MediaSyncDel.plugin_version == "2.0.2"
     assert manifest["release"] is True
     assert manifest["system_version"] == ">=3.0.0"
-    assert list(manifest["history"]) == ["v2.0.1", "v2.0.0"]
+    assert list(manifest["history"]) == ["v2.0.2", "v2.0.1", "v2.0.0"]
     assert legacy_manifest["v3"] is False
 
     imports = _imports()
@@ -83,7 +83,7 @@ def test_plugin_initializes_and_declares_response_model(monkeypatch) -> None:
     plugin = MediaSyncDel()
     plugin.init_plugin({})
 
-    assert plugin.plugin_version == "2.0.1"
+    assert plugin.plugin_version == "2.0.2"
     assert plugin.get_api()[0]["response_model"] is schemas.Response[None]
     assert plugin.get_api()[0]["auth"] == "bear"
     assert plugin.get_command() == []
@@ -204,6 +204,51 @@ def test_webhook_forwards_media_identity_to_delete_pipeline() -> None:
         episode_num=None,
         delete_time="2026-08-27 20:00:00",
     )
+
+
+def _scripter_x_plugin(item_isvirtual) -> MediaSyncDel:
+    """构造 Scripter X 方式的插件实例，并按宿主行为原样赋值 item_isvirtual。"""
+    plugin = MediaSyncDel()
+    plugin._enabled = True
+    plugin._sync_type = "plugin"
+    plugin._exclude_path = ""
+    plugin._MediaSyncDel__sync_del = Mock()
+    event_data = schemas.WebhookEventInfo(
+        event="media_del",
+        item_type="Series",
+        item_name="示例剧",
+        item_path="/media/example",
+        media_source=MediaSource.Douban,
+        media_id="1295644",
+    )
+    # 宿主解析 GET 参数时直接属性赋值，不触发布尔校验，字符串会原样透传
+    event_data.item_isvirtual = item_isvirtual
+    plugin.sync_del_by_plugin(Event(EventType.WebhookMessage, event_data))
+    return plugin
+
+
+@pytest.mark.parametrize("item_isvirtual", ["False", "false", "0", False])
+def test_scripter_x_non_virtual_flag_reaches_delete_pipeline(item_isvirtual) -> None:
+    """Scripter X 上报的非虚拟标识（含字符串 "False"）必须进入同步删除链路。"""
+    plugin = _scripter_x_plugin(item_isvirtual)
+
+    plugin._MediaSyncDel__sync_del.assert_called_once_with(
+        media_type="Series",
+        media_name="示例剧",
+        media_path="/media/example",
+        media_source=MediaSource.Douban,
+        media_id="1295644",
+        season_num=None,
+        episode_num=None,
+    )
+
+
+@pytest.mark.parametrize("item_isvirtual", ["True", "true", "1", True])
+def test_scripter_x_virtual_flag_skips_delete(item_isvirtual) -> None:
+    """Scripter X 上报的虚拟条目不得触发任何删除。"""
+    plugin = _scripter_x_plugin(item_isvirtual)
+
+    plugin._MediaSyncDel__sync_del.assert_not_called()
 
 
 def test_source_delete_failure_preserves_transfer_history(

@@ -27,7 +27,7 @@ class MediaSyncDel(_PluginBase):
     # 插件图标
     plugin_icon = "mediasyncdel.png"
     # 插件版本
-    plugin_version = "2.0.1"
+    plugin_version = "2.0.2"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -662,7 +662,9 @@ class MediaSyncDel(_PluginBase):
             return
 
         # 如果是虚拟item，则直接return，不进行删除
-        if item_isvirtual:
+        # Scripter X 以 GET 参数上报时，宿主会把 item_isvirtual 以原始字符串（如 "False"）透传，
+        # 直接做真值判断会把全部删除事件当作虚拟条目跳过，因此需显式转换为布尔值
+        if StringUtils.to_bool(item_isvirtual):
             return
 
         # 媒体类型
