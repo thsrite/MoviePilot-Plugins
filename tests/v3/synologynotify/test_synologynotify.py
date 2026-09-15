@@ -35,10 +35,10 @@ def test_v3_manifest_and_import_contract() -> None:
     )["SynologyNotify"]
     source = PLUGIN_PATH.read_text(encoding="utf-8")
 
-    assert manifest["version"] == SynologyNotify.plugin_version == "2.0.0"
+    assert manifest["version"] == SynologyNotify.plugin_version == "2.0.1"
     assert manifest["release"] is True
     assert manifest["system_version"] == ">=3.0.0"
-    assert list(manifest["history"]) == ["v2.0.0"]
+    assert list(manifest["history"]) == ["v2.0.1", "v2.0.0"]
     assert legacy_manifest["v3"] is False
 
     imports = _imports()
@@ -75,8 +75,8 @@ def test_plugin_lifecycle_and_api_contract() -> None:
             "endpoint": plugin.send_notify,
             "methods": ["GET"],
             "auth": "apikey",
-            "summary": "群辉webhook",
-            "description": "接受群辉webhook通知并推送",
+            "summary": "群晖webhook",
+            "description": "接受群晖webhook通知并推送",
             "response_model": schemas.Response[None],
         }
     ]
@@ -114,7 +114,7 @@ def test_send_notify_forwards_text_and_selected_message_type() -> None:
 
     assert response == schemas.Response(success=True, message="发送成功")
     plugin.post_message.assert_called_once_with(
-        title="群辉通知",
+        title="群晖通知",
         mtype=MessageType.Plugin,
         text="下载完成",
     )

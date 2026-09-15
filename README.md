@@ -28,7 +28,7 @@ MoviePilot三方插件市场：https://github.com/thsrite/MoviePilot-Plugins/
 22. 删除站点种子 v1.2 `删除下载器中某站点种子。`
 23. 插件更新管理 v1.9.2 `监测已安装插件，推送更新提醒，可配置自动更新。`
 24. 插件强制重装 v1.7 `卸载当前插件，强制重装。`
-25. 群辉Webhook通知 v1.1 `接收群辉webhook通知并推送。`
+25. 群晖Webhook通知 v1.1 `接收群晖webhook通知并推送。`
 26. 同步CookieCloud v1.3 `同步MoviePilot站点Cookie到本地CookieCloud。`
 27. 日程提醒 v1.0 `自定义提醒事项、提醒时间。`
 28. 订阅提醒 v1.1 `推送当天订阅更新内容。`

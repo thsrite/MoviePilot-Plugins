@@ -245,16 +245,17 @@
     }
   },
   "SynologyNotify": {
-    "name": "群辉Webhook通知",
-    "description": "接收群辉webhook通知并推送。",
+    "name": "群晖Webhook通知",
+    "description": "接收群晖webhook通知并推送。",
     "labels": "消息通知",
-    "version": "2.0.0",
+    "version": "2.0.1",
     "icon": "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/synology.png",
     "author": "thsrite",
     "level": 1,
     "release": true,
     "system_version": ">=3.0.0",
     "history": {
+      "v2.0.1": "修正插件名称与描述中的错别字：群辉→群晖",
       "v2.0.0": "适配 V3 SDK，迁移 Webhook 通知与消息类型合同。"
     }
   },
