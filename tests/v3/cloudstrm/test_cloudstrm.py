@@ -54,7 +54,7 @@ def test_v3_manifest_and_import_contracts() -> None:
         (REPOSITORY_ROOT / "package.json").read_text(encoding="utf-8")
     )["CloudStrm"]
 
-    assert manifest["version"] == CloudStrm.plugin_version == "5.0.0"
+    assert manifest["version"] == CloudStrm.plugin_version == "5.0.1"
     assert manifest["system_version"] == ">=3.0.0"
     assert manifest["release"] is True
     assert manifest["history"]["v5.0.0"]

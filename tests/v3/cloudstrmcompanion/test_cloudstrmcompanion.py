@@ -127,7 +127,7 @@ def test_v3_plugin_imports_and_initializes(monkeypatch) -> None:
     plugin = CloudStrmCompanion()
     plugin.init_plugin({})
 
-    assert plugin.plugin_version == "2.0.0"
+    assert plugin.plugin_version == "2.0.1"
     assert plugin.get_api() == []
     assert plugin.get_page() == []
 

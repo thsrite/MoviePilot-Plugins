@@ -53,10 +53,10 @@ def test_v3_manifest_and_strict_import_contract() -> None:
     )["StrmConvert"]
     source = PLUGIN_PATH.read_text(encoding="utf-8")
 
-    assert manifest["version"] == StrmConvert.plugin_version == "2.0.0"
+    assert manifest["version"] == StrmConvert.plugin_version == "2.0.1"
     assert manifest["release"] is True
     assert manifest["system_version"] == ">=3.0.0"
-    assert list(manifest["history"]) == ["v2.0.0"]
+    assert list(manifest["history"]) == ["v2.0.1", "v2.0.0"]
     assert legacy_manifest["v3"] is False
     assert "app.sdk.logging" in _imports()
     assert "app.log" not in source

@@ -90,11 +90,11 @@ def test_v3_manifest_import_and_event_contracts() -> None:
     v3 = json.loads((REPOSITORY_ROOT / "package.v3.json").read_text(encoding="utf-8"))
     manifest = v3["Cd2Assistant"]
 
-    assert manifest["version"] == Cd2Assistant.plugin_version == "3.0.0"
+    assert manifest["version"] == Cd2Assistant.plugin_version == "3.0.1"
     assert manifest["level"] == 2
     assert manifest["release"] is True
     assert manifest["system_version"] == ">=3.0.0"
-    assert list(manifest["history"]) == ["v3.0.0"]
+    assert list(manifest["history"]) == ["v3.0.1", "v3.0.0"]
     assert v1["Cd2Assistant"]["v3"] is False
     assert v2["Cd2Assistant"]["v3"] is False
     assert (

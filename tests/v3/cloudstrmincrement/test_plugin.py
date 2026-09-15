@@ -52,7 +52,7 @@ def test_v3_manifest_and_sdk_import_contracts() -> None:
         (REPOSITORY_ROOT / "package.json").read_text(encoding="utf-8")
     )["CloudStrmIncrement"]
 
-    assert manifest["version"] == CloudStrmIncrement.plugin_version == "2.0.0"
+    assert manifest["version"] == CloudStrmIncrement.plugin_version == "2.0.1"
     assert manifest["system_version"] == ">=3.0.0"
     assert manifest["release"] is True
     assert legacy["v3"] is False

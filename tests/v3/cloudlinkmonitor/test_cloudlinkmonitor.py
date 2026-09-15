@@ -61,7 +61,7 @@ def test_v3_plugin_imports_and_initializes(monkeypatch) -> None:
     plugin = CloudLinkMonitor()
     plugin.init_plugin({})
 
-    assert plugin.plugin_version == "3.0.1"
+    assert plugin.plugin_version == "3.0.2"
     assert plugin.get_api()[0]["response_model"] is schemas.Response[None]
 
     plugin.stop_service()
