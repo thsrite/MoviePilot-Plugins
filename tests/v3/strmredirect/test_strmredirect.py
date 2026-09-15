@@ -39,7 +39,7 @@ def test_v3_manifest_and_import_contracts() -> None:
         (REPOSITORY_ROOT / "package.json").read_text(encoding="utf-8")
     )
 
-    assert manifest["version"] == StrmRedirect.plugin_version == "2.0.0"
+    assert manifest["version"] == StrmRedirect.plugin_version == "2.0.1"
     assert manifest["release"] is True
     assert manifest["system_version"] == ">=3.0.0"
     assert legacy_manifest["v3"] is False

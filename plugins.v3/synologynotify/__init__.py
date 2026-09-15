@@ -11,10 +11,10 @@ from app.sdk.logging import logger
 class SynologyNotify(_PluginBase):
     """接收群晖 Webhook 消息并转发到 MoviePilot 通知中心。"""
 
-    plugin_name = "群辉Webhook通知"
-    plugin_desc = "接收群辉webhook通知并推送。"
+    plugin_name = "群晖Webhook通知"
+    plugin_desc = "接收群晖webhook通知并推送。"
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/synology.png"
-    plugin_version = "2.0.0"
+    plugin_version = "2.0.1"
     plugin_author = "thsrite"
     author_url = "https://github.com/thsrite"
     plugin_config_prefix = "synologynotify_"
@@ -52,7 +52,7 @@ class SynologyNotify(_PluginBase):
     ) -> schemas.Response[None]:
         """接收 Synology Webhook 参数并按插件配置转发通知。"""
         logger.info(
-            "收到群辉 webhook 消息，字段状态 text=%s title=%s content=%s url=%s",
+            "收到群晖 webhook 消息，字段状态 text=%s title=%s content=%s url=%s",
             bool(text),
             bool(title),
             bool(content),
@@ -66,7 +66,7 @@ class SynologyNotify(_PluginBase):
             if not text and url:
                 message_text = f"{message_text}\n[查看详情]({url})"
             self.post_message(
-                title="群辉通知" if text else title,
+                title="群晖通知" if text else title,
                 mtype=self._get_message_type(),
                 text=message_text,
             )
@@ -90,8 +90,8 @@ class SynologyNotify(_PluginBase):
                 "endpoint": self.send_notify,
                 "methods": ["GET"],
                 "auth": "apikey",
-                "summary": "群辉webhook",
-                "description": "接受群辉webhook通知并推送",
+                "summary": "群晖webhook",
+                "description": "接受群晖webhook通知并推送",
                 "response_model": schemas.Response[None],
             }
         ]
@@ -170,7 +170,7 @@ class SynologyNotify(_PluginBase):
                                             "type": "info",
                                             "variant": "tonal",
                                             "text": (
-                                                "群辉webhook配置"
+                                                "群晖webhook配置"
                                                 "http://ip:3001/api/v1/plugin/SynologyNotify/webhook?apikey=*****&text=hello world。"
                                                 "text参数类型是消息内容。此插件安装完需要重启生效api。消息类型默认为手动处理通知。"
                                             ),

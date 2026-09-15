@@ -7,13 +7,13 @@ from app import schemas
 
 class SynologyNotify(_PluginBase):
     # 插件名称
-    plugin_name = "群辉Webhook通知"
+    plugin_name = "群晖Webhook通知"
     # 插件描述
-    plugin_desc = "接收群辉webhook通知并推送。"
+    plugin_desc = "接收群晖webhook通知并推送。"
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/thsrite/MoviePilot-Plugins/main/icons/synology.png"
     # 插件版本
-    plugin_version = "1.3"
+    plugin_version = "1.3.1"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -46,7 +46,7 @@ class SynologyNotify(_PluginBase):
             if self._msgtype:
                 mtype = NotificationType.__getitem__(str(self._msgtype)) or NotificationType.Manual
             if text:
-                self.post_message(title="群辉通知",
+                self.post_message(title="群晖通知",
                                   mtype=mtype,
                                   text=text)
             else:
@@ -81,8 +81,8 @@ class SynologyNotify(_PluginBase):
                 "path": "/webhook",
                 "endpoint": self.send_notify,
                 "methods": ["GET"],
-                "summary": "群辉webhook",
-                "description": "接受群辉webhook通知并推送",
+                "summary": "群晖webhook",
+                "description": "接受群晖webhook通知并推送",
             }
         ]
 
@@ -175,7 +175,7 @@ class SynologyNotify(_PluginBase):
                                         'props': {
                                             'type': 'info',
                                             'variant': 'tonal',
-                                            'text': '群辉webhook配置http://ip:3001/api/v1/plugin/SynologyNotify/webhook?apikey=*****&text=hello world。'
+                                            'text': '群晖webhook配置http://ip:3001/api/v1/plugin/SynologyNotify/webhook?apikey=*****&text=hello world。'
                                                     'text参数类型是消息内容。此插件安装完需要重启生效api。消息类型默认为手动处理通知。'
                                         }
                                     }
