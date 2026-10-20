@@ -37,7 +37,7 @@ class EmbyReporter(_PluginBase):
     plugin_name = "Emby观影报告"
     plugin_desc = "推送Emby观影报告，需Emby安装Playback Report插件。"
     plugin_icon = "Pydiocells_A.png"
-    plugin_version = "3.0.0"
+    plugin_version = "3.0.1"
     plugin_author = "thsrite"
     author_url = "https://github.com/thsrite"
     plugin_config_prefix = "embyreporter_"
@@ -67,6 +67,9 @@ class EmbyReporter(_PluginBase):
         self._black_library = ""
         self._mediaserver_helper: Optional[MediaServerHelper] = None
         self._connection: Optional[_EmbyConnection] = None
+        # 条目所属媒体库名称按条目缓存，避免同一轮报告反复请求祖先链
+        self._library_name_cache: dict[str, str] = {}
+        self._virtual_folders_cache: Optional[list[dict]] = None
         self._run_lock = threading.Lock()
         self._run_once_lock = threading.Lock()
 
@@ -566,6 +569,9 @@ class EmbyReporter(_PluginBase):
         message_type = self._message_type()
         for connection in connections:
             self._connection = connection
+            # 每轮报告重新解析库名，避免沿用上一轮或上一个服务器的缓存
+            self._library_name_cache.clear()
+            self._virtual_folders_cache = None
             try:
                 movie_ok, movies = self.get_report(
                     types=self.PLAYBACK_REPORTING_TYPE_MOVIE,
@@ -698,7 +704,7 @@ class EmbyReporter(_PluginBase):
         return user_id, item_id, item_type, name, count, max(duration, 0)
 
     def _is_blacklisted(self, info: Any) -> bool:
-        """按媒体服务器返回的库名、路径等字段过滤配置中的黑名单文本。"""
+        """按条目所属媒体库名称和路径过滤配置中的黑名单文本。"""
         if not self._black_library or not isinstance(info, dict):
             return False
         black_names = [
@@ -708,8 +714,18 @@ class EmbyReporter(_PluginBase):
         ]
         candidates = [
             str(info.get(key) or "").casefold()
-            for key in ("LibraryName", "CollectionName", "Path", "ParentId")
+            for key in ("LibraryName", "CollectionName", "Path")
         ]
+        # Emby 条目的 Path 与父项名称都不含媒体库名，库是独立实体，只能反查库清单
+        library_name = self._library_name(
+            str(info.get("Id") or ""),
+            str(info.get("Path") or ""),
+        )
+        if library_name:
+            candidates.append(library_name.casefold())
+        logger.debug(
+            f"Emby 黑名单检查：库名={library_name or '未知'}，路径={info.get('Path')}"
+        )
         return any(
             black_name in candidate
             for black_name in black_names
@@ -983,6 +999,96 @@ class EmbyReporter(_PluginBase):
         finally:
             if response is not None:
                 response.close()
+
+    def _virtual_folders(self) -> list[dict]:
+        """读取 Emby 媒体库清单，含库名、库条目 ID 和磁盘目录。"""
+        if self._virtual_folders_cache is not None:
+            return self._virtual_folders_cache
+        folders: list[dict] = []
+        response = None
+        if self._connection:
+            try:
+                response = RequestUtils().get_res(
+                    url=f"{self._connection.host}/emby/Library/VirtualFolders",
+                    params={"api_key": self._connection.api_key},
+                )
+                if response is not None and response.status_code in (200, 204):
+                    data = response.json() or []
+                    if isinstance(data, list):
+                        folders = [item for item in data if isinstance(item, dict)]
+            except Exception:
+                folders = []
+            finally:
+                if response is not None:
+                    response.close()
+        self._virtual_folders_cache = folders
+        return folders
+
+    def _ancestor_ids(self, item_id: str) -> set[str]:
+        """收集条目自身及全部祖先的标识，用于定位其所属媒体库。"""
+        ids = {item_id}
+        if not self._connection:
+            return ids
+        response = None
+        try:
+            response = RequestUtils().get_res(
+                url=f"{self._connection.host}/emby/Items/{item_id}/Ancestors",
+                params={"api_key": self._connection.api_key},
+            )
+            if response is not None and response.status_code in (200, 204):
+                ancestors = response.json() or []
+                if isinstance(ancestors, list):
+                    for ancestor in ancestors:
+                        if isinstance(ancestor, dict) and ancestor.get("Id"):
+                            ids.add(str(ancestor.get("Id")))
+        except Exception:
+            pass
+        finally:
+            if response is not None:
+                response.close()
+        return ids
+
+    def _library_name(self, item_id: str, path: str = "") -> str:
+        """解析条目所属媒体库名称。
+
+        Emby 媒体库是独立实体：条目详情里的 Path 只到磁盘目录，ParentId 只到季或
+        影片目录，祖先链最顶端还可能是 root。库名只能拿库清单反查——先按库条目 ID
+        命中祖先链，再用库的磁盘目录前缀匹配条目路径。
+
+        :param item_id: 需要解析媒体库的条目标识
+        :param path: 条目在磁盘上的路径，用于目录前缀兜底
+        :return: 媒体库名称，无法解析时返回空串
+        """
+        if not item_id or not self._connection:
+            return ""
+        if item_id in self._library_name_cache:
+            return self._library_name_cache[item_id]
+        folders = self._virtual_folders()
+        name = ""
+        if folders:
+            ancestor_ids = self._ancestor_ids(item_id)
+            for folder in folders:
+                folder_id = str(folder.get("ItemId") or "")
+                if folder_id and folder_id in ancestor_ids:
+                    name = str(folder.get("Name") or "")
+                    break
+            if not name and path:
+                normalized_path = path.replace("\\", "/").casefold()
+                matched_prefix = -1
+                for folder in folders:
+                    for location in folder.get("Locations") or []:
+                        prefix = str(location or "").replace("\\", "/").rstrip("/")
+                        if not prefix:
+                            continue
+                        folded = prefix.casefold()
+                        if normalized_path.startswith(f"{folded}/") and len(
+                            folded
+                        ) > matched_prefix:
+                            # 库目录可能互相嵌套，取最长前缀，避免父库抢走子库的条目
+                            matched_prefix = len(folded)
+                            name = str(folder.get("Name") or "")
+        self._library_name_cache[item_id] = name
+        return name
 
     def get_report(
         self,
