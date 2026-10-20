@@ -378,13 +378,14 @@
     "name": "Emby观影报告",
     "description": "推送Emby观影报告，需Emby安装Playback Report插件。",
     "labels": "Emby",
-    "version": "3.0.0",
+    "version": "3.0.1",
     "icon": "Pydiocells_A.png",
     "author": "thsrite",
     "level": 1,
     "release": true,
     "system_version": ">=3.0.0",
     "history": {
+      "v3.0.1": "修复媒体库黑名单不生效：改为按 VirtualFolders 反查条目所属库名，路径前缀兜底。",
       "v3.0.0": "适配 V3 SDK，并将报告任务迁移到宿主调度器。"
     }
   },

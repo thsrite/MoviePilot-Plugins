@@ -59,9 +59,10 @@ def test_v3_manifest_and_strict_sdk_contract() -> None:
         (REPOSITORY_ROOT / "package.v2.json").read_text(encoding="utf-8")
     )["EmbyReporter"]
 
-    assert manifest["version"] == EmbyReporter.plugin_version == "3.0.0"
+    assert manifest["version"] == EmbyReporter.plugin_version == "3.0.1"
     assert manifest["release"] is True
     assert manifest["system_version"] == ">=3.0.0"
+    assert manifest["history"]["v3.0.1"]
     assert manifest["history"]["v3.0.0"]
     assert legacy_v1["v3"] is False
     assert legacy_v2["v3"] is False
@@ -367,3 +368,140 @@ def test_draw_and_split_report_with_packaged_reference_assets(
     )
     assert len(parts) == 3
     assert all(part.is_file() for part in parts)
+
+
+class _FakeEmbyResponse:
+    """模拟 SDK HTTP 响应，只实现黑名单解析用到的接口。"""
+
+    status_code = 200
+
+    def __init__(self, payload: object) -> None:
+        self._payload = payload
+
+    def json(self) -> object:
+        return self._payload
+
+    def close(self) -> None:
+        pass
+
+
+def _stub_emby_http(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    folders: list[dict],
+    ancestors: dict[str, list[dict]],
+) -> Mock:
+    """按 URL 分发伪造的库清单与祖先链响应。"""
+
+    def get_res(url: str, params: dict | None = None) -> _FakeEmbyResponse:
+        if url.endswith("/emby/Library/VirtualFolders"):
+            return _FakeEmbyResponse(folders)
+        if "/Ancestors" in url:
+            item_id = url.split("/emby/Items/")[1].split("/Ancestors")[0]
+            return _FakeEmbyResponse(ancestors.get(item_id, []))
+        raise AssertionError(f"未预期的请求：{url}")
+
+    request = Mock()
+    request.get_res.side_effect = get_res
+    monkeypatch.setattr(embyreporter_module, "RequestUtils", lambda: request)
+    return request
+
+
+def _connected_plugin() -> EmbyReporter:
+    """构造已绑定 Emby 连接的插件实例。"""
+    plugin = EmbyReporter()
+    plugin._connection = embyreporter_module._EmbyConnection(
+        name="Emby",
+        host="https://emby.example",
+        api_key="secret",
+    )
+    return plugin
+
+
+def test_blacklist_matches_library_name_from_ancestor_chain(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """库条目 ID 出现在祖先链时应按库名过滤，且同一条目只解析一次。"""
+    request = _stub_emby_http(
+        monkeypatch,
+        folders=[
+            {"Name": "测试库A", "ItemId": "lib-a", "Locations": ["/media/other"]}
+        ],
+        ancestors={"item-1": [{"Id": "lib-a", "Name": "root"}]},
+    )
+    plugin = _connected_plugin()
+    plugin._black_library = "测试库A"
+    info = {"Id": "item-1", "Path": "/media/test-library-a/movie-001/movie-001.strm"}
+
+    assert plugin._is_blacklisted(info) is True
+    assert plugin._is_blacklisted(info) is True
+    assert request.get_res.call_count == 2
+    assert plugin._library_name_cache == {"item-1": "测试库A"}
+
+
+def test_blacklist_falls_back_to_longest_location_prefix(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """祖先链不含库 ID 时按磁盘目录兜底，嵌套库目录应取最长前缀。"""
+    _stub_emby_http(
+        monkeypatch,
+        folders=[
+            {"Name": "测试库根", "ItemId": "lib-parent", "Locations": ["/media"]},
+            {
+                "Name": "测试库B",
+                "ItemId": "lib-b",
+                "Locations": ["/media/test-library-b"],
+            },
+        ],
+        ancestors={"item-1": [{"Id": "unknown"}]},
+    )
+    plugin = _connected_plugin()
+    plugin._black_library = "测试库B"
+
+    assert (
+        plugin._is_blacklisted(
+            {"Id": "item-1", "Path": "/media/test-library-b/movie-002/movie-002.strm"}
+        )
+        is True
+    )
+
+
+def test_blacklist_leaves_unrelated_library_entries_alone(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """未命中黑名单的媒体库条目必须保留。"""
+    _stub_emby_http(
+        monkeypatch,
+        folders=[
+            {
+                "Name": "测试库C",
+                "ItemId": "lib-c",
+                "Locations": ["/media/test-library-c"],
+            }
+        ],
+        ancestors={"item-1": [{"Id": "lib-c"}]},
+    )
+    plugin = _connected_plugin()
+    plugin._black_library = "测试库A"
+
+    assert (
+        plugin._is_blacklisted(
+            {"Id": "item-1", "Path": "/media/test-library-c/movie-003.strm"}
+        )
+        is False
+    )
+
+
+def test_empty_blacklist_skips_http_requests(monkeypatch: pytest.MonkeyPatch) -> None:
+    """未配置黑名单时不得为解析库名发起任何请求。"""
+    request = _stub_emby_http(monkeypatch, folders=[], ancestors={})
+    plugin = _connected_plugin()
+
+    assert (
+        plugin._is_blacklisted(
+            {"Id": "item-1", "Path": "/media/test-library-a/movie-004.strm"}
+        )
+        is False
+    )
+    request.get_res.assert_not_called()
+
