@@ -1,20 +1,20 @@
 import os
-import shutil
 import time
 from pathlib import Path
 from typing import List, Tuple, Dict, Any, Optional
 
 from app import schemas
 from app.db.oper.downloadhistory import DownloadHistoryOper
+from app.db.oper.systemconfig import SystemConfigOper
 from app.db.oper.transferhistory import TransferHistoryOper
 from app.plugins import _PluginBase
-from app.schemas.types import EventType, MediaImageType, MediaSource, MediaType, MessageType
+from app.schemas.types import EventType, MediaImageType, MediaSource, MediaType, MessageType, SystemConfigKey
 from app.sdk.config import settings
 from app.sdk.events import Event, eventmanager
 from app.sdk.logging import logger
 from app.sdk.media import build_media_key, resolve_media_identity
 from app.sdk.services import DownloaderHelper
-from app.sdk.utilities import StringUtils, SystemUtils
+from app.sdk.utilities import StringUtils
 
 
 class MediaSyncDel(_PluginBase):
@@ -27,7 +27,7 @@ class MediaSyncDel(_PluginBase):
     # 插件图标
     plugin_icon = "mediasyncdel.png"
     # 插件版本
-    plugin_version = "2.0.2"
+    plugin_version = "2.0.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -758,6 +758,9 @@ class MediaSyncDel(_PluginBase):
         episode_num: Optional[str],
         delete_time: Optional[str] = None,
     ):
+        if not isinstance(media_path, str) or not media_path.strip():
+            logger.warning("同步删除跳过：未提供有效媒体路径")
+            return
         if not media_type or not media_name:
             logger.error(f"{media_name} 同步删除失败，未获取到媒体类型，请检查媒体是否刮削")
             return
@@ -775,10 +778,14 @@ class MediaSyncDel(_PluginBase):
                 sub_paths = path.split(":", 1)
                 if len(sub_paths) < 2:
                     continue
-                media_path = media_path.replace(sub_paths[0], sub_paths[1]).replace('\\', '/')
+                source_prefix, target_prefix = (value.rstrip('/') for value in sub_paths)
+                if source_prefix and (media_path == source_prefix or media_path.startswith(source_prefix + '/')):
+                    media_path = target_prefix + media_path[len(source_prefix):]
 
         # 兼容重新整理的场景
-        if media_path and Path(media_path).exists():
+        event_path = Path(media_path)
+        if (not event_path.is_absolute() or ".." in event_path.parts
+                or event_path.exists() or event_path.is_symlink()):
             logger.warning(f"转移路径 {media_path} 未被删除或重新生成，跳过处理")
             return
 
@@ -796,11 +803,16 @@ class MediaSyncDel(_PluginBase):
                 f"{media_type} {media_name} 未获取到可删除数据，请检查路径映射或媒体身份是否正确")
             return
 
-        if delete_time:
-            latest_his = max(transfer_history, key=lambda x: x.date)
-            if delete_time < latest_his.date:
-                logger.warning(f"忽略删除 {msg}, 整理时间: {latest_his.date}, 发生在删除事件: {delete_time} 之后")
-                return
+        # 失败记录不具有删除授权，也不能阻止较早成功记录的事件处理。
+        failed_history_count = sum(getattr(record, "status", None) not in (True, 1) for record in transfer_history)
+        transfer_history = [record for record in transfer_history if getattr(record, "status", None) in (True, 1)]
+        if not transfer_history:
+            return
+        try:
+            download_roots, library_roots = self._get_delete_roots()
+        except Exception:
+            logger.exception("读取本地目录配置失败，停止同步删除")
+            return
 
         logger.info(f"开始同步删除 {msg}, 获取到 {len(transfer_history)} 条转移记录")
         if not media_source or not media_id:
@@ -814,56 +826,56 @@ class MediaSyncDel(_PluginBase):
         stop_torrent_hashs = []
         error_cnt = 0
         image = 'https://emby.media/notificationicon.png'
+        processed_count = 0
+        skipped_count = failed_history_count
         for transferhis in transfer_history:
-            title = transferhis.title
-            if not title or title not in media_name:
-                logger.warning(
-                    f"当前转移记录 {transferhis.id} {title} {transferhis.media_source}:{transferhis.media_id} "
-                    f"与删除媒体{media_name}不符，防误删，暂不自动删除")
-                continue
-            image = transferhis.image or image
-            year = transferhis.year
-            history_delete_ready = True
-
-            # 删除种子任务
-            if self._del_source:
-                # 1、直接删除源文件
-                if transferhis.src and Path(transferhis.src).suffix in settings.RMT_MEDIAEXT:
-                    # 删除硬链接文件和源文件
-                    if Path(transferhis.dest).exists():
-                        Path(transferhis.dest).unlink(missing_ok=True)
-                        self.__remove_parent_dir(Path(transferhis.dest))
-                    if Path(transferhis.src).exists():
-                        logger.info(f"源文件 {transferhis.src} 开始删除")
-                        Path(transferhis.src).unlink(missing_ok=True)
-                        logger.info(f"源文件 {transferhis.src} 已删除")
-                        self.__remove_parent_dir(Path(transferhis.src))
-
+            try:
+                title = transferhis.title
+                if delete_time and (not transferhis.date or delete_time < transferhis.date):
+                    skipped_count += 1
+                    logger.warning(f"整理记录 {transferhis.id} 缺少整理时间或晚于删除事件，保留历史")
+                    continue
+                paths = self._safe_history_paths(transferhis, media_path, media_type,
+                                                 download_roots, library_roots)
+                if not title or title not in media_name or paths is None:
+                    skipped_count += 1
+                    logger.warning(f"整理记录 {transferhis.id} 未通过删除安全检查，保留历史")
+                    continue
+                source_path, _ = paths
+                if self._del_source:
+                    # 同一源仍被其他库文件使用时，不删除共享源或暂停其下载任务。
+                    shared_history = self._transferhis.list_success_by_src(src=transferhis.src, storage="local")
+                    if any(record.id != transferhis.id and record.dest and Path(record.dest).exists()
+                           for record in shared_history):
+                        skipped_count += 1
+                        logger.warning(f"源文件 {source_path} 仍被其他媒体库文件引用，保留历史")
+                        continue
+                    source_path.unlink(missing_ok=True)
+                    self.__remove_parent_dir(source_path, download_roots + library_roots)
                     if transferhis.download_hash:
-                        try:
-                            # 2、判断种子是否被删除完
-                            delete_flag, success_flag, handle_torrent_hashs = self.handle_torrent(
-                                type=transferhis.type,
-                                src=transferhis.src,
-                                torrent_hash=transferhis.download_hash)
-                            if not success_flag:
-                                error_cnt += 1
-                                history_delete_ready = False
-                            else:
-                                if delete_flag:
-                                    del_torrent_hashs += handle_torrent_hashs
-                                else:
-                                    stop_torrent_hashs += handle_torrent_hashs
-                        except Exception as e:
+                        delete_flag, success_flag, handled_hashes = self.handle_torrent(
+                            type=transferhis.type, src=transferhis.src,
+                            torrent_hash=transferhis.download_hash)
+                        if not success_flag:
                             error_cnt += 1
-                            history_delete_ready = False
-                            logger.error("删除种子失败：%s" % str(e))
-
-            # 整理历史是跨文件系统和下载器清理失败后的重试依据，只能最后删除。
-            if history_delete_ready:
+                            logger.warning(f"下载器清理未完成，保留整理历史：{transferhis.id}")
+                            continue
+                        if delete_flag:
+                            del_torrent_hashs += handled_hashes
+                        else:
+                            stop_torrent_hashs += handled_hashes
+                # 外部清理失败时，整理历史必须保留供重试。
                 self._transferhis.delete(transferhis.id)
-            else:
-                logger.warning(f"外部清理未完成，保留整理历史：{transferhis.id}")
+                processed_count += 1
+                image = transferhis.image or image
+                year = transferhis.year
+            except Exception:
+                error_cnt += 1
+                logger.exception(f"整理记录 {transferhis.id} 同步删除失败，保留历史并继续后续记录")
+
+        if not processed_count:
+            logger.warning(f"同步删除 {msg} 未完成任何记录，失败 {error_cnt} 条，跳过 {skipped_count} 条")
+            return
 
         logger.info(f"同步删除 {msg} 完成！")
 
@@ -882,25 +894,20 @@ class MediaSyncDel(_PluginBase):
                 ) or image
 
             torrent_cnt_msg = ""
-            if del_torrent_hashs:
-                torrent_cnt_msg += f"删除种子{len(set(del_torrent_hashs))}个\n"
-            if stop_torrent_hashs:
-                stop_cnt = 0
-                # 排除已删除
-                for stop_hash in set(stop_torrent_hashs):
-                    if stop_hash not in set(del_torrent_hashs):
-                        stop_cnt += 1
-                if stop_cnt > 0:
-                    torrent_cnt_msg += f"暂停种子{stop_cnt}个\n"
+            handled_hashes = set(del_torrent_hashs + stop_torrent_hashs)
+            if handled_hashes:
+                # 合集中可能同时存在删除与暂停，现有返回合同只能确认处理总数。
+                torrent_cnt_msg += f"处理种子{len(handled_hashes)}个\n"
             if error_cnt:
-                torrent_cnt_msg += f"删种失败{error_cnt}个\n"
+                torrent_cnt_msg += f"处理失败{error_cnt}个\n"
             # 发送通知
             self.post_message(
                 mtype=MessageType.Plugin,
                 title="媒体库同步删除任务完成",
                 image=backrop_image,
                 text=f"{msg}\n"
-                     f"删除记录{len(transfer_history)}个\n"
+                     f"删除记录{processed_count}个\n"
+                     f"跳过记录{skipped_count}个\n"
                      f"{torrent_cnt_msg}"
                      f"时间 {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))}"
             )
@@ -934,25 +941,101 @@ class MediaSyncDel(_PluginBase):
         # 保存历史
         self.save_data("history", history)
 
-    def __remove_parent_dir(self, file_path: Path):
+    @staticmethod
+    def _get_delete_roots():
         """
-        删除父目录
+        读取宿主配置的本地下载和媒体库根目录，缺少配置时禁止文件删除。
+
+        :return: 下载根目录列表和媒体库根目录列表
         """
-        # 删除空目录
-        # 判断当前媒体父路径下是否有媒体文件，如有则无需遍历父级
-        if not SystemUtils.exits_files(file_path.parent, settings.RMT_MEDIAEXT):
-            # 判断父目录是否为空, 为空则删除
-            i = 0
-            for parent_path in file_path.parents:
-                i += 1
-                if i > 3:
+        download_roots, library_roots = [], []
+        for directory in SystemConfigOper().get(SystemConfigKey.Directories) or []:
+            for path_key, storage_key, roots in (
+                ("download_path", "storage", download_roots),
+                ("library_path", "library_storage", library_roots),
+            ):
+                value = directory.get(path_key)
+                if directory.get(storage_key) in (None, "", "local") and isinstance(value, str):
+                    path = Path(value)
+                    if path.is_absolute() and path.is_dir() and path.resolve() != Path(path.anchor):
+                        roots.append(path)
+        return download_roots, library_roots
+
+    @staticmethod
+    def _safe_local_path(value, roots):
+        """
+        校验本地媒体文件严格位于配置根下，拒绝目录、路径穿越和根内符号链接。
+
+        :param value: 历史中的完整路径
+        :param roots: 可用的本地根目录列表
+        :return: 校验后的路径，非法时返回 None
+        """
+        if not isinstance(value, str) or not value.strip():
+            return None
+        path = Path(value)
+        if not path.is_absolute() or ".." in path.parts or path.suffix.lower() not in settings.RMT_MEDIAEXT:
+            return None
+        for root in roots:
+            if path == root or not path.is_relative_to(root):
+                continue
+            relative = path.relative_to(root)
+            candidate = root
+            for part in relative.parts:
+                candidate = candidate / part
+                if candidate.is_symlink():
                     break
-                if str(parent_path.parent) != str(file_path.root):
-                    # 父目录非根目录，才删除父目录
-                    if not SystemUtils.exits_files(parent_path, settings.RMT_MEDIAEXT):
-                        # 当前路径下没有媒体文件则删除
-                        shutil.rmtree(parent_path)
-                        logger.warning(f"本地空目录 {parent_path} 已删除")
+            else:
+                if path.resolve().is_relative_to(root.resolve()) and (not path.exists() or path.is_file()):
+                    return path
+        return None
+
+    def _safe_history_paths(self, record, media_path, media_type, download_roots, library_roots):
+        """
+        将成功的本地整理历史约束到本次事件的路径范围。
+
+        :param record: 整理历史
+        :param media_path: 映射后的删除事件路径
+        :param media_type: 媒体服务器条目类型
+        :param download_roots: 下载根目录列表
+        :param library_roots: 媒体库根目录列表
+        :return: 源文件与目标文件路径，不能安全处理时返回 None
+        """
+        if record.src_storage != "local" or record.dest_storage != "local":
+            return None
+        source = self._safe_local_path(record.src, download_roots)
+        destination = self._safe_local_path(record.dest, library_roots)
+        if source is None or destination is None or source.resolve() == destination.resolve():
+            return None
+        # 另一分辨率或重建的库文件不能因同媒体身份被连带删除。
+        event_path = Path(media_path)
+        if destination.exists() or destination.is_symlink():
+            return None
+        if media_type in ("Movie", "MOV", "Episode"):
+            if destination != event_path:
+                return None
+        elif destination == event_path or not destination.is_relative_to(event_path):
+            return None
+        if event_path in download_roots + library_roots:
+            return None
+        return source, destination
+
+    @staticmethod
+    def __remove_parent_dir(file_path: Path, protected_roots):
+        """
+        最多清理三级真正的空目录，绝不递归删除残余文件或配置根目录。
+
+        :param file_path: 已删除的媒体文件路径
+        :param protected_roots: 必须保留的下载和媒体库根目录
+        """
+        roots = {root.resolve() for root in protected_roots}
+        for parent in list(file_path.parents)[:3]:
+            if parent.is_symlink() or parent.resolve() in roots or parent == Path(parent.anchor):
+                break
+            try:
+                parent.rmdir()
+                logger.info(f"本地空目录 {parent} 已删除")
+            except OSError:
+                break
 
     def __get_transfer_his(self, media_type: str, media_name: str, media_path: str,
                            media_source: Optional[MediaSource], media_id: Optional[str],
@@ -1051,7 +1134,7 @@ class MediaSyncDel(_PluginBase):
             if not download_files:
                 logger.error(
                     f"未查询到种子任务 {torrent_hash} 存在文件记录，未执行下载器文件同步或该种子已被删除")
-                return False, False, 0
+                return False, False, []
 
             # 查询未删除数
             no_del_cnt = 0
@@ -1076,23 +1159,19 @@ class MediaSyncDel(_PluginBase):
 
                 # 删除种子
                 if delete_flag:
-                    # 删除转种记录
-                    self.del_data(key=history_key, plugin_id=plugin_id)
-
                     # 转种后未删除源种时，同步删除源种
                     if not delete_source:
                         logger.info(f"{history_key} 转种时未删除源下载任务，开始删除源下载任务…")
 
                         # 删除源种子
                         logger.info(f"删除源下载器下载任务：{self._default_downloader} - {torrent_hash}")
-                        self.chain.remove_torrents(torrent_hash)
+                        self._change_torrent(torrent_hash, True)
                         handle_torrent_hashs.append(torrent_hash)
 
                     # 删除转种后任务
                     logger.info(f"删除转种后下载任务：{download} - {download_id}")
                     # 删除转种后下载任务
-                    self.chain.remove_torrents(hashs=torrent_hash,
-                                               downloader=download)
+                    self._change_torrent(download_id, True, download)
                     handle_torrent_hashs.append(download_id)
                 else:
                     # 暂停种子
@@ -1102,29 +1181,30 @@ class MediaSyncDel(_PluginBase):
 
                         # 暂停源种子
                         logger.info(f"暂停源下载器下载任务：{self._default_downloader} - {torrent_hash}")
-                        self.chain.stop_torrents(torrent_hash)
+                        self._change_torrent(torrent_hash, False)
                         handle_torrent_hashs.append(torrent_hash)
 
                     logger.info(f"暂停转种后下载任务：{download} - {download_id}")
                     # 删除转种后下载任务
-                    self.chain.stop_torrents(hashs=download_id, downloader=download)
+                    self._change_torrent(download_id, False, download)
                     handle_torrent_hashs.append(download_id)
             else:
                 # 未转种de情况
                 if delete_flag:
                     # 删除源种子
                     logger.info(f"删除源下载器下载任务：{download} - {download_id}")
-                    self.chain.remove_torrents(download_id)
+                    self._change_torrent(download_id, True)
                 else:
                     # 暂停源种子
                     logger.info(f"暂停源下载器下载任务：{download} - {download_id}")
-                    self.chain.stop_torrents(download_id)
+                    self._change_torrent(download_id, False)
                 handle_torrent_hashs.append(download_id)
 
             # 处理辅种
             handle_torrent_hashs = self.__del_seed(download_id=download_id,
                                                    delete_flag=delete_flag,
-                                                   handle_torrent_hashs=handle_torrent_hashs)
+                                                   handle_torrent_hashs=handle_torrent_hashs,
+                                                   visited={(download, download_id)})
             # 处理合集
             if str(type) == "电视剧":
                 handle_torrent_hashs = self.__del_collection(src=src,
@@ -1132,10 +1212,28 @@ class MediaSyncDel(_PluginBase):
                                                              torrent_hash=torrent_hash,
                                                              download_files=download_files,
                                                              handle_torrent_hashs=handle_torrent_hashs)
+            if delete_flag and transfer_history and isinstance(transfer_history, dict):
+                self.del_data(key=history_key, plugin_id=plugin_id)
             return delete_flag, True, handle_torrent_hashs
         except Exception as e:
             logger.error(f"删种失败： {str(e)}")
-            return False, False, 0
+            return False, False, []
+
+    def _change_torrent(self, torrent_hash, delete_flag, downloader=None):
+        """
+        只删除下载任务，不让下载器递归删除未经路径校验的共享数据。
+
+        :param torrent_hash: 目标下载任务标识
+        :param delete_flag: True 删除任务，False 暂停任务
+        :param downloader: 下载器名称，省略时使用默认下载器
+        :raises RuntimeError: 下载器未确认成功
+        """
+        if delete_flag:
+            result = self.chain.remove_torrents(hashs=torrent_hash, delete_file=False, downloader=downloader)
+        else:
+            result = self.chain.stop_torrents(hashs=torrent_hash, downloader=downloader)
+        if result is not True:
+            raise RuntimeError(f"下载器未确认任务 {torrent_hash} 处理成功")
 
     def __del_collection(self, src: str, delete_flag: bool, torrent_hash: str, download_files: list,
                          handle_torrent_hashs: list):
@@ -1168,13 +1266,11 @@ class MediaSyncDel(_PluginBase):
 
                             # 删除合集种子
                             if delete_flag:
-                                self.chain.remove_torrents(hashs=download_file.download_hash,
-                                                           downloader=download_file.downloader)
+                                self._change_torrent(download_file.download_hash, True, download_file.downloader)
                                 logger.info(f"删除合集种子 {download_file.downloader} {download_file.download_hash}")
                             else:
                                 # 暂停合集种子
-                                self.chain.stop_torrents(hashs=download_file.download_hash,
-                                                         downloader=download_file.downloader)
+                                self._change_torrent(download_file.download_hash, False, download_file.downloader)
                                 logger.info(f"暂停合集种子 {download_file.downloader} {download_file.download_hash}")
                             # 已处理种子+1
                             handle_torrent_hashs.append(download_file.download_hash)
@@ -1182,18 +1278,22 @@ class MediaSyncDel(_PluginBase):
                             # 处理合集辅种
                             handle_torrent_hashs = self.__del_seed(download_id=download_file.download_hash,
                                                                    delete_flag=delete_flag,
-                                                                   handle_torrent_hashs=handle_torrent_hashs)
+                                                                   handle_torrent_hashs=handle_torrent_hashs,
+                                                                   visited={(download_file.downloader,
+                                                                             download_file.download_hash)})
         except Exception as e:
-            logger.error(f"处理 {torrent_hash} 合集失败")
-            print(str(e))
+            logger.error(f"处理 {torrent_hash} 合集失败：{e}")
+            raise
 
         return handle_torrent_hashs
 
-    def __del_seed(self, download_id, delete_flag, handle_torrent_hashs):
+    def __del_seed(self, download_id, delete_flag, handle_torrent_hashs, visited=None):
         """
         删除辅种
         """
-        # 查询是否有辅种记录
+        # 递归去重必须包含下载器，同一哈希可以合法存在于多个下载器。
+        if visited is None:
+            visited = {(self._default_downloader, download_id)}
         history_key = download_id
         plugin_id = "IYUUAutoSeed"
         seed_history = self.get_data(key=history_key,
@@ -1206,27 +1306,31 @@ class MediaSyncDel(_PluginBase):
                 downloader = history.get("downloader")
                 torrents = history.get("torrents")
                 if not downloader or not torrents:
-                    return
+                    raise ValueError("辅种记录缺少下载器或种子标识")
                 if not isinstance(torrents, list):
                     torrents = [torrents]
 
                 # 删除辅种历史
                 for torrent in torrents:
+                    task_key = (downloader, torrent)
+                    if task_key in visited:
+                        continue
+                    visited.add(task_key)
                     handle_torrent_hashs.append(torrent)
                     # 删除辅种
                     if delete_flag:
                         logger.info(f"删除辅种：{downloader} - {torrent}")
-                        self.chain.remove_torrents(hashs=torrent,
-                                                   downloader=downloader)
+                        self._change_torrent(torrent, True, downloader)
                     # 暂停辅种
                     else:
-                        self.chain.stop_torrents(hashs=torrent, downloader=downloader)
+                        self._change_torrent(torrent, False, downloader)
                         logger.info(f"辅种：{downloader} - {torrent} 暂停")
 
                     # 处理辅种的辅种
                     handle_torrent_hashs = self.__del_seed(download_id=torrent,
                                                            delete_flag=delete_flag,
-                                                           handle_torrent_hashs=handle_torrent_hashs)
+                                                           handle_torrent_hashs=handle_torrent_hashs,
+                                                           visited=visited)
 
             # 删除辅种历史
             if delete_flag:
