@@ -38,10 +38,10 @@ def test_v3_manifest_and_sdk_contract() -> None:
         (REPOSITORY_ROOT / "package.v2.json").read_text(encoding="utf-8")
     )["MediaSyncDel"]
 
-    assert manifest["version"] == MediaSyncDel.plugin_version == "2.0.2"
+    assert manifest["version"] == MediaSyncDel.plugin_version == "2.0.3"
     assert manifest["release"] is True
     assert manifest["system_version"] == ">=3.0.0"
-    assert list(manifest["history"]) == ["v2.0.2", "v2.0.1", "v2.0.0"]
+    assert list(manifest["history"]) == ["v2.0.3", "v2.0.2", "v2.0.1", "v2.0.0"]
     assert legacy_manifest["v3"] is False
 
     imports = _imports()
@@ -83,7 +83,7 @@ def test_plugin_initializes_and_declares_response_model(monkeypatch) -> None:
     plugin = MediaSyncDel()
     plugin.init_plugin({})
 
-    assert plugin.plugin_version == "2.0.2"
+    assert plugin.plugin_version == "2.0.3"
     assert plugin.get_api()[0]["response_model"] is schemas.Response[None]
     assert plugin.get_api()[0]["auth"] == "bear"
     assert plugin.get_command() == []

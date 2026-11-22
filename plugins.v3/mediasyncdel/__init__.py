@@ -1,5 +1,6 @@
 import os
 import shutil
+import stat
 import time
 from pathlib import Path
 from typing import List, Tuple, Dict, Any, Optional
@@ -27,7 +28,7 @@ class MediaSyncDel(_PluginBase):
     # 插件图标
     plugin_icon = "mediasyncdel.png"
     # 插件版本
-    plugin_version = "2.0.2"
+    plugin_version = "2.0.3"
     # 插件作者
     plugin_author = "thsrite"
     # 作者主页
@@ -859,6 +860,20 @@ class MediaSyncDel(_PluginBase):
                             history_delete_ready = False
                             logger.error("删除种子失败：%s" % str(e))
 
+                elif transferhis.src:
+                    try:
+                        if getattr(transferhis, "src_storage", None) != "local":
+                            raise ValueError("蓝光原盘清理仅支持明确的本地源存储")
+                        del_torrent_hashs += self._delete_bluray_source(
+                            src=transferhis.src,
+                            torrent_hash=transferhis.download_hash,
+                            downloader=getattr(transferhis, "downloader", None),
+                        )
+                    except Exception as error:
+                        error_cnt += 1
+                        history_delete_ready = False
+                        logger.error("蓝光原盘同步清理失败，保留整理历史：%s", str(error))
+
             # 整理历史是跨文件系统和下载器清理失败后的重试依据，只能最后删除。
             if history_delete_ready:
                 self._transferhis.delete(transferhis.id)
@@ -988,6 +1003,15 @@ class MediaSyncDel(_PluginBase):
                 mtype=mtype.value,
                 dest=media_path,
             )
+            # 目录事件可能省略末尾斜杠；仅在精确路径未命中时查询等价路径，保留身份约束。
+            if not transfer_history and media_path and media_path.rstrip("/"):
+                alternate_path = media_path.rstrip("/") if media_path.endswith("/") else f"{media_path}/"
+                transfer_history = self._transferhis.get_by(
+                    media_source=media_source,
+                    media_id=media_id,
+                    mtype=mtype.value,
+                    dest=alternate_path,
+                )
         # 删除电视剧
         elif mtype == MediaType.TV and not season_num and not episode_num:
             msg = f'剧集 {media_name} {identity_text}'
@@ -1026,6 +1050,130 @@ class MediaSyncDel(_PluginBase):
             return "", []
 
         return msg, transfer_history
+
+    def _delete_bluray_source(
+        self, src: str, torrent_hash: str, downloader: Optional[str] = None,
+    ) -> List[str]:
+        """
+        联合下载历史与下载器完整清单，仅清理单个本地蓝光源目录。
+
+        :param src: 整理历史记录的本地蓝光源目录
+        :param torrent_hash: 关联下载任务的哈希
+        :param downloader: 整理历史中的下载器；缺省时仍须核对文件与下载历史一致
+        :return: 已成功移除的下载任务哈希
+        :raises ValueError: 路径、文件归属或关联任务不足以证明可安全清理
+        :raises OSError: 本地文件未能完整清理
+        :raises RuntimeError: 下载器未确认移除任务
+        """
+        root = Path(src)
+        if not torrent_hash or not root.is_absolute() or ".." in root.parts or len(root.parts) < 3:
+            raise ValueError("蓝光目录清理缺少种子身份或安全路径")
+        if root.is_symlink() or any(parent.is_symlink() for parent in root.parents):
+            raise ValueError("蓝光源路径包含符号链接，拒绝自动清理")
+
+        files = self._downloadhis.get_files_by_hash(download_hash=torrent_hash)
+        download_history = self._downloadhis.get_by_hash(torrent_hash)
+        if not files or not download_history or download_history.download_hash != torrent_hash:
+            raise ValueError("蓝光种子缺少一致的下载历史和文件记录")
+        downloader = downloader or download_history.downloader
+        if not downloader or download_history.downloader != downloader:
+            raise ValueError("蓝光种子的下载器归属不明确")
+
+        # 旧宿主可能去掉远程存储 URI 前缀，不能仅凭返回路径看起来像本地就删除。
+        service = self._downloader_helper.get_service(name=downloader)
+        if not service or not service.config:
+            raise ValueError("未找到可核验的下载器配置")
+        for storage_path, _download_path in service.config.path_mapping or []:
+            mapped_path = Path(storage_path.removeprefix("local:"))
+            if not mapped_path.is_absolute() or ".." in mapped_path.parts:
+                raise ValueError("下载器包含非本地路径映射，拒绝自动清理")
+
+        # 目录删除暂不猜测转种与辅种的完整关联范围，保留历史供人工处理。
+        for source_downloader in {downloader, self._default_downloader} - {None, ""}:
+            if self.get_data(key=f"{source_downloader}-{torrent_hash}", plugin_id="TorrentTransfer"):
+                raise ValueError("蓝光种子存在转种记录，拒绝自动清理")
+        if self.get_data(key=torrent_hash, plugin_id="IYUUAutoSeed"):
+            raise ValueError("蓝光种子存在辅种记录，拒绝自动清理")
+
+        recorded_paths = set()
+        for item in files:
+            path = Path(item.fullpath)
+            if (
+                item.downloader != downloader or item.download_hash != torrent_hash
+                or not path.is_absolute() or ".." in path.parts or root not in path.parents
+            ):
+                raise ValueError("种子文件不属于同一下载器或同一原盘目录")
+            recorded_paths.add(path)
+        if not any(path.relative_to(root).parts[0] == "BDMV" for path in recorded_paths):
+            raise ValueError("源路径缺少蓝光原盘下载记录佐证")
+
+        # 宿主只登记媒体扩展名，原盘辅助文件必须用精确下载任务的完整清单证明归属。
+        tasks = self.chain.list_torrents(
+            hashs=torrent_hash, downloader=downloader, include_all_tags=True,
+        )
+        if (
+            not tasks or len(tasks) != 1
+            or tasks[0].hash != torrent_hash or tasks[0].downloader != downloader
+        ):
+            raise ValueError("未获取到唯一且身份一致的下载任务")
+        save_path = Path(tasks[0].save_path or "")
+        if not save_path.is_absolute() or ".." in save_path.parts:
+            raise ValueError("下载任务缺少可靠的本地保存目录")
+        manifest = self.chain.torrent_files(tid=torrent_hash, downloader=downloader)
+        if not manifest:
+            raise ValueError("未获取到下载器完整文件清单")
+        manifest_paths = set()
+        for item in manifest:
+            relative_path = Path(item.name.replace("\\", "/"))
+            if not relative_path.parts or relative_path.is_absolute() or ".." in relative_path.parts:
+                raise ValueError("下载器文件清单包含不安全的相对路径")
+            path = save_path / relative_path
+            if root not in path.parents:
+                raise ValueError("下载任务包含原盘目录以外的文件")
+            manifest_paths.add(path)
+        if not recorded_paths.issubset(manifest_paths):
+            raise ValueError("下载器文件清单与下载历史的本地路径不一致")
+        for path in manifest_paths:
+            owners = self._downloadhis.get_files_by_fullpath(fullpath=path.as_posix())
+            if (path in recorded_paths and not owners) or any(
+                owner.state != 0
+                and (owner.download_hash != torrent_hash or owner.downloader != downloader)
+                for owner in owners
+            ):
+                raise ValueError("原盘文件仍被其他下载任务使用，拒绝自动清理")
+
+        # 先完整预检，再只删除清单文件与空目录；中途新出现的文件不得被递归删除。
+        directories = []
+        try:
+            root_mode = root.lstat().st_mode
+        except FileNotFoundError:
+            pass
+        else:
+            if not stat.S_ISDIR(root_mode) or root.is_mount():
+                raise ValueError("蓝光源路径不是普通本地目录")
+            directories.append(root)
+            for path in root.rglob("*"):
+                mode = path.lstat().st_mode
+                if stat.S_ISLNK(mode) or path.is_mount():
+                    raise ValueError("蓝光目录包含符号链接或挂载点，拒绝自动清理")
+                if stat.S_ISDIR(mode):
+                    directories.append(path)
+                elif not stat.S_ISREG(mode) or path not in manifest_paths:
+                    raise ValueError("蓝光目录包含未登记文件或特殊文件，拒绝自动清理")
+            for path in manifest_paths:
+                path.unlink(missing_ok=True)
+            for directory in sorted(directories, key=lambda path: len(path.parts), reverse=True):
+                try:
+                    directory.rmdir()
+                except FileNotFoundError:
+                    pass
+
+        # 未确认下载器移除前不标记文件记录，保留缺失或部分删除目录的重试依据。
+        if not self.chain.remove_torrents(hashs=torrent_hash, delete_file=False, downloader=downloader):
+            raise RuntimeError("原盘源目录已清理但种子移除失败，保留整理记录以便重试")
+        for item in files:
+            self._downloadhis.delete_file_by_fullpath(fullpath=item.fullpath)
+        return [torrent_hash]
 
     def handle_torrent(self, type: str, src: str, torrent_hash: str):
         """
